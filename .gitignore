@@ -21,19 +21,34 @@ dist-sourcemaps/
 /build/
 /api/
 /server/build
-/public/build# Sentry Config File
+/public/build
+
+# Sentry Config File
 .env.sentry-build-plugin
+
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
-.tanstack
 .logs/
 **/.pnpm-store/
 
 # Localflare generated files
 .localflare/
 
-# Local Claude config (skills are shared)
-.claude/*
-!.claude/skills/
+# ---- EchoSEO local tooling (ClaudeKit) — .claude/ is local-only (also user-global-ignored) ----
+/.claude/*
+release-manifest.json
+repomix-output.xml
+.serena/cache
+logs.txt
+__pycache__
+
+# Local design artifacts (plans kept local; templates tracked)
+plans/**/*
+!plans/templates/*
+
+# Local marketing/showoff assets
+assets/
+screenshots/
+docs/screenshots/

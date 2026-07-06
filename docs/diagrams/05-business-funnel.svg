@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1120 546" width="1120" height="546" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<line x1="530.0" y1="180.0" x2="530.0" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="530.0" y1="350.0" x2="530.0" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="250" y="90" width="560" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="530.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Free · Self-host (BYO-key)</text>
+<text x="530.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">mồi thu hút · ~0 rủi ro chi phí dữ liệu</text>
+<rect x="330" y="260" width="400" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
+<text x="530.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Managed Cloud · PAYG credits</text>
+<text x="530.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">markup minh bạch 20–40% · doanh thu chính</text>
+<rect x="400" y="430" width="260" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="530.0" y="471.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Team / Pro seats</text>
+<text x="530.0" y="489.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">collaboration</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Mô hình open-core — luồng doanh thu</text>
+<text x="840.0" y="140.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Cộng đồng + skill marketplace</text>
+<text x="840.0" y="310.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Ventra quản lý DataForSEO + OAuth</text>
+<text x="690.0" y="480.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Không khoá dữ liệu thô sau seats</text>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1060 716" width="1060" height="716" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<line x1="491.3" y1="180.0" x2="333.7" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="580.0" y1="180.0" x2="580.0" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="668.7" y1="180.0" x2="826.3" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="245.0" y1="350.0" x2="245.0" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="289.3" y1="350.0" x2="535.7" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="580.0" y1="350.0" x2="580.0" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="333.7" y1="520.0" x2="491.3" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="870.7" y1="350.0" x2="624.3" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="430" y="90" width="300" height="90" rx="12" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
+<text x="580.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P01 · Fork + Deploy</text>
+<text x="580.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">đường găng</text>
+<rect x="120" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="245.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P02 · Rebrand</text>
+<text x="245.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">→ Ventra</text>
+<rect x="455" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="580.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P03 · Strip / gate</text>
+<text x="580.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">hosted couplings</text>
+<rect x="790" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="915.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P05 · Provider</text>
+<text x="915.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">abstraction seam</text>
+<rect x="120" y="430" width="250" height="90" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
+<text x="245.0" y="471.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P04 · i18n</text>
+<text x="245.0" y="489.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">VN + EN</text>
+<rect x="455" y="600" width="250" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="580.0" y="641.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P06 · Verify</text>
+<text x="580.0" y="659.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Milestone M0</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Luồng thực thi Phase 0 (fork → M0)</text>
+</svg>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ventra SEO — Tầm nhìn & Định hướng</title>
+<style>
+:root{--bg:#0b1020;--panel:#131a2e;--panel2:#0f1626;--ink:#e6eaf5;--muted:#9aa6c4;--brand:#7c3aed;--brand2:#6366f1;--accent:#22d3ee;--ok:#34d399;--warn:#fbbf24;--danger:#f87171;--line:#26304d}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1300px 700px at 82% -12%,rgba(124,58,237,.28),transparent 60%),radial-gradient(1100px 560px at -12% 8%,rgba(34,211,238,.16),transparent 55%),var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans',Arial,sans-serif}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header.hero{padding:70px 20px 34px;text-align:center}
+.badge{display:inline-block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 14px;margin-bottom:18px;background:var(--panel2)}
+h1{font-size:clamp(32px,6vw,60px);margin:.08em 0;line-height:1.06;background:linear-gradient(90deg,#fff,#c4b5fd 52%,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lead{color:#cdd5ea;font-size:clamp(16px,2.4vw,22px);max-width:820px;margin:14px auto 0}
+.hero .oneliner{color:var(--muted);max-width:760px;margin:14px auto 0;font-style:italic}
+nav.toc{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);background:rgba(11,16,32,.8);border-bottom:1px solid var(--line)}
+nav.toc ul{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:1080px;margin:0 auto;padding:9px 12px;list-style:none}
+nav.toc a{color:var(--muted);font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:9px}
+nav.toc a:hover{color:var(--ink);background:var(--panel)}
+section{padding:40px 0;border-top:1px solid var(--line);scroll-margin-top:56px}
+.kicker{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand2);font-weight:800;margin:0 0 6px}
+h2{font-size:clamp(22px,3.4vw,32px);margin:0 0 8px;line-height:1.15}
+.sub{color:var(--muted);margin:0 0 22px;max-width:820px}
+p{margin:0 0 14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:8px 0}
+.stat{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0;overflow:hidden}
+.stat .big{font-size:clamp(21px,2.5vw,26px);font-weight:800;line-height:1.14;letter-spacing:-.01em;overflow-wrap:anywhere;background:linear-gradient(90deg,#fff,#a5b4fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .big .star{font-size:.55em;-webkit-text-fill-color:#fbbf24;color:#fbbf24;vertical-align:.5em;margin-left:2px}
+.stat .cap{color:var(--muted);font-size:13px;margin-top:4px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:820px){.cols,.cols3{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h4{margin:0 0 8px;font-size:16px;display:flex;gap:8px;align-items:center}
+.card p{margin:0;color:#c8d0e6;font-size:14.5px}
+.diagram{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;overflow:auto;margin:8px 0}
+.diagram svg{display:block;max-width:100%;height:auto;margin:0 auto}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+td strong{color:#fff}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid var(--line)}
+.ok{color:var(--ok);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.09)}
+.warn{color:var(--warn);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.09)}
+.danger{color:var(--danger);border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.09)}
+.bars{margin:8px 0}
+.bar-row{display:flex;align-items:center;gap:12px;margin:9px 0}
+.bar-label{width:150px;font-size:13.5px;color:#cdd5ea;text-align:right;flex:none}
+.bar-track{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:8px;height:24px;overflow:hidden}
+.bar-fill{display:block;height:100%;border-radius:8px}
+.bar-val{width:80px;font-size:13.5px;font-weight:700;color:#fff;flex:none}
+.chart-note{color:var(--muted);font-size:13px;margin-top:8px}
+.chart-wrap{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.note{border-left:3px solid var(--brand);background:rgba(124,58,237,.09);padding:12px 16px;border-radius:0 10px 10px 0;color:#dfe4f3;font-size:14.5px;margin:14px 0}
+.note.warn{border-color:var(--warn);background:rgba(251,191,36,.08)}
+ul.clean{margin:8px 0 0;padding-left:20px} ul.clean li{margin:7px 0;color:#cdd5ea}
+.ask{background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(34,211,238,.10));border:1px solid var(--brand2);border-radius:16px;padding:24px}
+footer{padding:30px 0 70px;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid var(--line)}
+code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12.5px}
+.phases{display:flex;flex-direction:column;gap:16px;margin-top:8px}
+.phase{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-left-width:4px;border-radius:14px;padding:18px 20px}
+.phase-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:4px}
+.phase-head .pnum{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--muted)}
+.phase-head h4{margin:0;font-size:18px}
+.phase-dur{margin-left:auto;font-size:12.5px;font-weight:700;color:#0b1020;background:#a5b4fc;border-radius:999px;padding:3px 12px}
+.phase .goal{color:#cdd5ea;font-size:14.5px;margin:4px 0 12px}
+.worklist{display:grid;grid-template-columns:1fr 1fr;gap:2px 22px;margin:0;padding:0}
+@media(max-width:820px){.worklist{grid-template-columns:1fr}}
+.worklist li{margin:5px 0;color:#c8d0e6;font-size:14px;list-style:none;padding-left:18px;position:relative}
+.worklist li:before{content:"\25B9";position:absolute;left:0;color:var(--brand2)}
+.phase .exit{margin-top:12px;font-size:13.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
+.phase .exit b{color:var(--ok)}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+  <div class="badge">Tài liệu định hướng · 2026-07-03 · Bản nháp nội bộ</div>
+  <h1>Ventra SEO</h1>
+  <p class="lead">Nền tảng SEO <b>mở</b> và <b>agent-native</b> — tự host được, thay thế Semrush/Ahrefs, xây trên nền mã nguồn mở đã trưởng thành.</p>
+  <p class="oneliner">"Nền tảng SEO mở không chỉ trả lời câu hỏi — nó tự làm việc và chứng minh kết quả bằng chính dữ liệu Search Console của bạn."</p>
+</div></header>
+
+<nav class="toc"><div class="wrap"><ul>
+  <li><a href="#tldr">Tóm tắt</a></li>
+  <li><a href="#problem">Vấn đề</a></li>
+  <li><a href="#market">Cơ hội</a></li>
+  <li><a href="#solution">Giải pháp</a></li>
+  <li><a href="#moat">Lợi thế</a></li>
+  <li><a href="#feasible">Khả thi</a></li>
+  <li><a href="#arch">Kiến trúc</a></li>
+  <li><a href="#agent">Agent</a></li>
+  <li><a href="#business">Kinh doanh</a></li>
+  <li><a href="#roadmap">Lộ trình</a></li>
+  <li><a href="#plan">Kế hoạch phase</a></li>
+  <li><a href="#risk">Rủi ro</a></li>
+  <li><a href="#kpi">KPI</a></li>
+  <li><a href="#next">Định hướng</a></li>
+</ul></div></nav>
+
+<main class="wrap">
+
+<section id="tldr">
+  <p class="kicker">Tóm tắt điều hành</p>
+  <h2>Cơ hội xây một nền tảng SEO thế hệ mới với chi phí và rủi ro thấp</h2>
+  <p class="sub">Thay vì xây từ đầu (4–8 tháng), chúng ta <b>fork</b> OpenSEO — một dự án mã nguồn mở MIT đã trưởng thành (~74k dòng code, ~4.000★, cập nhật hàng tuần) đã giải quyết sẵn phần khó nhất, rồi khác biệt hoá bằng lớp AI-agent, dữ liệu bên-thứ-nhất và song ngữ Việt–Anh.</p>
+  <div class="stats"><div class="stat"><div class="big">~4.000<span class="star">★</span></div><div class="cap">OpenSEO trên GitHub · MIT · nền tảng để fork</div></div><div class="stat"><div class="big">~55%</div><div class="cap">tính năng nền tảng đã có sẵn từ ngày đầu</div></div><div class="stat"><div class="big">$0,0006</div><div class="cap">chi phí mỗi truy vấn SERP (DataForSEO)</div></div><div class="stat"><div class="big">~50%</div><div class="cap">truy vấn Google đã có AI Overviews</div></div><div class="stat"><div class="big">1–3 tuần</div><div class="cap">ước tính tới bản MVP đổi thương hiệu</div></div><div class="stat"><div class="big">2 ngôn ngữ</div><div class="cap">Việt + Anh ngay từ đầu</div></div></div>
+  <div class="note">Điểm mấu chốt: ~55% nền tảng đã có sẵn; hầu hết phần còn lại là <b>xây sản phẩm, không phải nghiên cứu</b> vì lớp dữ liệu (DataForSEO) đã lo phần khó. Lợi thế bền vững nằm ở <b>vòng lặp agent read-write + hợp nhất dữ liệu người dùng + kinh tế mã nguồn mở</b> — thứ các ông lớn khó sao chép vì sẽ tự ăn vào doanh thu thuê bao của họ.</div>
+</section>
+
+<section id="problem">
+  <p class="kicker">01 · Bối cảnh &amp; Vấn đề</p>
+  <h2>Công cụ SEO vừa đắt, vừa lỗi thời trước làn sóng AI</h2>
+  <div class="cols3">
+    <div class="card"><h4>💸 Chi phí cao</h4><p>Các suite phổ biến $99–$500/tháng, khoá người dùng vào thuê bao và không cho sở hữu dữ liệu của chính mình.</p></div>
+    <div class="card"><h4>🤖 Search đang đổi</h4><p>~50% truy vấn Google đã hiển thị AI Overviews; ChatGPT/Perplexity trở thành cửa ngõ mới. "Hiển thị trong AI" là hạng mục tăng nhanh nhất.</p></div>
+    <div class="card"><h4>🔒 Chỉ đọc, không làm</h4><p>Các công cụ (kể cả bản MCP của Semrush/Ahrefs) chỉ <b>đọc</b> dữ liệu. Người dùng vẫn phải tự viết, tự sửa, tự theo dõi thủ công.</p></div>
+  </div>
+</section>
+
+<section id="market">
+  <p class="kicker">02 · Cơ hội thị trường</p>
+  <h2>Khoảng trống: mở, agent-native, và bản địa hoá</h2>
+  <p class="sub">Thị trường SEO tools do vài ông lớn thống trị trên diện rộng, nhưng để hở đúng ba lớp mà một đội nhỏ có thể chiếm.</p>
+  <div class="cols">
+    <div>
+      <ul class="clean">
+        <li><b>Mở &amp; tự host</b> — gần như không đối thủ lớn nào cho tự host + sở hữu dữ liệu.</li>
+        <li><b>Agent-native (read-write)</b> — các ông lớn ngại trao quyền "ghi/xuất bản" cho agent vì làm rỗng dashboard của họ.</li>
+        <li><b>AI-search / GEO visibility</b> — hạng mục mới nhất, tăng nhanh nhất; OpenSEO đã có nền tảng sẵn.</li>
+        <li><b>Thị trường Việt Nam</b> — hầu như chưa có công cụ SEO bản địa hoá tiếng Việt.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Giá thuê bao hàng tháng của đối thủ</h4>
+      <div class="bars">
+<div class="bar-row"><span class="bar-label">Semrush</span><span class="bar-track"><span class="bar-fill" style="width:100.0%;background:#f87171"></span></span><span class="bar-val">$139.95</span></div>
+<div class="bar-row"><span class="bar-label">Moz</span><span class="bar-track"><span class="bar-fill" style="width:70.7%;background:#fbbf24"></span></span><span class="bar-val">$99</span></div>
+<div class="bar-row"><span class="bar-label">Ubersuggest</span><span class="bar-track"><span class="bar-fill" style="width:8.6%;background:#60a5fa"></span></span><span class="bar-val">$12</span></div>
+<div class="bar-row"><span class="bar-label">Ventra (self-host)</span><span class="bar-track"><span class="bar-fill" style="width:3.0%;background:#34d399"></span></span><span class="bar-val">$0</span></div>
+</div>
+<p class="chart-note">Giá thuê bao/tháng của các suite. Ventra self-host miễn phí — người dùng chỉ trả chi phí dữ liệu thực dùng (BYO-key).</p>
+    </div>
+  </div>
+  <div class="note warn">Không đua thứ bất khả thi: quy mô chỉ số backlink (Ahrefs ~500M referring domains) hay bề rộng PPC/social của Semrush. Ta <b>mua</b> dữ liệu đó qua DataForSEO và thắng ở độ mở + agent + giá.</div>
+</section>
+
+<section id="solution">
+  <p class="kicker">03 · Giải pháp</p>
+  <h2>Ventra: dashboard mạnh + lớp agent tự làm việc</h2>
+  <p class="sub">Đầy đủ nghiệp vụ SEO cốt lõi trong một sản phẩm, với hai "mặt": bảng điều khiển trực quan cho người làm, và lớp AI-agent tự động hoá phần lặp đi lặp lại — cân bằng, cả hai đều là công dân hạng nhất.</p>
+  <table>
+    <thead><tr><th>Nhóm tính năng</th><th>MVP</th><th>V1</th><th>Sau</th></tr></thead>
+    <tbody>
+      <tr><td>Nghiên cứu &amp; nhóm từ khoá · rank tracking · backlink · audit · đối thủ · GSC</td><td><span class="pill ok">✓</span></td><td></td><td></td></tr>
+      <tr><td>MCP server + agent skills (hỗ trợ) · AI-search visibility (cơ bản)</td><td><span class="pill ok">✓</span></td><td></td><td></td></tr>
+      <tr><td>Song ngữ Việt + Anh</td><td><span class="pill ok">✓</span></td><td></td><td></td></tr>
+      <tr><td>Tối ưu nội dung on-page · audit sâu theo lịch · rank local + SERP features · GA4/Bing · báo cáo white-label · Managed Cloud · vòng lặp agent read-write</td><td></td><td><span class="pill warn">✓</span></td><td></td></tr>
+      <tr><td>Programmatic SEO · pipeline agent tự chủ · đa tenant cho agency</td><td></td><td></td><td><span class="pill">✓</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="moat">
+  <p class="kicker">04 · Lợi thế cạnh tranh</p>
+  <h2>"Agent-native" chưa đủ — hào nằm ở read-WRITE + dữ liệu + kinh tế mở</h2>
+  <table>
+    <thead><tr><th>Tiêu chí</th><th>Semrush / Ahrefs</th><th>OpenSEO (nền)</th><th>Ventra</th></tr></thead>
+    <tbody>
+      <tr><td>Agent truy cập</td><td>MCP chỉ đọc</td><td>MCP chỉ đọc</td><td><strong>Vòng lặp read-WRITE</strong></td></tr>
+      <tr><td>Hợp nhất dữ liệu GSC/GA4</td><td>Hạn chế</td><td>Chỉ GSC</td><td><strong>GSC+GA4+Bing trong ngữ cảnh agent</strong></td></tr>
+      <tr><td>Mở / tự host</td><td>Không</td><td>Có (MIT)</td><td><strong>Có (MIT)</strong></td></tr>
+      <tr><td>Chi phí</td><td>$99–500/tháng</td><td>BYO-key</td><td><strong>BYO-key → Managed PAYG</strong></td></tr>
+      <tr><td>Song ngữ VN/EN</td><td>EN</td><td>EN</td><td><strong>VN + EN</strong></td></tr>
+    </tbody>
+  </table>
+  <div class="cols3" style="margin-top:16px">
+    <div class="card"><h4>🔁 Read-WRITE</h4><p>Agent tự chạy: từ khoá → brief → viết → sửa on-page → theo dõi. Đối thủ ngại làm vì disrupt chính họ.</p></div>
+    <div class="card"><h4>🧬 Hợp nhất dữ liệu</h4><p>Trộn click/impression GSC + conversion GA4 + dữ liệu đối thủ trong một ngữ cảnh agent.</p></div>
+    <div class="card"><h4>🌐 Kinh tế mở</h4><p>BYO-key + mã nguồn mở + cộng đồng skill marketplace = hiệu ứng mạng, không lock-in.</p></div>
+  </div>
+</section>
+
+<section id="feasible">
+  <p class="kicker">05 · Vì sao nhanh &amp; rẻ</p>
+  <h2>Đứng trên vai một dự án đã trưởng thành</h2>
+  <div class="chart-wrap">
+    <div><svg viewBox="0 0 180 180" width="180" height="180">
+  <circle cx="90" cy="90" r="70" fill="none" stroke="#26304d" stroke-width="20"/>
+  <circle cx="90" cy="90" r="70" fill="none" stroke="#34d399" stroke-width="20"
+    stroke-dasharray="241.9 197.9" stroke-dashoffset="110.0" transform="rotate(-90 90 90)" stroke-linecap="round"/>
+  <text x="90" y="86" text-anchor="middle" font-size="34" font-weight="800" fill="#e6eaf5">55%</text>
+  <text x="90" y="112" text-anchor="middle" font-size="12" fill="#9aa6c4">đã có sẵn</text>
+</svg></div>
+    <div style="flex:1;min-width:280px">
+      <p>OpenSEO đã dựng sẵn phần khó và tốn kém: tích hợp DataForSEO (7 nhóm API), MCP server 18 công cụ, 7 agent skills, rank tracking theo lịch, crawler audit + Lighthouse, tích hợp GSC, tính năng AI-Visibility, và cơ chế xác thực 3 chế độ.</p>
+      <p style="color:var(--muted)">Phần còn thiếu (tối ưu nội dung, audit sâu, GA4/Bing, báo cáo white-label) đều là <b>độ khó thấp–trung bình</b> ở tầng sản phẩm — không phải bài toán nghiên cứu dữ liệu.</p>
+    </div>
+  </div>
+</section>
+
+<section id="arch">
+  <p class="kicker">06 · Kiến trúc hệ thống</p>
+  <h2>Một ứng dụng hợp nhất, chạy hoàn toàn trên Cloudflare</h2>
+  <p class="sub">TanStack Start (React 19) chạy trên Cloudflare Workers; dữ liệu ở D1/SQLite; tác vụ nền qua Workflows + cron; dữ liệu SEO qua DataForSEO sau một lớp trừu tượng để không lệ thuộc một nhà cung cấp.</p>
+  <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1140 736" width="1140" height="736" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<rect x="40" y="60" width="1080" height="130" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
+<text x="56.0" y="86.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Client / Agent</text>
+<rect x="40" y="220" width="1080" height="150" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
+<text x="56.0" y="246.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Cloudflare Workers · TanStack Start (React 19)</text>
+<rect x="40" y="400" width="1080" height="130" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
+<text x="56.0" y="426.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Cloudflare primitives</text>
+<rect x="40" y="560" width="1080" height="150" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
+<text x="56.0" y="586.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Data Layer · provider abstraction</text>
+<line x1="237.6" y1="175.0" x2="232.8" y2="255.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="896.7" y1="175.0" x2="930.1" y2="255.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="350.0" y1="302.5" x2="440.0" y2="302.5" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="830.0" y1="302.5" x2="740.0" y2="302.5" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="456.8" y1="355.0" x2="250.0" y2="436.5" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="707.5" y1="355.0" x2="875.4" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="588.4" y1="355.0" x2="581.4" y2="590.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="897.1" y1="350.0" x2="630.1" y2="590.0" stroke="#475569" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<line x1="430.0" y1="635.0" x2="340.0" y2="635.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="730.0" y1="635.0" x2="820.0" y2="635.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="120" y="95" width="240" height="80" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
+<text x="240.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Trình duyệt</text>
+<text x="240.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Dashboard UI</text>
+<rect x="760" y="95" width="240" height="80" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
+<text x="880.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">AI Agent</text>
+<text x="880.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">MCP client</text>
+<rect x="110" y="255" width="240" height="95" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="230.0" y="298.5" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Routes +</text>
+<text x="230.0" y="316.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Server Functions</text>
+<rect x="440" y="250" width="300" height="105" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="590.0" y="289.5" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Feature Services</text>
+<text x="590.0" y="307.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">keyword · rank · backlink</text>
+<text x="590.0" y="325.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">audit · competitor · ai-search</text>
+<rect x="830" y="255" width="240" height="95" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="950.0" y="298.5" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">MCP Server</text>
+<text x="950.0" y="316.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">18 tools + skills</text>
+<rect x="80" y="430" width="170" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="165.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">D1 / SQLite</text>
+<text x="165.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Drizzle</text>
+<rect x="270" y="430" width="150" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="345.0" y="475.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">KV ×2</text>
+<rect x="440" y="430" width="190" height="80" rx="12" fill="#ffec99" stroke="#f08c00" stroke-width="2"/>
+<text x="535.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">R2</text>
+<text x="535.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Lighthouse blobs</text>
+<rect x="650" y="430" width="190" height="80" rx="12" fill="#fff3bf" stroke="#fab005" stroke-width="2"/>
+<text x="745.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Durable Objects</text>
+<text x="745.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">chat agent</text>
+<rect x="860" y="430" width="210" height="80" rx="12" fill="#fff3bf" stroke="#fab005" stroke-width="2"/>
+<text x="965.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Workflows + Cron</text>
+<text x="965.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">rank · audit</text>
+<polygon points="580.0,590 730,635.0 580.0,680 430,635.0" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
+<text x="580.0" y="631.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">SEO Data Interface</text>
+<text x="580.0" y="649.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">provider abstraction</text>
+<rect x="80" y="595" width="260" height="80" rx="12" fill="#ffc9c9" stroke="#e03131" stroke-width="2"/>
+<text x="210.0" y="631.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">DataForSEO</text>
+<text x="210.0" y="649.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">BYO-key · primary</text>
+<rect x="820" y="595" width="260" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="950.0" y="631.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">First-party OAuth</text>
+<text x="950.0" y="649.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">GSC · GA4 · Bing (free)</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Kiến trúc &amp; luồng dữ liệu Ventra SEO</text>
+</svg></div>
+</section>
+
+<section id="agent">
+  <p class="kicker">07 · Cách agent hoạt động</p>
+  <h2>Vòng lặp read-WRITE — trái tim khác biệt của Ventra</h2>
+  <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 0 790 605" width="790" height="605" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<line x1="531.9" y1="195.0" x2="607.8" y2="250.1" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="655.1" y1="340.1" x2="608.1" y2="484.9" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="493.4" y1="529.9" x2="446.6" y2="529.9" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="331.9" y1="484.9" x2="284.9" y2="340.1" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="332.2" y1="250.1" x2="408.1" y2="195.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="370.0" y="105.0" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
+<text x="470.0" y="146.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Keyword</text>
+<text x="470.0" y="164.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">research</text>
+<rect x="569.7218684219822" y="250.10643118126103" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
+<text x="669.7" y="291.1" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Content</text>
+<text x="669.7" y="309.1" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">brief</text>
+<rect x="493.4349029814193" y="484.8935688187389" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
+<text x="593.4" y="525.9" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Draft</text>
+<text x="593.4" y="543.9" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">AI writing</text>
+<rect x="246.56509701858067" y="484.8935688187389" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
+<text x="346.6" y="525.9" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">On-page</text>
+<text x="346.6" y="543.9" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">fix</text>
+<rect x="170.27813157801774" y="250.1064311812611" width="200" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="270.3" y="291.1" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Monitor</text>
+<text x="270.3" y="309.1" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">GSC / GA4</text>
+<rect x="375" y="320" width="190" height="80" rx="12" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
+<text x="470.0" y="356.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Chứng minh bằng</text>
+<text x="470.0" y="374.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">dữ liệu của bạn</text>
+<text x="40.0" y="30.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Vòng lặp Agent read-WRITE — lợi thế cạnh tranh</text>
+</svg></div>
+  <p class="sub" style="margin-top:14px">Và bên dưới, mỗi truy vấn đi qua lớp cache-first để tối ưu chi phí dữ liệu:</p>
+  <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1370 416" width="1370" height="416" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<line x1="230.0" y1="155.0" x2="300.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="490.0" y1="155.0" x2="560.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="750.0" y1="155.0" x2="820.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="1020.0" y1="155.0" x2="1090.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="920.0" y1="200.0" x2="920.0" y2="300.0" stroke="#475569" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<rect x="876" y="238" width="89" height="20" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="920.0" y="253.0" font-size="12" fill="#475569" text-anchor="middle" font-weight="500">cache-first</text>
+<rect x="40" y="110" width="190" height="90" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
+<text x="135.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Trình duyệt</text>
+<text x="135.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">gọi RPC</text>
+<rect x="300" y="110" width="190" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="395.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Server Function</text>
+<text x="395.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">TanStack Start</text>
+<rect x="560" y="110" width="190" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="655.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Feature Service</text>
+<text x="655.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">+ repository</text>
+<polygon points="920.0,110 1020,155.0 920.0,200 820,155.0" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
+<text x="920.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">SEO Data</text>
+<text x="920.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Interface</text>
+<rect x="1090" y="110" width="190" height="90" rx="12" fill="#ffc9c9" stroke="#e03131" stroke-width="2"/>
+<text x="1185.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">DataForSEO</text>
+<text x="1185.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">API</text>
+<rect x="820" y="300" width="200" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="920.0" y="341.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">D1 cache</text>
+<text x="920.0" y="359.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">keyword_metrics</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Luồng xử lý một yêu cầu (request flow)</text>
+<text x="1090.0" y="295.0" font-size="14" fill="#2f9e44" text-anchor="start" font-weight="500">hit → trả ngay từ cache</text>
+<text x="1090.0" y="322.0" font-size="13" fill="#64748b" text-anchor="start" font-weight="500">miss → gọi DataForSEO,</text>
+<text x="1090.0" y="344.0" font-size="13" fill="#64748b" text-anchor="start" font-weight="500">lưu cache rồi trả về UI</text>
+</svg></div>
+</section>
+
+<section id="business">
+  <p class="kicker">08 · Mô hình kinh doanh</p>
+  <h2>Open-core: miễn phí thu hút → managed sinh lời</h2>
+  <div class="cols">
+    <div class="diagram" style="background:#fff"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1120 546" width="1120" height="546" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<line x1="530.0" y1="180.0" x2="530.0" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="530.0" y1="350.0" x2="530.0" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="250" y="90" width="560" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="530.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Free · Self-host (BYO-key)</text>
+<text x="530.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">mồi thu hút · ~0 rủi ro chi phí dữ liệu</text>
+<rect x="330" y="260" width="400" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
+<text x="530.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Managed Cloud · PAYG credits</text>
+<text x="530.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">markup minh bạch 20–40% · doanh thu chính</text>
+<rect x="400" y="430" width="260" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="530.0" y="471.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Team / Pro seats</text>
+<text x="530.0" y="489.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">collaboration</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Mô hình open-core — luồng doanh thu</text>
+<text x="840.0" y="140.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Cộng đồng + skill marketplace</text>
+<text x="840.0" y="310.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Ventra quản lý DataForSEO + OAuth</text>
+<text x="690.0" y="480.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Không khoá dữ liệu thô sau seats</text>
+</svg></div>
+    <div class="card">
+      <h4>Đơn vị kinh tế</h4>
+      <div class="bars">
+<div class="bar-row"><span class="bar-label">SerpApi (~)</span><span class="bar-track"><span class="bar-fill" style="width:100.0%;background:#f87171"></span></span><span class="bar-val">$7</span></div>
+<div class="bar-row"><span class="bar-label">DataForSEO</span><span class="bar-track"><span class="bar-fill" style="width:8.6%;background:#34d399"></span></span><span class="bar-val">$0.6</span></div>
+</div>
+<p class="chart-note">Chi phí xấp xỉ cho mỗi 1.000 truy vấn SERP — DataForSEO rẻ hơn 10–16× ở quy mô lớn, lại kèm sẵn CSDL từ khoá + backlink.</p>
+      <p style="margin-top:10px;color:var(--muted);font-size:13.5px">Managed Cloud tính credit với markup minh bạch 20–40% trên chi phí dữ liệu + tiện lợi; seats chỉ tính cho giá trị cộng tác, không khoá dữ liệu thô.</p>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <p class="kicker">09 · Lộ trình &amp; cột mốc</p>
+  <h2>Từ fork đến sản phẩm bán được</h2>
+  <div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1060 716" width="1060" height="716" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<line x1="491.3" y1="180.0" x2="333.7" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="580.0" y1="180.0" x2="580.0" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="668.7" y1="180.0" x2="826.3" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="245.0" y1="350.0" x2="245.0" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="289.3" y1="350.0" x2="535.7" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="580.0" y1="350.0" x2="580.0" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="333.7" y1="520.0" x2="491.3" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="870.7" y1="350.0" x2="624.3" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="430" y="90" width="300" height="90" rx="12" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
+<text x="580.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P01 · Fork + Deploy</text>
+<text x="580.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">đường găng</text>
+<rect x="120" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="245.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P02 · Rebrand</text>
+<text x="245.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">→ Ventra</text>
+<rect x="455" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="580.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P03 · Strip / gate</text>
+<text x="580.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">hosted couplings</text>
+<rect x="790" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="915.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P05 · Provider</text>
+<text x="915.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">abstraction seam</text>
+<rect x="120" y="430" width="250" height="90" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
+<text x="245.0" y="471.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P04 · i18n</text>
+<text x="245.0" y="489.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">VN + EN</text>
+<rect x="455" y="600" width="250" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="580.0" y="641.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P06 · Verify</text>
+<text x="580.0" y="659.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Milestone M0</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Luồng thực thi Phase 0 (fork → M0)</text>
+</svg></div>
+  <table>
+    <thead><tr><th>Mốc</th><th>Giai đoạn</th><th>Hoàn thành khi</th></tr></thead>
+    <tbody>
+      <tr><td><strong>M0 · Ventra chạy</strong></td><td>Phase 0 (1–3 tuần)</td><td>App đổi thương hiệu, tự host trên Cloudflare, song ngữ, đã track upstream</td></tr>
+      <tr><td><strong>M1 · MVP</strong></td><td>~4–8 tuần</td><td>Tính năng kế thừa + lớp agent + VN/EN + quick-wins; phát hành mã nguồn mở</td></tr>
+      <tr><td><strong>M2 · Nội dung + audit</strong></td><td>V1</td><td>Engine tối ưu nội dung + audit sâu theo lịch</td></tr>
+      <tr><td><strong>M3 · Bật doanh thu</strong></td><td>V1</td><td>Managed Cloud PAYG (beta) + báo cáo white-label</td></tr>
+      <tr><td><strong>M4 · Vòng lặp tự động</strong></td><td>V1→Sau</td><td>Agent read-write GA kèm guardrails</td></tr>
+      <tr><td><strong>M5 · Mở rộng quy mô</strong></td><td>Sau</td><td>Programmatic SEO hoặc đa tenant cho agency</td></tr>
+    </tbody>
+  </table>
+  <p class="chart-note">Ước tính cho đội nhỏ (~2–4 người). Sẽ chuẩn hoá lại mốc thời gian sau M0 khi biết vận tốc thực tế với Cloudflare.</p>
+</section>
+
+<section id="plan">
+  <p class="kicker">10 · Kế hoạch chi tiết các phase</p>
+  <h2>Làm gì trong từng giai đoạn</h2>
+  <p class="sub">Sắp theo phạm vi, không khoá ngày. Mỗi phase có mục tiêu, hạng mục công việc chính và điều kiện hoàn thành rõ ràng.</p>
+  <div class="phases">
+
+    <div class="phase" style="border-left-color:#e8590c">
+      <div class="phase-head"><span class="pnum">PHASE 0</span><h4>Fork &amp; Foundation</h4><span class="phase-dur">1–3 tuần · M0</span></div>
+      <p class="goal">Mục tiêu: một Ventra chạy được — đổi thương hiệu, song ngữ, tự host trên Cloudflare, sẵn "khe" cho tính năng sau.</p>
+      <ul class="worklist">
+        <li>Fork OpenSEO + track remote <code>upstream</code></li>
+        <li>Dựng hạ tầng Cloudflare (D1/KV/R2/DO/Workflows) + deploy self-host</li>
+        <li>Đổi thương hiệu → Ventra (UI, MCP tools, skills, web, wrangler)</li>
+        <li>Tách/ẩn coupling hosted (PostHog/Loops/Reddit/Autumn) sau cờ <code>hosted</code></li>
+        <li>Dựng khung i18n VN + EN, tách chuỗi, seed bản dịch Việt</li>
+        <li>Thêm lớp provider-abstraction cho DataForSEO</li>
+      </ul>
+      <p class="exit"><b>Hoàn thành khi:</b> app đổi thương hiệu, song ngữ, self-host chạy trên Cloudflare, CI xanh (prettier/knip/tsc/oxlint + test), đã track upstream.</p>
+    </div>
+
+    <div class="phase" style="border-left-color:#1971c2">
+      <div class="phase-head"><span class="pnum">PHASE 1 · MVP</span><h4>Lõi SEO agent-native (open-core)</h4><span class="phase-dur">~4–8 tuần · M1</span></div>
+      <p class="goal">Mục tiêu: phát hành một sản phẩm mã nguồn mở mạch lạc, khác biệt. ~80% kế thừa — công sức nằm ở hoàn thiện, agent panel, song ngữ và các quick-win.</p>
+      <ul class="worklist">
+        <li>Hoàn thiện: keyword + cluster, rank global, backlink</li>
+        <li>Audit cơ bản + Lighthouse/CWV, competitor, GSC</li>
+        <li>MCP + agent skills (hỗ trợ) + AI-search visibility cơ bản</li>
+        <li>UX cân bằng: dashboard chỉn chu + agent panel hạng nhất</li>
+        <li>Song ngữ VN + EN cho toàn bộ surface MVP</li>
+        <li>Quick-win: rank loop theo lịch + cảnh báo (SerpBear)</li>
+        <li>Quick-win: đối chiếu số liệu thực GSC (reconciliation)</li>
+        <li>Quick-win: chấm nội dung "đèn giao thông" + audit phân mức</li>
+      </ul>
+      <p class="exit"><b>Hoàn thành khi:</b> phát hành mã nguồn mở, nút "Deploy to Cloudflare" một chạm, tài liệu; định vị = "nền tảng SEO mở, agent-native".</p>
+    </div>
+
+    <div class="phase" style="border-left-color:#9c36b5">
+      <div class="phase-head"><span class="pnum">PHASE 2 · V1</span><h4>Tool → Business</h4><span class="phase-dur">~2–4 tháng · M2–M4</span></div>
+      <p class="goal">Mục tiêu: biến công cụ tự host thành sản phẩm bán được; mở tier doanh thu và hào read-write.</p>
+      <ul class="worklist">
+        <li>Engine tối ưu nội dung on-page (brief · entity/NLP · score · AI writing · internal link)</li>
+        <li>Audit sâu theo lịch (indexation · schema · robots/sitemap · broken link)</li>
+        <li>Rank local + SERP features (gồm hiện diện AI Overview)</li>
+        <li>Tích hợp GA4 + Bing Webmaster (tái dùng pattern GSC)</li>
+        <li>Báo cáo white-label + dashboard cho agency</li>
+        <li>Managed Cloud (PAYG credits, markup 20–40%)</li>
+        <li>Vòng lặp agent read-write (guardrails + eval harness)</li>
+        <li>Đào sâu GEO/AI-search (prompt tracking, LLM mention)</li>
+      </ul>
+      <p class="exit"><b>Hoàn thành khi:</b> managed cloud beta, agency white-label được, agent tự làm end-to-end. <span style="color:var(--warn)">M3 phụ thuộc điều khoản resale của DataForSEO.</span></p>
+    </div>
+
+    <div class="phase" style="border-left-color:#64748b">
+      <div class="phase-head"><span class="pnum">PHASE 3 · SAU</span><h4>Tự động hoá trần cao</h4><span class="phase-dur">M5 · khi core ổn định</span></div>
+      <p class="goal">Mục tiêu: khai thác các hạng mục xây nặng nhưng tiềm năng lớn — chỉ làm khi lõi vững và nhu cầu đã được xác thực.</p>
+      <ul class="worklist">
+        <li>Programmatic SEO engine (template + dataset → publish + index monitor + guardrail thin-content)</li>
+        <li>Pipeline agent tự chủ (research → publish → monitor → recover)</li>
+        <li>Đa tenant cho agency + skill marketplace</li>
+        <li>Cân nhắc lộ trình portability off-Cloudflare (nếu cần)</li>
+      </ul>
+      <p class="exit"><b>Ngoài phạm vi (YAGNI):</b> dữ liệu PPC, theo dõi social, bề rộng marketing-suite; sở hữu backlink index; hạ tầng scraping proxy.</p>
+    </div>
+
+  </div>
+</section>
+
+<section id="risk">
+  <p class="kicker">11 · Rủi ro &amp; giảm thiểu</p>
+  <h2>Nhìn thẳng vào rủi ro</h2>
+  <table>
+    <thead><tr><th>Rủi ro</th><th>Mức</th><th>Giảm thiểu</th></tr></thead>
+    <tbody>
+      <tr><td>Lệ thuộc hạ tầng Cloudflare (D1/DO/Workflows)</td><td><span class="pill warn">Trung bình</span></td><td>Đánh đổi có chủ đích để đi nhanh; giữ các "khe" DB/provider sạch để chuyển đổi sau</td></tr>
+      <tr><td>Điều khoản DataForSEO về bán lại đa tenant</td><td><span class="pill warn">Cần xác minh</span></td><td>Kiểm tra ToS trước khi mở tier Managed; phương án dự phòng: mỗi tenant tự dùng key</td></tr>
+      <tr><td>Lệ thuộc một nhà cung cấp dữ liệu</td><td><span class="pill warn">Trung bình</span></td><td>Lớp provider-abstraction từ Phase 0; có thể thêm ScaleSERP/Bright Data</td></tr>
+      <tr><td>Google siết scraping (vụ kiện SerpApi 12/2025)</td><td><span class="pill">Theo dõi</span></td><td>Dùng aggregator (rủi ro phân tán) + dữ liệu bên-thứ-nhất; tránh SerpApi</td></tr>
+      <tr><td>i18n &amp; posture cân bằng tăng phạm vi MVP</td><td><span class="pill">Thấp</span></td><td>Tái dùng dashboard sẵn có; i18n dựng khung ở Phase 0, dịch tăng dần</td></tr>
+    </tbody>
+  </table>
+  <div class="note">License đã xác nhận <b>MIT</b> — việc thương mại hoá bản managed hoàn toàn hợp lệ.</div>
+</section>
+
+<section id="kpi">
+  <p class="kicker">12 · KPI &amp; mục tiêu</p>
+  <h2>Đo lường thành công</h2>
+  <div class="cols3">
+    <div class="card"><h4>⭐ North star</h4><p>Số instance tự host hoạt động hàng tuần có chạy ≥1 workflow agent.</p></div>
+    <div class="card"><h4>⚡ Activation</h4><p>% cài đặt kết nối GSC + chạy tác vụ agent đầu tiên — mục tiêu ≥ 40%.</p></div>
+    <div class="card"><h4>🔁 Retention</h4><p>% instance còn hoạt động ở ngày 30 — mục tiêu ≥ 30%.</p></div>
+  </div>
+</section>
+
+<section id="next">
+  <p class="kicker">13 · Định hướng &amp; bước kế tiếp</p>
+  <h2>Đề xuất: đồng thuận khởi động Phase 0</h2>
+  <div class="ask">
+    <p>Chúng ta có một cơ hội hiếm: xây một nền tảng SEO thế hệ mới với <b>rủi ro thấp và tốc độ cao</b>, nhờ đứng trên một nền mã nguồn mở đã trưởng thành và một khác biệt hoá rõ ràng (agent read-write + dữ liệu người dùng + mở + song ngữ).</p>
+    <p style="margin-bottom:0"><b>Định hướng đề xuất:</b> khởi động <b>Phase 0 (Fork &amp; Foundation, 1–3 tuần)</b> để đạt mốc M0 — một Ventra chạy được, đổi thương hiệu, song ngữ, tự host trên Cloudflare — rồi cùng đánh giá lại trước khi cam kết nguồn lực cho MVP.</p>
+    <ul class="clean" style="margin-top:14px">
+      <li>Cần chuẩn bị: fork OpenSEO, tài khoản Cloudflare, một API key DataForSEO để thử.</li>
+      <li>Quyết định đã chốt: fork trên Cloudflare · open-core prosumer · song ngữ VN+EN · posture cân bằng dashboard + agent.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+<footer>Ventra SEO · tài liệu định hướng nội bộ · dựa trên nghiên cứu tại
+<code>plans/reports/research-summary-260703-1047-ventra-seo.md</code> ·
+sơ đồ: <code>docs/diagrams/*.excalidraw</code></footer>
+</body>
+</html>

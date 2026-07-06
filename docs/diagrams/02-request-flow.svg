@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1370 416" width="1370" height="416" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
+<line x1="230.0" y1="155.0" x2="300.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="490.0" y1="155.0" x2="560.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="750.0" y1="155.0" x2="820.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="1020.0" y1="155.0" x2="1090.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="920.0" y1="200.0" x2="920.0" y2="300.0" stroke="#475569" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<rect x="876" y="238" width="89" height="20" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="920.0" y="253.0" font-size="12" fill="#475569" text-anchor="middle" font-weight="500">cache-first</text>
+<rect x="40" y="110" width="190" height="90" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
+<text x="135.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Trình duyệt</text>
+<text x="135.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">gọi RPC</text>
+<rect x="300" y="110" width="190" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="395.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Server Function</text>
+<text x="395.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">TanStack Start</text>
+<rect x="560" y="110" width="190" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
+<text x="655.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Feature Service</text>
+<text x="655.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">+ repository</text>
+<polygon points="920.0,110 1020,155.0 920.0,200 820,155.0" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
+<text x="920.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">SEO Data</text>
+<text x="920.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Interface</text>
+<rect x="1090" y="110" width="190" height="90" rx="12" fill="#ffc9c9" stroke="#e03131" stroke-width="2"/>
+<text x="1185.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">DataForSEO</text>
+<text x="1185.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">API</text>
+<rect x="820" y="300" width="200" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
+<text x="920.0" y="341.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">D1 cache</text>
+<text x="920.0" y="359.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">keyword_metrics</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Luồng xử lý một yêu cầu (request flow)</text>
+<text x="1090.0" y="295.0" font-size="14" fill="#2f9e44" text-anchor="start" font-weight="500">hit → trả ngay từ cache</text>
+<text x="1090.0" y="322.0" font-size="13" fill="#64748b" text-anchor="start" font-weight="500">miss → gọi DataForSEO,</text>
+<text x="1090.0" y="344.0" font-size="13" fill="#64748b" text-anchor="start" font-weight="500">lưu cache rồi trả về UI</text>
+</svg>
