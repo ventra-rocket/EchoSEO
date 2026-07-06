@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
+import { useIntl } from "react-intl";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Sidebar } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
@@ -69,6 +70,7 @@ function AppContent({
   onCloseDrawer: () => void;
   children: React.ReactNode;
 }) {
+  const intl = useIntl();
   return (
     <>
       <div className="flex-1 min-h-0 md:hidden">
@@ -78,7 +80,7 @@ function AppContent({
           <div className="fixed inset-0 z-50">
             <button
               type="button"
-              aria-label="Close sidebar"
+              aria-label={intl.formatMessage({ id: "nav.closeSidebar" })}
               className="absolute inset-0 bg-black/45"
               onClick={onCloseDrawer}
             />

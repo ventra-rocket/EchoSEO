@@ -89,6 +89,7 @@
     "posthog-node": "^5.28.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-intl": "^10.1.14",
     "react-markdown": "^10.1.0",
     "recharts": "^3.7.0",
     "remark-gfm": "^4.0.1",
