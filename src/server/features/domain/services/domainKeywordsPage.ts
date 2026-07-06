@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { normalizeDomainInput } from "@/server/lib/domainUtils";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
@@ -79,7 +79,7 @@ export async function getKeywordsPage(
     return cached.data;
   }
 
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
   const response = await dataforseo.domain.rankedKeywords({
     target: domain,
     locationCode: input.locationCode,

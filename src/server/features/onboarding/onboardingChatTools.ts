@@ -8,7 +8,10 @@ import {
 } from "@/server/features/onboarding/scrape";
 import { DomainService } from "@/server/features/domain/services/DomainService";
 import { KeywordResearchService } from "@/server/features/keywords/services/KeywordResearchService";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import {
+  createSeoDataProvider,
+  type SeoDataProvider,
+} from "@/server/lib/seo-data";
 import { marketTools } from "@/server/features/onboarding/onboardingMarketTools";
 import { isLabsLocationCode, LOCATIONS } from "@/shared/keyword-locations";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
@@ -28,7 +31,7 @@ export type ToolContext = {
   organizationId: string;
   billingCustomer: BillingCustomerContext;
   metering: { creditFeature: "onboarding" };
-  dfsClient: ReturnType<typeof createDataforseoClient>;
+  dfsClient: SeoDataProvider;
   isSameDomain: (domain: unknown) => boolean;
 };
 
@@ -62,7 +65,7 @@ export function buildOnboardingTools({
     metering: { creditFeature: "onboarding" },
     // Each metered call passes `creditFeature: "onboarding"` so spend lands on
     // the onboarding line; the org's balance is asserted by the agent first.
-    dfsClient: createDataforseoClient(billingCustomer),
+    dfsClient: createSeoDataProvider(billingCustomer),
     isSameDomain: (domain) =>
       ownDomain != null &&
       typeof domain === "string" &&

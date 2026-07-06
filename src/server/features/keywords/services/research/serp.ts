@@ -3,7 +3,7 @@ import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { SerpResultItem } from "@/types/keywords";
 import { z } from "zod";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { normalizeKeyword } from "./helpers";
 
 const SERP_CACHE_TTL_SECONDS = 12 * 60 * 60;
@@ -79,7 +79,7 @@ async function getSerpLiveAnalysis(
     return cached.data;
   }
 
-  const liveItems = await createDataforseoClient(billingCustomer).serp.live({
+  const liveItems = await createSeoDataProvider(billingCustomer).serp.live({
     keyword,
     locationCode: input.locationCode,
     languageCode: input.languageCode,

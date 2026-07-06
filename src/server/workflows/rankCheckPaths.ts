@@ -5,11 +5,11 @@ import {
   MAX_TASKS_PER_POST,
 } from "@/server/lib/dataforseo";
 import type {
-  createDataforseoClient,
   PostedRankCheckTask,
   RankCheckResult,
   RankCheckTaskInput,
 } from "@/server/lib/dataforseo";
+import type { SeoDataProvider } from "@/server/lib/seo-data";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import { KEYWORDS_PER_BATCH } from "@/shared/rank-tracking";
 
@@ -40,7 +40,7 @@ function mapResultsToSnapshotRows(
 }
 
 interface CheckContext {
-  client: ReturnType<typeof createDataforseoClient>;
+  client: SeoDataProvider;
   keywords: KeywordEntry[];
   devices: RankTrackingConfig["devices"];
   serpDepth: number;

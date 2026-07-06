@@ -4,7 +4,10 @@ import {
 } from "@/server/lib/dataforseo";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import type { CreditFeature } from "@/shared/billing-credit-features";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import {
+  createSeoDataProvider,
+  type SeoDataProvider,
+} from "@/server/lib/seo-data";
 import {
   normalizeIntent,
   normalizeKeyword,
@@ -103,7 +106,7 @@ export async function fetchGoogleAdsResearchRows(
   params: Omit<FetchResearchRowsParams, "source">,
   billingCustomer: BillingCustomerContext,
 ): Promise<EnrichedKeyword[]> {
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
   return mapAdsKeywordItems(
     await dataforseo.keywords.adsIdeas({
       keyword: params.seedKeyword,
@@ -117,7 +120,7 @@ export async function fetchGoogleAdsResearchRows(
 
 async function fetchRelatedRows(
   params: Omit<FetchResearchRowsParams, "source">,
-  dataforseo: ReturnType<typeof createDataforseoClient>,
+  dataforseo: SeoDataProvider,
 ) {
   const items = await dataforseo.keywords.related({
     keyword: params.seedKeyword,
@@ -142,7 +145,7 @@ export async function fetchResearchRowsBySource(
   params: FetchResearchRowsParams,
   billingCustomer: BillingCustomerContext,
 ): Promise<EnrichedKeyword[]> {
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
 
   if (params.source === "related") {
     return fetchRelatedRows(params, dataforseo);

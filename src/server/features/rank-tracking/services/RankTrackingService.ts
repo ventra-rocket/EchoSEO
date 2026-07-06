@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { AppError } from "@/server/lib/errors";
@@ -249,7 +249,7 @@ async function refreshKeywordMetrics(
   const keywords = await RankTrackingRepository.getKeywordsForConfig(configId);
   if (keywords.length === 0) return { updated: 0 };
 
-  const client = createDataforseoClient(billingCustomer);
+  const client = createSeoDataProvider(billingCustomer);
   const now = new Date().toISOString();
   let updated = 0;
 

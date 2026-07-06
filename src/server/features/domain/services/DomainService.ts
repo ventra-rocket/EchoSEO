@@ -2,7 +2,7 @@ import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { z } from "zod";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import type { CreditFeature } from "@/shared/billing-credit-features";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { normalizeDomainInput } from "@/server/lib/domainUtils";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
 import { getKeywordsPage } from "@/server/features/domain/services/domainKeywordsPage";
@@ -59,7 +59,7 @@ async function getOverview(
   }
 
   const nowIso = new Date().toISOString();
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
 
   const metricsResponse = await dataforseo.domain.rankOverview({
     target: domain,
@@ -147,7 +147,7 @@ async function getSuggestedKeywords(
     return cached.data;
   }
 
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
 
   const rankedKeywordsResponse = await dataforseo.domain.rankedKeywords({
     target: domain,

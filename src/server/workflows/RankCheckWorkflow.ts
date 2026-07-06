@@ -12,7 +12,7 @@ import {
   runQueuedCheck,
   type QueuedCheckStats,
 } from "@/server/workflows/rankCheckPaths";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { AppError } from "@/server/lib/errors";
 import { autumn } from "@/server/billing/autumn";
@@ -263,7 +263,7 @@ export class RankCheckWorkflow extends WorkflowEntrypoint<
       keywordIds,
     } = event.payload;
 
-    const client = createDataforseoClient(billingCustomer);
+    const client = createSeoDataProvider(billingCustomer);
 
     // Guard: skip if config was archived after the workflow was triggered
     const configCheck = await step.do(
