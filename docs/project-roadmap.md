@@ -1,6 +1,6 @@
 # EchoSEO — Roadmap
 
-**Version:** 0.1 · **Date:** 2026-07-03 · **Status:** Pre-fork
+**Version:** 0.2 · **Date:** 2026-07-07 · **Status:** M0 complete — Phase 1 (MVP) next
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` · Companion: `docs/project-overview-pdr.md`
 
 Phases are scope-ordered, not date-locked. Durations are rough estimates for a small team and should be re-baselined after Phase 0.
