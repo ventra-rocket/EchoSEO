@@ -11,16 +11,16 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 
 **Goal:** a rebranded, self-hostable EchoSEO running on Cloudflare, with the seams in place for later features.
 
-- [ ] Fork `every-app/open-seo`; import into this repo; add `upstream` remote for security/feature pulls.
-- [ ] Provision Cloudflare infra: D1, KV ×2, R2, Durable Objects, Workflows, cron.
-- [ ] Deploy **self-host mode** (`local_noauth` / `cloudflare_access`) end-to-end.
-- [ ] **Rebrand** OpenSEO → EchoSEO: UI, MCP tool descriptions, agent skills, `wrangler` names, fact sheet, `web/` marketing site.
-- [ ] Strip/gate hosted-only couplings behind hosted flag: PostHog, Reddit-attribution, Loops, Autumn billing (self-host already runs without them). Drop trivial `@every-app/sdk` coupling.
-- [ ] **i18n scaffolding (VN + EN):** wire i18n into TanStack Start, extract UI strings, seed Vietnamese translations. _(Net-new vs OpenSEO.)_
-- [ ] Introduce a thin **DataForSEO provider-abstraction** seam (no behavior change yet).
-- [ ] Verify: DataForSEO ToS on multi-tenant resale; team Cloudflare fluency.
+- [x] Fork `every-app/open-seo`; import into this repo; add `upstream` remote for security/feature pulls.
+- [x] Provision Cloudflare infra: D1, KV ×2, R2, Durable Objects, Workflows, cron.
+- [x] Deploy **self-host mode** (`cloudflare_access`) end-to-end — live at `echoseo.ventrarocket.vn` behind Cloudflare Access.
+- [x] **Rebrand** OpenSEO → EchoSEO: UI, MCP tool descriptions, agent skills, `wrangler` names, fact sheet. _(→ `web/` marketing site rebrand deferred — separate un-deployed surface; see M0 follow-ups.)_
+- [x] Strip/gate hosted-only couplings behind hosted flag: PostHog, Reddit-attribution, Loops, Autumn billing, Svix (upstream already gated all network-firing paths behind the `hosted` auth mode; added reddit lib/client guards + self-host no-op tests). _(→ trivial `@every-app/sdk` dependency drop still pending.)_
+- [x] **i18n scaffolding (VN + EN):** react-intl wired into TanStack Start, shell strings extracted, Vietnamese seed catalog (machine-translated, flagged for review). _(Net-new vs OpenSEO.)_
+- [x] Introduce a thin **DataForSEO provider-abstraction** seam (`src/server/lib/seo-data`, no behavior change).
+- [ ] Verify: DataForSEO ToS on multi-tenant resale; team Cloudflare fluency. _(Business/legal — logged as tracked open decisions.)_
 
-**Exit:** EchoSEO-branded app deploys self-host, bilingual shell, upstream tracked.
+**Exit:** ✅ **M0 met (2026-07-07)** — EchoSEO-branded app deploys self-host on Cloudflare (Access-enforced), bilingual shell live, upstream tracked. Open follow-ups: `web/` marketing-site rebrand, DataForSEO resale-ToS answer, team CF fluency sign-off, `@every-app/sdk` drop.
 
 ## Phase 1 — MVP: "AI-native self-hosted SEO core" (~4–8 weeks)
 
@@ -76,14 +76,14 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 
 ## Milestones
 
-| Milestone                | Phase | Definition of done                                                                 |
-| ------------------------ | ----- | ---------------------------------------------------------------------------------- |
-| **M0 — EchoSEO runs**    | 0     | Rebranded app self-host-deploys on Cloudflare, bilingual shell, upstream tracked   |
-| **M1 — MVP launch**      | 1     | Inherited features hardened + agent panel + VN/EN + quick-wins; public OSS release |
-| **M2 — Content + audit** | 2     | Content-optimization engine + scheduled/deep audit shipped                         |
-| **M3 — Revenue on**      | 2     | Managed cloud PAYG beta + white-label reporting live                               |
-| **M4 — Autonomous loop** | 2→3   | Read-write agent loop GA with guardrails                                           |
-| **M5 — Scale**           | 3     | pSEO engine or agency multi-tenant, demand-validated                               |
+| Milestone                | Phase | Definition of done                                                                                             |
+| ------------------------ | ----- | -------------------------------------------------------------------------------------------------------------- |
+| **M0 — EchoSEO runs** ✅ | 0     | ✅ Done 2026-07-07 — rebranded app self-host-deploys on Cloudflare (Access), bilingual shell, upstream tracked |
+| **M1 — MVP launch**      | 1     | Inherited features hardened + agent panel + VN/EN + quick-wins; public OSS release                             |
+| **M2 — Content + audit** | 2     | Content-optimization engine + scheduled/deep audit shipped                                                     |
+| **M3 — Revenue on**      | 2     | Managed cloud PAYG beta + white-label reporting live                                                           |
+| **M4 — Autonomous loop** | 2→3   | Read-write agent loop GA with guardrails                                                                       |
+| **M5 — Scale**           | 3     | pSEO engine or agency multi-tenant, demand-validated                                                           |
 
 ## Dependencies & gating checks
 
