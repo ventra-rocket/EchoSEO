@@ -101,8 +101,9 @@ function PostHogBootstrap() {
   const redditSignupInFlightRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (!isHostedMode) return;
     captureRedditAttributionFromLocation();
-  }, []);
+  }, [isHostedMode]);
 
   React.useEffect(() => {
     if (!isHostedMode || isSessionPending) {

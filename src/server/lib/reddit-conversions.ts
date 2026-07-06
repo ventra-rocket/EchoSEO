@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { redditAttributions } from "@/db/schema";
+import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import {
   hasRedditAttribution,
   type RedditAttributionInput,
@@ -105,6 +106,12 @@ async function markConversionSent(args: CaptureRedditConversionArgs) {
 export async function captureRedditConversion(
   args: CaptureRedditConversionArgs,
 ) {
+  // Reddit conversion tracking is a hosted-only growth integration. Self-host
+  // deployments must never write to the attribution table or call Reddit's API,
+  // even if a client invokes the server function directly — so gate at the lib
+  // boundary rather than relying on the caller.
+  if (!(await isHostedServerAuthMode())) return "skipped" as const;
+
   if (!hasRedditAttribution(args.attribution)) return "skipped" as const;
 
   const alreadySent = await upsertAttribution(args);
