@@ -1,14 +1,14 @@
-# Ventra SEO
+# EchoSEO
 
 > The open, agent-native SEO platform — comprehensive SEO tooling that _does the work_ and proves it against your own data, at bring-your-own-key cost.
 
-Ventra SEO is a self-hostable, open-core alternative to Semrush/Ahrefs. It is built by forking the excellent MIT-licensed [every-app/open-seo](https://github.com/every-app/open-seo) and extending it with a balanced dashboard + AI-agent experience, first-party data fusion (GSC/GA4/Bing), bilingual (🇻🇳/🇬🇧) support, and an open-core business model.
+EchoSEO is a self-hostable, open-core alternative to Semrush/Ahrefs. It is built by forking the excellent MIT-licensed [every-app/open-seo](https://github.com/every-app/open-seo) and extending it with a balanced dashboard + AI-agent experience, first-party data fusion (GSC/GA4/Bing), bilingual (🇻🇳/🇬🇧) support, and an open-core business model.
 
 **Status:** Foundation / pre-fork. This repo currently holds the project definition, research, and roadmap. Code lands once the fork is set up (see roadmap Phase 0).
 
-## Why Ventra
+## Why EchoSEO
 
-- **Agent-native, read-WRITE.** Not just "ask an MCP server for rankings" (every incumbent now does that, read-only). Ventra's agents run the full loop: keyword → brief → draft → on-page fix → GSC-monitored → refresh.
+- **Agent-native, read-WRITE.** Not just "ask an MCP server for rankings" (every incumbent now does that, read-only). EchoSEO's agents run the full loop: keyword → brief → draft → on-page fix → GSC-monitored → refresh.
 - **Your data, fused.** Combines paid competitive data (DataForSEO) with your own Search Console / GA4 / Bing ground truth in one agent context.
 - **BYO-key economics.** ~$0.0006/SERP self-host cost undercuts $99–$500/mo suites by 1–2 orders of magnitude for targeted usage.
 - **Open + self-hostable.** MIT core, no lock-in. Free to self-host; managed cloud when you want the convenience.
@@ -62,7 +62,7 @@ plans/                        Plans + research reports
 This is a ClaudeKit-managed project. Common next steps:
 
 - Read the research: `plans/reports/research-summary-260703-1047-ventra-seo.md`
-- Plan the fork: `/ckm:plan` — "Fork OpenSEO and set up Ventra foundation (Phase 0)"
+- Plan the fork: `/ckm:plan` — "Fork OpenSEO and set up EchoSEO foundation (Phase 0)"
 - Personas & positioning: `/ckm:persona`, `/ckm:competitor`
 - Content & SEO for our own site: `/ckm:seo`, `/ckm:write:blog`
 

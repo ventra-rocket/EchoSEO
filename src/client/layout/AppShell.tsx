@@ -193,13 +193,13 @@ function TopNav({
           </button>
         ) : null}
         <Link to="/" className="ml-1 font-semibold text-base-content">
-          OpenSEO
+          EchoSEO
         </Link>
       </div>
 
       <div className="hidden items-center gap-1 md:flex">
         <Link to="/" className="px-2 text-lg font-semibold text-base-content">
-          OpenSEO
+          EchoSEO
         </Link>
         {projectId
           ? navGroups.map((entry) => {

@@ -398,7 +398,7 @@ export function createOpenSeoOAuthProvider(appFetch: AppFetch) {
     refreshTokenTTL: MCP_REFRESH_TOKEN_TTL_SECONDS,
     resourceMetadata: {
       scopes_supported: [...MCP_OAUTH_SCOPES],
-      resource_name: "OpenSEO MCP",
+      resource_name: "EchoSEO MCP",
     },
     tokenExchangeCallback: ({ props, requestedScope }) => {
       const accessTokenProps = withWorkersOAuthMcpScopes(props, requestedScope);

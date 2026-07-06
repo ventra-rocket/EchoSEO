@@ -192,7 +192,7 @@ export default {
           projectId: config.projectId,
           billingCustomer: {
             userId: "system",
-            userEmail: "system@openseo.so",
+            userEmail: "system@echoseo.ventrarocket.vn",
             organizationId: config.organizationId,
             projectId: config.projectId,
           },

@@ -37,8 +37,8 @@ export function SearchConsoleOnboardingStep() {
       {projectId ? <GscConnect projectId={projectId} /> : <Checking />}
 
       <p className="text-xs leading-relaxed text-base-content/55">
-        For now, Search Console data flows through the OpenSEO MCP. We're
-        building it into the OpenSEO app soon too.
+        For now, Search Console data flows through the EchoSEO MCP. We're
+        building it into the EchoSEO app soon too.
       </p>
     </div>
   );

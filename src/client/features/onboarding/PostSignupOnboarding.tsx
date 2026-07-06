@@ -72,7 +72,7 @@ export function PostSignupOnboarding({
         <div className="text-center space-y-3">
           <img
             src="/transparent-logo.png"
-            alt="OpenSEO"
+            alt="EchoSEO"
             className="mx-auto size-10 rounded-lg"
           />
           <h1 className="text-xl font-semibold">You’re in! 🎉</h1>
@@ -111,7 +111,7 @@ export function PostSignupOnboarding({
       <div className="text-center space-y-3">
         <img
           src="/transparent-logo.png"
-          alt="OpenSEO"
+          alt="EchoSEO"
           className="mx-auto size-10 rounded-lg"
         />
         <p className="text-xs font-medium uppercase tracking-wide text-base-content/50">
@@ -120,8 +120,8 @@ export function PostSignupOnboarding({
         <h1 className="text-xl font-semibold">
           {title ??
             (firstName
-              ? `Welcome to OpenSEO, ${firstName}!`
-              : "Welcome to OpenSEO!")}
+              ? `Welcome to EchoSEO, ${firstName}!`
+              : "Welcome to EchoSEO!")}
         </h1>
         <p className="text-sm text-base-content/60">
           {helperText ?? "A few quick answers to set things up."}
@@ -166,7 +166,7 @@ export function PostSignupOnboarding({
           />
         ) : step === 2 ? (
           <OnboardingChoiceGroup
-            title="How did you find OpenSEO?"
+            title="How did you find EchoSEO?"
             options={[...SOURCE_OPTIONS]}
             selectedValues={answers.source ? [answers.source] : []}
             onToggle={(source) => updateAnswers({ source })}
@@ -248,9 +248,9 @@ function McpRecommendation({
         <ArrowLeft className="size-4" />
         Back
       </button>
-      <h2 className="text-lg font-semibold">Set up OpenSEO MCP?</h2>
+      <h2 className="text-lg font-semibold">Set up EchoSEO MCP?</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-base-content/70">
-        The most powerful way to use OpenSEO — use AI to supercharge your SEO
+        The most powerful way to use EchoSEO — use AI to supercharge your SEO
         skills.
       </p>
 

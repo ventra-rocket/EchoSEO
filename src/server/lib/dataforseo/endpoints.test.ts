@@ -329,7 +329,7 @@ describe("DataForSEO SDK-backed endpoints", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchLlmResponse({
-      userPrompt: "What is OpenSEO?",
+      userPrompt: "What is EchoSEO?",
       modelSlug: "perplexity",
       modelName: "sonar",
       webSearch: false,
@@ -347,7 +347,7 @@ describe("DataForSEO SDK-backed endpoints", () => {
     ]);
     expect(parseDataforseoRequestBody(fetchMock.mock.calls[0]?.[1])).toEqual([
       {
-        user_prompt: "What is OpenSEO?",
+        user_prompt: "What is EchoSEO?",
         model_name: "sonar",
         web_search: false,
         max_output_tokens: 1024,

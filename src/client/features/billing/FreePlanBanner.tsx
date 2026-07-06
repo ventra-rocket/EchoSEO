@@ -66,7 +66,7 @@ function FreePlanBannerContent() {
     return (
       <BannerShell variant="error">
         You&rsquo;ve used all your credits. {creditsActionLink} to continue
-        using OpenSEO.
+        using EchoSEO.
       </BannerShell>
     );
   }
@@ -75,7 +75,7 @@ function FreePlanBannerContent() {
     return (
       <BannerShell variant="warning">
         You&rsquo;re running low on credits. {creditsActionLink} to keep using
-        OpenSEO.
+        EchoSEO.
       </BannerShell>
     );
   }
@@ -83,7 +83,7 @@ function FreePlanBannerContent() {
   if (isFreePlan) {
     return (
       <BannerShell variant="info">
-        We hope you&rsquo;re enjoying OpenSEO!{" "}
+        We hope you&rsquo;re enjoying EchoSEO!{" "}
         <Link
           to={SUBSCRIBE_ROUTE}
           search={{ upgrade: true }}

@@ -16,7 +16,7 @@ function DataforseoApiKeyHelpPage() {
               Set up your DataForSEO API key
             </h1>
             <p className="text-sm text-base-content/70">
-              OpenSEO needs the <code>DATAFORSEO_API_KEY</code> secret before
+              EchoSEO needs the <code>DATAFORSEO_API_KEY</code> secret before
               keyword, domain, and SEO data workflows can run.
             </p>
           </div>
@@ -62,7 +62,7 @@ function DataforseoApiKeyHelpPage() {
               <li>
                 In Cloudflare, go to <code>Compute</code> -&gt;{" "}
                 <code>Workers &amp; Pages</code>
-                and open your OpenSEO Worker.
+                and open your EchoSEO Worker.
               </li>
               <li>
                 Open <code>Settings</code>.

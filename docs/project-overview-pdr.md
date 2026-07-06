@@ -1,4 +1,4 @@
-# Ventra SEO — Product Definition & Requirements (PDR)
+# EchoSEO — Product Definition & Requirements (PDR)
 
 **Version:** 0.1 (foundation) · **Date:** 2026-07-03 · **Status:** Pre-fork
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` (+ 4 source reports)
@@ -7,7 +7,7 @@
 
 ## 1. Vision
 
-Ventra SEO is the **open, agent-native SEO platform**: a comprehensive, self-hostable alternative to Semrush/Ahrefs that pairs a polished dashboard with AI agents that execute real SEO work end-to-end and prove results against the user's own data — at bring-your-own-key cost.
+EchoSEO is the **open, agent-native SEO platform**: a comprehensive, self-hostable alternative to Semrush/Ahrefs that pairs a polished dashboard with AI agents that execute real SEO work end-to-end and prove results against the user's own data — at bring-your-own-key cost.
 
 **One-liner:** _The open SEO platform that doesn't just answer questions — it does the work and proves it against your own Search Console data._
 
@@ -19,7 +19,7 @@ Ventra SEO is the **open, agent-native SEO platform**: a comprehensive, self-hos
 
 ## 3. Differentiation (the moat)
 
-"Agent-native / MCP" alone is **not** a moat — Semrush, Ahrefs, and DataForSEO all ship read-only MCP servers. Ventra's defensible wedge:
+"Agent-native / MCP" alone is **not** a moat — Semrush, Ahrefs, and DataForSEO all ship read-only MCP servers. EchoSEO's defensible wedge:
 
 1. **Read-WRITE execution loop** — agents run keyword → brief → draft → on-page fix → GSC-monitored → refresh, not just retrieval. Incumbents won't hand agents write/publish access (it disintermediates their dashboards).
 2. **First-party + competitive data fusion** — combine the user's GSC clicks + GA4 conversions with DataForSEO's keyword/SERP universe in one agent context.
@@ -33,7 +33,7 @@ Ventra SEO is the **open, agent-native SEO platform**: a comprehensive, self-hos
 
 Primary buyer (decided): **prosumer, open-core**. Agencies are a V1 expansion, not the launch wedge.
 
-| Persona                                    | Who                                                | Jobs-to-be-done                                          | Ventra hook                                            |
+| Persona                                    | Who                                                | Jobs-to-be-done                                          | EchoSEO hook                                           |
 | ------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
 | **Indie SEO / founder** (primary)          | Solo operators, bootstrappers, technical marketers | Run full SEO without a $150/mo suite; automate the grind | Free self-host, BYO-key, agents do the repetitive work |
 | **Developer / prosumer** (primary)         | Devs who own their sites, MCP/agent users          | SEO inside their agent/IDE workflow; own their data      | MCP server + skills; self-hostable; open source        |
@@ -75,7 +75,7 @@ Owning a backlink crawl/index, proxy-fleet SERP scraping, PPC/paid-media managem
 - **Auth:** `AUTH_MODE` = `local_noauth` | `cloudflare_access` | `hosted` (Better Auth + org).
 - **Skills:** `.agents/skills/` — 7 portable SKILL.md agent skills.
 
-### Ventra extensions
+### EchoSEO extensions
 
 - **Provider abstraction** over the DataForSEO facade (swap/add raw-SERP providers behind one interface).
 - **i18n layer** (VN + EN) wired into TanStack Start — net-new; string extraction + VN translations.
@@ -83,7 +83,7 @@ Owning a backlink crawl/index, proxy-fleet SERP scraping, PPC/paid-media managem
 - **Content-optimization engine** (V1): briefs, entity/NLP, content score, AI writing, internal linking.
 - **Read-write agent loop** (V1): autonomous keyword→brief→draft→fix→monitor with guardrails + eval harness.
 - **Managed cloud + PAYG metering** (V1): keep/extend Autumn-style metering behind hosted flag.
-- **Rebrand:** OpenSEO → Ventra across UI, MCP tool descriptions, skills, wrangler names, `web/` site.
+- **Rebrand:** OpenSEO → EchoSEO across UI, MCP tool descriptions, skills, wrangler names, `web/` site.
 
 ### Strip / gate for open-core self-host
 
@@ -92,7 +92,7 @@ PostHog, Reddit-attribution, Loops, and hosted-only billing are gated behind hos
 ## 8. Data Layer
 
 ```
-Ventra Data Layer (provider-abstraction interface)
+EchoSEO Data Layer (provider-abstraction interface)
 ├── Paid aggregator (primary):  DataForSEO → SERP, Keywords, Labs, Backlinks, On-Page
 ├── First-party fusion (free):  GSC + GA4 + Bing Webmaster (user OAuth)
 └── Optional raw-SERP swap:     ScaleSERP / Bright Data (behind same interface)

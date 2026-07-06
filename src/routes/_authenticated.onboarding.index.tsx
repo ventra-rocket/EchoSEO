@@ -175,7 +175,7 @@ function OnboardingFlow({
       title={isExistingUser ? "Tell us about your work" : undefined}
       helperText={
         isExistingUser
-          ? "A little context helps us decide where to focus. You can also reach me anytime at ben@openseo.so."
+          ? "A little context helps us decide where to focus. You can also reach me anytime at ventrarocket.work@gmail.com."
           : undefined
       }
       step={step}

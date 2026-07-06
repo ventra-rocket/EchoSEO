@@ -19,7 +19,7 @@ import {
 } from "@/shared/billing";
 import { captureRedditConversionEvent } from "@/serverFunctions/redditConversions";
 
-const SUPPORT_EMAIL = "ben@openseo.so";
+const SUPPORT_EMAIL = "ventrarocket.work@gmail.com";
 
 const PLAN_FEATURES = [
   "Keyword research, backlinks, rank tracking, and site audits",
@@ -147,7 +147,7 @@ function SubscribePageContent() {
       <div className="w-full max-w-xs space-y-4 text-center">
         <img
           src="/transparent-logo.png"
-          alt="OpenSEO"
+          alt="EchoSEO"
           className="mx-auto size-10 rounded-lg"
         />
         <h1 className="text-xl font-semibold">
@@ -174,7 +174,7 @@ function SubscribePageContent() {
         <div className="text-center space-y-3">
           <img
             src="/transparent-logo.png"
-            alt="OpenSEO"
+            alt="EchoSEO"
             className="mx-auto size-10 rounded-lg"
           />
           <h1 className="text-xl font-semibold">Billing unavailable</h1>
@@ -233,15 +233,15 @@ function SubscribePageContent() {
       <div className="text-center space-y-3">
         <img
           src="/transparent-logo.png"
-          alt="OpenSEO"
+          alt="EchoSEO"
           className="mx-auto size-10 rounded-lg"
         />
         <h1 className="text-xl font-semibold">
           {isUpgradeFlow
             ? "Upgrade your plan"
             : firstName
-              ? `Welcome to OpenSEO, ${firstName}!`
-              : "Welcome to OpenSEO!"}
+              ? `Welcome to EchoSEO, ${firstName}!`
+              : "Welcome to EchoSEO!"}
         </h1>
         <p className="text-sm text-base-content/60">
           SEO on your terms. All your SEO tools in one place at a fair price.

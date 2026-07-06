@@ -4,7 +4,7 @@ import type { ToolExtra } from "@/server/mcp/context";
 import { MCP_AUTH_CONTEXT_PROP } from "@/server/mcp/context";
 
 // Verifies that each tool renders its actual row data into the text content
-// block (not just a count), across the tools whose data comes from OpenSEO
+// block (not just a count), across the tools whose data comes from EchoSEO
 // services rather than the DataForSEO client. Guards against a column wired to
 // the wrong field, which would render a table of only "—".
 

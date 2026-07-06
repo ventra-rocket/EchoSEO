@@ -13,11 +13,11 @@ export function BacklinksSetupGate({
   return (
     <AccessGate
       title="Enable Backlinks"
-      bodyText="Backlinks are not enabled for your DataForSEO account yet. You can enable them in DataForSEO, or use managed OpenSEO for long-term backlinks access at $10/month."
+      bodyText="Backlinks are not enabled for your DataForSEO account yet. You can enable them in DataForSEO, or use managed EchoSEO for long-term backlinks access at $10/month."
       helperText={
         <>
           We are also planning a Backlinks API so self-hosted apps can use
-          OpenSEO's backlinks data directly. Until then,{" "}
+          EchoSEO's backlinks data directly. Until then,{" "}
           <InlineManagedOpenSeoLink />.
         </>
       }
@@ -95,11 +95,11 @@ function InlineManagedOpenSeoLink() {
   return (
     <a
       className="underline underline-offset-2 hover:text-base-content/70"
-      href="https://openseo.so/?utm_source=self_hosted_app&utm_medium=access_gate&utm_campaign=backlinks"
+      href="https://echoseo.ventrarocket.vn/?utm_source=self_hosted_app&utm_medium=access_gate&utm_campaign=backlinks"
       target="_blank"
       rel="noreferrer"
     >
-      use managed OpenSEO
+      use managed EchoSEO
     </a>
   );
 }

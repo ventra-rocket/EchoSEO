@@ -203,12 +203,12 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
 
     const serverInfo = client.getServerVersion();
     expect(serverInfo).toMatchObject({
-      name: "OpenSEO MCP",
-      title: "OpenSEO",
-      websiteUrl: "https://openseo.so",
+      name: "EchoSEO MCP",
+      title: "EchoSEO",
+      websiteUrl: "https://echoseo.ventrarocket.vn",
       icons: [
         {
-          src: "https://openseo.so/android-chrome-512x512.png",
+          src: "https://echoseo.ventrarocket.vn/android-chrome-512x512.png",
           mimeType: "image/png",
           sizes: ["512x512"],
         },

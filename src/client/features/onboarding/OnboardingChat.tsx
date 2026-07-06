@@ -89,7 +89,7 @@ function SiteForm({ projectId }: { projectId: string }) {
         <div className="space-y-3 text-center">
           <img
             src="/transparent-logo.png"
-            alt="OpenSEO"
+            alt="EchoSEO"
             className="mx-auto size-10 rounded-lg"
           />
           <h1 className="text-xl font-semibold">Tell us about your website.</h1>

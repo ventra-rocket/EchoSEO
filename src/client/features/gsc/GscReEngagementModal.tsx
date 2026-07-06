@@ -106,7 +106,7 @@ export function GscReEngagementModal({
           New: Connect Google Search Console
         </h2>
         <p className="text-sm text-base-content/70">
-          Bring your real clicks, impressions, and rankings into OpenSEO and
+          Bring your real clicks, impressions, and rankings into EchoSEO and
           query them from Claude or Codex over MCP. It never uses credits.
         </p>
       </div>

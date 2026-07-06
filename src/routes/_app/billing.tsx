@@ -196,7 +196,7 @@ function BillingPageContent() {
               </div>
               <ul className="space-y-1.5">
                 {[
-                  "Access to all OpenSEO features",
+                  "Access to all EchoSEO features",
                   "Includes $10.00 of Usage Credits each month",
                 ].map((item) => (
                   <li

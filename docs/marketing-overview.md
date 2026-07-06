@@ -1,4 +1,4 @@
-# Ventra SEO — Marketing & GTM Overview
+# EchoSEO — Marketing & GTM Overview
 
 **Version:** 0.1 · **Date:** 2026-07-03 · **Status:** Foundation
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` · Companion: `docs/project-overview-pdr.md`
@@ -9,7 +9,7 @@
 
 **Category:** Open, agent-native SEO platform (self-hostable alternative to Semrush/Ahrefs).
 
-**Positioning statement:** _For indie SEOs, founders, and developers who resent paying $150/mo for a bloated suite, Ventra SEO is the open-source, agent-native platform that does the SEO work — and proves it against your own Search Console data — at bring-your-own-key cost._
+**Positioning statement:** _For indie SEOs, founders, and developers who resent paying $150/mo for a bloated suite, EchoSEO is the open-source, agent-native platform that does the SEO work — and proves it against your own Search Console data — at bring-your-own-key cost._
 
 **Message hierarchy:**
 
@@ -23,7 +23,7 @@
 
 ## 2. Differentiation vs alternatives
 
-|                                   | Semrush / Ahrefs | DataForSEO MCP | OpenSEO (base) | **Ventra**                              |
+|                                   | Semrush / Ahrefs | DataForSEO MCP | OpenSEO (base) | **EchoSEO**                             |
 | --------------------------------- | ---------------- | -------------- | -------------- | --------------------------------------- |
 | Agent access                      | Read-only MCP    | Read-only API  | Read-only MCP  | **Read-WRITE loop**                     |
 | First-party data fusion (GSC/GA4) | Limited          | No             | GSC only       | **GSC+GA4+Bing fused in agent context** |
@@ -32,7 +32,7 @@
 | Bilingual VN/EN                   | EN               | —              | EN             | **VN + EN**                             |
 | Balanced dashboard + agent        | Dashboard        | API only       | Agent-leaning  | **Both first-class**                    |
 
-**The wedge:** incumbents structurally won't give agents write/publish access (it disintermediates their dashboards). Ventra, agent-first and open, owns the autonomous execution loop.
+**The wedge:** incumbents structurally won't give agents write/publish access (it disintermediates their dashboards). EchoSEO, agent-first and open, owns the autonomous execution loop.
 
 ## 3. Target segments (priority order)
 
@@ -43,15 +43,15 @@
 
 ## 4. Business model — open-core hybrid
 
-| Tier                                  | What                                                                                | Purpose                                     | Data-cost risk                              |
-| ------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------- |
-| **Free — self-host (BYO-key)**        | Full app, user's own DataForSEO + first-party OAuth                                 | Adoption, community, trust, skill ecosystem | ~None (user pays data)                      |
-| **Managed Cloud — PAYG credits** (V1) | Ventra hosts + manages DataForSEO + OAuth; credits at **20–40% transparent markup** | Primary revenue                             | Contained via credit caps / prepaid wallets |
-| **Team / Pro seats** (V1+)            | Collaboration, shared skill libraries, agent orchestration/scheduling, RBAC         | Predictable ARR                             | Decoupled                                   |
+| Tier                                  | What                                                                                 | Purpose                                     | Data-cost risk                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------- |
+| **Free — self-host (BYO-key)**        | Full app, user's own DataForSEO + first-party OAuth                                  | Adoption, community, trust, skill ecosystem | ~None (user pays data)                      |
+| **Managed Cloud — PAYG credits** (V1) | EchoSEO hosts + manages DataForSEO + OAuth; credits at **20–40% transparent markup** | Primary revenue                             | Contained via credit caps / prepaid wallets |
+| **Team / Pro seats** (V1+)            | Collaboration, shared skill libraries, agent orchestration/scheduling, RBAC          | Predictable ARR                             | Decoupled                                   |
 
 **Guardrails:** keep markup **visible** (anti-lock-in brand); never gate raw data behind seats; keep first-party OAuth strictly user-scoped (don't resell first-party data). **Verify DataForSEO multi-tenant resale ToS before launching the managed tier.**
 
-**Pricing anchors (context):** Ubersuggest $12/mo · Moz $99/mo · Semrush $139.95/mo. Ventra's free self-host + transparent PAYG is a deliberate disruptor position.
+**Pricing anchors (context):** Ubersuggest $12/mo · Moz $99/mo · Semrush $139.95/mo. EchoSEO's free self-host + transparent PAYG is a deliberate disruptor position.
 
 ## 5. Go-to-market
 
@@ -60,7 +60,7 @@
 **Channels (priority):**
 
 1. **Open-source / GitHub** — the product _is_ the top of funnel. Great README, one-click Cloudflare deploy, `llms.txt`, skill marketplace.
-2. **Content & SEO (dogfood)** — rank for "open source SEO tool", "Semrush alternative", "self-hosted rank tracker", "AI SEO agent", "MCP SEO". Ventra ranks itself using itself → proof.
+2. **Content & SEO (dogfood)** — rank for "open source SEO tool", "Semrush alternative", "self-hosted rank tracker", "AI SEO agent", "MCP SEO". EchoSEO ranks itself using itself → proof.
 3. **AI-search / GEO visibility** — get cited in ChatGPT/Perplexity/Google AI Overviews for those queries (our own differentiator, applied to us).
 4. **Developer communities** — MCP/agent ecosystems, Claude/OpenClaw/Hermes, indie-hacker + SEO subreddits/Discords.
 5. **Vietnamese market** — VN-language content + community for the bilingual wedge.
@@ -87,13 +87,13 @@
 1. **Agent-native SEO** — how autonomous SEO workflows actually work; MCP for SEO.
 2. **Open / self-hosted SEO** — cost breakdowns, "own your SEO data", Semrush/Ahrefs alternatives.
 3. **AI-search / GEO** — getting cited in ChatGPT/Perplexity/AI Overviews.
-4. **Practical SEO how-tos** — dogfood tutorials using Ventra.
+4. **Practical SEO how-tos** — dogfood tutorials using EchoSEO.
 5. **Vietnamese-market SEO** — localized guides (bilingual wedge).
 
 ## 8. Open questions for marketing
 
 - Willingness-to-pay: will prosumers/agencies pay a 20–40% managed markup vs free self-host? _(Validate with pricing interviews before committing.)_
-- Brand: is "Ventra SEO" positioned global-first with VN as a wedge, or VN-first with global reach? (Bilingual from day one supports either — decide the lead narrative per campaign.)
+- Brand: is "EchoSEO" positioned global-first with VN as a wedge, or VN-first with global reach? (Bilingual from day one supports either — decide the lead narrative per campaign.)
 - Which launch surface first (Product Hunt vs HN vs GitHub-trending push)?
 
 ## 9. Suggested next marketing actions

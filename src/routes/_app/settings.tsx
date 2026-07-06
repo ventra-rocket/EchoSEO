@@ -95,7 +95,7 @@ function SettingsPage() {
             </h2>
             <div className="flex items-start justify-between gap-6">
               <div>
-                <p className="text-sm">Help improve OpenSEO</p>
+                <p className="text-sm">Help improve EchoSEO</p>
                 <p className="mt-1 text-sm text-base-content/60">
                   Share analytics and usage data.
                 </p>

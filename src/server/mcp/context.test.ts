@@ -18,7 +18,7 @@ const mcpContext = {
 };
 
 describe("withWorkersOAuthMcpScopes", () => {
-  it("stores the OpenSEO MCP context in Workers OAuth props", () => {
+  it("stores the EchoSEO MCP context in Workers OAuth props", () => {
     const props = createWorkersOAuthMcpProps(mcpContext);
 
     expect(workersOAuthMcpPropsSchema.parse(props)).toEqual({
