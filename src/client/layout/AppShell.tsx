@@ -1,6 +1,8 @@
 import * as React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
+import { LanguageSwitcher } from "@/client/i18n/LanguageSwitcher";
 import {
   ChevronDown,
   CircleHelp,
@@ -175,6 +177,7 @@ function TopNav({
   pathname: string;
   onOpenDrawer: () => void;
 }) {
+  const intl = useIntl();
   const navGroups = projectId ? getProjectNavGroups(projectId) : [];
   const isSupportActive = pathname === SUPPORT_PATH;
 
@@ -185,7 +188,7 @@ function TopNav({
           <button
             type="button"
             className="btn btn-square btn-ghost"
-            aria-label="Toggle sidebar"
+            aria-label={intl.formatMessage({ id: "nav.toggleSidebar" })}
             aria-expanded={drawerOpen}
             onClick={onOpenDrawer}
           >
@@ -204,7 +207,12 @@ function TopNav({
         {projectId
           ? navGroups.map((entry) => {
               if (entry.type === "standalone") {
-                const { icon: Icon, matchSegment, ...linkProps } = entry.item;
+                const {
+                  icon: Icon,
+                  matchSegment,
+                  labelId,
+                  ...linkProps
+                } = entry.item;
                 const isActive = pathname.includes(matchSegment);
                 return (
                   <Link
@@ -217,7 +225,7 @@ function TopNav({
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    {entry.item.label}
+                    {intl.formatMessage({ id: labelId })}
                   </Link>
                 );
               }
@@ -228,7 +236,7 @@ function TopNav({
               );
 
               return (
-                <div key={entry.label} className="dropdown dropdown-hover">
+                <div key={entry.labelId} className="dropdown dropdown-hover">
                   <button
                     type="button"
                     tabIndex={0}
@@ -239,7 +247,7 @@ function TopNav({
                     }`}
                   >
                     <GroupIcon className="h-4 w-4" />
-                    {entry.label}
+                    {intl.formatMessage({ id: entry.labelId })}
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </button>
                   <ul
@@ -247,7 +255,12 @@ function TopNav({
                     className="dropdown-content z-20 menu w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
                   >
                     {entry.items.map((item) => {
-                      const { icon: Icon, matchSegment, ...linkProps } = item;
+                      const {
+                        icon: Icon,
+                        matchSegment,
+                        labelId,
+                        ...linkProps
+                      } = item;
                       const isActive = pathname.includes(matchSegment);
                       return (
                         <li key={linkProps.to}>
@@ -267,7 +280,7 @@ function TopNav({
                             }}
                           >
                             <Icon className="h-4 w-4" />
-                            {item.label}
+                            {intl.formatMessage({ id: labelId })}
                           </Link>
                         </li>
                       );
@@ -282,7 +295,11 @@ function TopNav({
       <div className="flex-1" />
 
       <div className="hidden flex-none items-center gap-2 md:flex">
-        <div className="tooltip tooltip-bottom" data-tip="Help & Community">
+        <LanguageSwitcher />
+        <div
+          className="tooltip tooltip-bottom"
+          data-tip={intl.formatMessage({ id: "account.help" })}
+        >
           <Link
             to={SUPPORT_PATH}
             className={`btn btn-ghost btn-circle btn-sm ${
@@ -308,6 +325,7 @@ function TopNav({
 }
 
 function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
+  const intl = useIntl();
   const { data: session } = useSession();
   const isHostedMode = isHostedClientAuthMode();
   const email = session?.user?.email;
@@ -321,7 +339,7 @@ function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
           type="button"
           tabIndex={0}
           className={`btn btn-ghost btn-circle ${mobileOnly ? "" : "hover:bg-base-200/80"}`}
-          aria-label="Open account menu"
+          aria-label={intl.formatMessage({ id: "account.menuLabel" })}
         >
           <User className="h-5 w-5" />
         </button>
@@ -340,7 +358,7 @@ function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
             <li>
               <Link to={SUPPORT_PATH} className="flex items-center gap-2">
                 <CircleHelp className="h-4 w-4" />
-                Help & Community
+                {intl.formatMessage({ id: "account.help" })}
               </Link>
             </li>
           ) : null}
@@ -348,14 +366,14 @@ function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
             <li>
               <Link to={BILLING_ROUTE} className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
-                Billing
+                {intl.formatMessage({ id: "account.billing" })}
               </Link>
             </li>
           ) : null}
           <li>
             <Link to="/settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Settings
+              {intl.formatMessage({ id: "account.settings" })}
             </Link>
           </li>
           {isHostedMode && email ? (
@@ -365,7 +383,7 @@ function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
                 className="text-error"
                 onClick={handleSignOut}
               >
-                Sign out
+                {intl.formatMessage({ id: "account.signOut" })}
               </button>
             </li>
           ) : null}

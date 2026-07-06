@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { X } from "lucide-react";
+import { useIntl } from "react-intl";
 import { getProjectNavGroups } from "@/client/navigation/items";
 import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
 
@@ -10,6 +11,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
+  const intl = useIntl();
   const navGroups = getProjectNavGroups(projectId);
 
   return (
@@ -21,7 +23,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
           <button
             onClick={onClose}
             className="btn btn-ghost btn-sm btn-circle"
-            aria-label="Close sidebar"
+            aria-label={intl.formatMessage({ id: "nav.closeSidebar" })}
           >
             <X className="h-5 w-5" />
           </button>
@@ -41,7 +43,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
       <nav className="flex-1 py-2 pl-3 overflow-y-auto">
         {navGroups.map((entry) => {
           if (entry.type === "standalone") {
-            const { icon: Icon, ...linkProps } = entry.item;
+            const { icon: Icon, labelId, ...linkProps } = entry.item;
             return (
               <Link
                 key={linkProps.to}
@@ -57,7 +59,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                       <div className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-primary" />
                     ) : null}
                     <Icon className="h-5 w-5" />
-                    {entry.item.label}
+                    {intl.formatMessage({ id: labelId })}
                   </>
                 )}
               </Link>
@@ -65,12 +67,12 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
           }
 
           return (
-            <div key={entry.label} className="mb-2">
+            <div key={entry.labelId} className="mb-2">
               <div className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-base-content/40">
-                {entry.label}
+                {intl.formatMessage({ id: entry.labelId })}
               </div>
               {entry.items.map((item) => {
-                const { icon: Icon, ...linkProps } = item;
+                const { icon: Icon, labelId, ...linkProps } = item;
                 return (
                   <Link
                     key={linkProps.to}
@@ -86,7 +88,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                           <div className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-primary" />
                         ) : null}
                         <Icon className="h-5 w-5" />
-                        {item.label}
+                        {intl.formatMessage({ id: labelId })}
                       </>
                     )}
                   </Link>

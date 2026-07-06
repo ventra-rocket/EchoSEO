@@ -27,6 +27,7 @@ import {
   unmarkRedditSignupConversion,
 } from "@/client/lib/reddit-attribution";
 import { NotFound } from "@/client/components/NotFound";
+import { I18nProvider } from "@/client/i18n/I18nProvider";
 import appCss from "@/client/styles/app.css?url";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
@@ -165,27 +166,32 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ClientOnly>
-          <QueryClientProvider client={queryClient}>
-            <>
-              <PostHogBootstrap />
-              {children}
-              <ExportToSheetsModal />
-              <Toaster position="bottom-right" mobileOffset={{ bottom: 100 }} />
-              {showDevtools ? (
-                <TanStackDevtools
-                  config={{ position: "bottom-right" }}
-                  eventBusConfig={{ connectToServerBus: true }}
-                  plugins={[
-                    {
-                      name: "TanStack Router",
-                      render: <TanStackRouterDevtoolsPanel />,
-                      defaultOpen: true,
-                    },
-                  ]}
+          <I18nProvider>
+            <QueryClientProvider client={queryClient}>
+              <>
+                <PostHogBootstrap />
+                {children}
+                <ExportToSheetsModal />
+                <Toaster
+                  position="bottom-right"
+                  mobileOffset={{ bottom: 100 }}
                 />
-              ) : null}
-            </>
-          </QueryClientProvider>
+                {showDevtools ? (
+                  <TanStackDevtools
+                    config={{ position: "bottom-right" }}
+                    eventBusConfig={{ connectToServerBus: true }}
+                    plugins={[
+                      {
+                        name: "TanStack Router",
+                        render: <TanStackRouterDevtoolsPanel />,
+                        defaultOpen: true,
+                      },
+                    ]}
+                  />
+                ) : null}
+              </>
+            </QueryClientProvider>
+          </I18nProvider>
         </ClientOnly>
         <Scripts />
       </body>

@@ -5,73 +5,86 @@ import {
   ClipboardCheck,
   Globe,
   Link2,
+  type LucideIcon,
   MessageSquare,
   Search,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
 import { linkOptions } from "@tanstack/react-router";
+import type { MessageId } from "@/client/i18n/messages";
+
+// Nav labels are message IDs resolved at the render site with react-intl, so the
+// sidebar/topbar are bilingual. `as const satisfies` keeps `to`/`matchSegment`
+// as literals (needed by TanStack Router) while type-checking every `labelId`
+// against the message catalog — a typo here is a build error.
+type NavItemDef = {
+  to: string;
+  labelId: MessageId;
+  icon: LucideIcon;
+  matchSegment: string;
+};
 
 const projectNavItems = [
   {
-    to: "/p/$projectId/keywords" as const,
-    label: "Keyword Research",
+    to: "/p/$projectId/keywords",
+    labelId: "nav.keywordResearch",
     icon: Search,
     matchSegment: "/keywords",
   },
   {
-    to: "/p/$projectId/saved" as const,
-    label: "Saved Keywords",
+    to: "/p/$projectId/saved",
+    labelId: "nav.savedKeywords",
     icon: Bookmark,
     matchSegment: "/saved",
   },
   {
-    to: "/p/$projectId/rank-tracking" as const,
-    label: "Rank Tracking",
+    to: "/p/$projectId/rank-tracking",
+    labelId: "nav.rankTracking",
     icon: TrendingUp,
     matchSegment: "/rank-tracking",
   },
   {
-    to: "/p/$projectId/search-performance" as const,
-    label: "Search Performance",
+    to: "/p/$projectId/search-performance",
+    labelId: "nav.searchPerformance",
     icon: BarChart3,
     matchSegment: "/search-performance",
   },
   {
-    to: "/p/$projectId/domain" as const,
-    label: "Domain Overview",
+    to: "/p/$projectId/domain",
+    labelId: "nav.domainOverview",
     icon: Globe,
     matchSegment: "/domain",
   },
   {
-    to: "/p/$projectId/backlinks" as const,
-    label: "Backlinks",
+    to: "/p/$projectId/backlinks",
+    labelId: "nav.backlinks",
     icon: Link2,
     matchSegment: "/backlinks",
   },
   {
-    to: "/p/$projectId/audit" as const,
-    label: "Site Audit",
+    to: "/p/$projectId/audit",
+    labelId: "nav.siteAudit",
     icon: ClipboardCheck,
     matchSegment: "/audit",
   },
   {
-    to: "/p/$projectId/brand-lookup" as const,
-    label: "Brand Lookup",
+    to: "/p/$projectId/brand-lookup",
+    labelId: "nav.brandLookup",
     icon: Sparkles,
     matchSegment: "/brand-lookup",
   },
   {
-    to: "/p/$projectId/prompt-explorer" as const,
-    label: "Prompt Explorer",
+    to: "/p/$projectId/prompt-explorer",
+    labelId: "nav.promptExplorer",
     icon: MessageSquare,
     matchSegment: "/prompt-explorer",
   },
-] as const;
+] as const satisfies readonly NavItemDef[];
 
 const aiNavItem = linkOptions({
   to: "/ai" as const,
-  label: "AI & MCP",
+  labelId: "nav.aiMcp" satisfies MessageId,
   icon: Bot,
   matchSegment: "/ai",
 });
@@ -93,7 +106,7 @@ export function getProjectNavGroups(projectId: string) {
   return [
     {
       type: "group" as const,
-      label: "Keywords",
+      labelId: "nav.group.keywords" satisfies MessageId,
       icon: Search,
       matchSegments: ["/keywords", "/saved", "/rank-tracking"],
       items: [
@@ -108,7 +121,7 @@ export function getProjectNavGroups(projectId: string) {
     },
     {
       type: "group" as const,
-      label: "Domain",
+      labelId: "nav.group.domain" satisfies MessageId,
       icon: Globe,
       matchSegments: ["/domain", "/backlinks", "/audit"],
       items: [
@@ -119,7 +132,7 @@ export function getProjectNavGroups(projectId: string) {
     },
     {
       type: "group" as const,
-      label: "AI Visibility",
+      labelId: "nav.group.aiVisibility" satisfies MessageId,
       icon: Sparkles,
       matchSegments: ["/brand-lookup", "/prompt-explorer"],
       items: [bySegment("/brand-lookup"), bySegment("/prompt-explorer")],
