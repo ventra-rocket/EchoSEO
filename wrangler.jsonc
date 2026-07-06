@@ -7,6 +7,12 @@
   "observability": {
     "enabled": true,
   },
+  // Secure default: validate Cloudflare Access JWTs. The Access app + allow
+  // policy live in the ventrarocket Zero Trust org; POLICY_AUD and TEAM_DOMAIN
+  // are set as Worker secrets.
+  "vars": {
+    "AUTH_MODE": "cloudflare_access",
+  },
   // EchoSEO deploys to its own zone (ventrarocket.vn) as a custom domain.
   // workers_dev is disabled so deploys don't require a workers.dev subdomain.
   "routes": [{ "pattern": "echoseo.ventrarocket.vn", "custom_domain": true }],
