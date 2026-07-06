@@ -7,13 +7,10 @@
   "observability": {
     "enabled": true,
   },
-  // Uncomment when deploying to the openseo.so Cloudflare account. Self-hosters
-  // should leave this commented (or replace with their own zone) — otherwise
-  // `wrangler deploy` fails with "Could not find zone for app.openseo.so".
-  // "routes": [
-  //   { "pattern": "app.openseo.so", "custom_domain": true },
-  //   { "pattern": "www.app.openseo.so", "custom_domain": true },
-  // ],
+  // EchoSEO deploys to its own zone (ventrarocket.vn) as a custom domain.
+  // workers_dev is disabled so deploys don't require a workers.dev subdomain.
+  "routes": [{ "pattern": "echoseo.ventrarocket.vn", "custom_domain": true }],
+  "workers_dev": false,
   "workflows": [
     {
       "name": "site-audit-workflow",
@@ -49,18 +46,18 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "4abd52f3f2c549ac83cc2cb4ceec8620",
+      "id": "056fb7db45e34abeafb0840fd7505755",
     },
     {
       "binding": "OAUTH_KV",
-      "id": "bd1759494309474a9b423b029967b0db",
+      "id": "e159e65cfee3497baa826e9982bd73b9",
     },
   ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "open-seo",
-      "database_id": "37bee90a-e1aa-404f-b01e-b0d1d479bda1",
+      "database_id": "cc386283-18b3-4b19-b4f6-a9954c5d0594",
       "migrations_dir": "drizzle",
     },
   ],
