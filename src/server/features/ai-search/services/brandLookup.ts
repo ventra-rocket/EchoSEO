@@ -1,6 +1,9 @@
 import { waitUntil } from "cloudflare:workers";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import {
+  createSeoDataProvider,
+  type SeoDataProvider,
+} from "@/server/lib/seo-data";
 import {
   buildLlmTarget,
   CHATGPT_LANGUAGE_CODE,
@@ -82,7 +85,7 @@ export async function getBrandLookup(
     };
   }
 
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
 
   // Settle each platform independently so a failure in one doesn't discard the
   // other. Keep the metered DataForSEO calls sequenced: in hosted mode each
@@ -170,7 +173,7 @@ async function fetchPlatformData(
   platform: LlmPlatform,
   detected: ReturnType<typeof detectTarget>,
   input: PlatformFetchInput,
-  dataforseo: ReturnType<typeof createDataforseoClient>,
+  dataforseo: SeoDataProvider,
 ): Promise<PlatformBundle> {
   const target = buildLlmTarget({
     type: detected.type,
@@ -245,7 +248,7 @@ async function fetchCrossAggregated(
   detected: ReturnType<typeof detectTarget>,
   competitors: CompetitorGroup[],
   input: PlatformFetchInput,
-  dataforseo: ReturnType<typeof createDataforseoClient>,
+  dataforseo: SeoDataProvider,
 ): Promise<CrossOutcome[]> {
   const groups = [
     {

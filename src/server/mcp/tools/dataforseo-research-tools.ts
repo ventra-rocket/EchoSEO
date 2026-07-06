@@ -1,10 +1,10 @@
 /* eslint-disable max-lines */
 import { z } from "zod";
 import {
-  createDataforseoClient,
   type AdsKeywordItem,
   type KeywordOverviewItem,
 } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import { buildProjectMeta } from "@/server/mcp/context";
 import { mcpResponse } from "@/server/mcp/formatters";
@@ -606,7 +606,7 @@ export const getRankedKeywordsTool = {
     },
   },
   handler: withMcpProjectAuth(async (args: GetRankedKeywordsArgs, context) => {
-    const client = createDataforseoClient(context.billing);
+    const client = createSeoDataProvider(context.billing);
     const targetIsPage = /^https?:\/\//.test(args.target);
     const keywords = await client.domain.rankedKeywords({
       target: args.target,
@@ -663,7 +663,7 @@ export const searchLocalBusinessesTool = {
   },
   handler: withMcpProjectAuth(
     async (args: SearchLocalBusinessesArgs, context) => {
-      const client = createDataforseoClient(context.billing);
+      const client = createSeoDataProvider(context.billing);
       const businesses = await client.business.businessListings({
         categories: args.categories,
         title: args.query,
@@ -703,7 +703,7 @@ export const getLocalSerpResultsTool = {
   },
   handler: withMcpProjectAuth(
     async (args: GetLocalSerpResultsArgs, context) => {
-      const client = createDataforseoClient(context.billing);
+      const client = createSeoDataProvider(context.billing);
       const results = await client.serp.local({
         keyword: args.keyword,
         locationCoordinate: formatLocalSerpCoordinate(args.near),
@@ -746,7 +746,7 @@ export const getGoogleBusinessQuestionsTool = {
   },
   handler: withMcpProjectAuth(
     async (args: GetGoogleBusinessQuestionsArgs, context) => {
-      const client = createDataforseoClient(context.billing);
+      const client = createSeoDataProvider(context.billing);
       const questions = await client.business.questionsAnswers({
         keyword: args.keyword,
         locationCoordinate: formatQuestionsAnswersCoordinate(args.near),
@@ -786,7 +786,7 @@ export const findSerpCompetitorsTool = {
   },
   handler: withMcpProjectAuth(
     async (args: FindSerpCompetitorsArgs, context) => {
-      const client = createDataforseoClient(context.billing);
+      const client = createSeoDataProvider(context.billing);
       const competitors = await client.labs.serpCompetitors({
         keywords: args.keywords,
         locationCode: resolveMarketLocationCode(args.market),
@@ -843,7 +843,7 @@ export const getKeywordMetricsTool = {
     },
   },
   handler: withMcpProjectAuth(async (args: GetKeywordMetricsArgs, context) => {
-    const client = createDataforseoClient(context.billing);
+    const client = createSeoDataProvider(context.billing);
     const locationCode = args.locationCode ?? DEFAULT_LOCATION_CODE;
     const languageCode = args.languageCode ?? DEFAULT_LANGUAGE_CODE;
     const normalized =

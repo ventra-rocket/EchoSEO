@@ -1,6 +1,9 @@
 import { KeywordResearchRepository } from "@/server/features/keywords/repositories/KeywordResearchRepository";
 import { normalizeIntent } from "@/server/features/keywords/services/research/helpers";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import {
+  createSeoDataProvider,
+  type SeoDataProvider,
+} from "@/server/lib/seo-data";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import type { KeywordIntent, MonthlySearch } from "@/types/keywords";
 import type { RefreshSavedKeywordMetricsInput } from "@/types/schemas/keywords";
@@ -41,7 +44,7 @@ type RefreshedMetric = {
 // keyword. Labs covers most countries; the rest fall back to Google Ads, which
 // carries volume/CPC/competition but no difficulty or intent.
 async function fetchBatchMetrics(
-  client: ReturnType<typeof createDataforseoClient>,
+  client: SeoDataProvider,
   request: { keywords: string[]; locationCode: number; languageCode: string },
   useGoogleAds: boolean,
 ): Promise<Map<string, RefreshedMetric>> {
@@ -95,7 +98,7 @@ export async function refreshSavedKeywordMetrics(
 
   if (rows.length === 0) return { updated: 0 };
 
-  const client = createDataforseoClient(billingCustomer);
+  const client = createSeoDataProvider(billingCustomer);
   let updated = 0;
 
   // Group by (locationCode, languageCode) so each DataForSEO call is homogeneous.

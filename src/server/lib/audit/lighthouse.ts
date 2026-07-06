@@ -1,6 +1,6 @@
 import { detectUrlTemplate } from "./url-utils";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import type { LighthouseResult, LighthouseStrategy } from "./types";
 import { putTextToR2 } from "@/server/lib/r2";
 
@@ -21,7 +21,7 @@ async function fetchLighthouseResult(
   billingCustomer: BillingCustomerContext,
 ): Promise<LighthouseFetchResult> {
   let lastError: Error | null = null;
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {

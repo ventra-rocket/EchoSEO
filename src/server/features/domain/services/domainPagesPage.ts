@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { normalizeDomainInput, toRelativePath } from "@/server/lib/domainUtils";
 import type { RelevantPagesItem } from "@/server/lib/dataforseo";
@@ -159,7 +159,7 @@ export async function getPagesPage(
     return cached.data;
   }
 
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
   const response = await dataforseo.domain.relevantPages({
     target: domain,
     locationCode: input.locationCode,

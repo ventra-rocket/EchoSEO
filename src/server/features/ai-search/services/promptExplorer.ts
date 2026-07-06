@@ -1,6 +1,9 @@
 import { waitUntil } from "cloudflare:workers";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import {
+  createSeoDataProvider,
+  type SeoDataProvider,
+} from "@/server/lib/seo-data";
 import type { LlmResponseResult } from "@/server/lib/dataforseoLlmSchemas";
 import { AppError } from "@/server/lib/errors";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
@@ -36,13 +39,11 @@ const PROMPT_RESPONSE_TTL_SECONDS = 7 * 24 * 60 * 60;
  */
 const PROMPT_RESPONSE_MAX_TOKENS = 4096;
 
-type DataforseoClient = ReturnType<typeof createDataforseoClient>;
-
 export async function explorePrompt(
   input: PromptExplorerInput,
   billingCustomer: BillingCustomerContext,
 ): Promise<PromptExplorerResult> {
-  const dataforseo = createDataforseoClient(billingCustomer);
+  const dataforseo = createSeoDataProvider(billingCustomer);
   const highlightBrand = input.highlightBrand?.trim() || null;
 
   // Dedupe models so a request like ["claude","claude"] doesn't fan out to two
@@ -82,7 +83,7 @@ type RunModelArgs = {
   input: PromptExplorerInput;
   highlightBrand: string | null;
   billingCustomer: BillingCustomerContext;
-  dataforseo: DataforseoClient;
+  dataforseo: SeoDataProvider;
 };
 
 async function runModel(

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { mcpResponse } from "@/server/mcp/formatters";
 import { buildProjectMeta } from "@/server/mcp/context";
 import { optionalMetaOutputSchema } from "@/server/mcp/output-schemas";
@@ -94,7 +94,7 @@ export const getSerpResultsTool = {
     },
   },
   handler: withMcpProjectAuth(async (args: Args, context) => {
-    const client = createDataforseoClient(context.billing);
+    const client = createSeoDataProvider(context.billing);
 
     const results = await Promise.all(
       args.queries.map(async (q) => {
