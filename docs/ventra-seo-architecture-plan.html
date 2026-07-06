@@ -1,207 +1,1883 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Ventra SEO — Kiến trúc & Luồng (Excalidraw)</title>
-<style>
-    :root{--bg:#0b1020;--panel:#131a2e;--panel2:#0f1626;--ink:#e6eaf5;--muted:#9aa6c4;--brand:#7c3aed;--brand2:#6366f1;--accent:#22d3ee;--line:#26304d}
-    *{box-sizing:border-box} html{scroll-behavior:smooth}
-    body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,rgba(124,58,237,.25),transparent 60%),radial-gradient(1000px 500px at -10% 10%,rgba(34,211,238,.15),transparent 55%),var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans',Arial,sans-serif}
-    a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-    header.hero{padding:60px 24px 30px;max-width:1180px;margin:0 auto;text-align:center}
-    .badge{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 14px;margin-bottom:16px;background:var(--panel2)}
-    h1{font-size:clamp(28px,5vw,48px);margin:.1em 0;line-height:1.1;background:linear-gradient(90deg,#fff,#c4b5fd 55%,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent}
-    .tagline{color:var(--muted);max-width:760px;margin:12px auto 0}
-    nav.toc{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);background:rgba(11,16,32,.75);border-bottom:1px solid var(--line)}
-    nav.toc ul{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:1180px;margin:0 auto;padding:10px 16px;list-style:none}
-    nav.toc a{color:var(--muted);font-size:13px;font-weight:600;padding:7px 12px;border-radius:10px}
-    nav.toc a:hover{color:var(--ink);background:var(--panel)}
-    main{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
-    section{margin:30px 0;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
-    section h2{margin:0 0 4px;font-size:22px;display:flex;align-items:center;gap:10px}
-    section h2 .n{font-size:13px;color:var(--brand2);border:1px solid var(--line);border-radius:8px;padding:2px 8px;background:var(--panel2)}
-    .sub{color:var(--muted);margin:0 0 16px}
-    .diagram{background:#ffffff;border:1px solid var(--line);border-radius:12px;padding:14px;overflow:auto}
-    .diagram svg{display:block;max-width:100%;height:auto;margin:0 auto}
-    .src{margin-top:10px;font-size:13px;color:var(--muted)}
-    footer{max-width:1180px;margin:0 auto;padding:24px 16px 60px;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid var(--line)}
-    code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12.5px}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ventra SEO — Kiến trúc & Luồng (Excalidraw)</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #131a2e;
+        --panel2: #0f1626;
+        --ink: #e6eaf5;
+        --muted: #9aa6c4;
+        --brand: #7c3aed;
+        --brand2: #6366f1;
+        --accent: #22d3ee;
+        --line: #26304d;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(
+            1200px 600px at 80% -10%,
+            rgba(124, 58, 237, 0.25),
+            transparent 60%
+          ),
+          radial-gradient(
+            1000px 500px at -10% 10%,
+            rgba(34, 211, 238, 0.15),
+            transparent 55%
+          ),
+          var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Noto Sans",
+          Arial,
+          sans-serif;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      header.hero {
+        padding: 60px 24px 30px;
+        max-width: 1180px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 14px;
+        margin-bottom: 16px;
+        background: var(--panel2);
+      }
+      h1 {
+        font-size: clamp(28px, 5vw, 48px);
+        margin: 0.1em 0;
+        line-height: 1.1;
+        background: linear-gradient(90deg, #fff, #c4b5fd 55%, #67e8f9);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .tagline {
+        color: var(--muted);
+        max-width: 760px;
+        margin: 12px auto 0;
+      }
+      nav.toc {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(10px);
+        background: rgba(11, 16, 32, 0.75);
+        border-bottom: 1px solid var(--line);
+      }
+      nav.toc ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 10px 16px;
+        list-style: none;
+      }
+      nav.toc a {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 7px 12px;
+        border-radius: 10px;
+      }
+      nav.toc a:hover {
+        color: var(--ink);
+        background: var(--panel);
+      }
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 16px 80px;
+      }
+      section {
+        margin: 30px 0;
+        background: linear-gradient(180deg, var(--panel), var(--panel2));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+      }
+      section h2 {
+        margin: 0 0 4px;
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      section h2 .n {
+        font-size: 13px;
+        color: var(--brand2);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 2px 8px;
+        background: var(--panel2);
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 16px;
+      }
+      .diagram {
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        overflow: auto;
+      }
+      .diagram svg {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        margin: 0 auto;
+      }
+      .src {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      footer {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 16px 60px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+        border-top: 1px solid var(--line);
+      }
+      code {
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 1px 6px;
+        font-size: 12.5px;
+      }
     </style>
-</head>
-<body>
-<header class="hero"><div class="badge">Excalidraw · 2026-07-03 · Foundation</div><h1>Ventra SEO — Kiến trúc &amp; Các luồng đi</h1><p class="tagline">Sơ đồ Excalidraw (SVG offline) cho kiến trúc hệ thống, luồng xử lý, vòng lặp agent, kế hoạch Phase 0 và mô hình kinh doanh. File <code>.excalidraw</code> nguồn nằm trong <code>docs/diagrams/</code>.</p></header>
-<nav class="toc"><ul><li><a href="#01-system-architecture">Kiến trúc &amp; luồng dữ liệu</a></li><li><a href="#02-request-flow">Luồng xử lý một yêu cầu</a></li><li><a href="#03-agent-loop">Vòng lặp Agent read-WRITE</a></li><li><a href="#04-phase0-flow">Luồng thực thi Phase 0</a></li><li><a href="#05-business-funnel">Mô hình open-core</a></li></ul></nav>
-<main>
-<section id="01-system-architecture"><h2><span class="n">01</span> Kiến trúc &amp; luồng dữ liệu</h2><p class="sub">App hợp nhất TanStack Start trên Cloudflare Workers; agent và dashboard cùng đi qua feature services rồi tới data layer.</p><div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1140 736" width="1140" height="736" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
-<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
-<rect x="40" y="60" width="1080" height="130" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
-<text x="56.0" y="86.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Client / Agent</text>
-<rect x="40" y="220" width="1080" height="150" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
-<text x="56.0" y="246.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Cloudflare Workers · TanStack Start (React 19)</text>
-<rect x="40" y="400" width="1080" height="130" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
-<text x="56.0" y="426.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Cloudflare primitives</text>
-<rect x="40" y="560" width="1080" height="150" rx="18" fill="#eef1f6" fill-opacity="0.5" stroke="#94a3b8" stroke-dasharray="6 6"/>
-<text x="56.0" y="586.0" font-size="15" fill="#64748b" text-anchor="start" font-weight="700">Data Layer · provider abstraction</text>
-<line x1="237.6" y1="175.0" x2="232.8" y2="255.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="896.7" y1="175.0" x2="930.1" y2="255.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="350.0" y1="302.5" x2="440.0" y2="302.5" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="830.0" y1="302.5" x2="740.0" y2="302.5" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="456.8" y1="355.0" x2="250.0" y2="436.5" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="707.5" y1="355.0" x2="875.4" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="588.4" y1="355.0" x2="581.4" y2="590.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="897.1" y1="350.0" x2="630.1" y2="590.0" stroke="#475569" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
-<line x1="430.0" y1="635.0" x2="340.0" y2="635.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="730.0" y1="635.0" x2="820.0" y2="635.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<rect x="120" y="95" width="240" height="80" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
-<text x="240.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Trình duyệt</text>
-<text x="240.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Dashboard UI</text>
-<rect x="760" y="95" width="240" height="80" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
-<text x="880.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">AI Agent</text>
-<text x="880.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">MCP client</text>
-<rect x="110" y="255" width="240" height="95" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="230.0" y="298.5" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Routes +</text>
-<text x="230.0" y="316.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Server Functions</text>
-<rect x="440" y="250" width="300" height="105" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="590.0" y="289.5" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Feature Services</text>
-<text x="590.0" y="307.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">keyword · rank · backlink</text>
-<text x="590.0" y="325.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">audit · competitor · ai-search</text>
-<rect x="830" y="255" width="240" height="95" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="950.0" y="298.5" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">MCP Server</text>
-<text x="950.0" y="316.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">18 tools + skills</text>
-<rect x="80" y="430" width="170" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
-<text x="165.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">D1 / SQLite</text>
-<text x="165.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Drizzle</text>
-<rect x="270" y="430" width="150" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
-<text x="345.0" y="475.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">KV ×2</text>
-<rect x="440" y="430" width="190" height="80" rx="12" fill="#ffec99" stroke="#f08c00" stroke-width="2"/>
-<text x="535.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">R2</text>
-<text x="535.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Lighthouse blobs</text>
-<rect x="650" y="430" width="190" height="80" rx="12" fill="#fff3bf" stroke="#fab005" stroke-width="2"/>
-<text x="745.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Durable Objects</text>
-<text x="745.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">chat agent</text>
-<rect x="860" y="430" width="210" height="80" rx="12" fill="#fff3bf" stroke="#fab005" stroke-width="2"/>
-<text x="965.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Workflows + Cron</text>
-<text x="965.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">rank · audit</text>
-<polygon points="580.0,590 730,635.0 580.0,680 430,635.0" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
-<text x="580.0" y="631.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">SEO Data Interface</text>
-<text x="580.0" y="649.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">provider abstraction</text>
-<rect x="80" y="595" width="260" height="80" rx="12" fill="#ffc9c9" stroke="#e03131" stroke-width="2"/>
-<text x="210.0" y="631.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">DataForSEO</text>
-<text x="210.0" y="649.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">BYO-key · primary</text>
-<rect x="820" y="595" width="260" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
-<text x="950.0" y="631.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">First-party OAuth</text>
-<text x="950.0" y="649.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">GSC · GA4 · Bing (free)</text>
-<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Kiến trúc &amp; luồng dữ liệu Ventra SEO</text>
-</svg></div><p class="src">Nguồn canvas (chỉnh trên excalidraw.com): <code>docs/diagrams/01-system-architecture.excalidraw</code></p></section>
-<section id="02-request-flow"><h2><span class="n">02</span> Luồng xử lý một yêu cầu</h2><p class="sub">Mỗi truy vấn: UI → server function → feature → SEO Data Interface, ưu tiên cache D1, miss thì gọi DataForSEO.</p><div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1370 416" width="1370" height="416" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
-<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
-<line x1="230.0" y1="155.0" x2="300.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="490.0" y1="155.0" x2="560.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="750.0" y1="155.0" x2="820.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1020.0" y1="155.0" x2="1090.0" y2="155.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="920.0" y1="200.0" x2="920.0" y2="300.0" stroke="#475569" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
-<rect x="876" y="238" width="89" height="20" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
-<text x="920.0" y="253.0" font-size="12" fill="#475569" text-anchor="middle" font-weight="500">cache-first</text>
-<rect x="40" y="110" width="190" height="90" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
-<text x="135.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Trình duyệt</text>
-<text x="135.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">gọi RPC</text>
-<rect x="300" y="110" width="190" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="395.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Server Function</text>
-<text x="395.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">TanStack Start</text>
-<rect x="560" y="110" width="190" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="655.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Feature Service</text>
-<text x="655.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">+ repository</text>
-<polygon points="920.0,110 1020,155.0 920.0,200 820,155.0" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
-<text x="920.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">SEO Data</text>
-<text x="920.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Interface</text>
-<rect x="1090" y="110" width="190" height="90" rx="12" fill="#ffc9c9" stroke="#e03131" stroke-width="2"/>
-<text x="1185.0" y="151.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">DataForSEO</text>
-<text x="1185.0" y="169.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">API</text>
-<rect x="820" y="300" width="200" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
-<text x="920.0" y="341.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">D1 cache</text>
-<text x="920.0" y="359.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">keyword_metrics</text>
-<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Luồng xử lý một yêu cầu (request flow)</text>
-<text x="1090.0" y="295.0" font-size="14" fill="#2f9e44" text-anchor="start" font-weight="500">hit → trả ngay từ cache</text>
-<text x="1090.0" y="322.0" font-size="13" fill="#64748b" text-anchor="start" font-weight="500">miss → gọi DataForSEO,</text>
-<text x="1090.0" y="344.0" font-size="13" fill="#64748b" text-anchor="start" font-weight="500">lưu cache rồi trả về UI</text>
-</svg></div><p class="src">Nguồn canvas (chỉnh trên excalidraw.com): <code>docs/diagrams/02-request-flow.excalidraw</code></p></section>
-<section id="03-agent-loop"><h2><span class="n">03</span> Vòng lặp Agent read-WRITE</h2><p class="sub">Agent không chỉ đọc: keyword → brief → draft → fix → monitor, lặp lại và chứng minh bằng GSC/GA4.</p><div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 0 790 605" width="790" height="605" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
-<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
-<line x1="531.9" y1="195.0" x2="607.8" y2="250.1" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="655.1" y1="340.1" x2="608.1" y2="484.9" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="493.4" y1="529.9" x2="446.6" y2="529.9" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="331.9" y1="484.9" x2="284.9" y2="340.1" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="332.2" y1="250.1" x2="408.1" y2="195.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<rect x="370.0" y="105.0" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
-<text x="470.0" y="146.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Keyword</text>
-<text x="470.0" y="164.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">research</text>
-<rect x="569.7218684219822" y="250.10643118126103" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
-<text x="669.7" y="291.1" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Content</text>
-<text x="669.7" y="309.1" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">brief</text>
-<rect x="493.4349029814193" y="484.8935688187389" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
-<text x="593.4" y="525.9" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Draft</text>
-<text x="593.4" y="543.9" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">AI writing</text>
-<rect x="246.56509701858067" y="484.8935688187389" width="200" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
-<text x="346.6" y="525.9" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">On-page</text>
-<text x="346.6" y="543.9" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">fix</text>
-<rect x="170.27813157801774" y="250.1064311812611" width="200" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
-<text x="270.3" y="291.1" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Monitor</text>
-<text x="270.3" y="309.1" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">GSC / GA4</text>
-<rect x="375" y="320" width="190" height="80" rx="12" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
-<text x="470.0" y="356.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Chứng minh bằng</text>
-<text x="470.0" y="374.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">dữ liệu của bạn</text>
-<text x="40.0" y="30.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Vòng lặp Agent read-WRITE — lợi thế cạnh tranh</text>
-</svg></div><p class="src">Nguồn canvas (chỉnh trên excalidraw.com): <code>docs/diagrams/03-agent-loop.excalidraw</code></p></section>
-<section id="04-phase0-flow"><h2><span class="n">04</span> Luồng thực thi Phase 0</h2><p class="sub">P01 là đường găng; P02/P03/P05 song song; P04 sau P02; P06 chốt Milestone M0.</p><div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1060 716" width="1060" height="716" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
-<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
-<line x1="491.3" y1="180.0" x2="333.7" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="580.0" y1="180.0" x2="580.0" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="668.7" y1="180.0" x2="826.3" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="245.0" y1="350.0" x2="245.0" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="289.3" y1="350.0" x2="535.7" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="580.0" y1="350.0" x2="580.0" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="333.7" y1="520.0" x2="491.3" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="870.7" y1="350.0" x2="624.3" y2="600.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<rect x="430" y="90" width="300" height="90" rx="12" fill="#ffd8a8" stroke="#e8590c" stroke-width="2"/>
-<text x="580.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P01 · Fork + Deploy</text>
-<text x="580.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">đường găng</text>
-<rect x="120" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="245.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P02 · Rebrand</text>
-<text x="245.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">→ Ventra</text>
-<rect x="455" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="580.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P03 · Strip / gate</text>
-<text x="580.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">hosted couplings</text>
-<rect x="790" y="260" width="250" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="915.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P05 · Provider</text>
-<text x="915.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">abstraction seam</text>
-<rect x="120" y="430" width="250" height="90" rx="12" fill="#a5d8ff" stroke="#1971c2" stroke-width="2"/>
-<text x="245.0" y="471.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P04 · i18n</text>
-<text x="245.0" y="489.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">VN + EN</text>
-<rect x="455" y="600" width="250" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
-<text x="580.0" y="641.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">P06 · Verify</text>
-<text x="580.0" y="659.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Milestone M0</text>
-<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Luồng thực thi Phase 0 (fork → M0)</text>
-</svg></div><p class="src">Nguồn canvas (chỉnh trên excalidraw.com): <code>docs/diagrams/04-phase0-flow.excalidraw</code></p></section>
-<section id="05-business-funnel"><h2><span class="n">05</span> Mô hình open-core</h2><p class="sub">Free self-host thu hút → Managed Cloud PAYG sinh lời → seats mở rộng; không khoá dữ liệu thô.</p><div class="diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 4 1120 546" width="1120" height="546" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
-<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,3 L0,6 z" fill="#475569"/></marker></defs>
-<line x1="530.0" y1="180.0" x2="530.0" y2="260.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="530.0" y1="350.0" x2="530.0" y2="430.0" stroke="#475569" stroke-width="2" marker-end="url(#ah)"/>
-<rect x="250" y="90" width="560" height="90" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
-<text x="530.0" y="131.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Free · Self-host (BYO-key)</text>
-<text x="530.0" y="149.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">mồi thu hút · ~0 rủi ro chi phí dữ liệu</text>
-<rect x="330" y="260" width="400" height="90" rx="12" fill="#e599f7" stroke="#9c36b5" stroke-width="2"/>
-<text x="530.0" y="301.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Managed Cloud · PAYG credits</text>
-<text x="530.0" y="319.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">markup minh bạch 20–40% · doanh thu chính</text>
-<rect x="400" y="430" width="260" height="90" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
-<text x="530.0" y="471.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">Team / Pro seats</text>
-<text x="530.0" y="489.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">collaboration</text>
-<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Mô hình open-core — luồng doanh thu</text>
-<text x="840.0" y="140.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Cộng đồng + skill marketplace</text>
-<text x="840.0" y="310.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Ventra quản lý DataForSEO + OAuth</text>
-<text x="690.0" y="480.0" font-size="14" fill="#64748b" text-anchor="start" font-weight="500">Không khoá dữ liệu thô sau seats</text>
-</svg></div><p class="src">Nguồn canvas (chỉnh trên excalidraw.com): <code>docs/diagrams/05-business-funnel.excalidraw</code></p></section>
-</main>
-<footer>Tạo bằng skill <code>excalidraw</code> (file-based) · một model → <code>.excalidraw</code> + SVG · nguồn: <code>docs/project-overview-pdr.md</code>, <code>docs/project-roadmap.md</code>, <code>plans/reports/research-summary-260703-1047-ventra-seo.md</code></footer>
-</body>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="badge">Excalidraw · 2026-07-03 · Foundation</div>
+      <h1>Ventra SEO — Kiến trúc &amp; Các luồng đi</h1>
+      <p class="tagline">
+        Sơ đồ Excalidraw (SVG offline) cho kiến trúc hệ thống, luồng xử lý, vòng
+        lặp agent, kế hoạch Phase 0 và mô hình kinh doanh. File
+        <code>.excalidraw</code> nguồn nằm trong <code>docs/diagrams/</code>.
+      </p>
+    </header>
+    <nav class="toc">
+      <ul>
+        <li>
+          <a href="#01-system-architecture">Kiến trúc &amp; luồng dữ liệu</a>
+        </li>
+        <li><a href="#02-request-flow">Luồng xử lý một yêu cầu</a></li>
+        <li><a href="#03-agent-loop">Vòng lặp Agent read-WRITE</a></li>
+        <li><a href="#04-phase0-flow">Luồng thực thi Phase 0</a></li>
+        <li><a href="#05-business-funnel">Mô hình open-core</a></li>
+      </ul>
+    </nav>
+    <main>
+      <section id="01-system-architecture">
+        <h2><span class="n">01</span> Kiến trúc &amp; luồng dữ liệu</h2>
+        <p class="sub">
+          App hợp nhất TanStack Start trên Cloudflare Workers; agent và
+          dashboard cùng đi qua feature services rồi tới data layer.
+        </p>
+        <div class="diagram">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="10 4 1140 736"
+            width="1140"
+            height="736"
+            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif"
+          >
+            <defs>
+              <marker
+                id="ah"
+                markerWidth="10"
+                markerHeight="10"
+                refX="8"
+                refY="3"
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+              >
+                <path d="M0,0 L9,3 L0,6 z" fill="#475569" />
+              </marker>
+            </defs>
+            <rect
+              x="40"
+              y="60"
+              width="1080"
+              height="130"
+              rx="18"
+              fill="#eef1f6"
+              fill-opacity="0.5"
+              stroke="#94a3b8"
+              stroke-dasharray="6 6"
+            />
+            <text
+              x="56.0"
+              y="86.0"
+              font-size="15"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Client / Agent
+            </text>
+            <rect
+              x="40"
+              y="220"
+              width="1080"
+              height="150"
+              rx="18"
+              fill="#eef1f6"
+              fill-opacity="0.5"
+              stroke="#94a3b8"
+              stroke-dasharray="6 6"
+            />
+            <text
+              x="56.0"
+              y="246.0"
+              font-size="15"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Cloudflare Workers · TanStack Start (React 19)
+            </text>
+            <rect
+              x="40"
+              y="400"
+              width="1080"
+              height="130"
+              rx="18"
+              fill="#eef1f6"
+              fill-opacity="0.5"
+              stroke="#94a3b8"
+              stroke-dasharray="6 6"
+            />
+            <text
+              x="56.0"
+              y="426.0"
+              font-size="15"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Cloudflare primitives
+            </text>
+            <rect
+              x="40"
+              y="560"
+              width="1080"
+              height="150"
+              rx="18"
+              fill="#eef1f6"
+              fill-opacity="0.5"
+              stroke="#94a3b8"
+              stroke-dasharray="6 6"
+            />
+            <text
+              x="56.0"
+              y="586.0"
+              font-size="15"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Data Layer · provider abstraction
+            </text>
+            <line
+              x1="237.6"
+              y1="175.0"
+              x2="232.8"
+              y2="255.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="896.7"
+              y1="175.0"
+              x2="930.1"
+              y2="255.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="350.0"
+              y1="302.5"
+              x2="440.0"
+              y2="302.5"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="830.0"
+              y1="302.5"
+              x2="740.0"
+              y2="302.5"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="456.8"
+              y1="355.0"
+              x2="250.0"
+              y2="436.5"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="707.5"
+              y1="355.0"
+              x2="875.4"
+              y2="430.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="588.4"
+              y1="355.0"
+              x2="581.4"
+              y2="590.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="897.1"
+              y1="350.0"
+              x2="630.1"
+              y2="590.0"
+              stroke="#475569"
+              stroke-width="2"
+              stroke-dasharray="7 6"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="430.0"
+              y1="635.0"
+              x2="340.0"
+              y2="635.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="730.0"
+              y1="635.0"
+              x2="820.0"
+              y2="635.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <rect
+              x="120"
+              y="95"
+              width="240"
+              height="80"
+              rx="12"
+              fill="#a5d8ff"
+              stroke="#1971c2"
+              stroke-width="2"
+            />
+            <text
+              x="240.0"
+              y="131.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Trình duyệt
+            </text>
+            <text
+              x="240.0"
+              y="149.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              Dashboard UI
+            </text>
+            <rect
+              x="760"
+              y="95"
+              width="240"
+              height="80"
+              rx="12"
+              fill="#e599f7"
+              stroke="#9c36b5"
+              stroke-width="2"
+            />
+            <text
+              x="880.0"
+              y="131.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              AI Agent
+            </text>
+            <text
+              x="880.0"
+              y="149.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              MCP client
+            </text>
+            <rect
+              x="110"
+              y="255"
+              width="240"
+              height="95"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="230.0"
+              y="298.5"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Routes +
+            </text>
+            <text
+              x="230.0"
+              y="316.5"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              Server Functions
+            </text>
+            <rect
+              x="440"
+              y="250"
+              width="300"
+              height="105"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="590.0"
+              y="289.5"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Feature Services
+            </text>
+            <text
+              x="590.0"
+              y="307.5"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              keyword · rank · backlink
+            </text>
+            <text
+              x="590.0"
+              y="325.5"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              audit · competitor · ai-search
+            </text>
+            <rect
+              x="830"
+              y="255"
+              width="240"
+              height="95"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="950.0"
+              y="298.5"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              MCP Server
+            </text>
+            <text
+              x="950.0"
+              y="316.5"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              18 tools + skills
+            </text>
+            <rect
+              x="80"
+              y="430"
+              width="170"
+              height="80"
+              rx="12"
+              fill="#b2f2bb"
+              stroke="#2f9e44"
+              stroke-width="2"
+            />
+            <text
+              x="165.0"
+              y="466.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              D1 / SQLite
+            </text>
+            <text
+              x="165.0"
+              y="484.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              Drizzle
+            </text>
+            <rect
+              x="270"
+              y="430"
+              width="150"
+              height="80"
+              rx="12"
+              fill="#b2f2bb"
+              stroke="#2f9e44"
+              stroke-width="2"
+            />
+            <text
+              x="345.0"
+              y="475.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              KV ×2
+            </text>
+            <rect
+              x="440"
+              y="430"
+              width="190"
+              height="80"
+              rx="12"
+              fill="#ffec99"
+              stroke="#f08c00"
+              stroke-width="2"
+            />
+            <text
+              x="535.0"
+              y="466.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              R2
+            </text>
+            <text
+              x="535.0"
+              y="484.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              Lighthouse blobs
+            </text>
+            <rect
+              x="650"
+              y="430"
+              width="190"
+              height="80"
+              rx="12"
+              fill="#fff3bf"
+              stroke="#fab005"
+              stroke-width="2"
+            />
+            <text
+              x="745.0"
+              y="466.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Durable Objects
+            </text>
+            <text
+              x="745.0"
+              y="484.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              chat agent
+            </text>
+            <rect
+              x="860"
+              y="430"
+              width="210"
+              height="80"
+              rx="12"
+              fill="#fff3bf"
+              stroke="#fab005"
+              stroke-width="2"
+            />
+            <text
+              x="965.0"
+              y="466.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Workflows + Cron
+            </text>
+            <text
+              x="965.0"
+              y="484.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              rank · audit
+            </text>
+            <polygon
+              points="580.0,590 730,635.0 580.0,680 430,635.0"
+              fill="#ffd8a8"
+              stroke="#e8590c"
+              stroke-width="2"
+            />
+            <text
+              x="580.0"
+              y="631.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              SEO Data Interface
+            </text>
+            <text
+              x="580.0"
+              y="649.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              provider abstraction
+            </text>
+            <rect
+              x="80"
+              y="595"
+              width="260"
+              height="80"
+              rx="12"
+              fill="#ffc9c9"
+              stroke="#e03131"
+              stroke-width="2"
+            />
+            <text
+              x="210.0"
+              y="631.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              DataForSEO
+            </text>
+            <text
+              x="210.0"
+              y="649.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              BYO-key · primary
+            </text>
+            <rect
+              x="820"
+              y="595"
+              width="260"
+              height="80"
+              rx="12"
+              fill="#b2f2bb"
+              stroke="#2f9e44"
+              stroke-width="2"
+            />
+            <text
+              x="950.0"
+              y="631.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              First-party OAuth
+            </text>
+            <text
+              x="950.0"
+              y="649.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              GSC · GA4 · Bing (free)
+            </text>
+            <text
+              x="40.0"
+              y="34.0"
+              font-size="22"
+              fill="#0f172a"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Kiến trúc &amp; luồng dữ liệu Ventra SEO
+            </text>
+          </svg>
+        </div>
+        <p class="src">
+          Nguồn canvas (chỉnh trên excalidraw.com):
+          <code>docs/diagrams/01-system-architecture.excalidraw</code>
+        </p>
+      </section>
+      <section id="02-request-flow">
+        <h2><span class="n">02</span> Luồng xử lý một yêu cầu</h2>
+        <p class="sub">
+          Mỗi truy vấn: UI → server function → feature → SEO Data Interface, ưu
+          tiên cache D1, miss thì gọi DataForSEO.
+        </p>
+        <div class="diagram">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="10 4 1370 416"
+            width="1370"
+            height="416"
+            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif"
+          >
+            <defs>
+              <marker
+                id="ah"
+                markerWidth="10"
+                markerHeight="10"
+                refX="8"
+                refY="3"
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+              >
+                <path d="M0,0 L9,3 L0,6 z" fill="#475569" />
+              </marker>
+            </defs>
+            <line
+              x1="230.0"
+              y1="155.0"
+              x2="300.0"
+              y2="155.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="490.0"
+              y1="155.0"
+              x2="560.0"
+              y2="155.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="750.0"
+              y1="155.0"
+              x2="820.0"
+              y2="155.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="1020.0"
+              y1="155.0"
+              x2="1090.0"
+              y2="155.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="920.0"
+              y1="200.0"
+              x2="920.0"
+              y2="300.0"
+              stroke="#475569"
+              stroke-width="2"
+              stroke-dasharray="7 6"
+              marker-end="url(#ah)"
+            />
+            <rect
+              x="876"
+              y="238"
+              width="89"
+              height="20"
+              rx="6"
+              fill="#f1f5f9"
+              stroke="#cbd5e1"
+            />
+            <text
+              x="920.0"
+              y="253.0"
+              font-size="12"
+              fill="#475569"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              cache-first
+            </text>
+            <rect
+              x="40"
+              y="110"
+              width="190"
+              height="90"
+              rx="12"
+              fill="#a5d8ff"
+              stroke="#1971c2"
+              stroke-width="2"
+            />
+            <text
+              x="135.0"
+              y="151.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Trình duyệt
+            </text>
+            <text
+              x="135.0"
+              y="169.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              gọi RPC
+            </text>
+            <rect
+              x="300"
+              y="110"
+              width="190"
+              height="90"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="395.0"
+              y="151.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Server Function
+            </text>
+            <text
+              x="395.0"
+              y="169.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              TanStack Start
+            </text>
+            <rect
+              x="560"
+              y="110"
+              width="190"
+              height="90"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="655.0"
+              y="151.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Feature Service
+            </text>
+            <text
+              x="655.0"
+              y="169.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              + repository
+            </text>
+            <polygon
+              points="920.0,110 1020,155.0 920.0,200 820,155.0"
+              fill="#ffd8a8"
+              stroke="#e8590c"
+              stroke-width="2"
+            />
+            <text
+              x="920.0"
+              y="151.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              SEO Data
+            </text>
+            <text
+              x="920.0"
+              y="169.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              Interface
+            </text>
+            <rect
+              x="1090"
+              y="110"
+              width="190"
+              height="90"
+              rx="12"
+              fill="#ffc9c9"
+              stroke="#e03131"
+              stroke-width="2"
+            />
+            <text
+              x="1185.0"
+              y="151.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              DataForSEO
+            </text>
+            <text
+              x="1185.0"
+              y="169.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              API
+            </text>
+            <rect
+              x="820"
+              y="300"
+              width="200"
+              height="90"
+              rx="12"
+              fill="#b2f2bb"
+              stroke="#2f9e44"
+              stroke-width="2"
+            />
+            <text
+              x="920.0"
+              y="341.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              D1 cache
+            </text>
+            <text
+              x="920.0"
+              y="359.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              keyword_metrics
+            </text>
+            <text
+              x="40.0"
+              y="34.0"
+              font-size="22"
+              fill="#0f172a"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Luồng xử lý một yêu cầu (request flow)
+            </text>
+            <text
+              x="1090.0"
+              y="295.0"
+              font-size="14"
+              fill="#2f9e44"
+              text-anchor="start"
+              font-weight="500"
+            >
+              hit → trả ngay từ cache
+            </text>
+            <text
+              x="1090.0"
+              y="322.0"
+              font-size="13"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="500"
+            >
+              miss → gọi DataForSEO,
+            </text>
+            <text
+              x="1090.0"
+              y="344.0"
+              font-size="13"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="500"
+            >
+              lưu cache rồi trả về UI
+            </text>
+          </svg>
+        </div>
+        <p class="src">
+          Nguồn canvas (chỉnh trên excalidraw.com):
+          <code>docs/diagrams/02-request-flow.excalidraw</code>
+        </p>
+      </section>
+      <section id="03-agent-loop">
+        <h2><span class="n">03</span> Vòng lặp Agent read-WRITE</h2>
+        <p class="sub">
+          Agent không chỉ đọc: keyword → brief → draft → fix → monitor, lặp lại
+          và chứng minh bằng GSC/GA4.
+        </p>
+        <div class="diagram">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="10 0 790 605"
+            width="790"
+            height="605"
+            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif"
+          >
+            <defs>
+              <marker
+                id="ah"
+                markerWidth="10"
+                markerHeight="10"
+                refX="8"
+                refY="3"
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+              >
+                <path d="M0,0 L9,3 L0,6 z" fill="#475569" />
+              </marker>
+            </defs>
+            <line
+              x1="531.9"
+              y1="195.0"
+              x2="607.8"
+              y2="250.1"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="655.1"
+              y1="340.1"
+              x2="608.1"
+              y2="484.9"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="493.4"
+              y1="529.9"
+              x2="446.6"
+              y2="529.9"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="331.9"
+              y1="484.9"
+              x2="284.9"
+              y2="340.1"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="332.2"
+              y1="250.1"
+              x2="408.1"
+              y2="195.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <rect
+              x="370.0"
+              y="105.0"
+              width="200"
+              height="90"
+              rx="12"
+              fill="#e599f7"
+              stroke="#9c36b5"
+              stroke-width="2"
+            />
+            <text
+              x="470.0"
+              y="146.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Keyword
+            </text>
+            <text
+              x="470.0"
+              y="164.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              research
+            </text>
+            <rect
+              x="569.7218684219822"
+              y="250.10643118126103"
+              width="200"
+              height="90"
+              rx="12"
+              fill="#e599f7"
+              stroke="#9c36b5"
+              stroke-width="2"
+            />
+            <text
+              x="669.7"
+              y="291.1"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Content
+            </text>
+            <text
+              x="669.7"
+              y="309.1"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              brief
+            </text>
+            <rect
+              x="493.4349029814193"
+              y="484.8935688187389"
+              width="200"
+              height="90"
+              rx="12"
+              fill="#e599f7"
+              stroke="#9c36b5"
+              stroke-width="2"
+            />
+            <text
+              x="593.4"
+              y="525.9"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Draft
+            </text>
+            <text
+              x="593.4"
+              y="543.9"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              AI writing
+            </text>
+            <rect
+              x="246.56509701858067"
+              y="484.8935688187389"
+              width="200"
+              height="90"
+              rx="12"
+              fill="#e599f7"
+              stroke="#9c36b5"
+              stroke-width="2"
+            />
+            <text
+              x="346.6"
+              y="525.9"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              On-page
+            </text>
+            <text
+              x="346.6"
+              y="543.9"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              fix
+            </text>
+            <rect
+              x="170.27813157801774"
+              y="250.1064311812611"
+              width="200"
+              height="90"
+              rx="12"
+              fill="#b2f2bb"
+              stroke="#2f9e44"
+              stroke-width="2"
+            />
+            <text
+              x="270.3"
+              y="291.1"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Monitor
+            </text>
+            <text
+              x="270.3"
+              y="309.1"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              GSC / GA4
+            </text>
+            <rect
+              x="375"
+              y="320"
+              width="190"
+              height="80"
+              rx="12"
+              fill="#ffd8a8"
+              stroke="#e8590c"
+              stroke-width="2"
+            />
+            <text
+              x="470.0"
+              y="356.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Chứng minh bằng
+            </text>
+            <text
+              x="470.0"
+              y="374.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              dữ liệu của bạn
+            </text>
+            <text
+              x="40.0"
+              y="30.0"
+              font-size="22"
+              fill="#0f172a"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Vòng lặp Agent read-WRITE — lợi thế cạnh tranh
+            </text>
+          </svg>
+        </div>
+        <p class="src">
+          Nguồn canvas (chỉnh trên excalidraw.com):
+          <code>docs/diagrams/03-agent-loop.excalidraw</code>
+        </p>
+      </section>
+      <section id="04-phase0-flow">
+        <h2><span class="n">04</span> Luồng thực thi Phase 0</h2>
+        <p class="sub">
+          P01 là đường găng; P02/P03/P05 song song; P04 sau P02; P06 chốt
+          Milestone M0.
+        </p>
+        <div class="diagram">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="10 4 1060 716"
+            width="1060"
+            height="716"
+            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif"
+          >
+            <defs>
+              <marker
+                id="ah"
+                markerWidth="10"
+                markerHeight="10"
+                refX="8"
+                refY="3"
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+              >
+                <path d="M0,0 L9,3 L0,6 z" fill="#475569" />
+              </marker>
+            </defs>
+            <line
+              x1="491.3"
+              y1="180.0"
+              x2="333.7"
+              y2="260.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="580.0"
+              y1="180.0"
+              x2="580.0"
+              y2="260.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="668.7"
+              y1="180.0"
+              x2="826.3"
+              y2="260.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="245.0"
+              y1="350.0"
+              x2="245.0"
+              y2="430.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="289.3"
+              y1="350.0"
+              x2="535.7"
+              y2="600.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="580.0"
+              y1="350.0"
+              x2="580.0"
+              y2="600.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="333.7"
+              y1="520.0"
+              x2="491.3"
+              y2="600.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="870.7"
+              y1="350.0"
+              x2="624.3"
+              y2="600.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <rect
+              x="430"
+              y="90"
+              width="300"
+              height="90"
+              rx="12"
+              fill="#ffd8a8"
+              stroke="#e8590c"
+              stroke-width="2"
+            />
+            <text
+              x="580.0"
+              y="131.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              P01 · Fork + Deploy
+            </text>
+            <text
+              x="580.0"
+              y="149.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              đường găng
+            </text>
+            <rect
+              x="120"
+              y="260"
+              width="250"
+              height="90"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="245.0"
+              y="301.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              P02 · Rebrand
+            </text>
+            <text
+              x="245.0"
+              y="319.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              → Ventra
+            </text>
+            <rect
+              x="455"
+              y="260"
+              width="250"
+              height="90"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="580.0"
+              y="301.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              P03 · Strip / gate
+            </text>
+            <text
+              x="580.0"
+              y="319.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              hosted couplings
+            </text>
+            <rect
+              x="790"
+              y="260"
+              width="250"
+              height="90"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="915.0"
+              y="301.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              P05 · Provider
+            </text>
+            <text
+              x="915.0"
+              y="319.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              abstraction seam
+            </text>
+            <rect
+              x="120"
+              y="430"
+              width="250"
+              height="90"
+              rx="12"
+              fill="#a5d8ff"
+              stroke="#1971c2"
+              stroke-width="2"
+            />
+            <text
+              x="245.0"
+              y="471.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              P04 · i18n
+            </text>
+            <text
+              x="245.0"
+              y="489.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              VN + EN
+            </text>
+            <rect
+              x="455"
+              y="600"
+              width="250"
+              height="90"
+              rx="12"
+              fill="#b2f2bb"
+              stroke="#2f9e44"
+              stroke-width="2"
+            />
+            <text
+              x="580.0"
+              y="641.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              P06 · Verify
+            </text>
+            <text
+              x="580.0"
+              y="659.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              Milestone M0
+            </text>
+            <text
+              x="40.0"
+              y="34.0"
+              font-size="22"
+              fill="#0f172a"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Luồng thực thi Phase 0 (fork → M0)
+            </text>
+          </svg>
+        </div>
+        <p class="src">
+          Nguồn canvas (chỉnh trên excalidraw.com):
+          <code>docs/diagrams/04-phase0-flow.excalidraw</code>
+        </p>
+      </section>
+      <section id="05-business-funnel">
+        <h2><span class="n">05</span> Mô hình open-core</h2>
+        <p class="sub">
+          Free self-host thu hút → Managed Cloud PAYG sinh lời → seats mở rộng;
+          không khoá dữ liệu thô.
+        </p>
+        <div class="diagram">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="10 4 1120 546"
+            width="1120"
+            height="546"
+            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif"
+          >
+            <defs>
+              <marker
+                id="ah"
+                markerWidth="10"
+                markerHeight="10"
+                refX="8"
+                refY="3"
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+              >
+                <path d="M0,0 L9,3 L0,6 z" fill="#475569" />
+              </marker>
+            </defs>
+            <line
+              x1="530.0"
+              y1="180.0"
+              x2="530.0"
+              y2="260.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <line
+              x1="530.0"
+              y1="350.0"
+              x2="530.0"
+              y2="430.0"
+              stroke="#475569"
+              stroke-width="2"
+              marker-end="url(#ah)"
+            />
+            <rect
+              x="250"
+              y="90"
+              width="560"
+              height="90"
+              rx="12"
+              fill="#b2f2bb"
+              stroke="#2f9e44"
+              stroke-width="2"
+            />
+            <text
+              x="530.0"
+              y="131.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Free · Self-host (BYO-key)
+            </text>
+            <text
+              x="530.0"
+              y="149.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              mồi thu hút · ~0 rủi ro chi phí dữ liệu
+            </text>
+            <rect
+              x="330"
+              y="260"
+              width="400"
+              height="90"
+              rx="12"
+              fill="#e599f7"
+              stroke="#9c36b5"
+              stroke-width="2"
+            />
+            <text
+              x="530.0"
+              y="301.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Managed Cloud · PAYG credits
+            </text>
+            <text
+              x="530.0"
+              y="319.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              markup minh bạch 20–40% · doanh thu chính
+            </text>
+            <rect
+              x="400"
+              y="430"
+              width="260"
+              height="90"
+              rx="12"
+              fill="#d0bfff"
+              stroke="#7048e8"
+              stroke-width="2"
+            />
+            <text
+              x="530.0"
+              y="471.0"
+              font-size="15"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="700"
+            >
+              Team / Pro seats
+            </text>
+            <text
+              x="530.0"
+              y="489.0"
+              font-size="13"
+              fill="#1f2937"
+              text-anchor="middle"
+              font-weight="500"
+            >
+              collaboration
+            </text>
+            <text
+              x="40.0"
+              y="34.0"
+              font-size="22"
+              fill="#0f172a"
+              text-anchor="start"
+              font-weight="700"
+            >
+              Mô hình open-core — luồng doanh thu
+            </text>
+            <text
+              x="840.0"
+              y="140.0"
+              font-size="14"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="500"
+            >
+              Cộng đồng + skill marketplace
+            </text>
+            <text
+              x="840.0"
+              y="310.0"
+              font-size="14"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="500"
+            >
+              Ventra quản lý DataForSEO + OAuth
+            </text>
+            <text
+              x="690.0"
+              y="480.0"
+              font-size="14"
+              fill="#64748b"
+              text-anchor="start"
+              font-weight="500"
+            >
+              Không khoá dữ liệu thô sau seats
+            </text>
+          </svg>
+        </div>
+        <p class="src">
+          Nguồn canvas (chỉnh trên excalidraw.com):
+          <code>docs/diagrams/05-business-funnel.excalidraw</code>
+        </p>
+      </section>
+    </main>
+    <footer>
+      Tạo bằng skill <code>excalidraw</code> (file-based) · một model →
+      <code>.excalidraw</code> + SVG · nguồn:
+      <code>docs/project-overview-pdr.md</code>,
+      <code>docs/project-roadmap.md</code>,
+      <code>plans/reports/research-summary-260703-1047-ventra-seo.md</code>
+    </footer>
+  </body>
 </html>

@@ -8,7 +8,7 @@ Always-loaded context for this project. Keep short; deeper detail lives in `docs
 
 ## What EchoSEO Is
 
-An **open, agent-native SEO platform** — a comprehensive, self-hostable alternative to Semrush/Ahrefs built by **forking [every-app/open-seo](https://github.com/every-app/open-seo)** (MIT) and extending it. Ventra pairs a polished SEO dashboard with a first-class AI-agent layer that *does the work* (keyword → brief → draft → on-page fix → monitor) and proves it against the user's own Google Search Console / GA4 data — at bring-your-own-key data cost.
+An **open, agent-native SEO platform** — a comprehensive, self-hostable alternative to Semrush/Ahrefs built by **forking [every-app/open-seo](https://github.com/every-app/open-seo)** (MIT) and extending it. Ventra pairs a polished SEO dashboard with a first-class AI-agent layer that _does the work_ (keyword → brief → draft → on-page fix → monitor) and proves it against the user's own Google Search Console / GA4 data — at bring-your-own-key data cost.
 
 ## Core Decisions (2026-07-03)
 

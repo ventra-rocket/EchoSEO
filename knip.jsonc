@@ -16,7 +16,12 @@
     // Standalone CLI/dev scripts, invoked via package.json scripts
     "scripts/**",
   ],
-  "project": ["**/*.{js,mjs,ts,tsx}", "!src/routeTree.gen.ts", "!web/**"],
+  "project": [
+    "**/*.{js,mjs,ts,tsx}",
+    "!src/routeTree.gen.ts",
+    "!web/**",
+    "!.claude/**",
+  ],
   "ignore": ["drizzle-prod.config.ts"],
   // Disable Drizzle plugin - it tries to load drizzle.config.ts which imports cloudflare:workers
   "drizzle": false,

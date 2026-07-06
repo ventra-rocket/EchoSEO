@@ -9,9 +9,10 @@
 
 **Category:** Open, agent-native SEO platform (self-hostable alternative to Semrush/Ahrefs).
 
-**Positioning statement:** *For indie SEOs, founders, and developers who resent paying $150/mo for a bloated suite, Ventra SEO is the open-source, agent-native platform that does the SEO work — and proves it against your own Search Console data — at bring-your-own-key cost.*
+**Positioning statement:** _For indie SEOs, founders, and developers who resent paying $150/mo for a bloated suite, Ventra SEO is the open-source, agent-native platform that does the SEO work — and proves it against your own Search Console data — at bring-your-own-key cost._
 
 **Message hierarchy:**
+
 1. **It does the work** (agents run keyword → brief → draft → fix → monitor), not just dashboards.
 2. **Proven against your own data** (GSC/GA4/Bing fused with competitive data).
 3. **Open + self-hostable, no lock-in** (MIT core, BYO-key).
@@ -22,14 +23,14 @@
 
 ## 2. Differentiation vs alternatives
 
-| | Semrush / Ahrefs | DataForSEO MCP | OpenSEO (base) | **Ventra** |
-|---|---|---|---|---|
-| Agent access | Read-only MCP | Read-only API | Read-only MCP | **Read-WRITE loop** |
-| First-party data fusion (GSC/GA4) | Limited | No | GSC only | **GSC+GA4+Bing fused in agent context** |
-| Self-host / open source | No | No | Yes (MIT) | **Yes (MIT)** |
-| Cost model | $99–$500/mo | PAYG data | BYO-key | **BYO-key → managed PAYG** |
-| Bilingual VN/EN | EN | — | EN | **VN + EN** |
-| Balanced dashboard + agent | Dashboard | API only | Agent-leaning | **Both first-class** |
+|                                   | Semrush / Ahrefs | DataForSEO MCP | OpenSEO (base) | **Ventra**                              |
+| --------------------------------- | ---------------- | -------------- | -------------- | --------------------------------------- |
+| Agent access                      | Read-only MCP    | Read-only API  | Read-only MCP  | **Read-WRITE loop**                     |
+| First-party data fusion (GSC/GA4) | Limited          | No             | GSC only       | **GSC+GA4+Bing fused in agent context** |
+| Self-host / open source           | No               | No             | Yes (MIT)      | **Yes (MIT)**                           |
+| Cost model                        | $99–$500/mo      | PAYG data      | BYO-key        | **BYO-key → managed PAYG**              |
+| Bilingual VN/EN                   | EN               | —              | EN             | **VN + EN**                             |
+| Balanced dashboard + agent        | Dashboard        | API only       | Agent-leaning  | **Both first-class**                    |
 
 **The wedge:** incumbents structurally won't give agents write/publish access (it disintermediates their dashboards). Ventra, agent-first and open, owns the autonomous execution loop.
 
@@ -42,11 +43,11 @@
 
 ## 4. Business model — open-core hybrid
 
-| Tier | What | Purpose | Data-cost risk |
-|---|---|---|---|
-| **Free — self-host (BYO-key)** | Full app, user's own DataForSEO + first-party OAuth | Adoption, community, trust, skill ecosystem | ~None (user pays data) |
-| **Managed Cloud — PAYG credits** (V1) | Ventra hosts + manages DataForSEO + OAuth; credits at **20–40% transparent markup** | Primary revenue | Contained via credit caps / prepaid wallets |
-| **Team / Pro seats** (V1+) | Collaboration, shared skill libraries, agent orchestration/scheduling, RBAC | Predictable ARR | Decoupled |
+| Tier                                  | What                                                                                | Purpose                                     | Data-cost risk                              |
+| ------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------- |
+| **Free — self-host (BYO-key)**        | Full app, user's own DataForSEO + first-party OAuth                                 | Adoption, community, trust, skill ecosystem | ~None (user pays data)                      |
+| **Managed Cloud — PAYG credits** (V1) | Ventra hosts + manages DataForSEO + OAuth; credits at **20–40% transparent markup** | Primary revenue                             | Contained via credit caps / prepaid wallets |
+| **Team / Pro seats** (V1+)            | Collaboration, shared skill libraries, agent orchestration/scheduling, RBAC         | Predictable ARR                             | Decoupled                                   |
 
 **Guardrails:** keep markup **visible** (anti-lock-in brand); never gate raw data behind seats; keep first-party OAuth strictly user-scoped (don't resell first-party data). **Verify DataForSEO multi-tenant resale ToS before launching the managed tier.**
 
@@ -57,28 +58,29 @@
 **Motion:** bottom-up, developer/prosumer-led, community-driven (classic open-core).
 
 **Channels (priority):**
-1. **Open-source / GitHub** — the product *is* the top of funnel. Great README, one-click Cloudflare deploy, `llms.txt`, skill marketplace.
+
+1. **Open-source / GitHub** — the product _is_ the top of funnel. Great README, one-click Cloudflare deploy, `llms.txt`, skill marketplace.
 2. **Content & SEO (dogfood)** — rank for "open source SEO tool", "Semrush alternative", "self-hosted rank tracker", "AI SEO agent", "MCP SEO". Ventra ranks itself using itself → proof.
 3. **AI-search / GEO visibility** — get cited in ChatGPT/Perplexity/Google AI Overviews for those queries (our own differentiator, applied to us).
 4. **Developer communities** — MCP/agent ecosystems, Claude/OpenClaw/Hermes, indie-hacker + SEO subreddits/Discords.
 5. **Vietnamese market** — VN-language content + community for the bilingual wedge.
 6. **Launch surfaces** — Product Hunt, Hacker News, GitHub trending, relevant newsletters.
 
-**Launch narrative:** "We forked the best open-source SEO tool and made it *do the work* — bilingual, agent-native, and yours to self-host."
+**Launch narrative:** "We forked the best open-source SEO tool and made it _do the work_ — bilingual, agent-native, and yours to self-host."
 
 ## 6. Funnel & metrics
 
 **North star:** weekly active self-hosted instances running ≥1 agent workflow.
 
-| Funnel stage | Signal | Directional target |
-|---|---|---|
-| Awareness | GitHub stars, HN/PH traffic, branded search | Track from launch |
-| Acquisition | Repo clones, self-host deploys, docs visits | Grow MoM |
-| Activation | Connect GSC + run first agent task | ≥ 40% of installs |
-| Engagement | Weekly active instances w/ ≥1 scheduled job | Grow MoM |
-| Revenue (V1) | Managed-cloud signups, PAYG credit revenue | Post-V1 |
-| Retention | Instances active at day 30 | ≥ 30% |
-| Referral | Community skill contributions, word-of-mouth | Track |
+| Funnel stage | Signal                                       | Directional target |
+| ------------ | -------------------------------------------- | ------------------ |
+| Awareness    | GitHub stars, HN/PH traffic, branded search  | Track from launch  |
+| Acquisition  | Repo clones, self-host deploys, docs visits  | Grow MoM           |
+| Activation   | Connect GSC + run first agent task           | ≥ 40% of installs  |
+| Engagement   | Weekly active instances w/ ≥1 scheduled job  | Grow MoM           |
+| Revenue (V1) | Managed-cloud signups, PAYG credit revenue   | Post-V1            |
+| Retention    | Instances active at day 30                   | ≥ 30%              |
+| Referral     | Community skill contributions, word-of-mouth | Track              |
 
 ## 7. Content pillars
 
@@ -90,7 +92,7 @@
 
 ## 8. Open questions for marketing
 
-- Willingness-to-pay: will prosumers/agencies pay a 20–40% managed markup vs free self-host? *(Validate with pricing interviews before committing.)*
+- Willingness-to-pay: will prosumers/agencies pay a 20–40% managed markup vs free self-host? _(Validate with pricing interviews before committing.)_
 - Brand: is "Ventra SEO" positioned global-first with VN as a wedge, or VN-first with global reach? (Bilingual from day one supports either — decide the lead narrative per campaign.)
 - Which launch surface first (Product Hunt vs HN vs GitHub-trending push)?
 

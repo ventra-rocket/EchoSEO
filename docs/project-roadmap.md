@@ -16,7 +16,7 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 - [ ] Deploy **self-host mode** (`local_noauth` / `cloudflare_access`) end-to-end.
 - [ ] **Rebrand** OpenSEO → Ventra: UI, MCP tool descriptions, agent skills, `wrangler` names, fact sheet, `web/` marketing site.
 - [ ] Strip/gate hosted-only couplings behind hosted flag: PostHog, Reddit-attribution, Loops, Autumn billing (self-host already runs without them). Drop trivial `@every-app/sdk` coupling.
-- [ ] **i18n scaffolding (VN + EN):** wire i18n into TanStack Start, extract UI strings, seed Vietnamese translations. *(Net-new vs OpenSEO.)*
+- [ ] **i18n scaffolding (VN + EN):** wire i18n into TanStack Start, extract UI strings, seed Vietnamese translations. _(Net-new vs OpenSEO.)_
 - [ ] Introduce a thin **DataForSEO provider-abstraction** seam (no behavior change yet).
 - [ ] Verify: DataForSEO ToS on multi-tenant resale; team Cloudflare fluency.
 
@@ -27,6 +27,7 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 **Goal:** launch a coherent, differentiated open-core product. ~80% is inherited; effort is polish, i18n, agent panel, and borrowed quick-wins.
 
 **Inherited features to harden & ship as Ventra:**
+
 - [ ] Keyword research + clustering
 - [ ] Global rank tracking (scheduled cron + Workflow)
 - [ ] Backlink analysis + prospecting
@@ -37,6 +38,7 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 - [ ] AI-search visibility (Brand Lookup + Prompt Explorer) — basic
 
 **Ventra additions in MVP:**
+
 - [ ] **Balanced UX:** polished dashboard + first-class agent panel (both first-class).
 - [ ] **Bilingual VN + EN** across all shipped surfaces.
 - [ ] Borrowed quick-wins (★ stack-native, mostly zero API cost):
@@ -45,26 +47,26 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
   - [ ] Traffic-light real-time content analysis (client-side heuristics)
   - [ ] Severity-tiered audit issue taxonomy (critical/high/low)
 
-**Exit / launch:** public open-source release; "Deploy to Cloudflare" one-click; docs; positioning = *the open, agent-native SEO platform*.
+**Exit / launch:** public open-source release; "Deploy to Cloudflare" one-click; docs; positioning = _the open, agent-native SEO platform_.
 
 ## Phase 2 — V1: "Tool → Business" (~2–4 months)
 
 **Goal:** convert a self-host tool into a sellable product; open the managed revenue tier and the read-write agent moat.
 
-- [ ] **On-page content optimization engine** — briefs, target terms/entities (NLP), content score, AI writing, internal-linking suggestions. *(Top differentiator.)*
+- [ ] **On-page content optimization engine** — briefs, target terms/entities (NLP), content score, AI writing, internal-linking suggestions. _(Top differentiator.)_
 - [ ] **Scheduled + deep technical audit** — indexation, schema validation, robots/sitemap, broken-link checker.
 - [ ] **Local + SERP-feature rank tracking** — city/GPS scope, SERP features incl. AI Overview presence.
 - [ ] **GA4 + Bing Webmaster integrations** — reuse GSC OAuth pattern (DRY).
 - [ ] **White-label reporting + dashboards** — scheduled PDF/email, branded client portals (agency expansion).
 - [ ] **Deepen GEO / AI-search** — prompt tracking, LLM mention monitoring, GEO content recommendations.
-- [ ] **Read-WRITE agent execution loop** — autonomous keyword → brief → draft → on-page fix → GSC-monitored → refresh, with guardrails + eval harness. *(The moat.)*
-- [ ] **Managed Cloud (PAYG credits, 20–40% transparent markup)** — managed DataForSEO + first-party OAuth; open-source metering/billing layer. *(Gated on DataForSEO resale ToS.)*
+- [ ] **Read-WRITE agent execution loop** — autonomous keyword → brief → draft → on-page fix → GSC-monitored → refresh, with guardrails + eval harness. _(The moat.)_
+- [ ] **Managed Cloud (PAYG credits, 20–40% transparent markup)** — managed DataForSEO + first-party OAuth; open-source metering/billing layer. _(Gated on DataForSEO resale ToS.)_
 
 **Exit:** managed cloud in beta; agencies can white-label; agents do end-to-end work.
 
 ## Phase 3 — Later: "High-ceiling automation"
 
-- [ ] **Programmatic SEO engine** — template + dataset → publish at scale + indexation monitor + thin-content guardrails. *(Med–High build; save until core stable.)*
+- [ ] **Programmatic SEO engine** — template + dataset → publish at scale + indexation monitor + thin-content guardrails. _(Med–High build; save until core stable.)_
 - [ ] **Fully autonomous agent pipelines** — research → publish → monitor → recover with minimal human input.
 - [ ] **Multi-tenant agency scale + skill marketplace** — only if V1 agency demand validates.
 
@@ -74,14 +76,14 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 
 ## Milestones
 
-| Milestone | Phase | Definition of done |
-|---|---|---|
-| **M0 — Ventra runs** | 0 | Rebranded app self-host-deploys on Cloudflare, bilingual shell, upstream tracked |
-| **M1 — MVP launch** | 1 | Inherited features hardened + agent panel + VN/EN + quick-wins; public OSS release |
-| **M2 — Content + audit** | 2 | Content-optimization engine + scheduled/deep audit shipped |
-| **M3 — Revenue on** | 2 | Managed cloud PAYG beta + white-label reporting live |
-| **M4 — Autonomous loop** | 2→3 | Read-write agent loop GA with guardrails |
-| **M5 — Scale** | 3 | pSEO engine or agency multi-tenant, demand-validated |
+| Milestone                | Phase | Definition of done                                                                 |
+| ------------------------ | ----- | ---------------------------------------------------------------------------------- |
+| **M0 — Ventra runs**     | 0     | Rebranded app self-host-deploys on Cloudflare, bilingual shell, upstream tracked   |
+| **M1 — MVP launch**      | 1     | Inherited features hardened + agent panel + VN/EN + quick-wins; public OSS release |
+| **M2 — Content + audit** | 2     | Content-optimization engine + scheduled/deep audit shipped                         |
+| **M3 — Revenue on**      | 2     | Managed cloud PAYG beta + white-label reporting live                               |
+| **M4 — Autonomous loop** | 2→3   | Read-write agent loop GA with guardrails                                           |
+| **M5 — Scale**           | 3     | pSEO engine or agency multi-tenant, demand-validated                               |
 
 ## Dependencies & gating checks
 
