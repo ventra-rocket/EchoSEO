@@ -179,14 +179,41 @@ function LiteReportView({ report }: { report: LiteReport }) {
 
       <div className="space-y-2">
         {report.signals.map((signal) => (
-          <div
-            key={signal.id}
-            className="flex items-center justify-between gap-4 rounded-box border px-4 py-2"
-          >
-            <span className="text-sm">{signal.label}</span>
-            <span className={STATUS_BADGE_CLASS[signal.status]}>
-              {signal.status}
-            </span>
+          <div key={signal.id} className="rounded-box border px-4 py-2">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm">{signal.label}</span>
+              <span className={STATUS_BADGE_CLASS[signal.status]}>
+                {signal.status}
+              </span>
+            </div>
+
+            {signal.status !== "pass" ? (
+              <details className="mt-2 text-sm">
+                <summary className="cursor-pointer text-base-content/60">
+                  How to fix this
+                </summary>
+                <div className="mt-2 space-y-2 border-t pt-2">
+                  <p>{signal.problem}</p>
+                  <ol className="list-inside list-decimal space-y-1">
+                    {signal.fixSteps.map((step, index) => (
+                      <li key={index}>{step}</li>
+                    ))}
+                  </ol>
+                  <p className="text-xs text-base-content/60">
+                    Per{" "}
+                    <a
+                      href={signal.googleSourceUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="link"
+                    >
+                      Google's own guidance
+                    </a>
+                    , reviewed {signal.lastReviewedDate}: "{signal.guideQuote}"
+                  </p>
+                </div>
+              </details>
+            ) : null}
           </div>
         ))}
       </div>
