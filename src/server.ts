@@ -28,6 +28,8 @@ import {
   AUTUMN_WEBHOOK_PATH,
   handleAutumnWebhookRequest,
 } from "@/server/billing/autumn-webhook";
+import { FREE_SEO_CHECK_API_PATH } from "@/shared/free-seo-check";
+import { handleFreeSeoCheckRequest } from "@/server/services/seo-check/api";
 
 const appFetch = createStartHandler(defaultStreamHandler);
 const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
@@ -90,6 +92,13 @@ function fetch(
     return routeOnboardingChatAgent(publicRequest, env);
   }
 
+  // Public in every AUTH_MODE — bypasses the TanStack Start server-function
+  // pipeline (and its global auth middleware) entirely. See
+  // shared/free-seo-check.ts for why this can't be a createServerFn.
+  if (pathname === FREE_SEO_CHECK_API_PATH) {
+    return handleFreeSeoCheckRequest(publicRequest);
+  }
+
   if (isHostedAuthMode(authMode)) {
     if (pathname === AUTUMN_WEBHOOK_PATH) {
       return handleAutumnWebhookRequest(publicRequest);
@@ -117,6 +126,8 @@ export { SiteAuditWorkflow } from "./server/workflows/SiteAuditWorkflow";
 export { RankCheckWorkflow } from "./server/workflows/RankCheckWorkflow";
 // Durable Object class for the onboarding strategy chat (Agents SDK).
 export { OnboardingChatAgent } from "./server/features/onboarding/OnboardingChatAgent";
+// Durable Object class for the free SEO checker's per-IP rate limiter.
+export { IpRateLimiterDO } from "./server/services/seo-check/rate-limit-do";
 
 export default {
   fetch,

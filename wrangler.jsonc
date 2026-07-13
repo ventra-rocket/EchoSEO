@@ -29,14 +29,19 @@
       "class_name": "RankCheckWorkflow",
     },
   ],
-  // Durable Object backing the onboarding strategy chat (Agents SDK
-  // AIChatAgent). One instance per project; messages persist in the DO's
-  // SQLite. SQLite-backed classes must be declared in `migrations` below.
+  // Durable Objects: onboarding chat (Agents SDK AIChatAgent, one instance per
+  // project) and the free SEO checker's per-IP rate limiter (one instance per
+  // IP, see src/server/services/seo-check/rate-limit-do.ts). Both are
+  // SQLite-backed, so their classes must be declared in `migrations` below.
   "durable_objects": {
     "bindings": [
       {
         "name": "ONBOARDING_CHAT",
         "class_name": "OnboardingChatAgent",
+      },
+      {
+        "name": "RATE_LIMIT_DO",
+        "class_name": "IpRateLimiterDO",
       },
     ],
   },
@@ -44,6 +49,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["OnboardingChatAgent"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["IpRateLimiterDO"],
     },
   ],
   "triggers": {

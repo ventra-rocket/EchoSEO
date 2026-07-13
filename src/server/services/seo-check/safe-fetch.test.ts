@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppError } from "@/server/lib/errors";
-import { safeFetch } from "./safe-fetch";
+import { safeFetch, readBoundedText } from "./safe-fetch";
 
 const DOH_HOST = "cloudflare-dns.com";
 
@@ -97,6 +97,56 @@ describe("safeFetch", () => {
     await expect(
       safeFetch("https://start.test/", { maxRedirects: 1 }),
     ).rejects.toMatchObject({
+      code: "UPSTREAM_UNAVAILABLE",
+    } satisfies Partial<AppError>);
+  });
+
+  it("maps a network-level failure to UPSTREAM_UNAVAILABLE", async () => {
+    fetchMock.mockImplementationOnce((input: RequestInfo | URL) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      if (url.includes(DOH_HOST)) return Promise.resolve(dohEmpty());
+      return Promise.reject(new TypeError("network error"));
+    });
+
+    await expect(safeFetch("https://start.test/")).rejects.toMatchObject({
+      code: "UPSTREAM_UNAVAILABLE",
+    } satisfies Partial<AppError>);
+  });
+});
+
+describe("readBoundedText", () => {
+  it("returns the body when under the cap", async () => {
+    const text = await readBoundedText(new Response("hello world"), 1_000);
+
+    expect(text).toBe("hello world");
+  });
+
+  it("rejects fast via Content-Length before reading the body", async () => {
+    const response = new Response("small", {
+      headers: { "content-length": "999999999" },
+    });
+
+    await expect(readBoundedText(response, 1_000)).rejects.toMatchObject({
+      code: "UPSTREAM_UNAVAILABLE",
+    } satisfies Partial<AppError>);
+  });
+
+  it("caps a streamed body that understates its size (decompression-bomb case)", async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode("a".repeat(2_000)));
+        controller.close();
+      },
+    });
+    const response = new Response(stream);
+
+    await expect(readBoundedText(response, 100)).rejects.toMatchObject({
       code: "UPSTREAM_UNAVAILABLE",
     } satisfies Partial<AppError>);
   });

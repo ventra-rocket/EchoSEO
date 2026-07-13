@@ -25,6 +25,9 @@ declare namespace Cloudflare {
     AUTUMN_SECRET_KEY?: string;
     AUTUMN_WEBHOOK_SECRET?: string;
 
+    // Cloudflare Turnstile secret key for the public /free-seo-check widget.
+    TURNSTILE_SECRET_KEY?: string;
+
     // DataForSEO API Basic auth value (base64 of login:password)
     DATAFORSEO_API_KEY: string;
 
@@ -42,6 +45,8 @@ interface ImportMetaEnv {
   readonly POSTHOG_HOST?: string;
   readonly VITE_E2E_DOMAIN_FIXTURES?: string;
   readonly VITE_E2E_KEYWORD_FIXTURES?: string;
+  // Cloudflare Turnstile site key — public by design, baked in at build time.
+  readonly TURNSTILE_SITE_KEY?: string;
 }
 
 interface ImportMeta {
