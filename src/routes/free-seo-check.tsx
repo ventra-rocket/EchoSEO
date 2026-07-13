@@ -4,12 +4,10 @@ import {
   FREE_SEO_CHECK_API_PATH,
   type FreeSeoCheckRequest,
 } from "@/shared/free-seo-check";
-import type {
-  LiteReport,
-  SignalCategory,
-  SignalStatus,
-} from "@/server/services/seo-check/types";
+import type { LiteReport } from "@/server/services/seo-check/types";
 import { TurnstileWidget } from "@/client/features/free-seo-check/TurnstileWidget";
+import { LiteReportView } from "@/client/features/free-seo-check/LiteReportView";
+import { ScanLog } from "@/client/features/free-seo-check/ScanLog";
 
 export const Route = createFileRoute("/free-seo-check")({
   head: () => ({
@@ -21,21 +19,21 @@ export const Route = createFileRoute("/free-seo-check")({
           "Check any page's on-page SEO instantly and free — title, meta, headings, and technical basics, no signup required.",
       },
     ],
+    links: [
+      // Scoped preload: only requested on this route, keeps the display font
+      // off the critical path everywhere else. Fonts need crossorigin even
+      // same-origin, or the preload won't match the CSS request.
+      {
+        rel: "preload",
+        href: "/fonts/plus-jakarta-sans-latin.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+    ],
   }),
   component: FreeSeoCheckPage,
 });
-
-const CATEGORY_LABELS: Record<SignalCategory, string> = {
-  meta: "Meta",
-  structure: "Page Structure",
-  server: "Server",
-};
-
-const STATUS_BADGE_CLASS: Record<SignalStatus, string> = {
-  pass: "badge badge-success",
-  warn: "badge badge-warning",
-  fail: "badge badge-error",
-};
 
 const ERROR_MESSAGES: Record<string, string> = {
   VALIDATION_ERROR: "Enter a valid URL to check.",
@@ -100,128 +98,83 @@ function FreeSeoCheckPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 px-4 py-12">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold">Free SEO Checker</h1>
-        <p className="text-base-content/60">
-          Instant on-page SEO check — title, meta, headings, and technical
-          basics. No signup required.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          className="input input-bordered w-full"
-          placeholder="example.com"
-          value={url}
-          onChange={(event) => setUrl(event.target.value)}
-          autoComplete="off"
-          required
-        />
-
-        {siteKey ? (
-          <TurnstileWidget
-            siteKey={siteKey}
-            onToken={setTurnstileToken}
-            onExpire={() => setTurnstileToken(null)}
-            onLoadError={() =>
-              setErrorMessage(
-                "Couldn't load verification — please refresh the page.",
-              )
-            }
-          />
-        ) : (
-          <p className="text-sm text-warning">
-            Turnstile is not configured for this deployment yet.
+    <div className="fsc-root h-full overflow-auto bg-base-200">
+      <div className="mx-auto max-w-2xl space-y-8 px-4 py-10 sm:py-14">
+        <header className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Free SEO Checker
+          </h1>
+          <p className="mx-auto max-w-md text-sm text-base-content/60">
+            Instant on-page SEO check — title, meta, headings, and technical
+            basics. No signup required.
           </p>
-        )}
+        </header>
 
-        <button
-          type="submit"
-          className="btn btn-soft w-full"
-          disabled={!turnstileToken || status === "loading"}
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4 sm:p-6"
         >
-          {status === "loading" ? "Checking..." : "Check my site"}
-        </button>
-      </form>
+          <label htmlFor="fsc-url" className="sr-only">
+            Website URL
+          </label>
+          <input
+            id="fsc-url"
+            type="text"
+            inputMode="url"
+            className="input input-bordered w-full font-mono"
+            placeholder="example.com"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            autoComplete="off"
+            required
+          />
 
-      {errorMessage ? (
-        <p className="text-sm text-error">{errorMessage}</p>
-      ) : null}
-
-      {report ? <LiteReportView report={report} /> : null}
-    </div>
-  );
-}
-
-function LiteReportView({ report }: { report: LiteReport }) {
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="text-4xl font-bold">{report.overallScore}</div>
-        <p className="text-base-content/60">Overall on-page score</p>
-        <p className="mt-1 break-all text-xs text-base-content/40">
-          Results for {report.finalUrl}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 text-center">
-        {report.categoryScores.map((category) => (
-          <div key={category.category} className="rounded-box border p-4">
-            <div className="text-2xl font-semibold">{category.score}</div>
-            <div className="text-sm text-base-content/60">
-              {CATEGORY_LABELS[category.category]}
+          {siteKey ? (
+            <TurnstileWidget
+              siteKey={siteKey}
+              onToken={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+              onLoadError={() =>
+                setErrorMessage(
+                  "Couldn't load verification — please refresh the page.",
+                )
+              }
+            />
+          ) : (
+            <div className="alert alert-warning text-sm" role="alert">
+              Turnstile is not configured for this deployment yet.
             </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary w-full"
+            disabled={!turnstileToken || status === "loading"}
+          >
+            {status === "loading" ? (
+              <>
+                <span
+                  className="loading loading-spinner loading-sm"
+                  aria-hidden="true"
+                />
+                Checking…
+              </>
+            ) : (
+              "Check my site"
+            )}
+          </button>
+        </form>
+
+        {errorMessage ? (
+          <div className="alert alert-error text-sm" role="alert">
+            {errorMessage}
           </div>
-        ))}
-      </div>
+        ) : null}
 
-      <div className="space-y-2">
-        {report.signals.map((signal) => (
-          <div key={signal.id} className="rounded-box border px-4 py-2">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm">{signal.label}</span>
-              <span className={STATUS_BADGE_CLASS[signal.status]}>
-                {signal.status}
-              </span>
-            </div>
-
-            {signal.status !== "pass" ? (
-              <details className="mt-2 text-sm">
-                <summary className="cursor-pointer text-base-content/60">
-                  How to fix this
-                </summary>
-                <div className="mt-2 space-y-2 border-t pt-2">
-                  <p>{signal.problem}</p>
-                  <ol className="list-inside list-decimal space-y-1">
-                    {signal.fixSteps.map((step, index) => (
-                      <li key={index}>{step}</li>
-                    ))}
-                  </ol>
-                  <p className="text-xs text-base-content/60">
-                    Per{" "}
-                    <a
-                      href={signal.googleSourceUrl}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="link"
-                    >
-                      Google's own guidance
-                    </a>
-                    , reviewed {signal.lastReviewedDate}: "{signal.guideQuote}"
-                  </p>
-                </div>
-              </details>
-            ) : null}
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-box border border-primary/30 bg-primary/5 p-4 text-center text-sm">
-        Want Core Web Vitals too? The Deep report adds{" "}
-        {report.deepTeaser.coreWebVitalsMetricCount} Core Web Vitals metrics
-        plus a full site crawl — free, delivered to your inbox.
+        {status === "loading" ? <ScanLog url={url} /> : null}
+        {status === "done" && report ? (
+          <LiteReportView report={report} />
+        ) : null}
       </div>
     </div>
   );
