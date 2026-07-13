@@ -55,6 +55,9 @@
       },
       "OAUTH_KV": {
         "description": "KV namespace used by the Cloudflare Workers OAuth provider for MCP client registrations, grants, and tokens."
+      },
+      "TURNSTILE_SECRET_KEY": {
+        "description": "Cloudflare Turnstile secret key, verified server-side against the /free-seo-check widget token."
       }
     }
   },
