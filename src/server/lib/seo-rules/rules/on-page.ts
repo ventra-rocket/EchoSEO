@@ -201,8 +201,8 @@ export const STRUCTURED_DATA_GUIDANCE: RuleMeta = {
     "If eligible, add JSON-LD that matches the visible content and validate it with Google's Rich Results Test before publishing.",
   ],
   googleSourceUrl:
-    "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data",
+    "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
   guideQuote:
-    "Google doesn't guarantee that your page will appear in Search results with the specified feature, even if your page is marked up correctly according to the Rich Results Test.",
+    "Google does not guarantee that your structured data will show up in search results, even if your page is marked up correctly according to the Rich Results Test.",
   lastReviewedDate: "2026-07-13",
 };
