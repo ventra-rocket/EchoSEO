@@ -19,18 +19,6 @@ export const Route = createFileRoute("/free-seo-check")({
           "Check any page's on-page SEO instantly and free — title, meta, headings, and technical basics, no signup required.",
       },
     ],
-    links: [
-      // Scoped preload: only requested on this route, keeps the display font
-      // off the critical path everywhere else. Fonts need crossorigin even
-      // same-origin, or the preload won't match the CSS request.
-      {
-        rel: "preload",
-        href: "/fonts/plus-jakarta-sans-latin.woff2",
-        as: "font",
-        type: "font/woff2",
-        crossOrigin: "anonymous",
-      },
-    ],
   }),
   component: FreeSeoCheckPage,
 });
