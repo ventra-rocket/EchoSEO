@@ -1,30 +1,28 @@
 /**
  * `runLiteCheck` — the free, instant, on-page-only SEO check (Decision D).
  *
- * safeFetch (SSRF-gated) -> parse-html (cheerio) -> deterministic on-page
- * signal evaluation -> LiteReport. No Lighthouse/CWV here — that's the async
- * Deep tier via the Google PSI API (Phase 3). Phase 2 later attaches
- * Google-cited fixes to these signals via the rules engine.
+ * safeFetch (SSRF-gated) -> parse-html (cheerio) -> seo-rules engine
+ * (Phase 2, Google-cited fixes) -> LiteReport. No Lighthouse/CWV here —
+ * that's the async Deep tier via the Google PSI API (Phase 3).
  */
 import { safeFetch, readBoundedText } from "./safe-fetch";
 import { parseLitePage, type ParsedPage } from "./parse-html";
+import {
+  evaluateLiteSignals,
+  score as scoreIssues,
+  type Issue,
+  type RuleCategory,
+} from "@/server/lib/seo-rules";
 import {
   SIGNAL_CATEGORIES,
   type CategoryScore,
   type LiteReport,
   type Signal,
   type SignalCategory,
-  type SignalStatus,
 } from "./types";
 
 /** LCP, INP, CLS, TTFB — reported by the Deep tier via the PSI API. */
 const CORE_WEB_VITALS_METRIC_COUNT = 4;
-
-const SIGNAL_STATUS_WEIGHT: Record<SignalStatus, number> = {
-  pass: 1,
-  warn: 0.5,
-  fail: 0,
-};
 
 export async function runLiteCheck(inputUrl: string): Promise<LiteReport> {
   const startedAt = Date.now();
@@ -32,10 +30,22 @@ export async function runLiteCheck(inputUrl: string): Promise<LiteReport> {
   const html = await readBoundedText(response);
   const responseTimeMs = Date.now() - startedAt;
 
-  const page = parseLitePage(html, finalUrl, response.status, responseTimeMs);
+  const page: ParsedPage = parseLitePage(
+    html,
+    finalUrl,
+    response.status,
+    responseTimeMs,
+  );
 
-  const signals = evaluateSignals(page, finalUrl);
-  const categoryScores = scoreCategories(signals);
+  const issues = evaluateLiteSignals(page);
+  const signals = issues.map(toSignal);
+  const categoryScores: CategoryScore[] = scoreIssues(
+    issues,
+    SIGNAL_CATEGORIES,
+  ).map((entry) => ({
+    category: toSignalCategory(entry.category),
+    score: entry.score,
+  }));
   const overallScore = Math.round(
     categoryScores.reduce((sum, entry) => sum + entry.score, 0) /
       categoryScores.length,
@@ -62,144 +72,36 @@ export async function runLiteCheck(inputUrl: string): Promise<LiteReport> {
   };
 }
 
-function signal(
-  id: string,
-  category: SignalCategory,
-  status: SignalStatus,
-  label: string,
-): Signal {
-  return { id, category, status, label };
+function isSignalCategory(category: RuleCategory): category is SignalCategory {
+  return (SIGNAL_CATEGORIES as readonly RuleCategory[]).includes(category);
 }
 
-/** True if a heading level jumps by more than one from the highest seen so far. */
-function hasHeadingLevelSkip(order: number[]): boolean {
-  let maxSeen = 0;
-  for (const level of order) {
-    if (maxSeen > 0 && level > maxSeen + 1) return true;
-    if (level > maxSeen) maxSeen = level;
+/**
+ * `RuleCategory` is broader than `SignalCategory` (it also covers
+ * `core-web-vitals` for the Deep tier) — `evaluateLiteSignals` only ever
+ * runs the on-page + technical rule sets, so this should never throw; it's
+ * a checked narrowing rather than a blind cast.
+ */
+function toSignalCategory(category: RuleCategory): SignalCategory {
+  if (!isSignalCategory(category)) {
+    throw new Error(
+      `Lite check produced an out-of-scope signal category: ${category}`,
+    );
   }
-  return false;
+  return category;
 }
 
-function evaluateSignals(page: ParsedPage, finalUrl: string): Signal[] {
-  const titleLen = page.title.length;
-  const descriptionLen = page.metaDescription.length;
-  const h1Count = page.h1s.length;
-  const imagesWithSrc = page.images.filter((img) => img.src);
-  // alt="" is a valid, intentional "decorative image" marker (WCAG) — only a
-  // truly absent alt attribute (null) counts as missing.
-  const imagesMissingAlt = imagesWithSrc.filter(
-    (img) => img.alt === null,
-  ).length;
-  const robotsBlocksIndex = (page.robotsMeta ?? "")
-    .toLowerCase()
-    .includes("noindex");
-
-  return [
-    signal(
-      "meta-title",
-      "meta",
-      titleLen === 0
-        ? "fail"
-        : titleLen < 10 || titleLen > 60
-          ? "warn"
-          : "pass",
-      "Title tag present, 10-60 characters",
-    ),
-    signal(
-      "meta-description",
-      "meta",
-      descriptionLen === 0
-        ? "fail"
-        : descriptionLen < 50 || descriptionLen > 160
-          ? "warn"
-          : "pass",
-      "Meta description present, 50-160 characters",
-    ),
-    signal(
-      "meta-canonical",
-      "meta",
-      page.canonical ? "pass" : "fail",
-      "Canonical link tag present",
-    ),
-    signal(
-      "structure-h1",
-      "structure",
-      h1Count === 1 ? "pass" : h1Count === 0 ? "fail" : "warn",
-      "Exactly one H1 heading",
-    ),
-    signal(
-      "structure-heading-order",
-      "structure",
-      hasHeadingLevelSkip(page.headingOrder) ? "warn" : "pass",
-      "Heading levels do not skip (e.g. H2 straight to H4)",
-    ),
-    signal(
-      "structure-image-alt",
-      "structure",
-      imagesWithSrc.length === 0 || imagesMissingAlt === 0
-        ? "pass"
-        : imagesMissingAlt === imagesWithSrc.length
-          ? "fail"
-          : "warn",
-      "Images have descriptive alt text",
-    ),
-    signal(
-      "structure-word-count",
-      "structure",
-      page.wordCount >= 600 ? "pass" : page.wordCount >= 300 ? "warn" : "fail",
-      "Enough indexable content (300+ words)",
-    ),
-    signal(
-      "structure-structured-data",
-      "structure",
-      page.hasStructuredData ? "pass" : "warn",
-      "Structured data (JSON-LD) present",
-    ),
-    signal(
-      "server-https",
-      "server",
-      finalUrl.startsWith("https:") ? "pass" : "fail",
-      "Served over HTTPS",
-    ),
-    signal(
-      "server-status",
-      "server",
-      page.statusCode === 200
-        ? "pass"
-        : page.statusCode < 400
-          ? "warn"
-          : "fail",
-      "Responds with a healthy status code",
-    ),
-    signal(
-      "server-indexable",
-      "server",
-      robotsBlocksIndex ? "fail" : "pass",
-      "Not blocked from indexing via robots meta",
-    ),
-    signal(
-      "server-mixed-content",
-      "server",
-      page.hasMixedContent ? "fail" : "pass",
-      "No mixed HTTP content on an HTTPS page",
-    ),
-  ];
-}
-
-function scoreCategories(signals: Signal[]): CategoryScore[] {
-  return SIGNAL_CATEGORIES.map((category) => {
-    const inCategory = signals.filter((entry) => entry.category === category);
-    const score = inCategory.length
-      ? Math.round(
-          (inCategory.reduce(
-            (sum, entry) => sum + SIGNAL_STATUS_WEIGHT[entry.status],
-            0,
-          ) /
-            inCategory.length) *
-            100,
-        )
-      : 0;
-    return { category, score };
-  });
+function toSignal(issue: Issue): Signal {
+  return {
+    id: issue.id,
+    category: toSignalCategory(issue.category),
+    status: issue.status,
+    label: issue.label,
+    severity: issue.severity,
+    problem: issue.problem,
+    fixSteps: issue.fixSteps,
+    googleSourceUrl: issue.googleSourceUrl,
+    guideQuote: issue.guideQuote,
+    lastReviewedDate: issue.lastReviewedDate,
+  };
 }
