@@ -94,9 +94,14 @@ export async function crawlSite(
   const pages: CrawledPage[] = [primary];
   for (const url of targets) {
     const crawled = await fetchAndParse(url);
-    // Drop a link that redirected off-origin — it isn't a page of this site
-    // and its robots.txt was never consulted.
-    if (crawled && isSameOrigin(crawled.url, origin)) {
+    // Re-validate the *final* URL after redirects: drop a link that hopped
+    // off-origin (not a page of this site) or that redirected onto a
+    // robots-Disallow path (the pre-fetch check only saw the requested URL).
+    if (
+      crawled &&
+      isSameOrigin(crawled.url, origin) &&
+      robots.isAllowed(crawled.url)
+    ) {
       pages.push(crawled);
     }
   }

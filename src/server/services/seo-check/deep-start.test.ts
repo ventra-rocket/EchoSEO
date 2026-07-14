@@ -29,6 +29,7 @@ interface ConfirmationArg {
 }
 
 const {
+  isDeepCheckDisabledMock,
   verifyTurnstileTokenMock,
   checkIpRateLimitMock,
   getRequiredEnvValueMock,
@@ -38,6 +39,7 @@ const {
   getEmailSenderMock,
   sendDeepCheckConfirmationMock,
 } = vi.hoisted(() => ({
+  isDeepCheckDisabledMock: vi.fn<() => Promise<boolean>>(),
   verifyTurnstileTokenMock: vi.fn(),
   checkIpRateLimitMock: vi.fn(),
   getRequiredEnvValueMock: vi.fn(),
@@ -53,6 +55,9 @@ const {
 vi.mock("cloudflare:workers", () => ({
   env: { RATE_LIMIT_DO: {} },
   waitUntil: (promise: Promise<unknown>) => promise,
+}));
+vi.mock("./deep-check-config", () => ({
+  isDeepCheckDisabled: isDeepCheckDisabledMock,
 }));
 vi.mock("./turnstile", () => ({
   verifyTurnstileToken: verifyTurnstileTokenMock,
@@ -99,6 +104,7 @@ const VALID_BODY = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  isDeepCheckDisabledMock.mockResolvedValue(false);
   getRequiredEnvValueMock.mockResolvedValue("test-secret");
   verifyTurnstileTokenMock.mockResolvedValue({ success: true, errorCodes: [] });
   checkIpRateLimitMock.mockResolvedValue({
@@ -117,6 +123,15 @@ describe("handleStartDeepCheckRequest", () => {
     const response = await handleStartDeepCheckRequest(makeRequest({}, "GET"));
     expect(response.status).toBe(405);
     expect(verifyTurnstileTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses with the kill-switch on, before creating a lead or emailing", async () => {
+    isDeepCheckDisabledMock.mockResolvedValue(true);
+    const response = await handleStartDeepCheckRequest(makeRequest(VALID_BODY));
+    expect(response.status).toBe(503);
+    expect(verifyTurnstileTokenMock).not.toHaveBeenCalled();
+    expect(createLeadWithReportMock).not.toHaveBeenCalled();
+    expect(sendDeepCheckConfirmationMock).not.toHaveBeenCalled();
   });
 
   it("rejects a missing email before any gate", async () => {

@@ -95,7 +95,7 @@ beforeEach(() => {
 });
 
 describe("runDeepSeoCheck", () => {
-  it("runs PSI then crawl then persist, and commits done R2-first", async () => {
+  it("runs PSI then crawl+persist and commits done R2-first", async () => {
     const step = makeStep();
     await runDeepSeoCheck(step, PARAMS);
 

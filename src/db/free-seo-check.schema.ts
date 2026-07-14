@@ -65,6 +65,9 @@ export const seoReports = sqliteTable(
     url: text("url").notNull(),
     locale: text("locale").notNull(),
     status: text("status", { enum: DEEP_REPORT_STATUSES }).notNull(),
+    // Set when this report deduped onto a canonical same-domain audit from the
+    // same day: it serves the canonical's result instead of running its own.
+    canonicalReportId: text("canonical_report_id"),
     // R2 object key of the persisted DeepReport payload (Slice 2).
     r2Key: text("r2_key"),
     // User-facing failure reason when status = failed.
@@ -81,5 +84,26 @@ export const seoReports = sqliteTable(
   (table) => [
     index("seo_reports_lead_idx").on(table.leadId),
     index("seo_reports_domain_status_idx").on(table.domain, table.status),
+    index("seo_reports_canonical_idx").on(table.canonicalReportId),
   ],
 );
+
+/**
+ * Atomic `(domain, day)` dedupe reservation for the Deep check.
+ *
+ * The first confirm to insert `{domain}:{utc-date}` wins and runs the audit;
+ * concurrent same-domain confirms lose the PK conflict and attach their report
+ * to the winner (`seo_reports.canonical_report_id`) instead of running a second
+ * PSI + crawl. A blocked or failed-to-enqueue winner releases its row so a later
+ * confirm can become canonical.
+ */
+export const deepCheckDedupe = sqliteTable("deep_check_dedupe", {
+  // "{domain}:{YYYY-MM-DD}" in UTC.
+  domainDay: text("domain_day").primaryKey(),
+  reportId: text("report_id")
+    .notNull()
+    .references(() => seoReports.id, { onDelete: "cascade" }),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});

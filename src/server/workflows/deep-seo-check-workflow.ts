@@ -27,6 +27,9 @@ import {
   markReportRunning,
 } from "@/server/services/seo-check/seo-reports-repository";
 
+/** Generic, user-facing failure text; the real cause only goes to the log. */
+const FAILURE_MESSAGE = "The deep check could not be completed.";
+
 interface DeepSeoCheckParams {
   reportId: string;
   url: string;
@@ -76,6 +79,8 @@ export async function runDeepSeoCheck(
     // transient and never becomes a durable step output (Workflows cap step
     // results at 1 MiB). Only the small shaped PSI result crosses step
     // boundaries; the DeepReport goes straight to R2, then D1 commits `done`.
+    // Reports deduped onto this one read the result lazily via
+    // canonical_report_id — no fan-out write here.
     await step.do("crawl-and-persist", async () => {
       const crawl = await crawlSite(url);
       const report = buildDeepReport({ requestedUrl: url, crawl, psi });
@@ -88,7 +93,7 @@ export async function runDeepSeoCheck(
     // failed one). Keep the message generic — it is surfaced to anonymous
     // users in Phase 5; the real cause stays in the log above.
     await step.do("mark-failed", () =>
-      markReportFailed(reportId, "The deep check could not be completed."),
+      markReportFailed(reportId, FAILURE_MESSAGE),
     );
     throw error;
   }

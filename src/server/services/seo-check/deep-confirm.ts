@@ -20,7 +20,7 @@ import {
   findReportByLeadId,
   tryQueueConfirmingReport,
 } from "./seo-reports-repository";
-import { enqueueDeepCheck } from "./deep-check-enqueue";
+import { dispatchDeepCheck } from "./deep-dispatch";
 import {
   clientIp,
   errorResponse,
@@ -62,13 +62,19 @@ export async function handleConfirmDeepCheckRequest(
       await markLeadConfirmed(lead.id, new Date().toISOString());
     }
 
-    // Queue the paired report exactly once. The CAS is a no-op if a concurrent
-    // confirm already queued it, and recovers a report left in `confirming`.
+    // Advance the paired report exactly once. The CAS is a no-op if a concurrent
+    // confirm already queued it, and recovers a report left in `confirming`; the
+    // dispatcher then applies the kill-switch, dedupe, and quota gates.
     const report = await findReportByLeadId(lead.id);
     if (!report) {
       console.error(`free-seo-check: confirmed lead ${lead.id} has no report`);
     } else if (await tryQueueConfirmingReport(report.id)) {
-      await enqueueDeepCheck(report.id, report.url);
+      await dispatchDeepCheck({
+        reportId: report.id,
+        domain: report.domain,
+        url: report.url,
+        emailNormalized: lead.emailNormalized,
+      });
     }
 
     return jsonResponse({

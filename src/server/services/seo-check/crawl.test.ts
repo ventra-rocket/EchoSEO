@@ -102,6 +102,21 @@ describe("crawlSite", () => {
     expect(urls).toContain("https://site.test/c");
   });
 
+  it("drops a same-origin redirect that lands on a robots-Disallow path", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: 200 },
+        // /a redirects onto a Disallow path the pre-fetch check never saw.
+        finalUrl: url.endsWith("/a") ? "https://site.test/private/secret" : url,
+      }),
+    );
+    const result = await crawlSite(PRIMARY);
+    const urls = result.pages.map((p) => p.url);
+    expect(urls).not.toContain("https://site.test/private/secret");
+    expect(urls).toContain("https://site.test/b");
+    expect(urls).toContain("https://site.test/c");
+  });
+
   it("throws when the primary page cannot be fetched", async () => {
     safeFetchMock.mockRejectedValue(new Error("dns"));
     await expect(crawlSite(PRIMARY)).rejects.toThrow();

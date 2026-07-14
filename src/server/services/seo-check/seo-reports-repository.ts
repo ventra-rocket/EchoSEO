@@ -4,13 +4,15 @@
  * Slice 1 only drives the status machine to `queued`. The Slice 2 Workflow adds
  * the running -> done|failed transitions plus the R2 payload key.
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { seoReports } from "@/db/schema";
 
+type ReportRow = typeof seoReports.$inferSelect;
+
 export async function findReportByLeadId(
   leadId: string,
-): Promise<typeof seoReports.$inferSelect | null> {
+): Promise<ReportRow | null> {
   const [row] = await db
     .select()
     .from(seoReports)
@@ -79,5 +81,24 @@ export async function markReportFailed(
       finishedAt: sql`(current_timestamp)`,
       updatedAt: sql`(current_timestamp)`,
     })
-    .where(eq(seoReports.id, id));
+    // Never clobber a report that already reached `done` (its payload exists in
+    // R2) — a `done` report has nothing to fail.
+    .where(and(eq(seoReports.id, id), ne(seoReports.status, "done")));
+}
+
+/**
+ * Records that a deduped report shares a canonical same-domain audit. The report
+ * keeps its `queued` status and is resolved to the canonical's result lazily at
+ * delivery time by following `canonical_report_id` (Phase 5) — there is no
+ * fan-out, so no cross-report write race. The `queued` guard avoids overwriting
+ * a row that has since moved on. Never runs its own PSI + crawl.
+ */
+export async function attachReportToCanonical(
+  id: string,
+  canonicalReportId: string,
+): Promise<void> {
+  await db
+    .update(seoReports)
+    .set({ canonicalReportId, updatedAt: sql`(current_timestamp)` })
+    .where(and(eq(seoReports.id, id), eq(seoReports.status, "queued")));
 }

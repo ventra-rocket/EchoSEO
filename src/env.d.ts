@@ -31,6 +31,13 @@ declare namespace Cloudflare {
     // Google PageSpeed Insights API key for the free Deep check (Lighthouse/CWV).
     GOOGLE_PSI_API_KEY?: string;
 
+    // Free Deep check abuse/quota gates (all optional; conservative defaults in
+    // deep-check-config.ts). Kill-switch = "true" pauses the whole pipeline.
+    FREE_DEEP_CHECK_DISABLED?: string;
+    DEEP_CHECK_PSI_DAILY_CEILING?: string;
+    DEEP_CHECK_PER_DOMAIN_DAILY?: string;
+    DEEP_CHECK_PER_EMAIL_DAILY?: string;
+
     // DataForSEO API Basic auth value (base64 of login:password)
     DATAFORSEO_API_KEY: string;
 

@@ -17,6 +17,7 @@ import {
   FREE_SEO_CHECK_CONFIRM_ROUTE,
   startDeepCheckRequestSchema,
 } from "@/shared/free-seo-check";
+import { isDeepCheckDisabled } from "./deep-check-config";
 import { verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { createLeadWithReport } from "./leads-repository";
@@ -64,6 +65,13 @@ export async function handleStartDeepCheckRequest(
   }
 
   try {
+    // Kill-switch first: refuse before creating a lead or sending an email.
+    // Respond directly (no PostHog capture) — this runs before the rate limit,
+    // so a flood against a deliberately paused endpoint must stay cheap.
+    if (await isDeepCheckDisabled()) {
+      return jsonResponse({ error: "UPSTREAM_UNAVAILABLE" }, 503);
+    }
+
     const body = startDeepCheckRequestSchema.safeParse(
       await readJsonBody(request),
     );

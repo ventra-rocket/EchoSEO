@@ -6,7 +6,7 @@ const {
   markLeadConfirmedMock,
   findReportByLeadIdMock,
   tryQueueConfirmingReportMock,
-  enqueueDeepCheckMock,
+  dispatchDeepCheckMock,
   captureServerErrorMock,
 } = vi.hoisted(() => ({
   checkIpRateLimitMock: vi.fn(),
@@ -14,7 +14,7 @@ const {
   markLeadConfirmedMock: vi.fn(),
   findReportByLeadIdMock: vi.fn(),
   tryQueueConfirmingReportMock: vi.fn(),
-  enqueueDeepCheckMock: vi.fn(),
+  dispatchDeepCheckMock: vi.fn(),
   captureServerErrorMock: vi.fn(),
 }));
 
@@ -36,8 +36,8 @@ vi.mock("./seo-reports-repository", () => ({
   findReportByLeadId: findReportByLeadIdMock,
   tryQueueConfirmingReport: tryQueueConfirmingReportMock,
 }));
-vi.mock("./deep-check-enqueue", () => ({
-  enqueueDeepCheck: enqueueDeepCheckMock,
+vi.mock("./deep-dispatch", () => ({
+  dispatchDeepCheck: dispatchDeepCheckMock,
 }));
 
 const { handleConfirmDeepCheckRequest } = await import("./deep-confirm");
@@ -83,11 +83,12 @@ beforeEach(() => {
   findReportByLeadIdMock.mockResolvedValue({
     id: "report-1",
     leadId: "lead-1",
+    domain: "example.test",
     url: "https://example.test/",
     status: "confirming",
   });
   tryQueueConfirmingReportMock.mockResolvedValue(true);
-  enqueueDeepCheckMock.mockResolvedValue(undefined);
+  dispatchDeepCheckMock.mockResolvedValue(undefined);
 });
 
 describe("handleConfirmDeepCheckRequest", () => {
@@ -125,7 +126,7 @@ describe("handleConfirmDeepCheckRequest", () => {
     );
     expect(response.status).toBe(404);
     expect(markLeadConfirmedMock).not.toHaveBeenCalled();
-    expect(enqueueDeepCheckMock).not.toHaveBeenCalled();
+    expect(dispatchDeepCheckMock).not.toHaveBeenCalled();
   });
 
   it("rejects an expired token that was never confirmed", async () => {
@@ -138,7 +139,7 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "VALIDATION_ERROR" });
     expect(markLeadConfirmedMock).not.toHaveBeenCalled();
-    expect(enqueueDeepCheckMock).not.toHaveBeenCalled();
+    expect(dispatchDeepCheckMock).not.toHaveBeenCalled();
   });
 
   it("confirms consent, queues the report, and enqueues exactly once", async () => {
@@ -151,11 +152,13 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(markLeadConfirmedMock).toHaveBeenCalledTimes(1);
     expect(markLeadConfirmedMock.mock.calls[0]?.[0]).toBe("lead-1");
     expect(tryQueueConfirmingReportMock).toHaveBeenCalledWith("report-1");
-    expect(enqueueDeepCheckMock).toHaveBeenCalledTimes(1);
-    expect(enqueueDeepCheckMock).toHaveBeenCalledWith(
-      "report-1",
-      "https://example.test/",
-    );
+    expect(dispatchDeepCheckMock).toHaveBeenCalledTimes(1);
+    expect(dispatchDeepCheckMock).toHaveBeenCalledWith({
+      reportId: "report-1",
+      domain: "example.test",
+      url: "https://example.test/",
+      emailNormalized: "founder@example.com",
+    });
   });
 
   it("does not enqueue when the report CAS loses the race", async () => {
@@ -166,7 +169,7 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "confirmed" });
     expect(markLeadConfirmedMock).toHaveBeenCalledTimes(1);
-    expect(enqueueDeepCheckMock).not.toHaveBeenCalled();
+    expect(dispatchDeepCheckMock).not.toHaveBeenCalled();
   });
 
   it("is idempotent when already confirmed and already queued", async () => {
@@ -180,7 +183,7 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "already_confirmed" });
     expect(markLeadConfirmedMock).not.toHaveBeenCalled();
-    expect(enqueueDeepCheckMock).not.toHaveBeenCalled();
+    expect(dispatchDeepCheckMock).not.toHaveBeenCalled();
   });
 
   it("recovers a report stranded in confirming after a partial failure", async () => {
@@ -195,11 +198,13 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "already_confirmed" });
     expect(markLeadConfirmedMock).not.toHaveBeenCalled();
-    expect(enqueueDeepCheckMock).toHaveBeenCalledTimes(1);
-    expect(enqueueDeepCheckMock).toHaveBeenCalledWith(
-      "report-1",
-      "https://example.test/",
-    );
+    expect(dispatchDeepCheckMock).toHaveBeenCalledTimes(1);
+    expect(dispatchDeepCheckMock).toHaveBeenCalledWith({
+      reportId: "report-1",
+      domain: "example.test",
+      url: "https://example.test/",
+      emailNormalized: "founder@example.com",
+    });
   });
 
   it("records consent but does not enqueue when the report is missing", async () => {
@@ -210,6 +215,6 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(response.status).toBe(200);
     expect(markLeadConfirmedMock).toHaveBeenCalledTimes(1);
     expect(tryQueueConfirmingReportMock).not.toHaveBeenCalled();
-    expect(enqueueDeepCheckMock).not.toHaveBeenCalled();
+    expect(dispatchDeepCheckMock).not.toHaveBeenCalled();
   });
 });
