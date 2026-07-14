@@ -28,6 +28,9 @@ declare namespace Cloudflare {
     // Cloudflare Turnstile secret key for the public /free-seo-check widget.
     TURNSTILE_SECRET_KEY?: string;
 
+    // Google PageSpeed Insights API key for the free Deep check (Lighthouse/CWV).
+    GOOGLE_PSI_API_KEY?: string;
+
     // DataForSEO API Basic auth value (base64 of login:password)
     DATAFORSEO_API_KEY: string;
 

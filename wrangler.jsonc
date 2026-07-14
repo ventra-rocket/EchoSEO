@@ -28,6 +28,11 @@
       "binding": "RANK_CHECK_WORKFLOW",
       "class_name": "RankCheckWorkflow",
     },
+    {
+      "name": "deep-seo-check-workflow",
+      "binding": "DEEP_SEO_CHECK_WORKFLOW",
+      "class_name": "DeepSeoCheckWorkflow",
+    },
   ],
   // Durable Objects: onboarding chat (Agents SDK AIChatAgent, one instance per
   // project) and the free SEO checker's per-IP rate limiter (one instance per

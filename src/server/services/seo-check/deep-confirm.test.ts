@@ -83,6 +83,7 @@ beforeEach(() => {
   findReportByLeadIdMock.mockResolvedValue({
     id: "report-1",
     leadId: "lead-1",
+    url: "https://example.test/",
     status: "confirming",
   });
   tryQueueConfirmingReportMock.mockResolvedValue(true);
@@ -151,7 +152,10 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(markLeadConfirmedMock.mock.calls[0]?.[0]).toBe("lead-1");
     expect(tryQueueConfirmingReportMock).toHaveBeenCalledWith("report-1");
     expect(enqueueDeepCheckMock).toHaveBeenCalledTimes(1);
-    expect(enqueueDeepCheckMock).toHaveBeenCalledWith("report-1");
+    expect(enqueueDeepCheckMock).toHaveBeenCalledWith(
+      "report-1",
+      "https://example.test/",
+    );
   });
 
   it("does not enqueue when the report CAS loses the race", async () => {
@@ -192,7 +196,10 @@ describe("handleConfirmDeepCheckRequest", () => {
     expect(await response.json()).toEqual({ status: "already_confirmed" });
     expect(markLeadConfirmedMock).not.toHaveBeenCalled();
     expect(enqueueDeepCheckMock).toHaveBeenCalledTimes(1);
-    expect(enqueueDeepCheckMock).toHaveBeenCalledWith("report-1");
+    expect(enqueueDeepCheckMock).toHaveBeenCalledWith(
+      "report-1",
+      "https://example.test/",
+    );
   });
 
   it("records consent but does not enqueue when the report is missing", async () => {

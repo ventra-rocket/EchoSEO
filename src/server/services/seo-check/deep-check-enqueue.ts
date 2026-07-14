@@ -1,13 +1,37 @@
 /**
- * Seam between a confirmed opt-in and the Deep audit run.
+ * Enqueues the Deep audit Cloudflare Workflow for a confirmed report.
  *
- * Slice 1 stub: it only records that the report is queued. Slice 2 replaces the
- * body with the DeepSeoCheckWorkflow enqueue plus the DO concurrency/quota gate
- * and the (domain, day) dedupe reservation. Isolating it here means the confirm
- * handler and its tests do not change when the real workflow lands.
+ * Called once per report by the confirm handler, right after the CAS that moved
+ * the report `confirming` -> `queued`. If `create` fails, we compensate by
+ * reverting the report to `confirming` so a retried confirm re-runs the CAS and
+ * re-enqueues — rather than leaving it `queued` with no workflow behind it. The
+ * revert is a no-op once the workflow has already reached `running`, so a lost
+ * `create` response (instance actually started) never gets clobbered.
  */
-export async function enqueueDeepCheck(reportId: string): Promise<void> {
-  console.info(
-    `[free-seo-check] deep check queued: report ${reportId} (workflow wiring is Slice 2)`,
-  );
+import { env } from "cloudflare:workers";
+import { revertQueuedReportToConfirming } from "./seo-reports-repository";
+
+export async function enqueueDeepCheck(
+  reportId: string,
+  url: string,
+): Promise<void> {
+  try {
+    await env.DEEP_SEO_CHECK_WORKFLOW.create({
+      id: reportId,
+      params: { reportId, url },
+    });
+  } catch (error) {
+    // Compensate, but never let a failing revert swallow the root cause: if the
+    // revert also throws, the report stays `queued` and this logs why, while the
+    // original create error is what surfaces to the confirm caller.
+    try {
+      await revertQueuedReportToConfirming(reportId);
+    } catch (revertError) {
+      console.error(
+        `free-seo-check: revert after enqueue failure left report ${reportId} queued:`,
+        revertError,
+      );
+    }
+    throw error;
+  }
 }

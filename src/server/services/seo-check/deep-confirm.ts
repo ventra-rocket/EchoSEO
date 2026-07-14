@@ -68,7 +68,7 @@ export async function handleConfirmDeepCheckRequest(
     if (!report) {
       console.error(`free-seo-check: confirmed lead ${lead.id} has no report`);
     } else if (await tryQueueConfirmingReport(report.id)) {
-      await enqueueDeepCheck(report.id);
+      await enqueueDeepCheck(report.id, report.url);
     }
 
     return jsonResponse({

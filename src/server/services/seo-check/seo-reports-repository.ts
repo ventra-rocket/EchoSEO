@@ -32,3 +32,52 @@ export async function tryQueueConfirmingReport(id: string): Promise<boolean> {
     .returning({ id: seoReports.id });
   return rows.length === 1;
 }
+
+/**
+ * Compensating CAS `queued` -> `confirming`, used when enqueueing the workflow
+ * fails: it lets a retried confirm re-enqueue. It is a no-op once the workflow
+ * has already moved the report to `running`, so it never clobbers a live run.
+ */
+export async function revertQueuedReportToConfirming(
+  id: string,
+): Promise<void> {
+  await db
+    .update(seoReports)
+    .set({ status: "confirming", updatedAt: sql`(current_timestamp)` })
+    .where(and(eq(seoReports.id, id), eq(seoReports.status, "queued")));
+}
+
+export async function markReportRunning(id: string): Promise<void> {
+  await db
+    .update(seoReports)
+    .set({ status: "running", updatedAt: sql`(current_timestamp)` })
+    .where(eq(seoReports.id, id));
+}
+
+export async function markReportDone(id: string, r2Key: string): Promise<void> {
+  await db
+    .update(seoReports)
+    .set({
+      status: "done",
+      r2Key,
+      error: null,
+      finishedAt: sql`(current_timestamp)`,
+      updatedAt: sql`(current_timestamp)`,
+    })
+    .where(eq(seoReports.id, id));
+}
+
+export async function markReportFailed(
+  id: string,
+  error: string,
+): Promise<void> {
+  await db
+    .update(seoReports)
+    .set({
+      status: "failed",
+      error,
+      finishedAt: sql`(current_timestamp)`,
+      updatedAt: sql`(current_timestamp)`,
+    })
+    .where(eq(seoReports.id, id));
+}
