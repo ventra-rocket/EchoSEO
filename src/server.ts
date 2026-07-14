@@ -28,8 +28,14 @@ import {
   AUTUMN_WEBHOOK_PATH,
   handleAutumnWebhookRequest,
 } from "@/server/billing/autumn-webhook";
-import { FREE_SEO_CHECK_API_PATH } from "@/shared/free-seo-check";
+import {
+  FREE_SEO_CHECK_API_PATH,
+  FREE_SEO_CHECK_CONFIRM_PATH,
+  FREE_SEO_CHECK_DEEP_START_PATH,
+} from "@/shared/free-seo-check";
 import { handleFreeSeoCheckRequest } from "@/server/services/seo-check/api";
+import { handleStartDeepCheckRequest } from "@/server/services/seo-check/deep-start";
+import { handleConfirmDeepCheckRequest } from "@/server/services/seo-check/deep-confirm";
 
 const appFetch = createStartHandler(defaultStreamHandler);
 const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
@@ -97,6 +103,14 @@ function fetch(
   // shared/free-seo-check.ts for why this can't be a createServerFn.
   if (pathname === FREE_SEO_CHECK_API_PATH) {
     return handleFreeSeoCheckRequest(publicRequest);
+  }
+
+  if (pathname === FREE_SEO_CHECK_DEEP_START_PATH) {
+    return handleStartDeepCheckRequest(publicRequest);
+  }
+
+  if (pathname === FREE_SEO_CHECK_CONFIRM_PATH) {
+    return handleConfirmDeepCheckRequest(publicRequest);
   }
 
   if (isHostedAuthMode(authMode)) {

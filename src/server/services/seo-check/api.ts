@@ -7,61 +7,16 @@
  * Each gate runs before the next so an abusive caller never reaches the
  * expensive crawl.
  */
-import { env, waitUntil } from "cloudflare:workers";
-import { AppError, asAppError } from "@/server/lib/errors";
+import { env } from "cloudflare:workers";
+import { AppError } from "@/server/lib/errors";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
-import { captureServerError } from "@/server/lib/posthog";
-import {
-  shouldCaptureAppErrorCode,
-  type ErrorCode,
-} from "@/shared/error-codes";
 import { freeSeoCheckRequestSchema } from "@/shared/free-seo-check";
 import { verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { getCachedLiteReport, putCachedLiteReport } from "./cache";
 import { runLiteCheck } from "./lite";
-
-function clientIp(request: Request): string {
-  return request.headers.get("cf-connecting-ip") ?? "unknown";
-}
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
-  VALIDATION_ERROR: 400,
-  CRAWL_TARGET_BLOCKED: 400,
-  FORBIDDEN: 403,
-  RATE_LIMITED: 429,
-  UPSTREAM_UNAVAILABLE: 502,
-};
-
-function errorResponse(error: unknown, request: Request): Response {
-  const appError = asAppError(error);
-  const code: ErrorCode = appError?.code ?? "INTERNAL_ERROR";
-
-  if (!appError) {
-    console.error("free-seo-check: unexpected error", error);
-  }
-
-  if (shouldCaptureAppErrorCode(appError?.code)) {
-    const url = new URL(request.url);
-    waitUntil(
-      captureServerError(error, {
-        errorCode: code,
-        method: request.method,
-        path: url.pathname,
-      }),
-    );
-  }
-
-  return jsonResponse({ error: code }, ERROR_STATUS[code] ?? 500);
-}
+import { clientIp, errorResponse, jsonResponse } from "./http-response";
 
 export async function handleFreeSeoCheckRequest(
   request: Request,
