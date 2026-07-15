@@ -15,6 +15,7 @@ import { freeSeoCheckRequestSchema } from "@/shared/free-seo-check";
 import { verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { getCachedLiteReport, putCachedLiteReport } from "./cache";
+import { isDeepCheckDisabled } from "./deep-check-config";
 import { runLiteCheck } from "./lite";
 import { clientIp, errorResponse, jsonResponse } from "./http-response";
 
@@ -50,15 +51,22 @@ export async function handleFreeSeoCheckRequest(
     const normalizedUrl = await normalizeAndValidateStartUrl(url);
     const domain = new URL(normalizedUrl).hostname.toLowerCase();
 
+    // Whether to offer the Deep tier at all. Without this the page shows a form
+    // that asks for an email, a consent tick, and a CAPTCHA, then refuses — the
+    // visitor pays the whole cost before learning it was never going to work.
+    // Read per request, never cached with the report: the switch can flip any
+    // time, and a stale `false` would hide a working feature.
+    const deepAvailable = !(await isDeepCheckDisabled());
+
     const cached = await getCachedLiteReport(domain);
     if (cached) {
-      return jsonResponse({ report: cached, cached: true });
+      return jsonResponse({ report: cached, cached: true, deepAvailable });
     }
 
     const report = await runLiteCheck(normalizedUrl);
     await putCachedLiteReport(domain, report);
 
-    return jsonResponse({ report, cached: false });
+    return jsonResponse({ report, cached: false, deepAvailable });
   } catch (error) {
     return errorResponse(error, request);
   }

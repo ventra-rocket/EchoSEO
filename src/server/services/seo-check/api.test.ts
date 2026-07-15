@@ -10,6 +10,7 @@ const {
   getRequiredEnvValueMock,
   normalizeAndValidateStartUrlMock,
   captureServerErrorMock,
+  isDeepCheckDisabledMock,
 } = vi.hoisted(() => ({
   verifyTurnstileTokenMock: vi.fn(),
   checkIpRateLimitMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   getRequiredEnvValueMock: vi.fn(),
   normalizeAndValidateStartUrlMock: vi.fn(),
   captureServerErrorMock: vi.fn(),
+  isDeepCheckDisabledMock: vi.fn(),
 }));
 
 vi.mock("cloudflare:workers", () => ({
@@ -36,6 +38,9 @@ vi.mock("./cache", () => ({
   putCachedLiteReport: putCachedLiteReportMock,
 }));
 vi.mock("./lite", () => ({ runLiteCheck: runLiteCheckMock }));
+vi.mock("./deep-check-config", () => ({
+  isDeepCheckDisabled: isDeepCheckDisabledMock,
+}));
 vi.mock("@/server/lib/runtime-env", () => ({
   getRequiredEnvValue: getRequiredEnvValueMock,
 }));
@@ -84,6 +89,7 @@ beforeEach(() => {
   getCachedLiteReportMock.mockResolvedValue(null);
   runLiteCheckMock.mockResolvedValue(FAKE_REPORT);
   putCachedLiteReportMock.mockResolvedValue(undefined);
+  isDeepCheckDisabledMock.mockResolvedValue(false);
 });
 
 describe("handleFreeSeoCheckRequest", () => {
@@ -161,10 +167,54 @@ describe("handleFreeSeoCheckRequest", () => {
     expect(await response.json()).toEqual({
       report: FAKE_REPORT,
       cached: true,
+      deepAvailable: true,
     });
     expect(getCachedLiteReportMock).toHaveBeenCalledWith("example.test");
     expect(runLiteCheckMock).not.toHaveBeenCalled();
     expect(putCachedLiteReportMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a cache hit", true],
+    ["a cache miss", false],
+  ])(
+    "reports the deep tier as unavailable on %s when the kill-switch is on",
+    async (_label, cacheHit) => {
+      // Without this the page offers a form that asks for an email, a consent
+      // tick, and a CAPTCHA, then refuses the request outright.
+      isDeepCheckDisabledMock.mockResolvedValue(true);
+      getCachedLiteReportMock.mockResolvedValue(cacheHit ? FAKE_REPORT : null);
+
+      const response = await handleFreeSeoCheckRequest(
+        makeRequest({ url: "example.test", turnstileToken: "ok" }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ deepAvailable: false });
+    },
+  );
+
+  it("reads the kill-switch per request rather than serving it from cache", async () => {
+    // The switch can flip at any time; a report cached while it was off must
+    // not keep hiding the form once it is back on.
+    getCachedLiteReportMock.mockResolvedValue(FAKE_REPORT);
+    isDeepCheckDisabledMock.mockResolvedValue(true);
+    const paused = await handleFreeSeoCheckRequest(
+      makeRequest({ url: "example.test", turnstileToken: "ok" }),
+    );
+    expect(await paused.json()).toMatchObject({
+      cached: true,
+      deepAvailable: false,
+    });
+
+    isDeepCheckDisabledMock.mockResolvedValue(false);
+    const resumed = await handleFreeSeoCheckRequest(
+      makeRequest({ url: "example.test", turnstileToken: "ok" }),
+    );
+    expect(await resumed.json()).toMatchObject({
+      cached: true,
+      deepAvailable: true,
+    });
   });
 
   it("crawls and caches the result on a cache miss", async () => {
@@ -176,6 +226,7 @@ describe("handleFreeSeoCheckRequest", () => {
     expect(await response.json()).toEqual({
       report: FAKE_REPORT,
       cached: false,
+      deepAvailable: true,
     });
     expect(runLiteCheckMock).toHaveBeenCalledWith("https://example.test/");
     expect(putCachedLiteReportMock).toHaveBeenCalledWith(

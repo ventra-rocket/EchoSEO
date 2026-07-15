@@ -3,13 +3,21 @@ import { ScoreGauge } from "./ScoreGauge";
 import { CategoryScoreCards } from "./CategoryScoreCards";
 import { SignalRow } from "./SignalRow";
 import { DeepRequestForm } from "./DeepRequestForm";
+import { DeepTierPausedNotice } from "./DeepTierPitch";
 import { scoreHeadline } from "./score-presentation";
 
 /**
  * Composes the full Lite report: score hero, category cards, signals, and the
  * Deep tier's email-gated entry point.
  */
-export function LiteReportView({ report }: { report: LiteReport }) {
+export function LiteReportView({
+  report,
+  deepAvailable,
+}: {
+  report: LiteReport;
+  /** False while the Deep tier's kill-switch is on — offer nothing rather than a form that refuses. */
+  deepAvailable: boolean;
+}) {
   const issueCount = report.signals.filter(
     (signal) => signal.status !== "pass",
   ).length;
@@ -34,14 +42,18 @@ export function LiteReportView({ report }: { report: LiteReport }) {
         ))}
       </div>
 
-      {/*
-        Deep-check the URL the report actually landed on, not the raw input —
-        it's what the visitor is looking at, redirects and all.
-      */}
-      <DeepRequestForm
-        url={report.finalUrl}
-        metricCount={report.deepTeaser.coreWebVitalsMetricCount}
-      />
+      {deepAvailable ? (
+        // Deep-check the URL the report actually landed on, not the raw input —
+        // it's what the visitor is looking at, redirects and all.
+        <DeepRequestForm
+          url={report.finalUrl}
+          metricCount={report.deepTeaser.coreWebVitalsMetricCount}
+        />
+      ) : (
+        <DeepTierPausedNotice
+          metricCount={report.deepTeaser.coreWebVitalsMetricCount}
+        />
+      )}
     </div>
   );
 }

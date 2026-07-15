@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Lock, MailCheck } from "lucide-react";
+import { ArrowRight, MailCheck } from "lucide-react";
 import { FREE_SEO_CHECK_DEEP_START_PATH } from "@/shared/free-seo-check";
 import { TurnstileWidget } from "./TurnstileWidget";
+import { DeepTierPitch } from "./DeepTierPitch";
 
 const ERROR_MESSAGES: Record<string, string> = {
   VALIDATION_ERROR:
@@ -108,19 +109,7 @@ export function DeepRequestForm({
       onSubmit={handleSubmit}
       className="rounded-box border border-primary/30 bg-primary/5 p-4"
     >
-      <div className="flex items-start gap-3">
-        <Lock
-          className="mt-0.5 size-4 shrink-0 text-primary"
-          aria-hidden="true"
-        />
-        <div className="flex-1 text-sm">
-          <p className="font-medium">Unlock the Deep report</p>
-          <p className="mt-0.5 text-base-content/70">
-            Adds {metricCount} Core Web Vitals metrics from real Chrome users,
-            Google Lighthouse scores, and a crawl of your other pages — free.
-          </p>
-        </div>
-      </div>
+      <DeepTierPitch metricCount={metricCount} />
 
       <div className="mt-4 space-y-3">
         <label className="block">

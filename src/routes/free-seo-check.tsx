@@ -36,6 +36,8 @@ const DEFAULT_ERROR_MESSAGE = "Something went wrong — please try again.";
 interface CheckResponse {
   report: LiteReport;
   cached: boolean;
+  /** Whether the Deep tier is currently accepting requests (kill-switch off). */
+  deepAvailable: boolean;
 }
 
 interface CheckErrorResponse {
@@ -50,7 +52,9 @@ function FreeSeoCheckPage() {
     "idle",
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [report, setReport] = useState<LiteReport | null>(null);
+  // The whole response, not just the report: the Deep tier's availability rides
+  // along with it and both belong to the same check.
+  const [result, setResult] = useState<CheckResponse | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -58,7 +62,7 @@ function FreeSeoCheckPage() {
 
     setStatus("loading");
     setErrorMessage(null);
-    setReport(null);
+    setResult(null);
 
     try {
       const payload: FreeSeoCheckRequest = { url, turnstileToken };
@@ -77,7 +81,7 @@ function FreeSeoCheckPage() {
         return;
       }
 
-      setReport(body.report);
+      setResult(body);
       setStatus("done");
     } catch {
       setErrorMessage(DEFAULT_ERROR_MESSAGE);
@@ -160,8 +164,11 @@ function FreeSeoCheckPage() {
         ) : null}
 
         {status === "loading" ? <ScanLog url={url} /> : null}
-        {status === "done" && report ? (
-          <LiteReportView report={report} />
+        {status === "done" && result ? (
+          <LiteReportView
+            report={result.report}
+            deepAvailable={result.deepAvailable}
+          />
         ) : null}
       </div>
     </div>
