@@ -81,6 +81,10 @@ export async function sweepFreeCheckRetention(
   // report and an unexpired token in odd states) — delete it once.
   const leadIds = [...new Set([...expired, ...abandoned])];
   if (leadIds.length === 0) {
+    // Say so rather than returning silently: this is the only evidence the cron
+    // fired at all. A retention sweep that stops running looks exactly like one
+    // with nothing to do, and the difference is PII kept past its deadline.
+    console.log("[cron] free-seo-check retention: nothing to sweep");
     return { expiredLeads: 0, abandonedLeads: 0, leadsDeleted: 0 };
   }
 
