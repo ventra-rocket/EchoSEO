@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { FREE_SEO_CHECK_CONFIRM_PATH } from "@/shared/free-seo-check";
 
 // Trailing underscore on the file (free-seo-check_.confirm) keeps the URL
@@ -22,9 +22,15 @@ export const Route = createFileRoute("/free-seo-check_/confirm")({
 
 type Status = "idle" | "loading" | "confirmed" | "error";
 
+interface ConfirmResponse {
+  status: string;
+  reportId: string | null;
+}
+
 function ConfirmDeepCheckPage() {
   const { token } = Route.useSearch();
   const [status, setStatus] = useState<Status>("idle");
+  const [reportId, setReportId] = useState<string | null>(null);
 
   // Confirm on an explicit click (POST), never on the GET load — so email
   // security scanners that prefetch the link can't auto-confirm the opt-in.
@@ -40,7 +46,13 @@ function ConfirmDeepCheckPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ token }),
       });
-      setStatus(response.ok ? "confirmed" : "error");
+      if (!response.ok) {
+        setStatus("error");
+        return;
+      }
+      const body: ConfirmResponse = await response.json();
+      setReportId(body.reportId);
+      setStatus("confirmed");
     } catch {
       setStatus("error");
     }
@@ -51,10 +63,33 @@ function ConfirmDeepCheckPage() {
       <h1 className="text-2xl font-semibold">Confirm your deep SEO check</h1>
 
       {status === "confirmed" ? (
-        <p className="text-base-content/80">
-          Thanks — your opt-in is confirmed. We&apos;ll email your full deep SEO
-          report shortly.
-        </p>
+        // Hand over the link immediately: the browser is the primary delivery
+        // channel. Never tell the visitor to go wait for an email — email is a
+        // convenience, and a send can silently fail.
+        <div className="space-y-4">
+          <p className="text-base-content/80">
+            Thanks — your opt-in is confirmed and your deep check is running.
+          </p>
+          {reportId ? (
+            <>
+              <Link
+                to="/r/$id"
+                params={{ id: reportId }}
+                className="btn btn-primary"
+              >
+                Open my report
+              </Link>
+              <p className="text-xs text-base-content/50">
+                Bookmark this link — it&apos;s the only way back to your report.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-base-content/60">
+              We&apos;ll email you a link to the full report when it&apos;s
+              ready.
+            </p>
+          )}
+        </div>
       ) : status === "error" ? (
         <p className="text-error">
           This confirmation link is invalid or has expired. Please run the free

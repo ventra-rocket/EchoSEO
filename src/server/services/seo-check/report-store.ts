@@ -6,7 +6,7 @@
  * row, so a `done` report is guaranteed to have a readable payload.
  */
 import { env } from "cloudflare:workers";
-import type { DeepReport } from "./deep-types";
+import { deepReportSchema, type DeepReport } from "./deep-types";
 
 function reportKey(id: string): string {
   return `deep-reports/${id}.json`;
@@ -22,4 +22,35 @@ export async function putDeepReport(
     httpMetadata: { contentType: "application/json" },
   });
   return key;
+}
+
+/**
+ * Reads a persisted payload back. Returns null when the object is missing or
+ * unreadable — a `done` row should always have one (R2 is written before the D1
+ * commit), so null means the store drifted and the caller degrades rather than
+ * throwing a 500 at an anonymous reader.
+ *
+ * The payload is re-validated on read: it may have been written by an older
+ * deploy whose shape no longer matches `DeepReport`.
+ */
+export async function getDeepReport(id: string): Promise<DeepReport | null> {
+  const object = await env.R2.get(reportKey(id));
+  if (!object) return null;
+
+  let body: unknown;
+  try {
+    body = await object.json();
+  } catch (error) {
+    // A truncated or corrupted object would otherwise throw straight through
+    // the handler as a 500 — the one outcome this null contract exists to avoid.
+    console.error(`free-seo-check: report ${id} payload is unreadable`, error);
+    return null;
+  }
+
+  const parsed = deepReportSchema.safeParse(body);
+  if (!parsed.success) {
+    console.error(`free-seo-check: report ${id} failed schema validation`);
+    return null;
+  }
+  return parsed.data;
 }

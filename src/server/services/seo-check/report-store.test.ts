@@ -1,0 +1,98 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DeepReport } from "./deep-types";
+
+const { r2GetMock, r2PutMock } = vi.hoisted(() => ({
+  r2GetMock: vi.fn(),
+  r2PutMock: vi.fn(),
+}));
+
+vi.mock("cloudflare:workers", () => ({
+  env: { R2: { get: r2GetMock, put: r2PutMock } },
+}));
+
+const { getDeepReport, putDeepReport } = await import("./report-store");
+
+const REPORT: DeepReport = {
+  requestedUrl: "https://b.test/",
+  finalUrl: "https://b.test/",
+  statusCode: 200,
+  fetchedAt: "2026-07-15T00:00:00.000Z",
+  overallScore: 77,
+  categoryScores: [{ category: "meta", score: 80 }],
+  coreWebVitals: { lcpMs: 961, inpMs: 81, cls: 0, ttfbMs: 653 },
+  cwvSource: "field",
+  psiScores: {
+    performance: 100,
+    seo: 80,
+    accessibility: 96,
+    bestPractices: 96,
+  },
+  signals: [],
+  pages: [],
+  pageSummary: {
+    title: "B",
+    metaDescription: "",
+    h1: null,
+    wordCount: 120,
+  },
+  crawl: { pagesCrawled: 1 },
+};
+
+/** Stands in for the R2 object body the Worker runtime hands back. */
+function r2Object(json: () => Promise<unknown>) {
+  return { json };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.spyOn(console, "error").mockImplementation(() => {});
+});
+
+describe("putDeepReport", () => {
+  it("writes the payload under the report's key and returns it", async () => {
+    const key = await putDeepReport("r1", REPORT);
+
+    expect(key).toBe("deep-reports/r1.json");
+    expect(r2PutMock).toHaveBeenCalledWith(
+      "deep-reports/r1.json",
+      JSON.stringify(REPORT),
+      { httpMetadata: { contentType: "application/json" } },
+    );
+  });
+});
+
+describe("getDeepReport", () => {
+  it("round-trips a payload written by putDeepReport", async () => {
+    // Through JSON so the test proves the serialized form parses back, not just
+    // that the same object reference comes out the other side.
+    const stored: unknown = JSON.parse(JSON.stringify(REPORT));
+    r2GetMock.mockResolvedValue(r2Object(async () => stored));
+
+    await expect(getDeepReport("r1")).resolves.toEqual(REPORT);
+    expect(r2GetMock).toHaveBeenCalledWith("deep-reports/r1.json");
+  });
+
+  it("returns null when the object is missing", async () => {
+    r2GetMock.mockResolvedValue(null);
+    await expect(getDeepReport("r1")).resolves.toBeNull();
+  });
+
+  it("returns null instead of throwing when the payload is corrupted", async () => {
+    // A truncated object would otherwise surface as a 500 to an anonymous
+    // reader; the read path is built to degrade to a failed report instead.
+    r2GetMock.mockResolvedValue(
+      r2Object(() => Promise.reject(new SyntaxError("Unexpected end of JSON"))),
+    );
+
+    await expect(getDeepReport("r1")).resolves.toBeNull();
+  });
+
+  it("returns null when the payload no longer matches the schema", async () => {
+    // e.g. written by an older deploy whose DeepReport shape has since changed.
+    r2GetMock.mockResolvedValue(
+      r2Object(async () => ({ requestedUrl: "https://b.test/" })),
+    );
+
+    await expect(getDeepReport("r1")).resolves.toBeNull();
+  });
+});

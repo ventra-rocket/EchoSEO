@@ -77,8 +77,12 @@ export async function handleConfirmDeepCheckRequest(
       });
     }
 
+    // Hand the report id back so the confirm page can link straight to /r/{id}.
+    // The in-browser link is the primary delivery channel — email is only a
+    // convenience, and must never be the sole way to reach a finished report.
     return jsonResponse({
       status: alreadyConfirmed ? "already_confirmed" : "confirmed",
+      reportId: report?.id ?? null,
     });
   } catch (error) {
     return errorResponse(error, request);

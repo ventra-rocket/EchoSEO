@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as FreeSeoCheckRouteImport } from './routes/free-seo-check'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -18,6 +19,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as ProjectRouteRouteImport } from './routes/_project/route'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as RIdRouteImport } from './routes/r.$id'
 import { Route as FreeSeoCheckConfirmRouteImport } from './routes/free-seo-check_.confirm'
 import { Route as AuthenticatedSubscribeRouteImport } from './routes/_authenticated.subscribe'
 import { Route as AuthenticatedOauthConsentRouteImport } from './routes/_authenticated.oauth-consent'
@@ -57,6 +59,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -92,6 +99,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const RIdRoute = RIdRouteImport.update({
+  id: '/r/$id',
+  path: '/r/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FreeSeoCheckConfirmRoute = FreeSeoCheckConfirmRouteImport.update({
   id: '/free-seo-check_/confirm',
@@ -279,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/free-seo-check': typeof FreeSeoCheckRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
@@ -291,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
+  '/r/$id': typeof RIdRoute
   '/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
   '/onboarding/chat': typeof AuthenticatedOnboardingChatRoute
@@ -319,6 +333,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/free-seo-check': typeof FreeSeoCheckRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
@@ -331,6 +346,7 @@ export interface FileRoutesByTo {
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
+  '/r/$id': typeof RIdRoute
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
   '/onboarding/chat': typeof AuthenticatedOnboardingChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -360,6 +376,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/free-seo-check': typeof FreeSeoCheckRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/_app/ai': typeof AppAiRoute
@@ -372,6 +389,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/_authenticated/subscribe': typeof AuthenticatedSubscribeRoute
   '/free-seo-check_/confirm': typeof FreeSeoCheckConfirmRoute
+  '/r/$id': typeof RIdRoute
   '/_app/': typeof AppIndexRoute
   '/_project/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
   '/_app/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
@@ -403,6 +421,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/free-seo-check'
     | '/reset-password'
+    | '/robots.txt'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/ai'
@@ -415,6 +434,7 @@ export interface FileRouteTypes {
     | '/oauth-consent'
     | '/subscribe'
     | '/free-seo-check/confirm'
+    | '/r/$id'
     | '/p/$projectId'
     | '/help/dataforseo-api-key'
     | '/onboarding/chat'
@@ -443,6 +463,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/free-seo-check'
     | '/reset-password'
+    | '/robots.txt'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/ai'
@@ -455,6 +476,7 @@ export interface FileRouteTypes {
     | '/oauth-consent'
     | '/subscribe'
     | '/free-seo-check/confirm'
+    | '/r/$id'
     | '/help/dataforseo-api-key'
     | '/onboarding/chat'
     | '/api/auth/$'
@@ -483,6 +505,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/free-seo-check'
     | '/reset-password'
+    | '/robots.txt'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/_app/ai'
@@ -495,6 +518,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth-consent'
     | '/_authenticated/subscribe'
     | '/free-seo-check_/confirm'
+    | '/r/$id'
     | '/_app/'
     | '/_project/p/$projectId'
     | '/_app/help/dataforseo-api-key'
@@ -528,9 +552,11 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   FreeSeoCheckRoute: typeof FreeSeoCheckRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   FreeSeoCheckConfirmRoute: typeof FreeSeoCheckConfirmRoute
+  RIdRoute: typeof RIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAutumnSplatRoute: typeof ApiAutumnSplatRoute
   ApiGscOauthCallbackRoute: typeof ApiGscOauthCallbackRoute
@@ -543,6 +569,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -600,6 +633,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/r/$id': {
+      id: '/r/$id'
+      path: '/r/$id'
+      fullPath: '/r/$id'
+      preLoaderRoute: typeof RIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/free-seo-check_/confirm': {
       id: '/free-seo-check_/confirm'
@@ -980,10 +1020,12 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   FreeSeoCheckRoute: FreeSeoCheckRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute:
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,
   FreeSeoCheckConfirmRoute: FreeSeoCheckConfirmRoute,
+  RIdRoute: RIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAutumnSplatRoute: ApiAutumnSplatRoute,
   ApiGscOauthCallbackRoute: ApiGscOauthCallbackRoute,

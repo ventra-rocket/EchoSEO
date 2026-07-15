@@ -31,6 +31,7 @@ const deepCategoryScoreSchema = z.object({
   category: z.enum(RULE_CATEGORIES),
   score: z.number(),
 });
+export type DeepCategoryScore = z.infer<typeof deepCategoryScoreSchema>;
 
 const coreWebVitalsSchema = z.object({
   lcpMs: z.number(),
@@ -46,7 +47,8 @@ const deepPageSchema = z.object({
   signals: z.array(deepSignalSchema),
 });
 
-const deepReportSchema = z.object({
+/** Exported so the read path can validate an R2 payload it did not just write. */
+export const deepReportSchema = z.object({
   requestedUrl: z.string(),
   finalUrl: z.string(),
   statusCode: z.number(),

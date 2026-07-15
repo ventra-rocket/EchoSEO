@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Signal, SignalStatus } from "@/server/services/seo-check/types";
+import type { DeepSignal } from "@/server/services/seo-check/deep-types";
 import { STATUS_BADGE, STATUS_TEXT } from "./score-presentation";
 
 const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
@@ -18,8 +19,11 @@ const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
  * One signal row: severity icon + human label + machine id (mono) + status
  * badge. Non-passing signals expand to a console-style fix block and the
  * Google-cited guidance behind the rule.
+ *
+ * Lite and Deep signals differ only in how wide their `category` enum is, which
+ * this row never reads — so it renders either.
  */
-export function SignalRow({ signal }: { signal: Signal }) {
+export function SignalRow({ signal }: { signal: Signal | DeepSignal }) {
   const Icon = STATUS_ICON[signal.status];
 
   return (

@@ -32,10 +32,13 @@ import {
   FREE_SEO_CHECK_API_PATH,
   FREE_SEO_CHECK_CONFIRM_PATH,
   FREE_SEO_CHECK_DEEP_START_PATH,
+  FREE_SEO_CHECK_REPORT_PATH,
+  FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
 } from "@/shared/free-seo-check";
 import { handleFreeSeoCheckRequest } from "@/server/services/seo-check/api";
 import { handleStartDeepCheckRequest } from "@/server/services/seo-check/deep-start";
 import { handleConfirmDeepCheckRequest } from "@/server/services/seo-check/deep-confirm";
+import { handleDeepReportRequest } from "@/server/services/seo-check/deep-report";
 
 const appFetch = createStartHandler(defaultStreamHandler);
 const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
@@ -85,6 +88,27 @@ async function routeOnboardingChatAgent(
   return response ?? new Response("Not found", { status: 404 });
 }
 
+/**
+ * Renders `/r/{id}` with the headers its bearer-capability link requires.
+ *
+ * The id in the URL is the only thing protecting the report, so
+ * `Referrer-Policy: no-referrer` keeps it out of the `Referer` sent to the
+ * Google citation links the report renders. `X-Robots-Tag: noindex` keeps a
+ * link that gets pasted somewhere public out of search results, and unlike the
+ * in-page `<meta>` it does not depend on the crawler executing the shell.
+ */
+async function fetchSharedReportPage(request: Request): Promise<Response> {
+  const response = await appFetch(request);
+  const headers = new Headers(response.headers);
+  headers.set("Referrer-Policy", "no-referrer");
+  headers.set("X-Robots-Tag", "noindex");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function fetch(
   request: Request,
   env: Env,
@@ -111,6 +135,17 @@ function fetch(
 
   if (pathname === FREE_SEO_CHECK_CONFIRM_PATH) {
     return handleConfirmDeepCheckRequest(publicRequest);
+  }
+
+  if (pathname === FREE_SEO_CHECK_REPORT_PATH) {
+    return handleDeepReportRequest(publicRequest);
+  }
+
+  // The shareable report page needs no session in any AUTH_MODE, so it renders
+  // through appFetch directly here rather than falling through the auth
+  // branches below — that also makes its headers deterministic per mode.
+  if (pathname.startsWith(FREE_SEO_CHECK_REPORT_ROUTE_PREFIX)) {
+    return fetchSharedReportPage(request);
   }
 
   if (isHostedAuthMode(authMode)) {

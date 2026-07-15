@@ -147,7 +147,10 @@ describe("handleConfirmDeepCheckRequest", () => {
       makeRequest({ token: TOKEN }),
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "confirmed" });
+    expect(await response.json()).toEqual({
+      status: "confirmed",
+      reportId: "report-1",
+    });
 
     expect(markLeadConfirmedMock).toHaveBeenCalledTimes(1);
     expect(markLeadConfirmedMock.mock.calls[0]?.[0]).toBe("lead-1");
@@ -167,7 +170,10 @@ describe("handleConfirmDeepCheckRequest", () => {
       makeRequest({ token: TOKEN }),
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "confirmed" });
+    expect(await response.json()).toEqual({
+      status: "confirmed",
+      reportId: "report-1",
+    });
     expect(markLeadConfirmedMock).toHaveBeenCalledTimes(1);
     expect(dispatchDeepCheckMock).not.toHaveBeenCalled();
   });
@@ -181,7 +187,10 @@ describe("handleConfirmDeepCheckRequest", () => {
       makeRequest({ token: TOKEN }),
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "already_confirmed" });
+    expect(await response.json()).toEqual({
+      status: "already_confirmed",
+      reportId: "report-1",
+    });
     expect(markLeadConfirmedMock).not.toHaveBeenCalled();
     expect(dispatchDeepCheckMock).not.toHaveBeenCalled();
   });
@@ -196,7 +205,10 @@ describe("handleConfirmDeepCheckRequest", () => {
       makeRequest({ token: TOKEN }),
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "already_confirmed" });
+    expect(await response.json()).toEqual({
+      status: "already_confirmed",
+      reportId: "report-1",
+    });
     expect(markLeadConfirmedMock).not.toHaveBeenCalled();
     expect(dispatchDeepCheckMock).toHaveBeenCalledTimes(1);
     expect(dispatchDeepCheckMock).toHaveBeenCalledWith({

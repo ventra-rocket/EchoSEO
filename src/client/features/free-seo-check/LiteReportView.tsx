@@ -2,10 +2,13 @@ import type { LiteReport } from "@/server/services/seo-check/types";
 import { ScoreGauge } from "./ScoreGauge";
 import { CategoryScoreCards } from "./CategoryScoreCards";
 import { SignalRow } from "./SignalRow";
-import { DeepTeaser } from "./DeepTeaser";
+import { DeepRequestForm } from "./DeepRequestForm";
 import { scoreHeadline } from "./score-presentation";
 
-/** Composes the full Lite report: score hero, category cards, signals, teaser. */
+/**
+ * Composes the full Lite report: score hero, category cards, signals, and the
+ * Deep tier's email-gated entry point.
+ */
 export function LiteReportView({ report }: { report: LiteReport }) {
   const issueCount = report.signals.filter(
     (signal) => signal.status !== "pass",
@@ -31,7 +34,14 @@ export function LiteReportView({ report }: { report: LiteReport }) {
         ))}
       </div>
 
-      <DeepTeaser metricCount={report.deepTeaser.coreWebVitalsMetricCount} />
+      {/*
+        Deep-check the URL the report actually landed on, not the raw input —
+        it's what the visitor is looking at, redirects and all.
+      */}
+      <DeepRequestForm
+        url={report.finalUrl}
+        metricCount={report.deepTeaser.coreWebVitalsMetricCount}
+      />
     </div>
   );
 }

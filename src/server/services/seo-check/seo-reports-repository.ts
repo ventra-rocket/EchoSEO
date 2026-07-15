@@ -8,7 +8,16 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { seoReports } from "@/db/schema";
 
-type ReportRow = typeof seoReports.$inferSelect;
+export type ReportRow = typeof seoReports.$inferSelect;
+
+export async function findReportById(id: string): Promise<ReportRow | null> {
+  const [row] = await db
+    .select()
+    .from(seoReports)
+    .where(eq(seoReports.id, id))
+    .limit(1);
+  return row ?? null;
+}
 
 export async function findReportByLeadId(
   leadId: string,

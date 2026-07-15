@@ -15,6 +15,14 @@ export const FREE_SEO_CHECK_DEEP_START_PATH = "/api/free-seo-check/deep";
 export const FREE_SEO_CHECK_CONFIRM_PATH = "/api/free-seo-check/confirm";
 /** SSR landing the confirmation email links to; it POSTs to the confirm path. */
 export const FREE_SEO_CHECK_CONFIRM_ROUTE = "/free-seo-check/confirm";
+/** Public GET — reads a finished Deep report by id (`?id=<uuid>`). */
+export const FREE_SEO_CHECK_REPORT_PATH = "/api/free-seo-check/report";
+/**
+ * Path prefix of the shareable report page. The id is an unguessable capability
+ * token, so responses under it get `Referrer-Policy: no-referrer` +
+ * `X-Robots-Tag: noindex` in server.ts and are excluded in robots.txt.
+ */
+export const FREE_SEO_CHECK_REPORT_ROUTE_PREFIX = "/r/";
 
 export const freeSeoCheckRequestSchema = z.object({
   url: z.string().trim().min(1, "Enter a URL to check."),
