@@ -54,3 +54,9 @@ export async function getDeepReport(id: string): Promise<DeepReport | null> {
   }
   return parsed.data;
 }
+
+/** Purges payloads by key (retention sweep). R2 accepts up to 1000 per call. */
+export async function deleteDeepReports(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  await env.R2.delete(keys);
+}

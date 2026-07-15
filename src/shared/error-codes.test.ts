@@ -7,6 +7,7 @@ describe("shouldCaptureAppErrorCode", () => {
     "NOT_FOUND",
     "PAYMENT_REQUIRED",
     "VALIDATION_ERROR",
+    "RATE_LIMITED",
   ] as const)("skips expected %s errors", (code) => {
     expect(shouldCaptureAppErrorCode(code)).toBe(false);
   });

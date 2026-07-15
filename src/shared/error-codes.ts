@@ -31,6 +31,10 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   "PAYMENT_REQUIRED",
   "INSUFFICIENT_CREDITS",
   "VALIDATION_ERROR",
+  // A 429 is the rate limiter doing its job, not a fault to investigate. The
+  // public report page polls while a check runs, so one visitor behind a shared
+  // NAT can emit a long 429 run — capturing each one is pure noise and cost.
+  "RATE_LIMITED",
 ]);
 
 export function isErrorCode(value: string): value is ErrorCode {

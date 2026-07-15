@@ -39,6 +39,10 @@ import { handleFreeSeoCheckRequest } from "@/server/services/seo-check/api";
 import { handleStartDeepCheckRequest } from "@/server/services/seo-check/deep-start";
 import { handleConfirmDeepCheckRequest } from "@/server/services/seo-check/deep-confirm";
 import { handleDeepReportRequest } from "@/server/services/seo-check/deep-report";
+import {
+  FREE_CHECK_RETENTION_CRON,
+  sweepFreeCheckRetention,
+} from "@/server/services/seo-check/retention";
 
 const appFetch = createStartHandler(defaultStreamHandler);
 const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
@@ -182,10 +186,18 @@ export { IpRateLimiterDO } from "./server/services/seo-check/rate-limit-do";
 export default {
   fetch,
   async scheduled(
-    _controller: ScheduledController,
+    controller: ScheduledController,
     env: Env,
     _ctx: ExecutionContext,
   ) {
+    // Two schedules share this handler; the cron string is what separates them.
+    // Retention is daily, rank tracking every 15 minutes — running the sweep on
+    // every rank-tracking tick would be 96x the necessary D1 work.
+    if (controller.cron === FREE_CHECK_RETENTION_CRON) {
+      await sweepFreeCheckRetention();
+      return;
+    }
+
     const nowIso = new Date().toISOString();
     const dueConfigs =
       await RankTrackingRepository.getDueConfigsWithOrganization(nowIso);

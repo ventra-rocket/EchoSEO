@@ -61,7 +61,11 @@
     },
   ],
   "triggers": {
-    "crons": ["*/15 * * * *"],
+    // */15 = due rank-tracking configs. 0 3 = the free checker's daily
+    // retention sweep (FREE_CHECK_RETENTION_CRON in services/seo-check/
+    // retention.ts must match this string — the scheduled handler tells the two
+    // apart by it).
+    "crons": ["*/15 * * * *", "0 3 * * *"],
   },
   "kv_namespaces": [
     {
