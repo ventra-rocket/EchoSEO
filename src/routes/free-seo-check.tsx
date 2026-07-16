@@ -2,23 +2,39 @@ import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   FREE_SEO_CHECK_API_PATH,
+  FREE_SEO_CHECK_LANDING_PATH,
+  publicUrl,
   type FreeSeoCheckRequest,
 } from "@/shared/free-seo-check";
 import type { LiteReport } from "@/server/services/seo-check/types";
 import { TurnstileWidget } from "@/client/features/free-seo-check/TurnstileWidget";
 import { LiteReportView } from "@/client/features/free-seo-check/LiteReportView";
 import { ScanLog } from "@/client/features/free-seo-check/ScanLog";
+import { LandingContent } from "@/client/features/free-seo-check/LandingContent";
+import { landingStructuredDataScripts } from "@/client/features/free-seo-check/landing-structured-data";
+
+const PAGE_TITLE = "Free SEO Checker — EchoSEO";
+const PAGE_DESCRIPTION =
+  "Check any page's on-page SEO instantly and free — title, meta, headings, and technical basics, no signup required.";
+const CANONICAL_URL = publicUrl(FREE_SEO_CHECK_LANDING_PATH);
 
 export const Route = createFileRoute("/free-seo-check")({
   head: () => ({
     meta: [
-      { title: "Free SEO Checker — EchoSEO" },
-      {
-        name: "description",
-        content:
-          "Check any page's on-page SEO instantly and free — title, meta, headings, and technical basics, no signup required.",
-      },
+      { title: PAGE_TITLE },
+      { name: "description", content: PAGE_DESCRIPTION },
+      // Open Graph + Twitter so a shared link renders a real card, not a bare URL.
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "EchoSEO" },
+      { property: "og:title", content: PAGE_TITLE },
+      { property: "og:description", content: PAGE_DESCRIPTION },
+      { property: "og:url", content: CANONICAL_URL },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: PAGE_TITLE },
+      { name: "twitter:description", content: PAGE_DESCRIPTION },
     ],
+    links: [{ rel: "canonical", href: CANONICAL_URL }],
+    scripts: landingStructuredDataScripts(),
   }),
   component: FreeSeoCheckPage,
 });
@@ -182,6 +198,8 @@ function FreeSeoCheckPage() {
             deepAvailable={result.deepAvailable}
           />
         ) : null}
+
+        <LandingContent />
       </div>
     </div>
   );

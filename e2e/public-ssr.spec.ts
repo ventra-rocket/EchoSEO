@@ -40,6 +40,40 @@ test.describe("public routes server-render their body", () => {
     expect(await response.text()).toContain("Loading your report");
   });
 
+  test("the landing serves its SEO metadata and structured data", async ({
+    request,
+  }) => {
+    const html = await (await request.get("/free-seo-check")).text();
+    // Canonical + Open Graph so the page is indexable and shares as a card.
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('property="og:title"');
+    // Both JSON-LD blocks, server-rendered.
+    expect(html).toContain('"@type":"SoftwareApplication"');
+    expect(html).toContain('"@type":"FAQPage"');
+    // Real editorial body, not a thin page.
+    expect(html).toContain("Frequently asked questions");
+  });
+
+  test("sitemap.xml lists the landing and excludes report pages", async ({
+    request,
+  }) => {
+    const response = await request.get("/sitemap.xml");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("xml");
+    const xml = await response.text();
+    expect(xml).toContain("/free-seo-check");
+    // Bearer report links must never be advertised.
+    expect(xml).not.toContain("/r/");
+  });
+
+  test("robots.txt disallows report pages and points at the sitemap", async ({
+    request,
+  }) => {
+    const txt = await (await request.get("/robots.txt")).text();
+    expect(txt).toContain("Disallow: /r/");
+    expect(txt).toMatch(/Sitemap: https?:\/\/\S+\/sitemap\.xml/);
+  });
+
   test("the landing hydrates without error and is interactive", async ({
     page,
   }) => {

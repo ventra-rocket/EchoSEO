@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FREE_SEO_CHECK_REPORT_ROUTE_PREFIX } from "@/shared/free-seo-check";
+import {
+  FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
+  publicUrl,
+} from "@/shared/free-seo-check";
 
 // Shared Deep report links are bearer capabilities: anyone holding one can read
 // the report, so they must never end up in a search index. The `/r/{id}`
@@ -8,6 +11,7 @@ import { FREE_SEO_CHECK_REPORT_ROUTE_PREFIX } from "@/shared/free-seo-check";
 // requesting the page.
 const ROBOTS_TXT = `User-agent: *
 Disallow: ${FREE_SEO_CHECK_REPORT_ROUTE_PREFIX}
+Sitemap: ${publicUrl("/sitemap.xml")}
 `;
 
 export const Route = createFileRoute("/robots.txt")({
