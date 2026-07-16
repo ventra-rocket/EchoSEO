@@ -235,7 +235,7 @@ describe("sendReportReadyEmail", () => {
     await sendReportReadyEmail("report-1");
 
     expect(sendMock.mock.calls[0]?.[0].subject).toBe(
-      "Your free SEO deep check is finished",
+      "Your SEO deep check is finished",
     );
   });
 });

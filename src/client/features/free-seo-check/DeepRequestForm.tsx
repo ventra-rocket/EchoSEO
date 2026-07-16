@@ -98,6 +98,14 @@ export function DeepRequestForm({
               <span className="font-mono">{email}</span>. Click it and your deep
               check starts — you&apos;ll get a link to the full report.
             </p>
+            {/* Our sending domain is new, so mail providers do not trust it yet
+                and this mail can land in spam. Nothing runs until the link is
+                clicked, so someone who never finds it waits forever for a report
+                that was never started — saying so costs a line and saves them. */}
+            <p className="mt-2 text-base-content/50">
+              Not there in a minute? Check your spam folder — we&apos;re a new
+              sender, so filters are still learning to trust us.
+            </p>
           </div>
         </div>
       </div>
