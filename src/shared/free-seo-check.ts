@@ -24,6 +24,29 @@ export const FREE_SEO_CHECK_REPORT_PATH = "/api/free-seo-check/report";
  */
 export const FREE_SEO_CHECK_REPORT_ROUTE_PREFIX = "/r/";
 
+/**
+ * Public routes that must server-render their body (not just their `<head>`).
+ * The rest of the app renders inside `<ClientOnly>` in `__root.tsx` because it is
+ * an authenticated dashboard where SSR buys nothing; these routes are the public,
+ * indexable exception, so `AppLayout` renders them outside that island.
+ *
+ * This list and the Cloudflare Access bypass destinations are two separate lists
+ * that must stay in sync: a path here that is not bypassed gets a 302 to Access
+ * instead of the page. Report pages (`/r/`) are included so the emailed link
+ * paints without waiting on JS; they stay noindex via robots.txt + X-Robots-Tag.
+ */
+const PUBLIC_SSR_EXACT_PATHS: ReadonlySet<string> = new Set([
+  "/free-seo-check",
+  FREE_SEO_CHECK_CONFIRM_ROUTE,
+]);
+
+export function isPublicSsrPath(pathname: string): boolean {
+  return (
+    PUBLIC_SSR_EXACT_PATHS.has(pathname) ||
+    pathname.startsWith(FREE_SEO_CHECK_REPORT_ROUTE_PREFIX)
+  );
+}
+
 export const freeSeoCheckRequestSchema = z.object({
   url: z.string().trim().min(1, "Enter a URL to check."),
   turnstileToken: z.string().min(1),

@@ -16,10 +16,14 @@ type LocaleContextValue = {
 const LocaleContext = React.createContext<LocaleContextValue | null>(null);
 
 /**
- * Wraps the app in react-intl with the client-resolved locale. Mounted inside
- * <ClientOnly>, so `readClientLocale()` runs on the client during the lazy state
- * initializer — there is no server-rendered app HTML to mismatch, so no flash
- * of the default locale and no hydration reconciliation.
+ * Wraps the authenticated app in react-intl with the client-resolved locale.
+ * Mounted inside the `<ClientOnly>` island in `__root.tsx`, so
+ * `readClientLocale()` runs on the client during the lazy state initializer —
+ * that part of the tree has no server-rendered HTML to mismatch, so no flash of
+ * the default locale and no hydration reconciliation. Public indexable routes do
+ * NOT use this cookie-driven provider: they SSR their body (English-only today;
+ * a later slice derives locale from the URL so each language is a crawlable,
+ * per-URL signal rather than a cookie the crawler never sends).
  */
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = React.useState<Locale>(() =>
