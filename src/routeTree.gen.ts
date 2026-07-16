@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as FreeSeoCheckRouteImport } from './routes/free-seo-check'
@@ -57,6 +58,11 @@ import { Route as ProjectPProjectIdAuditIssuesResultIdRouteImport } from './rout
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/free-seo-check': typeof FreeSeoCheckRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
@@ -334,6 +341,7 @@ export interface FileRoutesByTo {
   '/free-seo-check': typeof FreeSeoCheckRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
@@ -377,6 +385,7 @@ export interface FileRoutesById {
   '/free-seo-check': typeof FreeSeoCheckRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/_app/ai': typeof AppAiRoute
@@ -422,6 +431,7 @@ export interface FileRouteTypes {
     | '/free-seo-check'
     | '/reset-password'
     | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/ai'
@@ -464,6 +474,7 @@ export interface FileRouteTypes {
     | '/free-seo-check'
     | '/reset-password'
     | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/ai'
@@ -506,6 +517,7 @@ export interface FileRouteTypes {
     | '/free-seo-check'
     | '/reset-password'
     | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/_app/ai'
@@ -553,6 +565,7 @@ export interface RootRouteChildren {
   FreeSeoCheckRoute: typeof FreeSeoCheckRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   FreeSeoCheckConfirmRoute: typeof FreeSeoCheckConfirmRoute
@@ -569,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -1021,6 +1041,7 @@ const rootRouteChildren: RootRouteChildren = {
   FreeSeoCheckRoute: FreeSeoCheckRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute:
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,

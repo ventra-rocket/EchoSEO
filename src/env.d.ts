@@ -57,6 +57,9 @@ interface ImportMetaEnv {
   readonly VITE_E2E_KEYWORD_FIXTURES?: string;
   // Cloudflare Turnstile site key — public by design, baked in at build time.
   readonly TURNSTILE_SITE_KEY?: string;
+  // Absolute public origin for canonical/OG/sitemap URLs. Overridable for forks;
+  // defaults to the production domain when unset.
+  readonly VITE_PUBLIC_ORIGIN?: string;
 }
 
 interface ImportMeta {
