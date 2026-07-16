@@ -13,9 +13,12 @@ export const FREE_SEO_CHECK_API_PATH = "/api/free-seo-check";
 export const FREE_SEO_CHECK_DEEP_START_PATH = "/api/free-seo-check/deep";
 /** Public POST — confirm the double opt-in via the emailed token. */
 export const FREE_SEO_CHECK_CONFIRM_PATH = "/api/free-seo-check/confirm";
-/** The public Lite checker landing. Single source for its route, canonical, OG
- * URL, sitemap entry, and SSR-switch membership, so those cannot drift apart. */
+/** The public Lite checker landing (English). Single source for its route,
+ * canonical, OG URL, sitemap entry, and SSR-switch membership. */
 export const FREE_SEO_CHECK_LANDING_PATH = "/free-seo-check";
+/** The Vietnamese landing — a distinct URL (prefix + Vietnamese slug) because
+ * hreflang needs one URL per language, not a cookie-switched single page. */
+export const FREE_SEO_CHECK_VI_LANDING_PATH = "/vi/kiem-tra-seo";
 /** SSR landing the confirmation email links to; it POSTs to the confirm path. */
 export const FREE_SEO_CHECK_CONFIRM_ROUTE = "/free-seo-check/confirm";
 /** Public GET — reads a finished Deep report by id (`?id=<uuid>`). */
@@ -40,6 +43,7 @@ export const FREE_SEO_CHECK_REPORT_ROUTE_PREFIX = "/r/";
  */
 const PUBLIC_SSR_EXACT_PATHS: ReadonlySet<string> = new Set([
   FREE_SEO_CHECK_LANDING_PATH,
+  FREE_SEO_CHECK_VI_LANDING_PATH,
   FREE_SEO_CHECK_CONFIRM_ROUTE,
 ]);
 

@@ -20,6 +20,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as ProjectRouteRouteImport } from './routes/_project/route'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as ViKiemTraSeoRouteImport } from './routes/vi.kiem-tra-seo'
 import { Route as RIdRouteImport } from './routes/r.$id'
 import { Route as FreeSeoCheckConfirmRouteImport } from './routes/free-seo-check_.confirm'
 import { Route as AuthenticatedSubscribeRouteImport } from './routes/_authenticated.subscribe'
@@ -105,6 +106,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const ViKiemTraSeoRoute = ViKiemTraSeoRouteImport.update({
+  id: '/vi/kiem-tra-seo',
+  path: '/vi/kiem-tra-seo',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const RIdRoute = RIdRouteImport.update({
   id: '/r/$id',
@@ -312,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
+  '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
   '/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
   '/onboarding/chat': typeof AuthenticatedOnboardingChatRoute
@@ -355,6 +362,7 @@ export interface FileRoutesByTo {
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
+  '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
   '/onboarding/chat': typeof AuthenticatedOnboardingChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -399,6 +407,7 @@ export interface FileRoutesById {
   '/_authenticated/subscribe': typeof AuthenticatedSubscribeRoute
   '/free-seo-check_/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
+  '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
   '/_app/': typeof AppIndexRoute
   '/_project/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
   '/_app/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
@@ -445,6 +454,7 @@ export interface FileRouteTypes {
     | '/subscribe'
     | '/free-seo-check/confirm'
     | '/r/$id'
+    | '/vi/kiem-tra-seo'
     | '/p/$projectId'
     | '/help/dataforseo-api-key'
     | '/onboarding/chat'
@@ -488,6 +498,7 @@ export interface FileRouteTypes {
     | '/subscribe'
     | '/free-seo-check/confirm'
     | '/r/$id'
+    | '/vi/kiem-tra-seo'
     | '/help/dataforseo-api-key'
     | '/onboarding/chat'
     | '/api/auth/$'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/_authenticated/subscribe'
     | '/free-seo-check_/confirm'
     | '/r/$id'
+    | '/vi/kiem-tra-seo'
     | '/_app/'
     | '/_project/p/$projectId'
     | '/_app/help/dataforseo-api-key'
@@ -570,6 +582,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   FreeSeoCheckConfirmRoute: typeof FreeSeoCheckConfirmRoute
   RIdRoute: typeof RIdRoute
+  ViKiemTraSeoRoute: typeof ViKiemTraSeoRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAutumnSplatRoute: typeof ApiAutumnSplatRoute
   ApiGscOauthCallbackRoute: typeof ApiGscOauthCallbackRoute
@@ -653,6 +666,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/vi/kiem-tra-seo': {
+      id: '/vi/kiem-tra-seo'
+      path: '/vi/kiem-tra-seo'
+      fullPath: '/vi/kiem-tra-seo'
+      preLoaderRoute: typeof ViKiemTraSeoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/r/$id': {
       id: '/r/$id'
@@ -1047,6 +1067,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,
   FreeSeoCheckConfirmRoute: FreeSeoCheckConfirmRoute,
   RIdRoute: RIdRoute,
+  ViKiemTraSeoRoute: ViKiemTraSeoRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAutumnSplatRoute: ApiAutumnSplatRoute,
   ApiGscOauthCallbackRoute: ApiGscOauthCallbackRoute,

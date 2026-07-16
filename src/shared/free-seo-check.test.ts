@@ -4,12 +4,14 @@ import { describe, expect, it } from "vitest";
 import {
   FREE_SEO_CHECK_CONFIRM_ROUTE,
   FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
+  FREE_SEO_CHECK_VI_LANDING_PATH,
   isPublicSsrPath,
 } from "./free-seo-check";
 
 describe("isPublicSsrPath", () => {
-  it("matches the indexable landing and the double-opt-in confirm page", () => {
+  it("matches both language landings and the double-opt-in confirm page", () => {
     expect(isPublicSsrPath("/free-seo-check")).toBe(true);
+    expect(isPublicSsrPath(FREE_SEO_CHECK_VI_LANDING_PATH)).toBe(true);
     expect(isPublicSsrPath(FREE_SEO_CHECK_CONFIRM_ROUTE)).toBe(true);
   });
 
@@ -66,6 +68,7 @@ describe("public SSR surface stays free of request-shared singletons", () => {
   ];
   const PUBLIC_FILES = [
     "src/routes/free-seo-check.tsx",
+    "src/routes/vi.kiem-tra-seo.tsx",
     "src/routes/free-seo-check_.confirm.tsx",
     "src/routes/r.$id.tsx",
     ...readdirSync(join(REPO_ROOT, "src/client/features/free-seo-check"), {
