@@ -12,6 +12,7 @@ const {
   markReportRunningMock,
   markReportDoneMock,
   markReportFailedMock,
+  sendReportReadyEmailMock,
 } = vi.hoisted(() => {
   class FakeNonRetryableError extends Error {}
   class FakePsiRequestError extends Error {
@@ -31,6 +32,7 @@ const {
     markReportRunningMock: vi.fn(),
     markReportDoneMock: vi.fn(),
     markReportFailedMock: vi.fn(),
+    sendReportReadyEmailMock: vi.fn(),
   };
 });
 
@@ -56,6 +58,9 @@ vi.mock("@/server/services/seo-check/deep", () => ({
 }));
 vi.mock("@/server/services/seo-check/report-store", () => ({
   putDeepReport: putDeepReportMock,
+}));
+vi.mock("@/server/services/seo-check/report-ready-email", () => ({
+  sendReportReadyEmail: sendReportReadyEmailMock,
 }));
 vi.mock("@/server/services/seo-check/seo-reports-repository", () => ({
   markReportRunning: markReportRunningMock,
@@ -92,6 +97,7 @@ beforeEach(() => {
   markReportRunningMock.mockResolvedValue(undefined);
   markReportDoneMock.mockResolvedValue(undefined);
   markReportFailedMock.mockResolvedValue(undefined);
+  sendReportReadyEmailMock.mockResolvedValue(undefined);
 });
 
 describe("runDeepSeoCheck", () => {
@@ -99,11 +105,15 @@ describe("runDeepSeoCheck", () => {
     const step = makeStep();
     await runDeepSeoCheck(step, PARAMS);
 
+    // The email goes last, after the report is committed: it is an announcement
+    // of finished work, never a precondition for it.
     expect(step.order).toEqual([
       "mark-running",
       "pagespeed",
       "crawl-and-persist",
+      "send-report-email",
     ]);
+    expect(sendReportReadyEmailMock).toHaveBeenCalledWith("r1");
     expect(fetchPageSpeedMock).toHaveBeenCalledWith(
       "https://x.test/",
       "psi-key",
@@ -173,5 +183,26 @@ describe("runDeepSeoCheck", () => {
     await expect(runDeepSeoCheck(step, PARAMS)).rejects.toThrow();
     expect(markReportDoneMock).not.toHaveBeenCalled();
     expect(markReportFailedMock).toHaveBeenCalledWith("r1", expect.any(String));
+  });
+
+  it("announces nothing when the audit failed", async () => {
+    // The cron sweep mails terminal reports, failures included — this route must
+    // not race it from inside the error path it is already handling.
+    crawlSiteMock.mockRejectedValue(new Error("dns"));
+
+    await expect(runDeepSeoCheck(makeStep(), PARAMS)).rejects.toThrow();
+
+    expect(sendReportReadyEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps a finished report finished when the email step throws", async () => {
+    // A mail problem must never reach the failure path and undo committed work:
+    // the report exists in R2, its page renders, and the sweep retries the mail.
+    sendReportReadyEmailMock.mockRejectedValue(new Error("d1 blip"));
+
+    await expect(runDeepSeoCheck(makeStep(), PARAMS)).rejects.toThrow();
+
+    expect(markReportDoneMock).toHaveBeenCalled();
+    expect(markReportFailedMock).not.toHaveBeenCalled();
   });
 });

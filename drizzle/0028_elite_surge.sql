@@ -1,0 +1,1 @@
+ALTER TABLE `seo_reports` ADD `email_sent_at` text;

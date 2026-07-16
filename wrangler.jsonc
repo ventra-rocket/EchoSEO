@@ -12,6 +12,15 @@
   // are set as Worker secrets.
   "vars": {
     "AUTH_MODE": "cloudflare_access",
+    // Where the free checker's outgoing mail points its report links. Request
+    // handlers read their own origin off the request; the Workflow and the email
+    // cron have no request, so this is the only way they can know.
+    "FREE_CHECK_PUBLIC_ORIGIN": "https://echoseo.ventrarocket.vn",
+    // Verified Resend sender (mail.echoseo.ventrarocket.vn, a subdomain so a
+    // reputation problem here never reaches the apex). Paired with the
+    // RESEND_API_KEY secret — without both, the checker logs mail instead of
+    // sending it, which is the correct default for a fork or a self-hoster.
+    "FREE_CHECK_EMAIL_FROM": "EchoSEO <reports@mail.echoseo.ventrarocket.vn>",
   },
   // EchoSEO deploys to its own zone (ventrarocket.vn) as a custom domain.
   // workers_dev is disabled so deploys don't require a workers.dev subdomain.
@@ -61,11 +70,13 @@
     },
   ],
   "triggers": {
-    // */15 = due rank-tracking configs. 0 3 = the free checker's daily
-    // retention sweep (FREE_CHECK_RETENTION_CRON in services/seo-check/
-    // retention.ts must match this string — the scheduled handler tells the two
-    // apart by it).
-    "crons": ["*/15 * * * *", "0 3 * * *"],
+    // */15 = due rank-tracking configs. 0 3 = the free checker's daily retention
+    // sweep. */5 = the free checker's report-email sweep (dedupe followers and
+    // any send lost to a crash). The scheduled handler tells them apart by the
+    // cron string, so FREE_CHECK_RETENTION_CRON (services/seo-check/retention.ts)
+    // and FREE_CHECK_REPORT_EMAIL_CRON (services/seo-check/report-ready-email.ts)
+    // must match these verbatim.
+    "crons": ["*/15 * * * *", "0 3 * * *", "*/5 * * * *"],
   },
   "kv_namespaces": [
     {

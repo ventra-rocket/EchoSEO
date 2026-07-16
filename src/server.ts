@@ -43,6 +43,10 @@ import {
   FREE_CHECK_RETENTION_CRON,
   sweepFreeCheckRetention,
 } from "@/server/services/seo-check/retention";
+import {
+  FREE_CHECK_REPORT_EMAIL_CRON,
+  sweepReportReadyEmails,
+} from "@/server/services/seo-check/report-ready-email";
 
 const appFetch = createStartHandler(defaultStreamHandler);
 const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
@@ -190,11 +194,17 @@ export default {
     env: Env,
     _ctx: ExecutionContext,
   ) {
-    // Two schedules share this handler; the cron string is what separates them.
-    // Retention is daily, rank tracking every 15 minutes — running the sweep on
-    // every rank-tracking tick would be 96x the necessary D1 work.
+    // Several schedules share this handler; the cron string is what separates
+    // them. Each free-check sweep runs on its own cadence — retention daily,
+    // report emails every 5 minutes — so neither inherits rank tracking's
+    // 15-minute tick and the D1 work each does stays proportional to its job.
     if (controller.cron === FREE_CHECK_RETENTION_CRON) {
       await sweepFreeCheckRetention();
+      return;
+    }
+
+    if (controller.cron === FREE_CHECK_REPORT_EMAIL_CRON) {
+      await sweepReportReadyEmails();
       return;
     }
 

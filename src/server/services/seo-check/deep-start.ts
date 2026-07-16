@@ -126,8 +126,9 @@ export async function handleStartDeepCheckRequest(
       },
     );
 
-    await sendDeepCheckConfirmation(getEmailSender(), {
+    await sendDeepCheckConfirmation(await getEmailSender(), {
       to: email,
+      leadId,
       confirmUrl: buildConfirmUrl(request, confirmToken),
       targetUrl: normalizedUrl,
     });

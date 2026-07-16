@@ -55,6 +55,19 @@ function FreeSeoCheckPage() {
   // The whole response, not just the report: the Deep tier's availability rides
   // along with it and both belong to the same check.
   const [result, setResult] = useState<CheckResponse | null>(null);
+  // Bumping this remounts the Turnstile widget, which is the only way to get a
+  // fresh token: the API verifies (and so consumes) the token before it does
+  // anything else, so any rejected submit — an unreachable site, a typo'd URL —
+  // burns it. Without the remount the retry button stays disabled until
+  // Turnstile self-refreshes, and the visitor's obvious next move is dead.
+  const [challengeAttempt, setChallengeAttempt] = useState(0);
+
+  function failWith(message: string) {
+    setErrorMessage(message);
+    setStatus("error");
+    setTurnstileToken(null);
+    setChallengeAttempt((attempt) => attempt + 1);
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -76,16 +89,14 @@ function FreeSeoCheckPage() {
 
       if (!response.ok || "error" in body) {
         const code = "error" in body ? body.error : "INTERNAL_ERROR";
-        setErrorMessage(ERROR_MESSAGES[code] ?? DEFAULT_ERROR_MESSAGE);
-        setStatus("error");
+        failWith(ERROR_MESSAGES[code] ?? DEFAULT_ERROR_MESSAGE);
         return;
       }
 
       setResult(body);
       setStatus("done");
     } catch {
-      setErrorMessage(DEFAULT_ERROR_MESSAGE);
-      setStatus("error");
+      failWith(DEFAULT_ERROR_MESSAGE);
     }
   }
 
@@ -123,6 +134,7 @@ function FreeSeoCheckPage() {
 
           {siteKey ? (
             <TurnstileWidget
+              key={challengeAttempt}
               siteKey={siteKey}
               onToken={setTurnstileToken}
               onExpire={() => setTurnstileToken(null)}

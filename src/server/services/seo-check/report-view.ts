@@ -42,8 +42,15 @@ const GENERIC_FAILURE_MESSAGE = "The deep check could not be completed.";
  * keeps its own `queued` status forever and holds no payload, so resolving to
  * the terminal root is the only way to serve it. Returns null if the chain
  * breaks (dangling id) or exceeds the depth cap.
+ *
+ * Exported for the report-ready email, which must answer the same question
+ * ("has this visitor's report actually finished?") from a cron with no request.
+ * Both callers share one resolver so the depth cap and cycle guard cannot drift
+ * apart between the page and the mail.
  */
-async function resolveCanonicalRoot(row: ReportRow): Promise<ReportRow | null> {
+export async function resolveCanonicalRoot(
+  row: ReportRow,
+): Promise<ReportRow | null> {
   let current = row;
   const visited = new Set<string>([current.id]);
 

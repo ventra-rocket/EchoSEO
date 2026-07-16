@@ -46,10 +46,11 @@ function row(overrides: Partial<ReportRow> & { id: string }): ReportRow {
     r2Key: null,
     error: null,
     finishedAt: null,
+    emailSentAt: null,
     createdAt: "2026-07-15T00:00:00.000Z",
     updatedAt: "2026-07-15T00:00:00.000Z",
     ...overrides,
-  } as ReportRow;
+  };
 }
 
 /** Registers rows so findReportById resolves them by id, like D1 would. */

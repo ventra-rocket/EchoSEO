@@ -74,6 +74,10 @@ export const seoReports = sqliteTable(
     error: text("error"),
     // Terminal-state timestamp (done|failed|expired) — drives retention later.
     finishedAt: text("finished_at"),
+    // Set when the "check finished" email was handed to the provider. Claimed by
+    // a compare-and-swap, so the Workflow and the sweep can both try to send and
+    // exactly one wins — whichever gets here first.
+    emailSentAt: text("email_sent_at"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(current_timestamp)`),

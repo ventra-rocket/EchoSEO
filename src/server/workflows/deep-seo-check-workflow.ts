@@ -21,6 +21,7 @@ import {
 import { crawlSite } from "@/server/services/seo-check/crawl";
 import { buildDeepReport } from "@/server/services/seo-check/deep";
 import { putDeepReport } from "@/server/services/seo-check/report-store";
+import { sendReportReadyEmail } from "@/server/services/seo-check/report-ready-email";
 import {
   markReportDone,
   markReportFailed,
@@ -92,11 +93,21 @@ export async function runDeepSeoCheck(
     // Record the failure as a delivered outcome (a dead row is worse than a
     // failed one). Keep the message generic — it is surfaced to anonymous
     // users in Phase 5; the real cause stays in the log above.
+    // The "finished" email for a failed check is left to the cron sweep, which
+    // picks up any terminal report: failures are rare, and the alternative is
+    // duplicating the send on the one path that is already handling an error.
     await step.do("mark-failed", () =>
       markReportFailed(reportId, FAILURE_MESSAGE),
     );
     throw error;
   }
+
+  // Deliberately outside the try: the report is committed, and a mail problem
+  // must not reach the failure path above and re-litigate a finished report. The
+  // send swallows its own errors and hands the claim back for the sweep to
+  // retry. Reports deduped onto this one are the sweep's job too — this route
+  // only ever knows its own lead.
+  await step.do("send-report-email", () => sendReportReadyEmail(reportId));
 }
 
 export class DeepSeoCheckWorkflow extends WorkflowEntrypoint<
