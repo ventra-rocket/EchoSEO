@@ -1,32 +1,86 @@
 /**
  * Email delivery seam for the Free Deep SEO Checker.
  *
- * Slice 1 ships a no-op logging sender so the double opt-in flow runs
- * end-to-end without a provider. Phase 5 replaces `getEmailSender()` with the
- * real Resend implementation (sender domain + SPF/DKIM). Handlers depend only
- * on the `EmailSender` interface, so nothing downstream changes when it lands.
+ * Resolves to Resend when the deployment is configured to send, and to a logging
+ * no-op when it is not. Handlers depend only on the `EmailSender` interface.
+ *
+ * The no-op is not leftover scaffolding: it is what a fork, a self-hoster with no
+ * Resend account, and `pnpm dev` all run on — `RESEND_API_KEY` is a secret, so
+ * absent by default, while the From address is a committed var and so present.
+ * The funnel works end-to-end without a provider; the mail goes to the log
+ * instead of an inbox.
  */
+import { getOptionalEnvValue } from "@/server/lib/runtime-env";
+import { sendViaResend } from "./resend-client";
 
 export interface EmailMessage {
   to: string;
   subject: string;
   text: string;
   html: string;
+  /**
+   * Stable identity for this logical message, so a retry of a send whose outcome
+   * was never learned cannot mail the visitor twice. Must be derived from what
+   * the message is about (the report, the lead) — never random, or a retry is
+   * just a second message.
+   */
+  idempotencyKey: string;
 }
 
 export interface EmailSender {
   send(message: EmailMessage): Promise<void>;
 }
 
-/** Logs instead of sending — the Slice 1 default (no provider wired yet). */
+/**
+ * Logs instead of sending — used whenever the deployment cannot send.
+ *
+ * Names the message, never the recipient: this runs on the anonymous funnel, and
+ * a misconfigured production deployment falling back here must not turn every
+ * visitor's address into a log line.
+ */
 const noopEmailSender: EmailSender = {
   async send(message: EmailMessage): Promise<void> {
     console.info(
-      `[free-seo-check:email] would send "${message.subject}" to ${message.to}`,
+      `[free-seo-check:email] would send "${message.subject}" (${message.idempotencyKey})`,
     );
   },
 };
 
-export function getEmailSender(): EmailSender {
+function resendEmailSender(apiKey: string, from: string): EmailSender {
+  return {
+    async send(message: EmailMessage): Promise<void> {
+      await sendViaResend({ apiKey, from, ...message });
+    },
+  };
+}
+
+/**
+ * Both settings are required to send: a key alone cannot pick a From address, and
+ * a From address outside the key's verified domain is rejected by Resend anyway.
+ * Missing the key means "this deployment does not send mail" — a valid
+ * configuration, not an error, and the one every fork and `pnpm dev` runs in.
+ *
+ * The two halves are not symmetrical, so they are not judged alike.
+ * `FREE_CHECK_EMAIL_FROM` is a committed var, so it is *present by default*
+ * everywhere, including dev — complaining about a From with no key would fire on
+ * every send in exactly the setups the no-op exists to serve, and a warning that
+ * cries wolf on first run is worse than no warning. The reverse never happens by
+ * default: a key is only ever set deliberately, so a key with nowhere to send
+ * from is always someone's mistake and always worth saying out loud.
+ */
+export async function getEmailSender(): Promise<EmailSender> {
+  const [apiKey, from] = await Promise.all([
+    getOptionalEnvValue("RESEND_API_KEY"),
+    getOptionalEnvValue("FREE_CHECK_EMAIL_FROM"),
+  ]);
+
+  if (apiKey && from) return resendEmailSender(apiKey, from);
+
+  if (apiKey && !from) {
+    console.error(
+      "free-seo-check: RESEND_API_KEY is set but FREE_CHECK_EMAIL_FROM is not — nothing will be sent",
+    );
+  }
+
   return noopEmailSender;
 }

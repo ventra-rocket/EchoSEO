@@ -41,6 +41,19 @@ export async function isDeepCheckDisabled(): Promise<boolean> {
   return (await getOptionalEnvValue("FREE_DEEP_CHECK_DISABLED")) === "true";
 }
 
+/**
+ * Origin the report links in outgoing mail are built on, e.g.
+ * `https://echoseo.ventrarocket.vn`.
+ *
+ * Request handlers derive their own origin from the request, but the Workflow and
+ * the email cron have no request to derive it from — they only learn where this
+ * deployment lives by being told. Null means the deployment cannot build a report
+ * link, so it must not claim to have mailed one.
+ */
+export async function getFreeCheckPublicOrigin(): Promise<string | null> {
+  return (await getOptionalEnvValue("FREE_CHECK_PUBLIC_ORIGIN")) ?? null;
+}
+
 interface DeepCheckLimits {
   psiDailyCeiling: number;
   perDomainDaily: number;

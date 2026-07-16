@@ -10,6 +10,12 @@ import type { EmailMessage, EmailSender } from "./sender";
 
 interface DeepCheckConfirmationInput {
   to: string;
+  /**
+   * The lead this opt-in belongs to; also its identity for retry-safe sending.
+   * A visitor who retries a failed request gets a new lead and so a new key —
+   * correctly, because that really is a different opt-in with a different token.
+   */
+  leadId: string;
   /** Own-origin confirm landing URL carrying the single-use token. */
   confirmUrl: string;
   /** The page the visitor asked us to deep-check (untrusted). */
@@ -19,7 +25,7 @@ interface DeepCheckConfirmationInput {
 function buildDeepCheckConfirmationEmail(
   input: DeepCheckConfirmationInput,
 ): EmailMessage {
-  const { to, confirmUrl, targetUrl } = input;
+  const { to, leadId, confirmUrl, targetUrl } = input;
 
   const subject = "Confirm your free SEO deep check";
   const text = [
@@ -38,7 +44,7 @@ function buildDeepCheckConfirmationEmail(
     `<p>This link expires in 24 hours. If you didn't request this, ignore this email.</p>`,
   ].join("\n");
 
-  return { to, subject, text, html };
+  return { to, subject, text, html, idempotencyKey: `confirm:${leadId}` };
 }
 
 export async function sendDeepCheckConfirmation(

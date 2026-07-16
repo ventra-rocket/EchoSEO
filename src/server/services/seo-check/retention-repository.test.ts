@@ -7,12 +7,16 @@
  * write paths** (`createLeadWithReport`, `markReportDone`, …) rather than
  * hand-written inserts — the timestamp formats those writers produce are
  * precisely what the predicates have to match.
+ *
+ * The schema comes from `createFreeCheckTestDb`, which replays the whole
+ * migration journal.
  */
-import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createClient, type Client } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "@/db/schema";
+import {
+  createFreeCheckTestDb,
+  type FreeCheckTestDb,
+} from "./__tests__/free-check-test-db";
 
 // The repositories import `db` at module load; this holds the per-test in-memory
 // instance behind a getter so each test gets a fresh database.
@@ -41,34 +45,16 @@ const {
   deleteLeadsByIds,
 } = await import("./retention-repository");
 
-const MIGRATIONS = [
-  "drizzle/0026_giant_boomer.sql",
-  "drizzle/0027_panoramic_queen_noir.sql",
-];
-
 /** Far enough in the past that a freshly-written row is never "expired". */
 const PAST_CUTOFF = "2020-01-01 00:00:00";
 /** Far enough in the future that any settled row counts as expired. */
 const FUTURE_CUTOFF = "2099-01-01 00:00:00";
 
-let db: ReturnType<typeof drizzle>;
-let raw: Client;
+let db: FreeCheckTestDb["db"];
+let raw: FreeCheckTestDb["raw"];
 
 beforeEach(async () => {
-  raw = createClient({ url: ":memory:" });
-  // D1 enforces foreign keys; plain SQLite does not unless asked. The whole
-  // delete story rests on the lead -> reports cascade, so the test must match.
-  await raw.execute("PRAGMA foreign_keys = ON");
-
-  for (const file of MIGRATIONS) {
-    const ddl = readFileSync(file, "utf8");
-    for (const statement of ddl.split("--> statement-breakpoint")) {
-      const trimmed = statement.trim();
-      if (trimmed) await raw.execute(trimmed);
-    }
-  }
-
-  db = drizzle(raw, { schema });
+  ({ db, raw } = await createFreeCheckTestDb());
   testDb.current = db;
 });
 
