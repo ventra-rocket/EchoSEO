@@ -212,8 +212,30 @@ function PostHogBootstrap() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // Server-render the document language from the committed path so the public
+  // Vietnamese landing ships `lang="vi"` for crawlers. Authenticated pages get
+  // "en" here and then the I18nProvider effect overrides from the cookie
+  // client-side — same end state as before, when only that effect set lang.
+  const pathname = useRouterState({
+    select: (state) =>
+      state.matches[state.matches.length - 1]?.pathname ??
+      state.location.pathname,
+  });
+  const lang = pathname.startsWith("/vi/") ? "vi" : "en";
+
+  // On a client-side navigation INTO a public page, React skips rewriting
+  // `<html lang>` when the value it computes is unchanged (e.g. arriving on the
+  // English landing while the dashboard's I18nProvider had imperatively set
+  // lang="vi" from the cookie). Reassert it here so a public page always carries
+  // its own language; authenticated pages are left to the I18nProvider effect.
+  React.useEffect(() => {
+    if (isPublicSsrPath(pathname)) {
+      document.documentElement.lang = lang;
+    }
+  }, [pathname, lang]);
+
   return (
-    <html suppressHydrationWarning>
+    <html lang={lang} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{ __html: themePreferenceInitScript }}

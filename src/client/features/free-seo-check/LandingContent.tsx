@@ -1,10 +1,4 @@
-import {
-  FAQS,
-  HOW_IT_WORKS,
-  LANDING_INTRO,
-  WHAT_WE_CHECK,
-  type LandingFeature,
-} from "./landing-content";
+import type { LandingCopy, LandingFeature } from "./landing-copy";
 
 function FeatureList({
   heading,
@@ -35,24 +29,26 @@ function FeatureList({
  * Editorial content below the checker form: what the tool looks at, how the two
  * tiers work, and an FAQ. Real, self-contained copy so the landing is not a thin
  * page, and the FAQ doubles as the source for the page's FAQPage structured data.
+ * All strings come from the locale's copy, so this renders in the page's language.
  */
-export function LandingContent() {
+export function LandingContent({ copy }: { copy: LandingCopy }) {
   return (
     <div className="space-y-10 border-t border-base-300 pt-10">
-      <p className="text-center text-sm text-base-content/70">
-        {LANDING_INTRO}
-      </p>
+      <p className="text-center text-sm text-base-content/70">{copy.intro}</p>
 
       <FeatureList
-        heading="What the free check looks at"
-        features={WHAT_WE_CHECK}
+        heading={copy.whatWeCheckHeading}
+        features={copy.whatWeCheck}
       />
-      <FeatureList heading="How it works" features={HOW_IT_WORKS} />
+      <FeatureList
+        heading={copy.howItWorksHeading}
+        features={copy.howItWorks}
+      />
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Frequently asked questions</h2>
+        <h2 className="text-lg font-semibold">{copy.faqHeading}</h2>
         <div className="space-y-2">
-          {FAQS.map((faq) => (
+          {copy.faqs.map((faq) => (
             <details
               key={faq.question}
               className="rounded-box border border-base-300 bg-base-100 p-4"

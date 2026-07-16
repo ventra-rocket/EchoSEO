@@ -52,6 +52,31 @@ test.describe("public routes server-render their body", () => {
     expect(html).toContain('"@type":"FAQPage"');
     // Real editorial body, not a thin page.
     expect(html).toContain("Frequently asked questions");
+    // The Vietnamese alternate link points at the Vietnamese URL (attribute
+    // order-independent: grab the vi link tag, then check its href).
+    const viAlt = html.match(/<link[^>]*hreflang="vi"[^>]*>/)?.[0] ?? "";
+    expect(viAlt).toContain("/vi/kiem-tra-seo");
+  });
+
+  test("the Vietnamese landing server-renders in Vietnamese with hreflang", async ({
+    request,
+  }) => {
+    const response = await request.get("/vi/kiem-tra-seo");
+    expect(response.status()).toBe(200);
+    const html = await response.text();
+    // Vietnamese body copy, server-rendered (not the English page).
+    expect(html).toContain("Kiểm tra SEO miễn phí");
+    expect(html).toContain("Câu hỏi thường gặp");
+    // The document declares Vietnamese, and self-canonicals to its own URL.
+    expect(html).toContain('lang="vi"');
+    const canonical = html.match(/<link[^>]*rel="canonical"[^>]*>/)?.[0] ?? "";
+    expect(canonical).toContain("/vi/kiem-tra-seo");
+    // Reciprocal hreflang back to English + x-default.
+    const enAlt = html.match(/<link[^>]*hreflang="en"[^>]*>/)?.[0] ?? "";
+    expect(enAlt).toContain("/free-seo-check");
+    expect(html).toContain('hreflang="x-default"');
+    // FAQPage JSON-LD is present and localized.
+    expect(html).toContain('"@type":"FAQPage"');
   });
 
   test("sitemap.xml lists the landing and excludes report pages", async ({
@@ -62,6 +87,8 @@ test.describe("public routes server-render their body", () => {
     expect(response.headers()["content-type"]).toContain("xml");
     const xml = await response.text();
     expect(xml).toContain("/free-seo-check");
+    // Both language landings are listed.
+    expect(xml).toContain("/vi/kiem-tra-seo");
     // Bearer report links must never be advertised.
     expect(xml).not.toContain("/r/");
   });

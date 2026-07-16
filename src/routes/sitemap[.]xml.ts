@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   FREE_SEO_CHECK_LANDING_PATH,
+  FREE_SEO_CHECK_VI_LANDING_PATH,
   publicUrl,
 } from "@/shared/free-seo-check";
 
@@ -10,7 +11,10 @@ import {
 // publicUrl(), so a crawler never sees the sitemap and the canonical disagree.
 // Paths must stay query-free — <loc> is interpolated without XML escaping, which
 // is safe only while no path carries `&`, `<`, or `>`.
-const LANDING_PATHS = [FREE_SEO_CHECK_LANDING_PATH];
+const LANDING_PATHS = [
+  FREE_SEO_CHECK_LANDING_PATH,
+  FREE_SEO_CHECK_VI_LANDING_PATH,
+];
 
 function sitemapXml(): string {
   const urls = LANDING_PATHS.map(
