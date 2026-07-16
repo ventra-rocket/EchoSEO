@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
@@ -28,6 +29,7 @@ import {
 } from "@/client/lib/reddit-attribution";
 import { NotFound } from "@/client/components/NotFound";
 import { I18nProvider } from "@/client/i18n/I18nProvider";
+import { isPublicSsrPath } from "@/shared/free-seo-check";
 import appCss from "@/client/styles/app.css?url";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
@@ -89,7 +91,64 @@ export const Route = createRootRoute({
 });
 
 function AppLayout() {
-  return <Outlet />;
+  // Public, indexable routes render their body on the server. Everything else is
+  // the authenticated dashboard, which renders inside <ClientOnly> — SSR buys it
+  // nothing, and keeping its providers off the server means two module-level
+  // singletons (the tanstack-db queryClient and the auth client) are never
+  // read or written while rendering, so no visitor's state reaches another's HTML.
+  //
+  // Switch on the COMMITTED pathname (the last resolved match), not
+  // `location.pathname`: during an in-flight cross-boundary navigation the
+  // location URL flips to the target before <Outlet/> swaps to it, and switching
+  // on the pending URL would briefly render the still-mounted old tree under the
+  // wrong providers. The matches are what Outlet actually renders, so they cannot
+  // disagree with it.
+  const pathname = useRouterState({
+    select: (state) =>
+      state.matches[state.matches.length - 1]?.pathname ??
+      state.location.pathname,
+  });
+  if (isPublicSsrPath(pathname)) {
+    return <Outlet />;
+  }
+  return (
+    <ClientOnly>
+      <AppProviders>
+        <Outlet />
+      </AppProviders>
+    </ClientOnly>
+  );
+}
+
+function AppProviders({ children }: { children: React.ReactNode }) {
+  const showDevtools =
+    import.meta.env.DEV && import.meta.env.VITE_SHOW_DEVTOOLS !== "false";
+
+  return (
+    <I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <>
+          <PostHogBootstrap />
+          {children}
+          <ExportToSheetsModal />
+          <Toaster position="bottom-right" mobileOffset={{ bottom: 100 }} />
+          {showDevtools ? (
+            <TanStackDevtools
+              config={{ position: "bottom-right" }}
+              eventBusConfig={{ connectToServerBus: true }}
+              plugins={[
+                {
+                  name: "TanStack Router",
+                  render: <TanStackRouterDevtoolsPanel />,
+                  defaultOpen: true,
+                },
+              ]}
+            />
+          ) : null}
+        </>
+      </QueryClientProvider>
+    </I18nProvider>
+  );
 }
 
 function PostHogBootstrap() {
@@ -153,9 +212,6 @@ function PostHogBootstrap() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const showDevtools =
-    import.meta.env.DEV && import.meta.env.VITE_SHOW_DEVTOOLS !== "false";
-
   return (
     <html suppressHydrationWarning>
       <head>
@@ -165,34 +221,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ClientOnly>
-          <I18nProvider>
-            <QueryClientProvider client={queryClient}>
-              <>
-                <PostHogBootstrap />
-                {children}
-                <ExportToSheetsModal />
-                <Toaster
-                  position="bottom-right"
-                  mobileOffset={{ bottom: 100 }}
-                />
-                {showDevtools ? (
-                  <TanStackDevtools
-                    config={{ position: "bottom-right" }}
-                    eventBusConfig={{ connectToServerBus: true }}
-                    plugins={[
-                      {
-                        name: "TanStack Router",
-                        render: <TanStackRouterDevtoolsPanel />,
-                        defaultOpen: true,
-                      },
-                    ]}
-                  />
-                ) : null}
-              </>
-            </QueryClientProvider>
-          </I18nProvider>
-        </ClientOnly>
+        {children}
         <Scripts />
       </body>
     </html>

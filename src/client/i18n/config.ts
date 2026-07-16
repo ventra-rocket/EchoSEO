@@ -4,9 +4,12 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "en";
 
-// Locale is persisted client-side. The app shell renders inside <ClientOnly>
-// (only the HTML document is server-rendered), so the active locale is resolved
-// on the client from this cookie — no SSR/hydration locale threading needed.
+// Locale for the authenticated app is persisted client-side. That part of the
+// tree renders inside the <ClientOnly> island in __root.tsx, so the active locale
+// is resolved on the client from this cookie — no SSR/hydration locale threading
+// needed there. Public indexable routes SSR their body and are English-only for
+// now (a later slice derives their locale from the URL, not this cookie), so this
+// cookie does not govern them.
 export const LOCALE_COOKIE = "echoseo_locale";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
