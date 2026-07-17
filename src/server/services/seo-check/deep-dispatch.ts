@@ -16,9 +16,7 @@ import {
   revertQueuedReportToConfirming,
 } from "./seo-reports-repository";
 import { enqueueDeepCheck } from "./deep-check-enqueue";
-
-const DISABLED_MESSAGE =
-  "Free deep checks are paused right now. Please try again later.";
+import { DEEP_DISABLED_MESSAGE as DISABLED_MESSAGE } from "./deep-failure-messages";
 
 /** UTC calendar day, e.g. "2026-07-14". */
 function utcDay(now: Date = new Date()): string {

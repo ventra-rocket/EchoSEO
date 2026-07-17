@@ -39,6 +39,18 @@ export const CORE_WEB_VITALS_RULES: Array<Rule<CoreWebVitalsSignals>> = [
     guideQuote:
       "LCP reports the render time of the largest image, text block, or video visible in the viewport, relative to when the user first navigated to the page.",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Largest Contentful Paint (LCP) không quá 2.5s",
+        problem:
+          "Phần tử hiển thị lớn nhất của trang (hình ảnh, khối văn bản hoặc video) mất quá lâu để hiển thị, khiến trang có cảm giác tải chậm.",
+        fixSteps: [
+          "Tối ưu và tải trước (preload) hình ảnh hoặc khối văn bản lớn nhất trong màn hình đầu tiên.",
+          "Giảm CSS/JS chặn hiển thị và rút ngắn thời gian phản hồi máy chủ (TTFB) ở khâu phía trước.",
+          "Dùng CDN và các định dạng ảnh hiện đại để rút ngắn thời gian tải.",
+        ],
+      },
+    },
   },
   {
     id: "cwv-inp",
@@ -61,6 +73,18 @@ export const CORE_WEB_VITALS_RULES: Array<Rule<CoreWebVitalsSignals>> = [
     guideQuote:
       "A low INP means the page was consistently able to respond quickly to all—or the vast majority—of user interactions.",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Interaction to Next Paint (INP) không quá 200ms",
+        problem:
+          "Trang phản hồi chậm với thao tác của người dùng (nhấp chuột, chạm, gõ phím), tạo cảm giác giật lag hoặc trang bị đơ.",
+        fixSteps: [
+          "Chia nhỏ các tác vụ JavaScript dài để luồng chính có thể phản hồi thao tác nhập sớm hơn.",
+          "Trì hoãn hoặc loại bỏ các script không thiết yếu chạy khi người dùng tương tác.",
+          "Tránh đọc-ghi layout liên tục (layout thrashing) trong các trình xử lý sự kiện.",
+        ],
+      },
+    },
   },
   {
     id: "cwv-cls",
@@ -83,6 +107,18 @@ export const CORE_WEB_VITALS_RULES: Array<Rule<CoreWebVitalsSignals>> = [
     guideQuote:
       "CLS is a measure of the largest burst of layout shift scores for every unexpected layout shift that occurs during the entire lifecycle of a page.",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Cumulative Layout Shift (CLS) không quá 0.1",
+        problem:
+          "Các phần tử trên trang bị xê dịch bất ngờ trong lúc nội dung tải, dễ gây bấm nhầm và trải nghiệm đọc khó chịu.",
+        fixSteps: [
+          "Khai báo rõ width/height (hoặc aspect-ratio) cho hình ảnh, nội dung nhúng và quảng cáo để chỗ trống được giữ sẵn trước khi chúng tải xong.",
+          "Tránh chèn nội dung phía trên nội dung sẵn có, trừ khi do chính người dùng thao tác.",
+          "Tải trước (preload) font chữ để tránh hiện tượng đổi font làm xô lệch bố cục.",
+        ],
+      },
+    },
   },
   {
     id: "cwv-ttfb",
@@ -109,5 +145,17 @@ export const CORE_WEB_VITALS_RULES: Array<Rule<CoreWebVitalsSignals>> = [
     guideQuote:
       "Because TTFB isn't a Core Web Vitals metric, it's not absolutely necessary that sites meet the 'good' TTFB threshold, provided that it doesn't impede their ability to score well on the metrics that matter.",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Time to First Byte (TTFB) không quá 0.8s",
+        problem:
+          "Máy chủ mất quá lâu để gửi byte phản hồi đầu tiên, kéo theo mọi thứ trang cần để hiển thị đều bị chậm lại.",
+        fixSteps: [
+          "Giảm thời gian xử lý phía máy chủ (thời gian truy vấn/dựng trang) cho phản hồi HTML ban đầu.",
+          "Dùng bộ nhớ đệm (cache), CDN, hoặc kết xuất tại edge gần người truy cập hơn.",
+          "Tránh các chuỗi chuyển hướng không cần thiết trước phản hồi cuối cùng.",
+        ],
+      },
+    },
   },
 ];

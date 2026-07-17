@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getFix } from "@/server/lib/seo-rules";
 import type { DeepReport } from "./deep-types";
+import type { DeepSignal } from "./deep-types";
 import type { ReportRow } from "./seo-reports-repository";
 
 const { findReportByIdMock, getDeepReportMock } = vi.hoisted(() => ({
@@ -80,15 +82,55 @@ describe("loadReportView", () => {
       status: "done",
       report: REPORT,
       deduped: false,
+      locale: "en",
     });
     expect(getDeepReportMock).toHaveBeenCalledWith("r1");
+  });
+
+  it("renders signals in the requester's language for a vi report", async () => {
+    givenRows(
+      row({
+        id: "r1",
+        status: "done",
+        locale: "vi",
+        r2Key: "deep-reports/r1.json",
+      }),
+    );
+    const englishSignal: DeepSignal = {
+      id: "meta-title",
+      category: "meta",
+      status: "warn",
+      label: "Title tag present, 10-60 characters",
+      severity: "critical",
+      problem: "English problem.",
+      fixSteps: ["English step."],
+      googleSourceUrl: "https://developers.google.com/x",
+      guideQuote: "An English quote from Google.",
+      lastReviewedDate: "2026-07-13",
+    };
+    getDeepReportMock.mockResolvedValue({
+      ...REPORT,
+      signals: [englishSignal],
+    });
+
+    const view = await loadReportView("r1");
+    if (view?.status !== "done") throw new Error("expected a done view");
+    expect(view.locale).toBe("vi");
+    const fix = getFix("meta-title", "vi");
+    expect(view.report.signals[0]?.label).toBe(fix?.label);
+    expect(view.report.signals[0]?.problem).toBe(fix?.problem);
+    // The Google quote is never translated — it stays exactly as stored.
+    expect(view.report.signals[0]?.guideQuote).toBe(englishSignal.guideQuote);
   });
 
   it.each(["confirming", "queued", "running"] as const)(
     "reports %s as pending",
     async (status) => {
       givenRows(row({ id: "r1", status }));
-      expect(await loadReportView("r1")).toEqual({ status: "pending" });
+      expect(await loadReportView("r1")).toEqual({
+        status: "pending",
+        locale: "en",
+      });
     },
   );
 
@@ -97,6 +139,7 @@ describe("loadReportView", () => {
     expect(await loadReportView("r1")).toEqual({
       status: "failed",
       message: "It broke.",
+      locale: "en",
     });
   });
 
@@ -111,6 +154,7 @@ describe("loadReportView", () => {
         status: "done",
         report: REPORT,
         deduped: true,
+        locale: "en",
       });
       expect(getDeepReportMock).toHaveBeenCalledWith("r1");
     });
@@ -129,6 +173,7 @@ describe("loadReportView", () => {
         status: "done",
         report: REPORT,
         deduped: true,
+        locale: "en",
       });
       expect(getDeepReportMock).toHaveBeenCalledWith("r3");
     });
@@ -138,7 +183,10 @@ describe("loadReportView", () => {
         row({ id: "r2", status: "queued", canonicalReportId: "r1" }),
         row({ id: "r1", status: "running" }),
       );
-      expect(await loadReportView("r2")).toEqual({ status: "pending" });
+      expect(await loadReportView("r2")).toEqual({
+        status: "pending",
+        locale: "en",
+      });
     });
 
     it("fails instead of looping when the chain cycles", async () => {
@@ -150,6 +198,7 @@ describe("loadReportView", () => {
       await expect(loadReportView("r1")).resolves.toEqual({
         status: "failed",
         message: "The deep check could not be completed.",
+        locale: "en",
       });
     });
 
@@ -167,6 +216,7 @@ describe("loadReportView", () => {
       await expect(loadReportView("r0")).resolves.toEqual({
         status: "failed",
         message: "The deep check could not be completed.",
+        locale: "en",
       });
     });
 
@@ -176,6 +226,7 @@ describe("loadReportView", () => {
       await expect(loadReportView("r2")).resolves.toEqual({
         status: "failed",
         message: "The deep check could not be completed.",
+        locale: "en",
       });
     });
   });
@@ -189,6 +240,7 @@ describe("loadReportView", () => {
     expect(await loadReportView("r1")).toEqual({
       status: "failed",
       message: "The deep check could not be completed.",
+      locale: "en",
     });
   });
 });

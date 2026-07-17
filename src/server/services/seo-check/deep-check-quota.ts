@@ -11,15 +11,12 @@
 import { env } from "cloudflare:workers";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { DEEP_CHECK_WINDOW_MS, getDeepCheckLimits } from "./deep-check-config";
+import { DEEP_QUOTA_BLOCKED_MESSAGE as BLOCKED_MESSAGE } from "./deep-failure-messages";
 
 interface QuotaDecision {
   allowed: boolean;
   message?: string;
 }
-
-/** Neutral wording — never reveals which limit (global/domain/email) tripped. */
-const BLOCKED_MESSAGE =
-  "Today's free deep-check limit has been reached. Please try again tomorrow.";
 
 export async function checkDeepCheckQuotas(input: {
   emailNormalized: string;

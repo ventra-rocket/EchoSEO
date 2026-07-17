@@ -20,10 +20,14 @@ const BODY_STYLE = [
   "color:#1f2937",
 ].join(";");
 
-export function emailHtmlDocument(title: string, bodyHtml: string): string {
+export function emailHtmlDocument(
+  title: string,
+  bodyHtml: string,
+  lang: string = "en",
+): string {
   return [
     "<!doctype html>",
-    '<html lang="en">',
+    `<html lang="${lang}">`,
     "<head>",
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width,initial-scale=1">',

@@ -33,7 +33,8 @@ import {
 
 const CONFIRM_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const LEAD_SOURCE = "free-seo-check";
-// VN localization of the tool surfaces is Phase 6; leads default to English.
+// The requester's UI language, captured so the report page and emails render in
+// it. Falls back to English when an older client omits `locale` from the body.
 const DEFAULT_LOCALE = "en";
 
 /** 256-bit CSPRNG hex token for the single-use double opt-in link. */
@@ -76,7 +77,8 @@ export async function handleStartDeepCheckRequest(
       await readJsonBody(request),
     );
     if (!body.success) throw new AppError("VALIDATION_ERROR");
-    const { url, email, turnstileToken } = body.data;
+    const { url, email, turnstileToken, locale } = body.data;
+    const requestLocale = locale ?? DEFAULT_LOCALE;
 
     const ip = clientIp(request);
 
@@ -111,7 +113,7 @@ export async function handleStartDeepCheckRequest(
         emailNormalized: normalizeEmail(email),
         url: normalizedUrl,
         domain,
-        locale: DEFAULT_LOCALE,
+        locale: requestLocale,
         source: LEAD_SOURCE,
         confirmToken,
         confirmTokenExpiresAt,
@@ -121,7 +123,7 @@ export async function handleStartDeepCheckRequest(
         leadId,
         domain,
         url: normalizedUrl,
-        locale: DEFAULT_LOCALE,
+        locale: requestLocale,
         status: "confirming",
       },
     );
@@ -131,6 +133,7 @@ export async function handleStartDeepCheckRequest(
       leadId,
       confirmUrl: buildConfirmUrl(request, confirmToken),
       targetUrl: normalizedUrl,
+      locale: requestLocale,
     });
 
     return jsonResponse({ status: "confirmation_sent" }, 202);

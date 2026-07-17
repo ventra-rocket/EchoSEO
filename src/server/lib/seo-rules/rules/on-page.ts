@@ -41,6 +41,18 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     guideQuote:
       'Write descriptive and concise text for your <title> elements. Avoid vague descriptors like "Home" for your home page, or "Profile" for a specific person\'s profile.',
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Có thẻ tiêu đề, 10–60 ký tự",
+        problem:
+          "Trang thiếu thẻ <title>, hoặc thẻ quá ngắn/quá dài nên hiển thị không tốt trong kết quả tìm kiếm.",
+        fixSteps: [
+          "Thêm một thẻ <title> duy nhất, mô tả rõ nội dung vào phần <head> của trang.",
+          "Giữ độ dài khoảng 10–60 ký tự để tiêu đề không bị cắt cụt trong kết quả tìm kiếm.",
+          'Đưa chủ đề chính của trang lên đầu tiêu đề, thay vì một nhãn mơ hồ như "Trang chủ".',
+        ],
+      },
+    },
   },
   {
     id: "meta-description",
@@ -65,6 +77,18 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     guideQuote:
       "There's no limit on how long a meta description can be, but the snippet is truncated in Google Search results as needed, typically to fit the device width.",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Có thẻ meta description, 50–160 ký tự",
+        problem:
+          "Trang thiếu thẻ meta description, hoặc thẻ quá ngắn/quá dài để tạo được đoạn trích tốt trong kết quả tìm kiếm.",
+        fixSteps: [
+          'Thêm một thẻ <meta name="description"> duy nhất, tóm tắt nội dung của trang.',
+          "Nhắm tới khoảng 50–160 ký tự — Google cắt đoạn trích hiển thị cho vừa chiều rộng thiết bị.",
+          "Viết cho người tìm kiếm (vì sao trang này trả lời đúng truy vấn của họ), đừng nhồi nhét từ khóa.",
+        ],
+      },
+    },
   },
   {
     id: "meta-canonical",
@@ -83,6 +107,17 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     guideQuote:
       'A rel="canonical" link element (also known as a canonical element) is an element used in the head section of HTML to indicate that another page is representative of the content on the page.',
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Có thẻ link canonical",
+        problem:
+          'Trang không có thẻ rel="canonical", nên khi tồn tại nội dung trùng lặp, Google phải tự đoán URL nào là phiên bản chính thức.',
+        fixSteps: [
+          'Thêm thẻ <link rel="canonical" href="..."> vào phần <head>, trỏ tới URL ưu tiên.',
+          "Trỏ mọi biến thể trùng lặp/có tham số của trang về cùng một URL canonical.",
+        ],
+      },
+    },
   },
   {
     id: "structure-h1",
@@ -108,6 +143,17 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     guideQuote:
       "A common practice is to use a single h1 for the primary headline or logo on a page, h2 elements to designate major sections, and h3 elements in supporting subsections",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Có đúng một thẻ heading H1",
+        problem:
+          "Trang không có H1, hoặc có nhiều hơn một, khiến người đọc và công nghệ hỗ trợ khó nhận ra đâu là tiêu đề chính của trang.",
+        fixSteps: [
+          "Thêm đúng một thẻ <h1> mô tả chủ đề chính của trang.",
+          "Nếu có nhiều H1, hạ các thẻ thừa xuống <h2> hoặc thấp hơn.",
+        ],
+      },
+    },
   },
   {
     id: "structure-heading-order",
@@ -129,6 +175,17 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     guideQuote:
       "Developers often skip heading levels to use the browser's default styles that closely match their design. This is considered an anti-pattern because it breaks the outline model.",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Các cấp heading không nhảy bậc (vd H2 nhảy thẳng xuống H4)",
+        problem:
+          "Các cấp heading bị nhảy bậc (vd một H2 theo ngay sau là H4), làm hỏng dàn ý tài liệu đối với trình đọc màn hình và khiến cấu trúc trang khó nắm bắt hơn.",
+        fixSteps: [
+          "Sắp xếp lại heading để mỗi cấp chỉ nằm ngay dưới cấp cha liền kề (H3 dưới H2, H4 dưới H3, v.v.).",
+          "Dùng cấp heading cho cấu trúc tài liệu, không phải để chỉnh cỡ chữ — hãy tạo kiểu bằng CSS.",
+        ],
+      },
+    },
   },
   {
     id: "structure-image-alt",
@@ -155,6 +212,17 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     guideQuote:
       "The most important attribute when it comes to providing more metadata for an image is the alt text (text that describes an image), which also improves accessibility",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Hình ảnh có văn bản alt mô tả nội dung",
+        problem:
+          "Một số hình ảnh thiếu văn bản alt, nên Google (và trình đọc màn hình) không có mô tả nào về nội dung hình.",
+        fixSteps: [
+          "Thêm thuộc tính alt mô tả nội dung cho từng hình ảnh mang ý nghĩa.",
+          'Chỉ dùng alt="" cho hình thuần trang trí, đừng dùng nó để thế chỗ phần mô tả còn thiếu.',
+        ],
+      },
+    },
   },
   {
     id: "structure-word-count",
@@ -179,6 +247,17 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     guideQuote:
       "Google's automated ranking systems are designed to prioritize helpful, reliable information that's created to benefit people, and not content that's created to manipulate search engine rankings.",
     lastReviewedDate: "2026-07-13",
+    locales: {
+      vi: {
+        label: "Đủ nội dung để lập chỉ mục (300+ từ)",
+        problem:
+          "Trang có rất ít nội dung văn bản hiển thị, dễ bị xem là nội dung mỏng, ít giá trị với người tìm kiếm.",
+        fixSteps: [
+          "Bổ sung cho trang nội dung nguyên bản, có chiều sâu, giúp người đọc hoàn thành việc họ cần.",
+          "Đừng độn chữ cho đủ số từ — theo chính hướng dẫn của Google, thứ được đánh giá là chất lượng nội dung, không phải độ dài.",
+        ],
+      },
+    },
   },
 ];
 

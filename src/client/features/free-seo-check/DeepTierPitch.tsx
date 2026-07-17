@@ -1,4 +1,6 @@
 import { Clock, Lock } from "lucide-react";
+import type { Locale } from "@/client/i18n/config";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
 
 /**
  * What the Deep tier offers. Shared by the request form and the paused notice so
@@ -6,11 +8,14 @@ import { Clock, Lock } from "lucide-react";
  */
 export function DeepTierPitch({
   metricCount,
+  locale,
   paused = false,
 }: {
   metricCount: number;
+  locale: Locale;
   paused?: boolean;
 }) {
+  const copy = CHECK_RESULT_COPY[locale].deepPitch;
   const Icon = paused ? Clock : Lock;
 
   return (
@@ -20,10 +25,9 @@ export function DeepTierPitch({
         aria-hidden="true"
       />
       <div className="flex-1 text-sm">
-        <p className="font-medium">Unlock the Deep report</p>
+        <p className="font-medium">{copy.unlockTitle}</p>
         <p className="mt-0.5 text-base-content/70">
-          Adds {metricCount} Core Web Vitals metrics from real Chrome users,
-          Google Lighthouse scores, and a crawl of your other pages — free.
+          {copy.unlockBody(metricCount)}
         </p>
       </div>
     </div>
@@ -37,13 +41,18 @@ export function DeepTierPitch({
  * consent tick, and a solved CAPTCHA before telling them the feature is paused
  * spends their effort on a request that was never going to run.
  */
-export function DeepTierPausedNotice({ metricCount }: { metricCount: number }) {
+export function DeepTierPausedNotice({
+  metricCount,
+  locale,
+}: {
+  metricCount: number;
+  locale: Locale;
+}) {
   return (
     <div className="rounded-box border border-base-300 bg-base-200 p-4">
-      <DeepTierPitch metricCount={metricCount} paused />
+      <DeepTierPitch metricCount={metricCount} locale={locale} paused />
       <p className="mt-3 text-sm text-base-content/60">
-        Deep reports are paused while we finish setting up delivery — check back
-        soon.
+        {CHECK_RESULT_COPY[locale].deepPitch.pausedNotice}
       </p>
     </div>
   );

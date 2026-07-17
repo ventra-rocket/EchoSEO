@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import type { Signal, SignalStatus } from "@/server/services/seo-check/types";
 import type { DeepSignal } from "@/server/services/seo-check/deep-types";
+import type { Locale } from "@/client/i18n/config";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { STATUS_BADGE, STATUS_TEXT } from "./score-presentation";
 
 const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
@@ -23,7 +25,14 @@ const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
  * Lite and Deep signals differ only in how wide their `category` enum is, which
  * this row never reads — so it renders either.
  */
-export function SignalRow({ signal }: { signal: Signal | DeepSignal }) {
+export function SignalRow({
+  signal,
+  locale,
+}: {
+  signal: Signal | DeepSignal;
+  locale: Locale;
+}) {
+  const copy = CHECK_RESULT_COPY[locale].signal;
   const Icon = STATUS_ICON[signal.status];
 
   return (
@@ -42,7 +51,7 @@ export function SignalRow({ signal }: { signal: Signal | DeepSignal }) {
           </code>
         </div>
         <span className={`badge badge-sm ${STATUS_BADGE[signal.status]}`}>
-          {signal.status}
+          {copy.statusBadge[signal.status]}
         </span>
       </div>
 
@@ -53,7 +62,7 @@ export function SignalRow({ signal }: { signal: Signal | DeepSignal }) {
               className="size-3.5 transition-transform group-open:rotate-90"
               aria-hidden="true"
             />
-            How to fix this
+            {copy.howToFix}
           </summary>
           <div className="mt-2 space-y-3 text-sm">
             <p className="text-base-content/80">{signal.problem}</p>
@@ -72,18 +81,21 @@ export function SignalRow({ signal }: { signal: Signal | DeepSignal }) {
                 ))}
               </ol>
             </div>
+            {/* Only the chrome is localized — `guideQuote` is Google's
+                verbatim English text, and the VI copy names Google as the
+                source so the quote reads as citation, not our prose. */}
             <p className="text-xs text-base-content/50">
-              Per{" "}
+              {copy.guidancePrefix}
               <a
                 href={signal.googleSourceUrl}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="link link-primary"
               >
-                Google&apos;s guidance
+                {copy.guidanceLinkText}
               </a>
-              , reviewed {signal.lastReviewedDate}: &ldquo;{signal.guideQuote}
-              &rdquo;
+              {copy.guidanceReviewed(signal.lastReviewedDate)}&ldquo;
+              {signal.guideQuote}&rdquo;
             </p>
           </div>
         </details>

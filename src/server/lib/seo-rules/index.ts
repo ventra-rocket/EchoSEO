@@ -43,6 +43,7 @@ const RULE_META_BY_ID = new Map<string, RuleMeta>(
 );
 
 interface FixText {
+  label: string;
   problem: string;
   fixSteps: string[];
   googleSourceUrl: string;
@@ -51,9 +52,10 @@ interface FixText {
 }
 
 /**
- * Localized fix text for a rule. Falls back to the rule's English default
- * when no override exists for `locale` — every non-English locale is a stub
- * until Phase 6 populates real translations.
+ * Localized presentational text for a rule (label + problem + fixSteps). Falls
+ * back to the rule's English default when no override exists for `locale`.
+ * `guideQuote`/`googleSourceUrl` are never localized — the quote is verbatim
+ * from Google's own documentation.
  */
 export function getFix(ruleId: string, locale: Locale = "en"): FixText | null {
   const rule = RULE_META_BY_ID.get(ruleId);
@@ -61,10 +63,34 @@ export function getFix(ruleId: string, locale: Locale = "en"): FixText | null {
 
   const override = locale === "en" ? undefined : rule.locales?.[locale];
   return {
+    label: override?.label ?? rule.label,
     problem: override?.problem ?? rule.problem,
     fixSteps: override?.fixSteps ?? rule.fixSteps,
     googleSourceUrl: rule.googleSourceUrl,
     guideQuote: rule.guideQuote,
     lastReviewedDate: rule.lastReviewedDate,
+  };
+}
+
+/**
+ * Overlay a rule's localized `label`/`problem`/`fixSteps` onto an already-
+ * evaluated signal, keyed by its rule id. This is the read-time localization
+ * boundary: reports are stored/cached in canonical English and translated here
+ * on the way to the viewer, so a cached or cross-locale-deduped report still
+ * renders in the requester's language. English is a no-op (returns the input
+ * untouched), keeping the EN output byte-identical. Non-presentational fields
+ * (status, category, guideQuote, …) are preserved.
+ */
+export function localizeRuleText<
+  T extends { id: string; label: string; problem: string; fixSteps: string[] },
+>(signal: T, locale: Locale): T {
+  if (locale === "en") return signal;
+  const fix = getFix(signal.id, locale);
+  if (!fix) return signal;
+  return {
+    ...signal,
+    label: fix.label,
+    problem: fix.problem,
+    fixSteps: fix.fixSteps,
   };
 }

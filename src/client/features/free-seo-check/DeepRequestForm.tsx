@@ -1,19 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { ArrowRight, MailCheck } from "lucide-react";
 import { FREE_SEO_CHECK_DEEP_START_PATH } from "@/shared/free-seo-check";
+import type { Locale } from "@/client/i18n/config";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { TurnstileWidget } from "./TurnstileWidget";
 import { DeepTierPitch } from "./DeepTierPitch";
-
-const ERROR_MESSAGES: Record<string, string> = {
-  VALIDATION_ERROR:
-    "Use a real email address — disposable inboxes aren't accepted.",
-  CRAWL_TARGET_BLOCKED: "That URL can't be checked.",
-  FORBIDDEN: "Verification failed — please retry the checkbox above.",
-  RATE_LIMITED: "You've hit the free-check limit for now — try again later.",
-  UPSTREAM_UNAVAILABLE:
-    "Deep checks are paused right now — please try again later.",
-};
-const DEFAULT_ERROR_MESSAGE = "Something went wrong — please try again.";
 
 /**
  * Email-gated entry point to the Deep report.
@@ -29,11 +20,14 @@ const DEFAULT_ERROR_MESSAGE = "Something went wrong — please try again.";
 export function DeepRequestForm({
   url,
   metricCount,
+  locale,
 }: {
   /** The URL the visitor just ran the Lite check against. */
   url: string;
   metricCount: number;
+  locale: Locale;
 }) {
+  const copy = CHECK_RESULT_COPY[locale].deepForm;
   const siteKey = import.meta.env.TURNSTILE_SITE_KEY;
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
@@ -66,20 +60,28 @@ export function DeepRequestForm({
       const response = await fetch(FREE_SEO_CHECK_DEEP_START_PATH, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url, email, consent: true, turnstileToken }),
+        // `locale` rides along so the confirmation email and the report page
+        // come back in the language the visitor ran the check in.
+        body: JSON.stringify({
+          url,
+          email,
+          consent: true,
+          turnstileToken,
+          locale,
+        }),
       });
 
       if (!response.ok) {
         const body = await response
           .json<{ error?: string }>()
           .catch(() => null);
-        failWith(ERROR_MESSAGES[body?.error ?? ""] ?? DEFAULT_ERROR_MESSAGE);
+        failWith(copy.errors[body?.error ?? ""] ?? copy.errorDefault);
         return;
       }
 
       setStatus("sent");
     } catch {
-      failWith(DEFAULT_ERROR_MESSAGE);
+      failWith(copy.errorDefault);
     }
   }
 
@@ -92,20 +94,16 @@ export function DeepRequestForm({
             aria-hidden="true"
           />
           <div className="text-sm">
-            <p className="font-medium">Check your inbox</p>
+            <p className="font-medium">{copy.sentTitle}</p>
             <p className="mt-0.5 text-base-content/70">
-              We sent a confirmation link to{" "}
-              <span className="font-mono">{email}</span>. Click it and your deep
-              check starts — you&apos;ll get a link to the full report.
+              {copy.sentBodyBefore} <span className="font-mono">{email}</span>
+              {copy.sentBodyAfter}
             </p>
             {/* Our sending domain is new, so mail providers do not trust it yet
                 and this mail can land in spam. Nothing runs until the link is
                 clicked, so someone who never finds it waits forever for a report
                 that was never started — saying so costs a line and saves them. */}
-            <p className="mt-2 text-base-content/50">
-              Not there in a minute? Check your spam folder — we&apos;re a new
-              sender, so filters are still learning to trust us.
-            </p>
+            <p className="mt-2 text-base-content/50">{copy.sentSpamHint}</p>
           </div>
         </div>
       </div>
@@ -117,18 +115,18 @@ export function DeepRequestForm({
       onSubmit={handleSubmit}
       className="rounded-box border border-primary/30 bg-primary/5 p-4"
     >
-      <DeepTierPitch metricCount={metricCount} />
+      <DeepTierPitch metricCount={metricCount} locale={locale} />
 
       <div className="mt-4 space-y-3">
         <label className="block">
-          <span className="sr-only">Email address</span>
+          <span className="sr-only">{copy.emailLabel}</span>
           <input
             type="email"
             required
             maxLength={254}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@company.com"
+            placeholder={copy.emailPlaceholder}
             className="input input-bordered w-full"
             autoComplete="email"
           />
@@ -141,10 +139,7 @@ export function DeepRequestForm({
             onChange={(event) => setConsent(event.target.checked)}
             className="checkbox checkbox-xs mt-0.5"
           />
-          <span>
-            Email me my deep SEO report. We&apos;ll send a confirmation link
-            first — no marketing without your say-so.
-          </span>
+          <span>{copy.consentLabel}</span>
         </label>
 
         {siteKey ? (
@@ -154,14 +149,12 @@ export function DeepRequestForm({
             onToken={setTurnstileToken}
             onExpire={() => setTurnstileToken(null)}
             onLoadError={() => {
-              setErrorMessage(DEFAULT_ERROR_MESSAGE);
+              setErrorMessage(copy.errorDefault);
               setStatus("error");
             }}
           />
         ) : (
-          <p className="text-xs text-base-content/50">
-            Deep checks aren&apos;t configured for this deployment yet.
-          </p>
+          <p className="text-xs text-base-content/50">{copy.unconfigured}</p>
         )}
 
         {errorMessage ? (
@@ -179,10 +172,10 @@ export function DeepRequestForm({
           }
         >
           {status === "loading" ? (
-            "Sending…"
+            copy.submitLoading
           ) : (
             <>
-              Email me the deep report
+              {copy.submitIdle}
               <ArrowRight className="size-4" aria-hidden="true" />
             </>
           )}

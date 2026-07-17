@@ -20,6 +20,7 @@
 import { escapeHtml } from "../output-encode";
 import { emailHtmlDocument } from "./html-layout";
 import type { EmailMessage, EmailSender } from "./sender";
+import type { Locale } from "@/server/lib/seo-rules";
 
 interface DeepReportReadyInput {
   to: string;
@@ -31,20 +32,66 @@ interface DeepReportReadyInput {
   targetUrl: string;
   /** Days the report is kept, so the mail states its own expiry honestly. */
   retentionDays: number;
+  /** The requester's language; missing/unknown falls back to English. */
+  locale?: Locale;
 }
+
+/**
+ * Per-locale copy. The Vietnamese preserves the anti-spam intent of the English
+ * (see the file header) — it leads with "you requested this" and never uses the
+ * word "miễn phí" (the VN "free" spam token). `leadBefore`/`leadAfter` bracket
+ * the untrusted target URL so the HTML body can bold just the escaped URL.
+ */
+const COPY: Record<
+  Locale,
+  {
+    subject: string;
+    leadBefore: string;
+    leadAfter: string;
+    viewHere: (url: string) => string;
+    ctaLabel: string;
+    retention: (days: number) => string;
+    footer: string;
+  }
+> = {
+  en: {
+    subject: "Your SEO deep check is finished",
+    leadBefore: "The deep check you requested for ",
+    leadAfter: " has finished.",
+    viewHere: (url) => `View it here: ${url}`,
+    ctaLabel: "View my deep report",
+    retention: (days) =>
+      `This link works for ${days} days, after which the report and your email address are deleted.`,
+    footer:
+      "You are getting this because you requested this check and confirmed your email address. We send nothing else.",
+  },
+  vi: {
+    subject: "Bản kiểm tra SEO chuyên sâu của bạn đã xong",
+    leadBefore: "Bản kiểm tra chuyên sâu bạn yêu cầu cho ",
+    leadAfter: " đã hoàn tất.",
+    viewHere: (url) => `Xem tại đây: ${url}`,
+    ctaLabel: "Xem báo cáo chuyên sâu",
+    retention: (days) =>
+      `Liên kết này hoạt động trong ${days} ngày, sau đó báo cáo và địa chỉ email của bạn sẽ bị xoá.`,
+    footer:
+      "Bạn nhận email này vì đã yêu cầu bản kiểm tra này và xác nhận địa chỉ email. Chúng tôi không gửi gì khác.",
+  },
+};
 
 function buildDeepReportReadyEmail(input: DeepReportReadyInput): EmailMessage {
   const { to, reportId, reportUrl, targetUrl, retentionDays } = input;
+  const locale = input.locale ?? "en";
+  const copy = COPY[locale];
 
-  const subject = "Your SEO deep check is finished";
+  const subject = copy.subject;
   const text = [
-    `The deep check you requested for ${targetUrl} has finished.`,
+    `${copy.leadBefore}${targetUrl}${copy.leadAfter}`,
     "",
-    `View it here: ${reportUrl}`,
+    copy.viewHere(reportUrl),
     "",
-    `This link works for ${retentionDays} days, after which the report and your email address are deleted.`,
+    copy.retention(retentionDays),
     "",
-    "You are getting this because you requested this check and confirmed your email address. We send nothing else.",
+    copy.footer,
   ].join("\n");
 
   const safeTarget = escapeHtml(targetUrl);
@@ -52,11 +99,12 @@ function buildDeepReportReadyEmail(input: DeepReportReadyInput): EmailMessage {
   const html = emailHtmlDocument(
     subject,
     [
-      `<p>The deep check you requested for <strong>${safeTarget}</strong> has finished.</p>`,
-      `<p><a href="${safeReport}">View my deep report</a></p>`,
-      `<p>This link works for ${retentionDays} days, after which the report and your email address are deleted.</p>`,
-      `<p style="color:#6b7280;font-size:13px">You are getting this because you requested this check and confirmed your email address. We send nothing else.</p>`,
+      `<p>${copy.leadBefore}<strong>${safeTarget}</strong>${copy.leadAfter}</p>`,
+      `<p><a href="${safeReport}">${copy.ctaLabel}</a></p>`,
+      `<p>${copy.retention(retentionDays)}</p>`,
+      `<p style="color:#6b7280;font-size:13px">${copy.footer}</p>`,
     ].join("\n"),
+    locale,
   );
 
   // One report gets one announcement, however many times the sweep retries it.

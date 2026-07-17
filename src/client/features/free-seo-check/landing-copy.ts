@@ -179,7 +179,7 @@ const VI: LandingCopy = {
     "Dán một URL và nhận ngay đánh giá SEO on-page bằng ngôn ngữ dễ hiểu — kèm " +
     "cách khắc phục cho từng lỗi, dẫn thẳng tới tài liệu chính thức của Google " +
     "chứ không phải phỏng đoán.",
-  whatWeCheckHeading: "Bản kiểm tra miễn phí xem xét những gì",
+  whatWeCheckHeading: "Bản kiểm tra miễn phí xem xét những gì?",
   whatWeCheck: [
     {
       title: "Tiêu đề & thẻ meta",
@@ -194,10 +194,10 @@ const VI: LandingCopy = {
         "đọc lẫn công cụ tìm kiếm hiểu trang nói về điều gì.",
     },
     {
-      title: "Nền tảng kỹ thuật",
+      title: "Yếu tố kỹ thuật cơ bản",
       body:
-        "Mã trạng thái, chuyển hướng và các tín hiệu cho phép lập chỉ mục — phần " +
-        "nền quyết định một trang có thể xếp hạng hay không, trước cả khi xét nội dung.",
+        "Mã trạng thái, chuyển hướng và các tín hiệu cho phép lập chỉ mục — nền " +
+        "móng kỹ thuật quyết định một trang có thể xếp hạng hay không, trước cả khi xét nội dung.",
     },
   ],
   howItWorksHeading: "Cách hoạt động",
@@ -214,7 +214,7 @@ const VI: LandingCopy = {
       body:
         "Yêu cầu bản kiểm tra chuyên sâu, chúng tôi sẽ đo Core Web Vitals qua " +
         "Google PageSpeed Insights và quét vài trang nội bộ của bạn, rồi gửi email " +
-        "một báo cáo chia sẻ được khi hoàn tất. Cũng miễn phí — email chỉ để chúng " +
+        "một báo cáo có thể chia sẻ khi hoàn tất. Cũng miễn phí — email chỉ để chúng " +
         "tôi báo bạn khi quét xong.",
     },
   ],
@@ -245,7 +245,7 @@ const VI: LandingCopy = {
       answer:
         "Core Web Vitals (LCP, INP, CLS) cùng TTFB, đo qua Google PageSpeed Insights, " +
         "và quét vài trang nội bộ của bạn. Nó chạy nền và gửi tới hộp thư của bạn dưới " +
-        "dạng báo cáo chia sẻ được.",
+        "dạng báo cáo có thể chia sẻ.",
     },
     {
       question: "Báo cáo của tôi có riêng tư không?",

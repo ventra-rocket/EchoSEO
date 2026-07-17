@@ -1,4 +1,6 @@
+import type { Locale } from "@/client/i18n/config";
 import { useCountUp } from "./use-count-up";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
 import {
   BAND_COLOR_VAR,
   BAND_TEXT,
@@ -14,7 +16,14 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * grade (Concept B). The ring sweep and the number are both driven by a single
  * eased count-up value, so they animate together and settle at the same time.
  */
-export function ScoreGauge({ score }: { score: number }) {
+export function ScoreGauge({
+  score,
+  locale,
+}: {
+  score: number;
+  locale: Locale;
+}) {
+  const copy = CHECK_RESULT_COPY[locale].gauge;
   const shown = useCountUp(score);
   const band = scoreBand(score);
   const grade = scoreGrade(score);
@@ -56,12 +65,14 @@ export function ScoreGauge({ score }: { score: number }) {
         >
           {Math.round(shown)}
         </span>
-        <span className="text-[0.7rem] text-base-content/50">out of 100</span>
+        <span className="text-[0.7rem] text-base-content/50">
+          {copy.outOf100}
+        </span>
       </div>
 
       <span
         className={`absolute right-1 top-2 rounded-full border border-current px-1.5 font-mono text-xs font-bold ${BAND_TEXT[band]}`}
-        aria-label={`Grade ${grade}`}
+        aria-label={copy.gradeAria(grade)}
       >
         {grade}
       </span>

@@ -19,6 +19,7 @@
 import { escapeHtml } from "../output-encode";
 import { emailHtmlDocument } from "./html-layout";
 import type { EmailMessage, EmailSender } from "./sender";
+import type { Locale } from "@/server/lib/seo-rules";
 
 interface DeepCheckConfirmationInput {
   to: string;
@@ -32,20 +33,62 @@ interface DeepCheckConfirmationInput {
   confirmUrl: string;
   /** The page the visitor asked us to deep-check (untrusted). */
   targetUrl: string;
+  /** The requester's language; missing/unknown falls back to English. */
+  locale?: Locale;
 }
+
+/**
+ * Per-locale copy. The Vietnamese keeps the same anti-spam intent as the English
+ * (see the file header): it leads with "you just asked for this" and avoids the
+ * word "miễn phí" — the VN equivalent of the "free" spam token.
+ * `leadBefore`/`leadAfter` bracket the untrusted target URL so the HTML body can
+ * bold just the escaped URL.
+ */
+const COPY: Record<
+  Locale,
+  {
+    subject: string;
+    leadBefore: string;
+    leadAfter: string;
+    confirmHere: (url: string) => string;
+    ctaLabel: string;
+    expiry: string;
+  }
+> = {
+  en: {
+    subject: "Confirm your SEO deep check",
+    leadBefore: "You asked us to run a deep SEO check on ",
+    leadAfter: ". Confirm this address and it starts right away.",
+    confirmHere: (url) => `Confirm here: ${url}`,
+    ctaLabel: "Confirm my deep check",
+    expiry:
+      "This link expires in 24 hours. If you didn't request this, ignore this email — nothing runs and we delete the address.",
+  },
+  vi: {
+    subject: "Xác nhận yêu cầu kiểm tra SEO chuyên sâu",
+    leadBefore: "Bạn vừa yêu cầu kiểm tra SEO chuyên sâu cho ",
+    leadAfter: ". Xác nhận địa chỉ này và quá trình sẽ bắt đầu ngay.",
+    confirmHere: (url) => `Xác nhận tại đây: ${url}`,
+    ctaLabel: "Xác nhận kiểm tra chuyên sâu",
+    expiry:
+      "Liên kết này hết hạn sau 24 giờ. Nếu bạn không yêu cầu, hãy bỏ qua email này — không có gì chạy và chúng tôi sẽ xoá địa chỉ của bạn.",
+  },
+};
 
 function buildDeepCheckConfirmationEmail(
   input: DeepCheckConfirmationInput,
 ): EmailMessage {
   const { to, leadId, confirmUrl, targetUrl } = input;
+  const locale = input.locale ?? "en";
+  const copy = COPY[locale];
 
-  const subject = "Confirm your SEO deep check";
+  const subject = copy.subject;
   const text = [
-    `You asked us to run a deep SEO check on ${targetUrl}. Confirm this address and it starts right away.`,
+    `${copy.leadBefore}${targetUrl}${copy.leadAfter}`,
     "",
-    `Confirm here: ${confirmUrl}`,
+    copy.confirmHere(confirmUrl),
     "",
-    "This link expires in 24 hours. If you didn't request this, ignore this email — nothing runs and we delete the address.",
+    copy.expiry,
   ].join("\n");
 
   const safeTarget = escapeHtml(targetUrl);
@@ -53,10 +96,11 @@ function buildDeepCheckConfirmationEmail(
   const html = emailHtmlDocument(
     subject,
     [
-      `<p>You asked us to run a deep SEO check on <strong>${safeTarget}</strong>. Confirm this address and it starts right away.</p>`,
-      `<p><a href="${safeConfirm}">Confirm my deep check</a></p>`,
-      `<p style="color:#6b7280;font-size:13px">This link expires in 24 hours. If you didn't request this, ignore this email — nothing runs and we delete the address.</p>`,
+      `<p>${copy.leadBefore}<strong>${safeTarget}</strong>${copy.leadAfter}</p>`,
+      `<p><a href="${safeConfirm}">${copy.ctaLabel}</a></p>`,
+      `<p style="color:#6b7280;font-size:13px">${copy.expiry}</p>`,
     ].join("\n"),
+    locale,
   );
 
   return { to, subject, text, html, idempotencyKey: `confirm:${leadId}` };

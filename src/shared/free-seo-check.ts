@@ -70,9 +70,18 @@ export function publicUrl(pathname: string): string {
   return new URL(pathname, PUBLIC_ORIGIN).toString();
 }
 
+/**
+ * The check-result language. Optional on the wire so older clients still
+ * validate; the server treats a missing value as English. Kept as a local
+ * literal (not imported from the client i18n config) to avoid a shared→client
+ * layering dependency — the two supported locales are en + vi.
+ */
+const checkLocaleSchema = z.enum(["en", "vi"]).optional();
+
 export const freeSeoCheckRequestSchema = z.object({
   url: z.string().trim().min(1, "Enter a URL to check."),
   turnstileToken: z.string().min(1),
+  locale: checkLocaleSchema,
 });
 
 export type FreeSeoCheckRequest = z.infer<typeof freeSeoCheckRequestSchema>;
@@ -83,6 +92,7 @@ export const startDeepCheckRequestSchema = z.object({
   // Explicit opt-in — must be checked. Establishes the consent record.
   consent: z.literal(true),
   turnstileToken: z.string().min(1),
+  locale: checkLocaleSchema,
 });
 
 export const confirmDeepCheckRequestSchema = z.object({

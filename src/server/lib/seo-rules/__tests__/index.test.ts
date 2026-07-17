@@ -30,13 +30,25 @@ describe("getFix", () => {
   it("returns English fix text for a known rule", () => {
     const fix = getFix("meta-title");
     expect(fix).not.toBeNull();
+    expect(fix?.label).toBe("Title tag present, 10-60 characters");
     expect(fix?.googleSourceUrl).toContain("developers.google.com");
     expect(fix?.fixSteps.length).toBeGreaterThan(0);
   });
 
-  it("falls back to English when no Vietnamese override exists yet", () => {
+  it("localizes label, problem, and fixSteps when a Vietnamese override exists", () => {
     const en = getFix("meta-title", "en");
     const vi = getFix("meta-title", "vi");
+    expect(vi?.label).not.toBe(en?.label);
+    expect(vi?.problem).not.toBe(en?.problem);
+    expect(vi?.fixSteps).not.toEqual(en?.fixSteps);
+    // guideQuote is a verbatim Google quote and stays English in every locale.
+    expect(vi?.guideQuote).toBe(en?.guideQuote);
+  });
+
+  it("falls back to English when a rule has no Vietnamese override", () => {
+    // Structured-data guidance is deliberately never rendered, so never localized.
+    const en = getFix("structure-structured-data", "en");
+    const vi = getFix("structure-structured-data", "vi");
     expect(vi).toEqual(en);
   });
 

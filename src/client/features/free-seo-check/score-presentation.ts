@@ -6,6 +6,8 @@
  * so components stay thin and these can be unit-tested if needed.
  */
 import type { SignalStatus } from "@/server/services/seo-check/types";
+import type { Locale } from "@/client/i18n/config";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
 
 type ScoreBand = "good" | "fair" | "poor";
 
@@ -53,12 +55,16 @@ export const STATUS_BADGE: Record<SignalStatus, string> = {
   fail: "badge-error",
 };
 
-/** Short human summary shown under the gauge. */
-export function scoreHeadline(score: number, issueCount: number): string {
-  if (issueCount === 0) return "No issues found — nicely done.";
-  const noun = issueCount === 1 ? "issue" : "issues";
+/** Short human summary shown under the gauge, in the visitor's language. */
+export function scoreHeadline(
+  score: number,
+  issueCount: number,
+  locale: Locale,
+): string {
+  const copy = CHECK_RESULT_COPY[locale].headline;
+  if (issueCount === 0) return copy.none;
   const band = scoreBand(score);
-  if (band === "good") return `Good — ${issueCount} ${noun} to fix.`;
-  if (band === "fair") return `Fair — ${issueCount} ${noun} to fix.`;
-  return `Needs work — ${issueCount} ${noun} to fix.`;
+  if (band === "good") return copy.good(issueCount);
+  if (band === "fair") return copy.fair(issueCount);
+  return copy.needsWork(issueCount);
 }
