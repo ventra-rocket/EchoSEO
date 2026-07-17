@@ -109,6 +109,9 @@ async function deliver(
       ).toString(),
       targetUrl: report.url,
       retentionDays: context.retentionDays,
+      // The requester's stored language; the `locale` column is plain text, so
+      // anything that isn't a known locale falls back to English.
+      locale: report.locale === "vi" ? "vi" : "en",
     });
     return "sent";
   } catch (error) {

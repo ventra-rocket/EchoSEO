@@ -26,6 +26,7 @@ interface ConfirmationArg {
   to: string;
   targetUrl: string;
   confirmUrl: string;
+  locale?: string;
 }
 
 const {
@@ -233,6 +234,21 @@ describe("handleStartDeepCheckRequest", () => {
       "https://echoseo.test/free-seo-check/confirm?token=",
     );
     expect(confirmation?.confirmUrl).toContain(lead?.confirmToken ?? "");
+  });
+
+  it("persists the requester's locale on the lead, report, and opt-in email", async () => {
+    await handleStartDeepCheckRequest(
+      makeRequest({ ...VALID_BODY, locale: "vi" }),
+    );
+    expect(createLeadWithReportMock.mock.calls[0]?.[0]?.locale).toBe("vi");
+    expect(createLeadWithReportMock.mock.calls[0]?.[1]?.locale).toBe("vi");
+    expect(sendDeepCheckConfirmationMock.mock.calls[0]?.[1]?.locale).toBe("vi");
+  });
+
+  it("defaults locale to English when the request omits it", async () => {
+    await handleStartDeepCheckRequest(makeRequest(VALID_BODY));
+    expect(createLeadWithReportMock.mock.calls[0]?.[0]?.locale).toBe("en");
+    expect(createLeadWithReportMock.mock.calls[0]?.[1]?.locale).toBe("en");
   });
 
   it("does not send the email if the lead insert fails", async () => {

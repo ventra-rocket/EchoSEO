@@ -28,6 +28,8 @@ export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 export type Locale = "en" | "vi";
 
 export interface LocalizedFixText {
+  /** Localized check name, e.g. "Có thẻ tiêu đề, 10–60 ký tự". */
+  label: string;
   problem: string;
   fixSteps: string[];
 }
@@ -52,7 +54,8 @@ export interface RuleMeta {
   guideQuote: string;
   /** ISO date (YYYY-MM-DD) this rule's source + quote were last confirmed accurate. */
   lastReviewedDate: string;
-  /** Locale overrides for problem/fixSteps. Stubbed — populated in Phase 6. */
+  /** Locale overrides for label/problem/fixSteps. English is the default;
+   * `guideQuote` is never localized (it's a verbatim Google-doc quote). */
   locales?: Partial<Record<Exclude<Locale, "en">, LocalizedFixText>>;
 }
 

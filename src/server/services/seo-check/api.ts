@@ -11,12 +11,14 @@ import { env } from "cloudflare:workers";
 import { AppError } from "@/server/lib/errors";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
+import { localizeRuleText } from "@/server/lib/seo-rules";
 import { freeSeoCheckRequestSchema } from "@/shared/free-seo-check";
 import { verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { getCachedLiteReport, putCachedLiteReport } from "./cache";
 import { isDeepCheckDisabled } from "./deep-check-config";
 import { runLiteCheck } from "./lite";
+import type { LiteReport } from "./types";
 import { clientIp, errorResponse, jsonResponse } from "./http-response";
 
 export async function handleFreeSeoCheckRequest(
@@ -32,7 +34,18 @@ export async function handleFreeSeoCheckRequest(
   try {
     const body = freeSeoCheckRequestSchema.safeParse(await request.json());
     if (!body.success) throw new AppError("VALIDATION_ERROR");
-    const { url, turnstileToken } = body.data;
+    const { url, turnstileToken, locale } = body.data;
+
+    // Reports are built + cached in canonical English; translate the signal text
+    // to the requester's language on the way out, so a domain-keyed cache hit
+    // still serves the right language. English is a no-op.
+    const viewLocale = locale ?? "en";
+    const localizeReport = (report: LiteReport): LiteReport => ({
+      ...report,
+      signals: report.signals.map((signal) =>
+        localizeRuleText(signal, viewLocale),
+      ),
+    });
 
     const ip = clientIp(request);
 
@@ -60,13 +73,21 @@ export async function handleFreeSeoCheckRequest(
 
     const cached = await getCachedLiteReport(domain);
     if (cached) {
-      return jsonResponse({ report: cached, cached: true, deepAvailable });
+      return jsonResponse({
+        report: localizeReport(cached),
+        cached: true,
+        deepAvailable,
+      });
     }
 
     const report = await runLiteCheck(normalizedUrl);
     await putCachedLiteReport(domain, report);
 
-    return jsonResponse({ report, cached: false, deepAvailable });
+    return jsonResponse({
+      report: localizeReport(report),
+      cached: false,
+      deepAvailable,
+    });
   } catch (error) {
     return errorResponse(error, request);
   }

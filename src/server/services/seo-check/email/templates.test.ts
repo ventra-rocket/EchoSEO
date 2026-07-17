@@ -45,6 +45,29 @@ const reportReady = () =>
     }),
   );
 
+const confirmationVi = () =>
+  capture((sender) =>
+    sendDeepCheckConfirmation(sender, {
+      to: "visitor@example.test",
+      leadId: "lead-1",
+      confirmUrl: "https://echoseo.test/free-seo-check/confirm?token=abc",
+      targetUrl: "https://example.test/",
+      locale: "vi",
+    }),
+  );
+
+const reportReadyVi = () =>
+  capture((sender) =>
+    sendDeepReportReady(sender, {
+      to: "visitor@example.test",
+      reportId: "report-1",
+      reportUrl: "https://echoseo.test/r/report-1",
+      targetUrl: "https://example.test/",
+      retentionDays: 30,
+      locale: "vi",
+    }),
+  );
+
 describe.each([
   ["the confirmation email", confirmation],
   ["the report-ready email", reportReady],
@@ -108,5 +131,32 @@ describe("the report-ready email", () => {
     const { text } = await reportReady();
 
     expect(text).toContain("30 days");
+  });
+});
+
+describe.each([
+  ["the Vietnamese confirmation email", confirmationVi],
+  ["the Vietnamese report-ready email", reportReadyVi],
+])("%s", (_label, build) => {
+  it("keeps 'free' and 'miễn phí' out of the wording", async () => {
+    const { subject, text } = await build();
+
+    // "free" appears legitimately in the /free-seo-check/ confirm URL, so — like
+    // the English subject test — only the subject must avoid the token.
+    expect(subject.toLowerCase()).not.toContain("free");
+    // "miễn phí" is the VN spam token; it belongs nowhere in subject or body.
+    expect(`${subject}\n${text}`.toLowerCase()).not.toContain("miễn phí");
+  });
+
+  it("leads with the recipient's own request", async () => {
+    const { text } = await build();
+
+    expect(text.toLowerCase()).toContain("yêu cầu");
+  });
+
+  it("declares the Vietnamese document language for screen readers", async () => {
+    const { html } = await build();
+
+    expect(html).toContain('<html lang="vi">');
   });
 });

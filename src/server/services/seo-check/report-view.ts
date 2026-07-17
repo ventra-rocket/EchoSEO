@@ -7,6 +7,7 @@
  */
 import { findReportById, type ReportRow } from "./seo-reports-repository";
 import { getDeepReport } from "./report-store";
+import { localizeRuleText, type Locale } from "@/server/lib/seo-rules";
 import type { DeepReport } from "./deep-types";
 
 /**
@@ -21,8 +22,8 @@ import type { DeepReport } from "./deep-types";
 const MAX_CANONICAL_DEPTH = 5;
 
 export type ReportView =
-  | { status: "pending" }
-  | { status: "failed"; message: string }
+  | { status: "pending"; locale: Locale }
+  | { status: "failed"; message: string; locale: Locale }
   | {
       status: "done";
       report: DeepReport;
@@ -33,9 +34,28 @@ export type ReportView =
        * the page can say so rather than quietly showing another page's result.
        */
       deduped: boolean;
+      /**
+       * The requester's language, from their own report row. The page chrome
+       * and (via `localizeRuleText` below) the signal text render in it, even
+       * when the payload deduped onto an English-canonical report.
+       */
+      locale: Locale;
     };
 
 const GENERIC_FAILURE_MESSAGE = "The deep check could not be completed.";
+
+/** Translate the persisted (English) signal text to the requester's language. */
+function localizeDeepReport(report: DeepReport, locale: Locale): DeepReport {
+  if (locale === "en") return report;
+  return {
+    ...report,
+    signals: report.signals.map((signal) => localizeRuleText(signal, locale)),
+    pages: report.pages.map((page) => ({
+      ...page,
+      signals: page.signals.map((signal) => localizeRuleText(signal, locale)),
+    })),
+  };
+}
 
 /**
  * Follows `canonical_report_id` to the report that actually ran. A deduped row
@@ -91,16 +111,25 @@ export async function loadReportView(id: string): Promise<ReportView | null> {
   const requested = await findReportById(id);
   if (!requested) return null;
 
+  // The requester's own language governs the view. The `locale` column is plain
+  // text; anything that isn't a known locale falls back to English.
+  const locale: Locale = requested.locale === "vi" ? "vi" : "en";
+
   const root = await resolveCanonicalRoot(requested);
   // A broken chain leaves the visitor's report unservable: it will never run on
   // its own and its canonical is gone. Report it as failed rather than pending
   // forever, so the page stops polling and offers a re-run.
-  if (!root) return { status: "failed", message: GENERIC_FAILURE_MESSAGE };
+  if (!root)
+    return { status: "failed", message: GENERIC_FAILURE_MESSAGE, locale };
 
   if (root.status === "failed") {
-    return { status: "failed", message: root.error ?? GENERIC_FAILURE_MESSAGE };
+    return {
+      status: "failed",
+      message: root.error ?? GENERIC_FAILURE_MESSAGE,
+      locale,
+    };
   }
-  if (root.status !== "done") return { status: "pending" };
+  if (root.status !== "done") return { status: "pending", locale };
 
   const report = await getDeepReport(root.id);
   // `done` guarantees a payload (R2 is written before the D1 commit), so a miss
@@ -109,8 +138,13 @@ export async function loadReportView(id: string): Promise<ReportView | null> {
     console.error(
       `free-seo-check: report ${root.id} is done but has no payload`,
     );
-    return { status: "failed", message: GENERIC_FAILURE_MESSAGE };
+    return { status: "failed", message: GENERIC_FAILURE_MESSAGE, locale };
   }
 
-  return { status: "done", report, deduped: root.id !== requested.id };
+  return {
+    status: "done",
+    report: localizeDeepReport(report, locale),
+    deduped: root.id !== requested.id,
+    locale,
+  };
 }

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReportView } from "@/server/services/seo-check/report-view";
 import { FREE_SEO_CHECK_REPORT_PATH } from "@/shared/free-seo-check";
+import type { Locale } from "@/client/i18n/config";
+import { CHECK_RESULT_COPY } from "@/client/features/free-seo-check/check-result-copy";
 import { DeepReportView } from "@/client/features/free-seo-check/DeepReportView";
 
 // A report link is a bearer capability — anyone holding it can read the report.
@@ -11,6 +13,8 @@ import { DeepReportView } from "@/client/features/free-seo-check/DeepReportView"
 export const Route = createFileRoute("/r/$id")({
   head: () => ({
     meta: [
+      // Deliberately English: head() runs before the report (and its locale)
+      // is fetched, and this is only the tab title of a noindex page.
       { title: "Your deep SEO report — EchoSEO" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "referrer", content: "no-referrer" },
@@ -28,19 +32,20 @@ type PageState =
   | { kind: "loading" }
   | { kind: "view"; view: ReportView }
   | { kind: "stalled" }
-  | { kind: "error"; message: string };
-
-const ERROR_MESSAGES: Record<string, string> = {
-  NOT_FOUND: "This report link is invalid or has expired.",
-  VALIDATION_ERROR: "This report link is invalid.",
-  RATE_LIMITED: "Too many requests — wait a moment and refresh.",
-};
-const DEFAULT_ERROR_MESSAGE = "We couldn't load this report — please refresh.";
+  // The raw API error code — mapped to a message at render time so it follows
+  // the page's locale rather than freezing the language at fetch time.
+  | { kind: "error"; code: string };
 
 function SharedReportPage() {
   const { id } = Route.useParams();
   const [state, setState] = useState<PageState>({ kind: "loading" });
   const pollCountRef = useRef(0);
+
+  // The report row carries the requester's language; until it arrives (or when
+  // the load failed) there is no locale to honor, so English is the transient
+  // default.
+  const locale: Locale = state.kind === "view" ? state.view.locale : "en";
+  const copy = CHECK_RESULT_COPY[locale].reportPage;
 
   const load = useCallback(async (): Promise<ReportView | null> => {
     try {
@@ -51,17 +56,14 @@ function SharedReportPage() {
         const body = await response
           .json<{ error?: string }>()
           .catch(() => null);
-        setState({
-          kind: "error",
-          message: ERROR_MESSAGES[body?.error ?? ""] ?? DEFAULT_ERROR_MESSAGE,
-        });
+        setState({ kind: "error", code: body?.error ?? "" });
         return null;
       }
       const view: ReportView = await response.json();
       setState({ kind: "view", view });
       return view;
     } catch {
-      setState({ kind: "error", message: DEFAULT_ERROR_MESSAGE });
+      setState({ kind: "error", code: "" });
       return null;
     }
   }, [id]);
@@ -94,36 +96,34 @@ function SharedReportPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
-      <ReportBody state={state} />
+      <ReportBody state={state} locale={locale} />
 
       <div className="mt-10 rounded-box border border-primary/30 bg-primary/5 p-5 text-center">
-        <p className="font-medium">Want these fixes done for you?</p>
-        <p className="mt-1 text-sm text-base-content/70">
-          EchoSEO is an open, agent-native SEO platform — self-host it free with
-          your own keys, or let the agent layer apply the fixes and prove the
-          result against your own Search Console data.
-        </p>
+        <p className="font-medium">{copy.ctaHeading}</p>
+        <p className="mt-1 text-sm text-base-content/70">{copy.ctaBody}</p>
         <Link to="/free-seo-check" className="btn btn-primary btn-sm mt-4">
-          Check another page
+          {copy.ctaLink}
         </Link>
       </div>
     </main>
   );
 }
 
-function ReportBody({ state }: { state: PageState }) {
+function ReportBody({ state, locale }: { state: PageState; locale: Locale }) {
+  const copy = CHECK_RESULT_COPY[locale].reportPage;
+
   if (state.kind === "loading") {
     return (
-      <p className="py-16 text-center text-base-content/60">
-        Loading your report…
-      </p>
+      <p className="py-16 text-center text-base-content/60">{copy.loading}</p>
     );
   }
 
   if (state.kind === "error") {
     return (
       <div className="py-16 text-center">
-        <p className="text-error">{state.message}</p>
+        <p className="text-error">
+          {copy.errors[state.code] ?? copy.errorDefault}
+        </p>
       </div>
     );
   }
@@ -131,16 +131,13 @@ function ReportBody({ state }: { state: PageState }) {
   if (state.kind === "stalled") {
     return (
       <div className="py-16 text-center">
-        <p className="text-base-content/80">
-          This check is taking longer than usual. It&apos;s still running —
-          refresh this page in a minute.
-        </p>
+        <p className="text-base-content/80">{copy.stalledBody}</p>
         <button
           type="button"
           className="btn btn-sm mt-4"
           onClick={() => window.location.reload()}
         >
-          Refresh
+          {copy.stalledRefresh}
         </button>
       </div>
     );
@@ -152,13 +149,8 @@ function ReportBody({ state }: { state: PageState }) {
     return (
       <div className="py-16 text-center">
         <span className="loading loading-spinner loading-lg text-primary" />
-        <p className="mt-4 text-base-content/80">
-          Your deep check is running — crawling your pages and pulling Core Web
-          Vitals from Google.
-        </p>
-        <p className="mt-1 text-sm text-base-content/50">
-          This page updates itself. It usually takes under a minute.
-        </p>
+        <p className="mt-4 text-base-content/80">{copy.pendingTitle}</p>
+        <p className="mt-1 text-sm text-base-content/50">{copy.pendingHint}</p>
       </div>
     );
   }
@@ -166,11 +158,13 @@ function ReportBody({ state }: { state: PageState }) {
   if (view.status === "failed") {
     return (
       <div className="py-16 text-center">
-        <p className="text-error">{view.message}</p>
-        <p className="mt-2 text-sm text-base-content/60">
-          Run the free check again — if it keeps failing, the site may be
-          blocking automated requests.
+        {/* Translate the specific server message (kill-switch/quota) when we
+            recognize it — those carry actionable guidance ("try again
+            tomorrow") — and fall back to the generic line otherwise. */}
+        <p className="text-error">
+          {copy.failedMessages[view.message] ?? copy.failedTitle}
         </p>
+        <p className="mt-2 text-sm text-base-content/60">{copy.failedHint}</p>
       </div>
     );
   }
@@ -181,11 +175,10 @@ function ReportBody({ state }: { state: PageState }) {
         // The (domain, day) dedupe can resolve to another page of the same
         // site. Say so rather than passing it off as the exact page requested.
         <p className="mb-6 rounded-box border border-base-300 bg-base-200 px-4 py-3 text-sm text-base-content/70">
-          This site was already checked today, so here are those results — they
-          cover the page shown below.
+          {copy.dedupedNotice}
         </p>
       ) : null}
-      <DeepReportView report={view.report} />
+      <DeepReportView report={view.report} locale={locale} />
     </>
   );
 }

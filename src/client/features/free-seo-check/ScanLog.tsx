@@ -1,19 +1,40 @@
 import { useEffect, useState } from "react";
+import type { Locale } from "@/client/i18n/config";
 import { useReducedMotion } from "./use-reduced-motion";
+
+/** The terminal step lines + the status aria-label, per locale. The `GET {url}`
+ * line and "HTML" are code tokens and stay verbatim in both. */
+const SCAN_LOG_COPY: Record<
+  Locale,
+  { steps: readonly string[]; aria: string }
+> = {
+  en: {
+    steps: [
+      "fetching page",
+      "parsing HTML",
+      "evaluating on-page + technical signals",
+    ],
+    aria: "Scanning your page",
+  },
+  vi: {
+    steps: [
+      "đang tải trang",
+      "đang phân tích HTML",
+      "đang đánh giá tín hiệu on-page + kỹ thuật",
+    ],
+    aria: "Đang quét trang của bạn",
+  },
+};
 
 /**
  * Terminal-style loading state (Concept B). The lines mirror the real steps the
  * server performs (fetch → parse → evaluate), revealed one at a time with a
  * blinking caret. Reduced-motion users see all lines at once.
  */
-export function ScanLog({ url }: { url: string }) {
+export function ScanLog({ url, locale }: { url: string; locale: Locale }) {
   const reduced = useReducedMotion();
-  const lines = [
-    `GET ${url.trim() || "…"}`,
-    "fetching page",
-    "parsing HTML",
-    "evaluating on-page + technical signals",
-  ];
+  const copy = SCAN_LOG_COPY[locale];
+  const lines = [`GET ${url.trim() || "…"}`, ...copy.steps];
   const [visible, setVisible] = useState(1);
 
   useEffect(() => {
@@ -31,7 +52,7 @@ export function ScanLog({ url }: { url: string }) {
       className="fsc-console rounded-box p-4 font-mono text-xs leading-relaxed"
       role="status"
       aria-live="polite"
-      aria-label="Scanning your page"
+      aria-label={copy.aria}
     >
       {lines.slice(0, visible).map((line, index) => (
         <div key={index} className="flex gap-2">

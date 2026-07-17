@@ -1,14 +1,8 @@
 import type { CategoryScore } from "@/server/services/seo-check/types";
 import type { DeepCategoryScore } from "@/server/services/seo-check/deep-types";
-import type { RuleCategory } from "@/server/lib/seo-rules/types";
+import type { Locale } from "@/client/i18n/config";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { BAND_COLOR_VAR, BAND_TEXT, scoreBand } from "./score-presentation";
-
-const CATEGORY_LABELS: Record<RuleCategory, string> = {
-  meta: "Meta",
-  structure: "Page Structure",
-  server: "Server",
-  "core-web-vitals": "Core Web Vitals",
-};
 
 /**
  * Per-category score cards with a monospace number and a mini fill bar. Lite
@@ -17,9 +11,12 @@ const CATEGORY_LABELS: Record<RuleCategory, string> = {
  */
 export function CategoryScoreCards({
   categoryScores,
+  locale,
 }: {
   categoryScores: readonly (CategoryScore | DeepCategoryScore)[];
+  locale: Locale;
 }) {
+  const labels = CHECK_RESULT_COPY[locale].categoryLabels;
   const columns =
     categoryScores.length > 3 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3";
 
@@ -38,7 +35,7 @@ export function CategoryScoreCards({
               {category.score}
             </div>
             <div className="mb-2 mt-1 text-xs text-base-content/60">
-              {CATEGORY_LABELS[category.category]}
+              {labels[category.category]}
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-base-300">
               <div

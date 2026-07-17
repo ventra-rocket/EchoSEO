@@ -27,8 +27,8 @@ interface CheckErrorResponse {
  * the Vietnamese `/vi/kiem-tra-seo` routes. All user-facing text comes from
  * `LANDING_COPY[locale]`, chosen from the URL (not a cookie), so the server
  * renders the right language deterministically and the page is a valid hreflang
- * target. The interactive report views below are not yet localized — they render
- * only after a check runs and are not indexed content.
+ * target. The interactive report views below take the same `locale`, and the
+ * check request sends it so the server localizes the signal text too.
  */
 export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   const copy = LANDING_COPY[locale];
@@ -65,7 +65,7 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     setResult(null);
 
     try {
-      const payload: FreeSeoCheckRequest = { url, turnstileToken };
+      const payload: FreeSeoCheckRequest = { url, turnstileToken, locale };
       const response = await fetch(FREE_SEO_CHECK_API_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -157,11 +157,12 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           </div>
         ) : null}
 
-        {status === "loading" ? <ScanLog url={url} /> : null}
+        {status === "loading" ? <ScanLog url={url} locale={locale} /> : null}
         {status === "done" && result ? (
           <LiteReportView
             report={result.report}
             deepAvailable={result.deepAvailable}
+            locale={locale}
           />
         ) : null}
 

@@ -1,4 +1,6 @@
 import type { DeepReport } from "@/server/services/seo-check/deep-types";
+import type { Locale } from "@/client/i18n/config";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
 
 type CoreWebVitals = NonNullable<DeepReport["coreWebVitals"]>;
 
@@ -54,18 +56,21 @@ function metricTone(value: number, good: number, needsImprovement: number) {
 export function CoreWebVitalsCards({
   coreWebVitals,
   source,
+  locale,
 }: {
   coreWebVitals: CoreWebVitals;
   source: DeepReport["cwvSource"];
+  locale: Locale;
 }) {
+  const copy = CHECK_RESULT_COPY[locale].coreWebVitals;
+
   return (
     <section className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
+        {/* "Core Web Vitals" is the Google product term in every locale. */}
         <h2 className="text-sm font-medium">Core Web Vitals</h2>
         <span className="text-xs text-base-content/50">
-          {source === "field"
-            ? "Real Chrome user data (CrUX)"
-            : "Lab simulation (no field data yet)"}
+          {source === "field" ? copy.sourceField : copy.sourceLab}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
