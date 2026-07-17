@@ -31,6 +31,18 @@ test.describe("public routes server-render their body", () => {
     expect(await response.text()).toContain("Confirm my deep check");
   });
 
+  test("the confirm page renders Vietnamese when the email link carries lang=vi", async ({
+    request,
+  }) => {
+    const response = await request.get(
+      "/free-seo-check/confirm?token=x&lang=vi",
+    );
+    expect(response.status()).toBe(200);
+    // The Vietnamese confirm button, server-rendered — the VN opt-in email links
+    // here with lang=vi so the whole flow stays Vietnamese.
+    expect(await response.text()).toContain("Xác nhận kiểm tra chuyên sâu");
+  });
+
   test("the report page ships its loading body in the initial HTML", async ({
     request,
   }) => {
