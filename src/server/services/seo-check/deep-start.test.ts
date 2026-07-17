@@ -242,13 +242,20 @@ describe("handleStartDeepCheckRequest", () => {
     );
     expect(createLeadWithReportMock.mock.calls[0]?.[0]?.locale).toBe("vi");
     expect(createLeadWithReportMock.mock.calls[0]?.[1]?.locale).toBe("vi");
-    expect(sendDeepCheckConfirmationMock.mock.calls[0]?.[1]?.locale).toBe("vi");
+    const confirmation = sendDeepCheckConfirmationMock.mock.calls[0]?.[1];
+    expect(confirmation?.locale).toBe("vi");
+    // The emailed confirm link carries the language so the confirm page renders VN.
+    expect(confirmation?.confirmUrl).toContain("lang=vi");
   });
 
   it("defaults locale to English when the request omits it", async () => {
     await handleStartDeepCheckRequest(makeRequest(VALID_BODY));
     expect(createLeadWithReportMock.mock.calls[0]?.[0]?.locale).toBe("en");
     expect(createLeadWithReportMock.mock.calls[0]?.[1]?.locale).toBe("en");
+    // English links stay unchanged — no lang param.
+    expect(
+      sendDeepCheckConfirmationMock.mock.calls[0]?.[1]?.confirmUrl,
+    ).not.toContain("lang=");
   });
 
   it("does not send the email if the lead insert fails", async () => {

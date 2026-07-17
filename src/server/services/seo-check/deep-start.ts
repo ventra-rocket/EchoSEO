@@ -46,12 +46,20 @@ function generateConfirmToken(): string {
   );
 }
 
-function buildConfirmUrl(request: Request, token: string): string {
+function buildConfirmUrl(
+  request: Request,
+  token: string,
+  locale: string,
+): string {
   const url = new URL(
     FREE_SEO_CHECK_CONFIRM_ROUTE,
     new URL(request.url).origin,
   );
   url.searchParams.set("token", token);
+  // Carry the requester's language on the emailed link so the confirm page
+  // (only ever reached from that link) renders in it. Omitted for English to
+  // keep those links unchanged.
+  if (locale !== "en") url.searchParams.set("lang", locale);
   return url.toString();
 }
 
@@ -131,7 +139,7 @@ export async function handleStartDeepCheckRequest(
     await sendDeepCheckConfirmation(await getEmailSender(), {
       to: email,
       leadId,
-      confirmUrl: buildConfirmUrl(request, confirmToken),
+      confirmUrl: buildConfirmUrl(request, confirmToken, requestLocale),
       targetUrl: normalizedUrl,
       locale: requestLocale,
     });
