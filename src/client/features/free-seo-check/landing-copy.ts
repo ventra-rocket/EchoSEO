@@ -25,12 +25,61 @@ export interface FaqEntry {
   answer: string;
 }
 
+export type SampleSignalStatus = "pass" | "warn" | "fail";
+
+interface SampleSignalRow {
+  /** Machine rule id, rendered mono — mirrors the ids a real report shows. */
+  id: string;
+  label: string;
+  /** Measured value with units — the instrument voice ("54 chars"). */
+  detail: string;
+  status: SampleSignalStatus;
+}
+
+/**
+ * The illustrative "what you get" card. Self-contained sample strings by design:
+ * they live here (not in the rules engine) so they stay translatable, at the
+ * cosmetic cost of possibly drifting from real rule wording over time.
+ */
+export interface SampleReportCopy {
+  /** Visible badge AND the section's accessible name — the honesty label. */
+  label: string;
+  heading: string;
+  /** Under the sample gauge: how a real report's scoring relates to this card. */
+  scoreCaption: string;
+  /** Verdict words on the sample rows — kept aligned with the real report UI. */
+  statusLabels: Record<SampleSignalStatus, string>;
+  rows: readonly SampleSignalRow[];
+  footnote: string;
+}
+
 export interface LandingCopy {
   /** <title> and meta description — localized so each URL reads natively. */
   metaTitle: string;
   metaDescription: string;
+  /**
+   * Mono brand line above the h1 — carries the teal accent so the h1 itself can
+   * stay one contiguous keyword string for the SSR tripwire.
+   */
+  heroEyebrow: string;
   heroHeading: string;
-  heroSubtitle: string;
+  /**
+   * The subtitle renders as before + accent + after (accent in teal). The three
+   * parts concatenate to the exact sentence crawlers have already indexed — the
+   * split exists only so a keyword can carry the brand color.
+   */
+  heroSubtitleBefore: string;
+  heroSubtitleAccent: string;
+  heroSubtitleAfter: string;
+  /**
+   * The cross-locale switch, written in the TARGET language: the visitor who
+   * needs it cannot be assumed to read the page's current language.
+   */
+  languageSwitchLabel: string;
+  languageSwitchAria: string;
+  /** Short mono facts under the form. Every claim must stay true of the tool. */
+  trustSignals: readonly string[];
+  samplePreview: SampleReportCopy;
   urlLabel: string;
   urlPlaceholder: string;
   submitIdle: string;
@@ -53,9 +102,56 @@ const EN: LandingCopy = {
   metaTitle: "Free SEO Checker — EchoSEO",
   metaDescription:
     "Check any page's on-page SEO instantly and free — title, meta, headings, and technical basics, no signup required.",
+  heroEyebrow: "Measured. Diagnosed. Proven.",
   heroHeading: "Free SEO Checker",
-  heroSubtitle:
-    "Instant on-page SEO check — title, meta, headings, and technical basics. No signup required.",
+  heroSubtitleBefore: "Instant ",
+  heroSubtitleAccent: "on-page SEO check",
+  heroSubtitleAfter:
+    " — title, meta, headings, and technical basics. No signup required.",
+  languageSwitchLabel: "Tiếng Việt",
+  languageSwitchAria: "Xem trang này bằng tiếng Việt",
+  // Each claim is checkable: the Lite rule set scores 12 signals (8 on-page +
+  // 4 technical), every fix cites a Google doc, and Deep measures 4 CWV metrics.
+  trustSignals: [
+    "12 signals scored",
+    "0 signup, $0",
+    "every fix cites Google's docs",
+    "deep check adds 4 Core Web Vitals",
+  ],
+  samplePreview: {
+    label: "Sample report",
+    heading: "What your report shows",
+    scoreCaption: "12 signals scored — 4 shown",
+    statusLabels: { pass: "pass", warn: "warn", fail: "fail" },
+    rows: [
+      {
+        id: "meta-title",
+        label: "Title tag",
+        detail: "54 chars",
+        status: "pass",
+      },
+      {
+        id: "meta-description",
+        label: "Meta description",
+        detail: "38 chars — too short",
+        status: "warn",
+      },
+      {
+        id: "structure-h1",
+        label: "H1 heading",
+        detail: "3 found — expected 1",
+        status: "fail",
+      },
+      {
+        id: "server-indexable",
+        label: "Indexability",
+        detail: "200 · index, follow",
+        status: "pass",
+      },
+    ],
+    footnote:
+      "Illustrative numbers — run a check to see your page's real readout.",
+  },
   urlLabel: "Website URL",
   urlPlaceholder: "example.com",
   submitIdle: "Check my site",
@@ -155,9 +251,55 @@ const VI: LandingCopy = {
   metaTitle: "Kiểm tra SEO miễn phí — EchoSEO",
   metaDescription:
     "Kiểm tra SEO on-page cho bất kỳ trang nào, ngay lập tức và miễn phí — tiêu đề, thẻ meta, heading và các yếu tố kỹ thuật, không cần đăng ký.",
+  heroEyebrow: "Đo lường. Chẩn đoán. Chứng minh.",
   heroHeading: "Kiểm tra SEO miễn phí",
-  heroSubtitle:
-    "Kiểm tra SEO on-page tức thì — tiêu đề, thẻ meta, heading và các yếu tố kỹ thuật cơ bản. Không cần đăng ký.",
+  heroSubtitleBefore: "Kiểm tra ",
+  heroSubtitleAccent: "SEO on-page",
+  heroSubtitleAfter:
+    " tức thì — tiêu đề, thẻ meta, heading và các yếu tố kỹ thuật cơ bản. Không cần đăng ký.",
+  languageSwitchLabel: "English",
+  languageSwitchAria: "View this page in English",
+  trustSignals: [
+    "chấm điểm 12 tín hiệu",
+    "không đăng ký, 0 đồng",
+    "mỗi cách sửa đều kèm tài liệu Google",
+    "bản chuyên sâu thêm 4 chỉ số Core Web Vitals",
+  ],
+  samplePreview: {
+    label: "Báo cáo mẫu",
+    heading: "Báo cáo của bạn sẽ có gì",
+    scoreCaption: "Chấm 12 tín hiệu — hiển thị 4",
+    // Aligned with the real report UI's verdict words (check-result-copy).
+    statusLabels: { pass: "đạt", warn: "cảnh báo", fail: "lỗi" },
+    rows: [
+      {
+        id: "meta-title",
+        label: "Thẻ tiêu đề",
+        detail: "54 ký tự",
+        status: "pass",
+      },
+      {
+        id: "meta-description",
+        label: "Thẻ mô tả",
+        detail: "38 ký tự — quá ngắn",
+        status: "warn",
+      },
+      {
+        id: "structure-h1",
+        label: "Thẻ H1",
+        detail: "3 thẻ — chỉ nên có 1",
+        status: "fail",
+      },
+      {
+        id: "server-indexable",
+        label: "Khả năng lập chỉ mục",
+        detail: "200 · index, follow",
+        status: "pass",
+      },
+    ],
+    footnote:
+      "Số liệu chỉ để minh họa — hãy chạy kiểm tra để xem chỉ số thật của trang bạn.",
+  },
   urlLabel: "Địa chỉ website",
   urlPlaceholder: "example.com",
   submitIdle: "Kiểm tra trang của tôi",

@@ -17,8 +17,11 @@ test.describe("public routes server-render their body", () => {
     const html = await response.text();
     // The <h1> copy, present in the server response with no client hydration.
     expect(html).toContain("Free SEO Checker");
-    // Guard against a shell-only regression: the form action, not just the head.
-    expect(html).toContain("example.com");
+    // Guard against a shell-only regression: the form itself, not just the head.
+    // Match the attribute rather than the bare value — the sample-report card
+    // also prints "example.com" as body text, so the looser string would keep
+    // this assertion green even if the form stopped server-rendering.
+    expect(html).toContain('placeholder="example.com"');
   });
 
   test("the double-opt-in confirm page ships its body in the initial HTML", async ({
