@@ -5,6 +5,7 @@
  * (Phase 2, Google-cited fixes) -> LiteReport. No Lighthouse/CWV here —
  * that's the async Deep tier via the Google PSI API (Phase 3).
  */
+import { AppError } from "@/server/lib/errors";
 import { safeFetch, readBoundedText } from "./safe-fetch";
 import { parseLitePage, type ParsedPage } from "./parse-html";
 import {
@@ -27,6 +28,17 @@ const CORE_WEB_VITALS_METRIC_COUNT = 4;
 export async function runLiteCheck(inputUrl: string): Promise<LiteReport> {
   const startedAt = Date.now();
   const { response, finalUrl } = await safeFetch(inputUrl);
+  // Only a 2xx body is the page the visitor asked about. A non-2xx response
+  // still carries HTML — a 404 page, an origin's 5xx, or (for a hostname that
+  // does not resolve) Cloudflare's own error page — and scoring that markup
+  // reports a plausible-looking score for a site we never actually read.
+  if (!response.ok) {
+    throw new AppError(
+      "UPSTREAM_UNAVAILABLE",
+      "Target page did not return 2xx",
+      { statusCode: String(response.status) },
+    );
+  }
   const html = await readBoundedText(response);
   const responseTimeMs = Date.now() - startedAt;
 

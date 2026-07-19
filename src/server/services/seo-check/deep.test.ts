@@ -108,4 +108,36 @@ describe("buildDeepReport", () => {
     expect(report.finalUrl).toBe(PRIMARY);
     expect(report.pageSummary.title).toBe(makeGoodPage().title);
   });
+
+  // `crawlSite` refuses a non-2xx PRIMARY page but deliberately keeps non-2xx
+  // internal ones, because a broken internal URL is a real finding. That
+  // carve-out is only safe while such a page stays out of the headline number,
+  // so pin it here rather than leaving it to deep.ts's current shape.
+  it("keeps a broken internal page out of the headline score", () => {
+    const withBrokenInternal: CrawlResult = {
+      pages: [
+        ...crawlOf(PRIMARY).pages,
+        {
+          url: "https://site.test/gone",
+          statusCode: 404,
+          page: makeGoodPage({ url: "https://site.test/gone" }),
+        },
+      ],
+    };
+
+    const baseline = buildDeepReport({
+      requestedUrl: PRIMARY,
+      crawl: crawlOf(PRIMARY),
+      psi: PSI_WITH_CWV,
+    });
+    const withBroken = buildDeepReport({
+      requestedUrl: PRIMARY,
+      crawl: withBrokenInternal,
+      psi: PSI_WITH_CWV,
+    });
+
+    expect(withBroken.overallScore).toBe(baseline.overallScore);
+    expect(withBroken.categoryScores).toEqual(baseline.categoryScores);
+    expect(withBroken.pages).toHaveLength(2);
+  });
 });

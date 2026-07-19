@@ -121,4 +121,29 @@ describe("crawlSite", () => {
     safeFetchMock.mockRejectedValue(new Error("dns"));
     await expect(crawlSite(PRIMARY)).rejects.toThrow();
   });
+
+  // An unresolvable host answers with Cloudflare's error page rather than
+  // throwing, so a body alone does not mean we reached the site.
+  it("throws when the primary page answers non-2xx", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({ response: { status: 530 }, finalUrl: url }),
+    );
+    await expect(crawlSite(PRIMARY)).rejects.toThrow(
+      "Could not fetch the target page",
+    );
+  });
+
+  // The mirror of the rule above: only the primary page feeds the headline
+  // score, so a broken internal URL stays in the report as a finding.
+  it("keeps a non-2xx internal page in the crawl as a finding", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: url.endsWith("/b") ? 404 : 200 },
+        finalUrl: url,
+      }),
+    );
+    const result = await crawlSite(PRIMARY);
+    const broken = result.pages.find((p) => p.url === "https://site.test/b");
+    expect(broken?.statusCode).toBe(404);
+  });
 });
