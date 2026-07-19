@@ -34,6 +34,7 @@ import appCss from "@/client/styles/app.css?url";
 // `no-inline` keeps this out of a base64 data URI: Safari ignores data-URI
 // favicons, so the mark has to be an emitted file to reach Safari at all.
 import faviconSvg from "@/client/components/echoseo-mark.svg?url&no-inline";
+import ibmPlexSansLatin from "@/client/styles/fonts/ibm-plex-sans-latin.woff2?url&no-inline";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { Toaster } from "sonner";
@@ -65,6 +66,19 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      // The body font's latin subset is on the critical path for every page,
+      // including the Vietnamese landing (which still renders latin for URLs,
+      // numbers and the brand name). Preloading it shortens the swap from the
+      // fallback stack. `crossorigin` is required even same-origin: fonts are
+      // fetched in CORS mode, and without it the preload is discarded and the
+      // file downloaded twice.
+      {
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: ibmPlexSansLatin,
+        crossOrigin: "anonymous",
+      },
       {
         rel: "apple-touch-icon",
         sizes: "180x180",
