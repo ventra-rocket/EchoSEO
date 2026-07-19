@@ -479,3 +479,14 @@ html[data-theme="openseo-dark"] .alert-error {
     animation: none;
   }
 }
+
+/* Faint teal signal glow behind the landing hero. Reads from the primary token
+   so it stays coherent in both themes; color-mix over a theme var inside a
+   radial-gradient is not expressible as a legible utility class. */
+.fsc-hero-glow {
+  background: radial-gradient(
+    48rem 20rem at 50% 0%,
+    color-mix(in oklab, var(--color-primary) 9%, transparent),
+    transparent 70%
+  );
+}
