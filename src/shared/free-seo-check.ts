@@ -24,6 +24,18 @@ export const FREE_SEO_CHECK_CONFIRM_ROUTE = "/free-seo-check/confirm";
 /** Public GET — reads a finished Deep report by id (`?id=<uuid>`). */
 export const FREE_SEO_CHECK_REPORT_PATH = "/api/free-seo-check/report";
 /**
+ * Public GET — the report's page capture (`?id=<uuid>`), used as the `src` of
+ * the screenshot on `/r/{id}`. Sits under the same `/api/free-seo-check*`
+ * prefix as the endpoints above, which is what keeps it on the existing
+ * Cloudflare Access bypass without spending a destination.
+ */
+export const FREE_SEO_CHECK_SCREENSHOT_PATH = "/api/free-seo-check/screenshot";
+
+/** The image URL for a report id — single source for the handler and the view. */
+export function screenshotUrl(reportId: string): string {
+  return `${FREE_SEO_CHECK_SCREENSHOT_PATH}?id=${encodeURIComponent(reportId)}`;
+}
+/**
  * Path prefix of the shareable report page. The id is an unguessable capability
  * token, so responses under it get `Referrer-Policy: no-referrer` +
  * `X-Robots-Tag: noindex` in server.ts and are excluded in robots.txt.

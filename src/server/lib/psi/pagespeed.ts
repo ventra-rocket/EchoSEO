@@ -86,6 +86,30 @@ const psiResponseSchema = z.object({
 type PsiResponse = z.infer<typeof psiResponseSchema>;
 
 /**
+ * Read separately from `psiResponseSchema` so the megabyte-scale image field
+ * is only touched by the one function that wants it. Lighthouse's own capture
+ * of the rendered page — preferred over the `final-screenshot` audit, which PSI
+ * returns at 124x248, a thumbnail too small to stand as visual evidence.
+ */
+const screenshotSchema = z.object({
+  lighthouseResult: z
+    .object({
+      fullPageScreenshot: z
+        .object({
+          screenshot: z
+            .object({
+              data: z.string(),
+              width: z.number(),
+              height: z.number(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+/**
  * Fetches the raw PSI JSON for a URL. Throws on a non-OK response so the caller
  * (the Workflow step) can retry transient 429/5xx failures; shaping is separate
  * and must not re-run this.
@@ -142,6 +166,58 @@ function labCwv(response: PsiResponse): CoreWebVitalsSignals | null {
     return null;
   }
   return { lcpMs: lcp, cls, inpMs: inp, ttfbMs: ttfb };
+}
+
+/** Decoded page capture, ready to store. Deliberately NOT part of `PsiResult`:
+ * that value crosses a Workflow step boundary, where results are capped at
+ * 1 MiB, and this image runs to a few hundred KB. */
+export interface PsiScreenshot {
+  bytes: Uint8Array;
+  contentType: string;
+  width: number;
+  height: number;
+}
+
+/**
+ * Allowlisted rather than accepting any `image/*`: the bytes are echoed back
+ * as the content type of a response served from our own origin, and letting
+ * `image/svg+xml` through that path would make it a script sink. Lighthouse
+ * only ever encodes these, so the list costs nothing today and keeps the hole
+ * closed if the capture source is ever swapped for another.
+ */
+const DATA_URI = /^data:(image\/(?:webp|jpeg|png));base64,(.+)$/;
+
+/**
+ * Pure — pulls Lighthouse's rendered-page capture out of raw PSI JSON.
+ *
+ * Returns null rather than throwing whenever the capture is absent or
+ * malformed: the screenshot is corroborating evidence, never a reason to fail
+ * a check that otherwise succeeded.
+ */
+export function extractScreenshot(raw: unknown): PsiScreenshot | null {
+  const parsed = screenshotSchema.safeParse(raw);
+  if (!parsed.success) return null;
+
+  const shot = parsed.data.lighthouseResult?.fullPageScreenshot?.screenshot;
+  if (!shot) return null;
+
+  const match = DATA_URI.exec(shot.data);
+  if (!match) return null;
+  const [, contentType, base64] = match;
+
+  let binary: string;
+  try {
+    binary = atob(base64);
+  } catch {
+    return null;
+  }
+
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return { bytes, contentType, width: shot.width, height: shot.height };
 }
 
 /** Pure — shapes raw PSI JSON into CWV + category scores. Throws on malformed input. */

@@ -33,12 +33,14 @@ import {
   FREE_SEO_CHECK_CONFIRM_PATH,
   FREE_SEO_CHECK_DEEP_START_PATH,
   FREE_SEO_CHECK_REPORT_PATH,
+  FREE_SEO_CHECK_SCREENSHOT_PATH,
   FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
 } from "@/shared/free-seo-check";
 import { handleFreeSeoCheckRequest } from "@/server/services/seo-check/api";
 import { handleStartDeepCheckRequest } from "@/server/services/seo-check/deep-start";
 import { handleConfirmDeepCheckRequest } from "@/server/services/seo-check/deep-confirm";
 import { handleDeepReportRequest } from "@/server/services/seo-check/deep-report";
+import { handleDeepScreenshotRequest } from "@/server/services/seo-check/deep-screenshot";
 import {
   FREE_CHECK_RETENTION_CRON,
   sweepFreeCheckRetention,
@@ -147,6 +149,10 @@ function fetch(
 
   if (pathname === FREE_SEO_CHECK_REPORT_PATH) {
     return handleDeepReportRequest(publicRequest);
+  }
+
+  if (pathname === FREE_SEO_CHECK_SCREENSHOT_PATH) {
+    return handleDeepScreenshotRequest(publicRequest);
   }
 
   // The shareable report page needs no session in any AUTH_MODE, so it renders
