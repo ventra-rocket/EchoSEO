@@ -32,6 +32,11 @@ export interface CrawlResult {
   pages: CrawledPage[];
 }
 
+/** A body we can attribute to the target site itself, not to an error page. */
+function isOk(statusCode: number): boolean {
+  return statusCode >= 200 && statusCode < 300;
+}
+
 async function fetchAndParse(url: string): Promise<CrawledPage | null> {
   try {
     const startedAt = Date.now();
@@ -75,7 +80,13 @@ export async function crawlSite(
   maxPages: number = DEFAULT_MAX_PAGES,
 ): Promise<CrawlResult> {
   const primary = await fetchAndParse(startUrl);
-  if (!primary) {
+  // The submitted page must have answered 2xx — a 404/5xx body, or the error
+  // page Cloudflare returns for a hostname that does not resolve, is not the
+  // site the visitor asked us to audit, and scoring it would report a
+  // confident-looking result for a page we never read. Internal pages below
+  // are deliberately NOT held to this: a broken internal URL is a real finding
+  // worth listing, and only the primary page feeds the headline score.
+  if (!primary || !isOk(primary.statusCode)) {
     throw new AppError(
       "UPSTREAM_UNAVAILABLE",
       "Could not fetch the target page",

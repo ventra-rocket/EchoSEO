@@ -107,6 +107,20 @@ describe("runLiteCheck", () => {
     expect(byId["structure-image-alt"]).toBe("pass");
   });
 
+  // A hostname that does not resolve still yields a body from Cloudflare's own
+  // error page, so "we got HTML back" is not evidence we reached the site.
+  // Without this guard that error page scores like any other document and the
+  // visitor is handed a confident number for a site nobody ever read.
+  it.each([404, 500, 530])(
+    "refuses to score a page that answered %i",
+    async (status) => {
+      mockPage(GOOD_HTML, status);
+      await expect(runLiteCheck("https://gone.test/")).rejects.toThrow(
+        "Target page did not return 2xx",
+      );
+    },
+  );
+
   it("exposes a fixed Core Web Vitals teaser count for the Deep tier", async () => {
     mockPage(GOOD_HTML);
 
