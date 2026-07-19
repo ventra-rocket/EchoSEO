@@ -74,5 +74,18 @@ export const deepReportSchema = z.object({
     wordCount: z.number(),
   }),
   crawl: z.object({ pagesCrawled: z.number() }),
+  /**
+   * Dimensions of the stored page capture, or null when none was taken. The
+   * bytes live in R2 under a key derived from the report id, so only the shape
+   * travels in the payload — enough to reserve layout before the image loads.
+   *
+   * `.default(null)` on purpose: reports written before screenshots existed are
+   * re-validated on every read (`getDeepReport`), and without a default they
+   * would fail the schema and 404 a report that is otherwise perfectly good.
+   */
+  screenshot: z
+    .object({ width: z.number(), height: z.number() })
+    .nullable()
+    .default(null),
 });
 export type DeepReport = z.infer<typeof deepReportSchema>;

@@ -42,7 +42,7 @@ beforeEach(() => {
   findExpiredLeadIdsMock.mockResolvedValue([]);
   findAbandonedLeadIdsMock.mockResolvedValue([]);
   findReportKeysForLeadsMock.mockResolvedValue([]);
-  deleteDeepReportsMock.mockResolvedValue(undefined);
+  deleteDeepReportsMock.mockResolvedValue([]);
   deleteLeadsByIdsMock.mockImplementation(async (ids: string[]) => ids.length);
 });
 
@@ -98,6 +98,7 @@ describe("sweepFreeCheckRetention", () => {
     const order: string[] = [];
     deleteDeepReportsMock.mockImplementation(async () => {
       order.push("r2");
+      return [];
     });
     deleteLeadsByIdsMock.mockImplementation(async () => {
       order.push("d1");
@@ -132,16 +133,24 @@ describe("sweepFreeCheckRetention", () => {
     // An orphaned payload holds only the audited URL and is logged for cleanup;
     // keeping the rows would retain the email indefinitely, which is worse.
     findExpiredLeadIdsMock.mockResolvedValue(["lead-1"]);
-    findReportKeysForLeadsMock.mockResolvedValue(["deep-reports/r1.json"]);
-    deleteDeepReportsMock.mockRejectedValue(new Error("R2 down"));
+    findReportKeysForLeadsMock.mockResolvedValue([
+      "deep-reports/r1.json",
+      "deep-reports/r1-screenshot",
+    ]);
+    // The store reports what it could not delete rather than throwing, so one
+    // failed batch cannot hide the keys of the batches that did succeed.
+    deleteDeepReportsMock.mockResolvedValue(["deep-reports/r1-screenshot"]);
 
     await expect(sweepFreeCheckRetention(NOW)).resolves.toMatchObject({
       leadsDeleted: 1,
     });
     expect(deleteLeadsByIdsMock).toHaveBeenCalledWith(["lead-1"]);
+    // Only the key that actually leaked is named — the payload was purged.
     expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("deep-reports/r1-screenshot"),
+    );
+    expect(console.error).not.toHaveBeenCalledWith(
       expect.stringContaining("deep-reports/r1.json"),
-      expect.any(Error),
     );
   });
 });

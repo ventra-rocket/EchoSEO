@@ -96,7 +96,7 @@ function SharedReportPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
-      <ReportBody state={state} locale={locale} />
+      <ReportBody reportId={id} state={state} locale={locale} />
 
       <div className="mt-10 rounded-box border border-primary/30 bg-primary/5 p-5 text-center">
         <p className="font-medium">{copy.ctaHeading}</p>
@@ -109,7 +109,15 @@ function SharedReportPage() {
   );
 }
 
-function ReportBody({ state, locale }: { state: PageState; locale: Locale }) {
+function ReportBody({
+  reportId,
+  state,
+  locale,
+}: {
+  reportId: string;
+  state: PageState;
+  locale: Locale;
+}) {
   const copy = CHECK_RESULT_COPY[locale].reportPage;
 
   if (state.kind === "loading") {
@@ -178,7 +186,11 @@ function ReportBody({ state, locale }: { state: PageState; locale: Locale }) {
           {copy.dedupedNotice}
         </p>
       ) : null}
-      <DeepReportView report={view.report} locale={locale} />
+      <DeepReportView
+        reportId={reportId}
+        report={view.report}
+        locale={locale}
+      />
     </>
   );
 }

@@ -60,6 +60,9 @@ interface CheckResultCopy {
     otherPagesHeading: (count: number) => string;
     noIssues: string;
     issuesToFix: (count: number) => string;
+    /** The page capture: caption above it, alt text on the image itself. */
+    screenshotLabel: string;
+    screenshotAlt: (url: string) => string;
   };
   /** DeepTierPitch + the paused notice that stands in for the request form. */
   deepPitch: {
@@ -149,6 +152,8 @@ const EN: CheckResultCopy = {
     otherPagesHeading: (count) => `Other pages crawled (${count})`,
     noIssues: "no issues",
     issuesToFix: (count) => `${count} to fix`,
+    screenshotLabel: "What we loaded",
+    screenshotAlt: (url) => `Screenshot of ${url} as our checker rendered it`,
   },
   deepPitch: {
     unlockTitle: "Unlock the Deep report",
@@ -273,6 +278,9 @@ const VI: CheckResultCopy = {
     otherPagesHeading: (count) => `Các trang khác đã quét (${count})`,
     noIssues: "không lỗi",
     issuesToFix: (count) => `${count} cần sửa`,
+    screenshotLabel: "Trang chúng tôi đã tải",
+    screenshotAlt: (url) =>
+      `Ảnh chụp màn hình ${url} khi trình kiểm tra của chúng tôi tải trang`,
   },
   deepPitch: {
     unlockTitle: "Mở khoá báo cáo chuyên sâu",

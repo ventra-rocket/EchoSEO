@@ -35,10 +35,12 @@ interface DeepReportInput {
   requestedUrl: string;
   crawl: CrawlResult;
   psi: PsiResult;
+  /** Dimensions of the capture already stored in R2, when one was taken. */
+  screenshot?: { width: number; height: number } | null;
 }
 
 export function buildDeepReport(input: DeepReportInput): DeepReport {
-  const { requestedUrl, crawl, psi } = input;
+  const { requestedUrl, crawl, psi, screenshot = null } = input;
   const primary = crawl.pages[0];
   if (!primary) {
     throw new AppError("UPSTREAM_UNAVAILABLE", "No pages were crawled");
@@ -84,5 +86,6 @@ export function buildDeepReport(input: DeepReportInput): DeepReport {
       wordCount: primary.page.wordCount,
     },
     crawl: { pagesCrawled: crawl.pages.length },
+    screenshot,
   };
 }

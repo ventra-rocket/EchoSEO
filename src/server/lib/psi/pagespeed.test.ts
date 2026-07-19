@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchPageSpeed, PsiRequestError, shapePsiResult } from "./pagespeed";
+import {
+  extractScreenshot,
+  fetchPageSpeed,
+  PsiRequestError,
+  shapePsiResult,
+} from "./pagespeed";
 
 describe("shapePsiResult", () => {
   it("prefers real-user field data and scales CrUX CLS", () => {
@@ -87,6 +92,45 @@ describe("shapePsiResult", () => {
 
   it("throws on a non-object payload", () => {
     expect(() => shapePsiResult("nope")).toThrow();
+  });
+});
+
+function withScreenshot(data: string) {
+  return {
+    lighthouseResult: {
+      fullPageScreenshot: { screenshot: { data, width: 412, height: 900 } },
+    },
+  };
+}
+
+describe("extractScreenshot", () => {
+  it("decodes the data URI into raw bytes and keeps its dimensions", () => {
+    // "hi" — small enough to assert byte-for-byte.
+    const shot = extractScreenshot(
+      withScreenshot("data:image/webp;base64,aGk="),
+    );
+
+    expect(shot).not.toBeNull();
+    expect(Array.from(shot!.bytes)).toEqual([0x68, 0x69]);
+    expect(shot!.contentType).toBe("image/webp");
+    expect(shot!.width).toBe(412);
+    expect(shot!.height).toBe(900);
+  });
+
+  // Every one of these must degrade to "no screenshot" rather than throw: the
+  // caller runs inside the Workflow step that already produced a good PSI
+  // result, and a missing picture must never cost the visitor their report.
+  it.each([
+    ["no lighthouse result", {}],
+    ["no screenshot field", { lighthouseResult: {} }],
+    ["a non-object payload", "nope"],
+    [
+      "a data URI that is not an image",
+      withScreenshot("data:text/plain;base64,aGk="),
+    ],
+    ["a bare base64 string with no data URI wrapper", withScreenshot("aGk=")],
+  ])("returns null for %s", (_label, payload) => {
+    expect(extractScreenshot(payload)).toBeNull();
   });
 });
 

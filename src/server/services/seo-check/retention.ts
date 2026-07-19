@@ -90,17 +90,16 @@ export async function sweepFreeCheckRetention(
 
   const keys = await findReportKeysForLeads(leadIds);
 
-  // Purge R2 first so a payload is never left with no row pointing at it. If
-  // this throws we still delete the rows below: an orphaned object holds only
-  // the audited URL and is logged here for manual cleanup, whereas keeping the
-  // rows would retain the email — the PII retention exists to remove. Failing
-  // closed on a transient R2 error would mean never deleting anyone's data.
-  try {
-    await deleteDeepReports(keys);
-  } catch (error) {
+  // Purge R2 first so a payload is never left with no row pointing at it. Keys
+  // R2 refuses are reported, not rethrown: we still delete the rows below,
+  // because an orphaned object holds only the audited URL (and its screenshot)
+  // and is logged here for manual cleanup, whereas keeping the rows would
+  // retain the email — the PII retention exists to remove. Failing closed on a
+  // transient R2 error would mean never deleting anyone's data.
+  const orphaned = await deleteDeepReports(keys);
+  if (orphaned.length > 0) {
     console.error(
-      `free-seo-check: retention could not purge R2 payloads, orphaning ${keys.length} object(s): ${keys.join(", ")}`,
-      error,
+      `free-seo-check: retention could not purge R2 payloads, orphaning ${orphaned.length} object(s): ${orphaned.join(", ")}`,
     );
   }
 

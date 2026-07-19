@@ -14,13 +14,18 @@ import {
 import { NonRetryableError } from "cloudflare:workflows";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import {
+  extractScreenshot,
   fetchPageSpeed,
   PsiRequestError,
   shapePsiResult,
+  type PsiResult,
 } from "@/server/lib/psi/pagespeed";
 import { crawlSite } from "@/server/services/seo-check/crawl";
 import { buildDeepReport } from "@/server/services/seo-check/deep";
-import { putDeepReport } from "@/server/services/seo-check/report-store";
+import {
+  putDeepReport,
+  putReportScreenshot,
+} from "@/server/services/seo-check/report-store";
 import { sendReportReadyEmail } from "@/server/services/seo-check/report-ready-email";
 import {
   markReportDone,
@@ -67,13 +72,31 @@ export async function runDeepSeoCheck(
         }
         throw error;
       }
+      let result: PsiResult;
       try {
-        return shapePsiResult(raw);
+        result = shapePsiResult(raw);
       } catch (error) {
         // A malformed payload won't fix itself on retry — and retrying would
         // re-spend the PSI quota. Fail fast instead.
         throw new NonRetryableError(`PSI shaping failed: ${String(error)}`);
       }
+
+      // The capture goes straight to R2 from inside this step, and only its
+      // dimensions cross the step boundary: the image runs to a few hundred KB
+      // and step results are capped at 1 MiB. Never fail the check over it —
+      // the report is worth delivering without a picture.
+      const shot = extractScreenshot(raw);
+      if (!shot) return { psi: result, screenshot: null };
+      try {
+        await putReportScreenshot(reportId, shot);
+      } catch (error) {
+        console.error(`Deep check ${reportId} screenshot store failed:`, error);
+        return { psi: result, screenshot: null };
+      }
+      return {
+        psi: result,
+        screenshot: { width: shot.width, height: shot.height },
+      };
     });
 
     // Crawl + build + persist in one step so the multi-page ParsedPage[] stays
@@ -84,7 +107,12 @@ export async function runDeepSeoCheck(
     // canonical_report_id — no fan-out write here.
     await step.do("crawl-and-persist", async () => {
       const crawl = await crawlSite(url);
-      const report = buildDeepReport({ requestedUrl: url, crawl, psi });
+      const report = buildDeepReport({
+        requestedUrl: url,
+        crawl,
+        psi: psi.psi,
+        screenshot: psi.screenshot,
+      });
       const r2Key = await putDeepReport(reportId, report);
       await markReportDone(reportId, r2Key);
     });
