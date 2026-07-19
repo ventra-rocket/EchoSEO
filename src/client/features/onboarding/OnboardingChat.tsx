@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { DEFAULT_LOCATION_CODE } from "@/shared/keyword-locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { useSession } from "@/lib/auth-client";
 import { saveOnboardingSite } from "@/serverFunctions/onboardingChat";
 import { OnboardingAccountMenu } from "./OnboardingAccountMenu";
@@ -87,11 +88,7 @@ function SiteForm({ projectId }: { projectId: string }) {
         }}
       >
         <div className="space-y-3 text-center">
-          <img
-            src="/transparent-logo.png"
-            alt="EchoSEO"
-            className="mx-auto size-10 rounded-lg"
-          />
+          <EchoSeoLogo className="mx-auto size-10" />
           <h1 className="text-xl font-semibold">Tell us about your website.</h1>
           <p className="text-sm text-base-content/60">
             If you have multiple websites, you can set that up later.

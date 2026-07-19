@@ -1,0 +1,11 @@
+<!-- Favicon twin of the mark in EchoSeoLogo.tsx. Standalone, so it pins the
+     dark-ground brand hexes instead of daisyUI theme tokens and sits on a
+     ground rect. Keep the arc geometry in sync with the component. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="EchoSEO">
+  <rect width="96" height="96" rx="20" fill="#0B0F14"/>
+  <g fill="none" stroke-linecap="round" transform="translate(20 8) skewX(-10)">
+    <path d="M22 34 A13 13 0 0 1 22 52" stroke="#F5A524" stroke-width="5"/>
+    <path d="M34 25 A25 25 0 0 1 34 61" stroke="#19E3B1" stroke-width="6.5"/>
+    <path d="M48 16 A36 36 0 0 1 48 70" stroke="#19E3B1" stroke-width="8" opacity=".82"/>
+  </g>
+</svg>

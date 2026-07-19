@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { X } from "lucide-react";
 import { useIntl } from "react-intl";
 import { getProjectNavGroups } from "@/client/navigation/items";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
 
 interface SidebarProps {
@@ -18,7 +19,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
     <div className="sidebar w-64 border-r border-base-300 h-full bg-base-100 flex flex-col">
       {/* Header */}
       <div className="px-4 py-4 border-b border-base-300 flex items-center justify-between">
-        <span className="font-semibold text-base-content">EchoSEO</span>
+        <EchoSeoLogo variant="lockup" className="text-base-content" />
         {onClose && (
           <button
             onClick={onClose}
