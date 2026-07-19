@@ -146,6 +146,7 @@ export function DeepRequestForm({
           <TurnstileWidget
             key={challengeAttempt}
             siteKey={siteKey}
+            locale={locale}
             onToken={setTurnstileToken}
             onExpire={() => setTurnstileToken(null)}
             onLoadError={() => {

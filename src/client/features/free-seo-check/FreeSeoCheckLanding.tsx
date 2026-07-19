@@ -167,6 +167,7 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
               <TurnstileWidget
                 key={challengeAttempt}
                 siteKey={siteKey}
+                locale={locale}
                 onToken={setTurnstileToken}
                 onExpire={() => setTurnstileToken(null)}
                 onLoadError={() => setErrorMessage(copy.turnstileLoadError)}
