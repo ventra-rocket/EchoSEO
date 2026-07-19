@@ -4,6 +4,7 @@ import {
   getOAuthSignedQuery,
 } from "@/lib/auth-redirect";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 
 export const authRedirectSearchSchema = z.object({
   redirect: z.string().optional(),
@@ -100,11 +101,7 @@ export function AuthPageCard({
   return (
     <div className="w-full max-w-xs space-y-6">
       <div className="text-center space-y-3">
-        <img
-          src="/transparent-logo.png"
-          alt="EchoSEO"
-          className="mx-auto size-10 rounded-lg"
-        />
+        <EchoSeoLogo className="mx-auto size-10" />
         <div>
           <h1 className="text-xl font-semibold">{title}</h1>
           {helperText ? (

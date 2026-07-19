@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, Database, KeyRound, User } from "lucide-react";
 import { useState } from "react";
 import { useSession } from "@/lib/auth-client";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 
 export const Route = createFileRoute("/_authenticated/oauth-consent")({
   component: OAuthConsentPage,
@@ -64,11 +65,7 @@ function OAuthConsentPage() {
   return (
     <div className="w-full max-w-md rounded-2xl border border-base-300 bg-base-100 p-8 shadow-sm">
       <div className="flex flex-col items-center text-center">
-        <img
-          src="/transparent-logo.png"
-          alt="EchoSEO"
-          className="size-10 rounded-lg"
-        />
+        <EchoSeoLogo className="size-10" />
         <h1 className="mt-5 text-xl font-semibold">Authorize MCP access</h1>
         <p className="mt-2 text-sm text-base-content/70">
           An MCP client is requesting access to your EchoSEO workspace.

@@ -31,6 +31,9 @@ import { NotFound } from "@/client/components/NotFound";
 import { I18nProvider } from "@/client/i18n/I18nProvider";
 import { isPublicSsrPath } from "@/shared/free-seo-check";
 import appCss from "@/client/styles/app.css?url";
+// `no-inline` keeps this out of a base64 data URI: Safari ignores data-URI
+// favicons, so the mark has to be an emitted file to reach Safari at all.
+import faviconSvg from "@/client/components/echoseo-mark.svg?url&no-inline";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { Toaster } from "sonner";
@@ -80,6 +83,14 @@ export const Route = createRootRoute({
         href: "/favicon-16x16.png",
       },
       { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
+      // Declared last, and unsized, so browsers that understand SVG icons pick
+      // it over the sized PNGs above (the standard modern-favicon ordering).
+      // That matters beyond fidelity: the mark rides the Vite asset pipeline
+      // (/assets/*), the only prefix on the Cloudflare Access bypass, so
+      // anonymous visitors on the public landings get a real tab icon — a
+      // public/ favicon 302s them to the Access login instead. The PNG/ico
+      // links stay for browsers without SVG favicon support.
+      { rel: "icon", type: "image/svg+xml", sizes: "any", href: faviconSvg },
       { rel: "manifest", href: "/site.webmanifest" },
     ],
     scripts: [],

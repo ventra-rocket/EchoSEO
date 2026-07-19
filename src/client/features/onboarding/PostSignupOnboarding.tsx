@@ -11,6 +11,7 @@ import {
   WORK_FOR_OPTIONS,
 } from "@/client/features/onboarding/onboardingModel";
 import { SearchConsoleOnboardingStep } from "@/client/features/onboarding/SearchConsoleOnboardingStep";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 
 type PostSignupOnboardingProps = {
   firstName: string;
@@ -70,11 +71,7 @@ export function PostSignupOnboarding({
         {accountMenu}
 
         <div className="text-center space-y-3">
-          <img
-            src="/transparent-logo.png"
-            alt="EchoSEO"
-            className="mx-auto size-10 rounded-lg"
-          />
+          <EchoSeoLogo className="mx-auto size-10" />
           <h1 className="text-xl font-semibold">You’re in! 🎉</h1>
           <p className="text-sm text-base-content/60">
             Your subscription’s active.
@@ -109,11 +106,7 @@ export function PostSignupOnboarding({
       {accountMenu}
 
       <div className="text-center space-y-3">
-        <img
-          src="/transparent-logo.png"
-          alt="EchoSEO"
-          className="mx-auto size-10 rounded-lg"
-        />
+        <EchoSeoLogo className="mx-auto size-10" />
         <p className="text-xs font-medium uppercase tracking-wide text-base-content/50">
           Step {step + 1} of {ONBOARDING_LAST_STEP + 1}
         </p>

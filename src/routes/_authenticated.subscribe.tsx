@@ -3,6 +3,7 @@ import { AutumnProvider, useCustomer } from "autumn-js/react";
 import { useEffect, useState } from "react";
 import { ArrowRight, Settings, User } from "lucide-react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { getStoredRedditAttribution } from "@/client/lib/reddit-attribution";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
@@ -145,11 +146,7 @@ function SubscribePageContent() {
   if (subscribeRouteState === "finalizing") {
     return (
       <div className="w-full max-w-xs space-y-4 text-center">
-        <img
-          src="/transparent-logo.png"
-          alt="EchoSEO"
-          className="mx-auto size-10 rounded-lg"
-        />
+        <EchoSeoLogo className="mx-auto size-10" />
         <h1 className="text-xl font-semibold">
           Finalizing your subscription&hellip;
         </h1>
@@ -172,11 +169,7 @@ function SubscribePageContent() {
     return (
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center space-y-3">
-          <img
-            src="/transparent-logo.png"
-            alt="EchoSEO"
-            className="mx-auto size-10 rounded-lg"
-          />
+          <EchoSeoLogo className="mx-auto size-10" />
           <h1 className="text-xl font-semibold">Billing unavailable</h1>
         </div>
 
@@ -231,11 +224,7 @@ function SubscribePageContent() {
       <SubscribePageAccountMenu email={session?.user?.email} />
 
       <div className="text-center space-y-3">
-        <img
-          src="/transparent-logo.png"
-          alt="EchoSEO"
-          className="mx-auto size-10 rounded-lg"
-        />
+        <EchoSeoLogo className="mx-auto size-10" />
         <h1 className="text-xl font-semibold">
           {isUpgradeFlow
             ? "Upgrade your plan"
