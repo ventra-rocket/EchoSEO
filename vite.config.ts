@@ -40,6 +40,13 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: emitSourcemaps,
       outDir: emitSourcemaps ? "dist-sourcemaps" : "dist",
+      // Never base64-inline a font. Two of the IBM Plex Mono subsets sit just
+      // under the 4 KB default, and inlining them would push Vietnamese glyphs
+      // into render-blocking CSS for every visitor — exactly what the
+      // unicode-range subsetting exists to avoid. `undefined` leaves every
+      // other asset on the default threshold.
+      assetsInlineLimit: (filePath) =>
+        filePath.endsWith(".woff2") ? false : undefined,
     },
     plugins: [
       showDevtools
