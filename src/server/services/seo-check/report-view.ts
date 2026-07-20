@@ -54,6 +54,14 @@ function localizeDeepReport(report: DeepReport, locale: Locale): DeepReport {
       ...page,
       signals: page.signals.map((signal) => localizeRuleText(signal, locale)),
     })),
+    geo: report.geo
+      ? {
+          ...report.geo,
+          signals: report.geo.signals.map((signal) =>
+            localizeRuleText(signal, locale),
+          ),
+        }
+      : null,
   };
 }
 

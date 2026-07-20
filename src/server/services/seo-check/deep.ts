@@ -9,16 +9,33 @@
 import { AppError } from "@/server/lib/errors";
 import {
   evaluateCoreWebVitals,
+  evaluateGeoSignals,
   evaluateLiteSignals,
   score,
+  type GeoSignals,
   type Issue,
   type RuleCategory,
 } from "@/server/lib/seo-rules";
 import type { PsiResult } from "@/server/lib/psi/pagespeed";
 import type { CrawlResult } from "./crawl";
-import type { DeepReport, DeepSignal } from "./deep-types";
+import type { DeepReport, DeepSignal, GeoSection } from "./deep-types";
 
 const ON_PAGE_CATEGORIES = ["meta", "structure", "server"] as const;
+
+/** Scores the GEO signals separately (never folded into the on-page number) and
+ * carries the two informational facts the section surfaces but does not score. */
+function buildGeoSection(geo: GeoSignals): GeoSection {
+  const issues = evaluateGeoSignals(geo);
+  return {
+    score: averageScore(score(issues, ["geo"])),
+    signals: issues.map(toDeepSignal),
+    aiBots: {
+      googleExtended: geo.botAccess.googleExtended,
+      gptbot: geo.botAccess.gptbot,
+    },
+    llmsTxt: geo.llmsTxtFound,
+  };
+}
 
 function toDeepSignal(issue: Issue): DeepSignal {
   return { ...issue };
@@ -35,10 +52,13 @@ interface DeepReportInput {
   requestedUrl: string;
   crawl: CrawlResult;
   psi: PsiResult;
+  /** GEO signals, or null when extraction was skipped or failed — the report
+   * ships either way (decision C). */
+  geo?: GeoSignals | null;
 }
 
 export function buildDeepReport(input: DeepReportInput): DeepReport {
-  const { requestedUrl, crawl, psi } = input;
+  const { requestedUrl, crawl, psi, geo = null } = input;
   const primary = crawl.pages[0];
   if (!primary) {
     throw new AppError("UPSTREAM_UNAVAILABLE", "No pages were crawled");
@@ -84,5 +104,6 @@ export function buildDeepReport(input: DeepReportInput): DeepReport {
       wordCount: primary.page.wordCount,
     },
     crawl: { pagesCrawled: crawl.pages.length },
+    geo: geo ? buildGeoSection(geo) : null,
   };
 }

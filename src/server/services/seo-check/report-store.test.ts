@@ -38,6 +38,7 @@ const REPORT: DeepReport = {
     wordCount: 120,
   },
   crawl: { pagesCrawled: 1 },
+  geo: null,
 };
 
 /** Stands in for the R2 object body the Worker runtime hands back. */

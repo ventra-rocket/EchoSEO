@@ -13,6 +13,9 @@ import type { PageAnalysis } from "@/server/lib/audit/types";
 export interface ParsedPage extends PageAnalysis {
   /** True if an HTTPS page references an HTTP sub-resource. */
   hasMixedContent: boolean;
+  /** Distinct JSON-LD `@type` values on the page — the GEO checks need the
+   * actual types, where the audit analyzer only records a present/absent bool. */
+  schemaTypes: string[];
 }
 
 const MIXED_CONTENT_TARGETS: Array<{ selector: string; attr: string }> = [
@@ -21,6 +24,43 @@ const MIXED_CONTENT_TARGETS: Array<{ selector: string; attr: string }> = [
   { selector: 'link[rel="stylesheet"]', attr: "href" },
   { selector: "iframe", attr: "src" },
 ];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** Collects `@type` strings from every JSON-LD block, flattening arrays and
+ * `@graph` nodes. Malformed JSON in one block is skipped, not fatal. */
+function extractSchemaTypes(html: string): string[] {
+  const $ = cheerio.load(html);
+  const types = new Set<string>();
+
+  const collect = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(collect);
+      return;
+    }
+    if (!isRecord(node)) return;
+    const type = node["@type"];
+    if (typeof type === "string") types.add(type);
+    else if (Array.isArray(type)) {
+      type.forEach((t) => typeof t === "string" && types.add(t));
+    }
+    if (Array.isArray(node["@graph"])) collect(node["@graph"]);
+  };
+
+  $('script[type="application/ld+json"]').each((_, el) => {
+    const raw = $(el).text().trim();
+    if (!raw) return;
+    try {
+      collect(JSON.parse(raw));
+    } catch {
+      // A single malformed JSON-LD block must not sink the whole extraction.
+    }
+  });
+
+  return [...types];
+}
 
 function hasMixedContent(html: string, pageUrl: string): boolean {
   if (!pageUrl.startsWith("https:")) return false;
@@ -49,5 +89,6 @@ export function parseLitePage(
   return {
     ...analysis,
     hasMixedContent: hasMixedContent(html, pageUrl),
+    schemaTypes: extractSchemaTypes(html),
   };
 }

@@ -35,6 +35,7 @@ const REPORT: DeepReport = {
   pages: [],
   pageSummary: { title: "", metaDescription: "", h1: null, wordCount: 0 },
   crawl: { pagesCrawled: 1 },
+  geo: null,
 };
 
 function row(overrides: Partial<ReportRow> & { id: string }): ReportRow {

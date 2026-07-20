@@ -7,6 +7,7 @@ const {
   fetchPageSpeedMock,
   shapePsiResultMock,
   crawlSiteMock,
+  extractGeoSignalsMock,
   buildDeepReportMock,
   putDeepReportMock,
   markReportRunningMock,
@@ -27,6 +28,7 @@ const {
     fetchPageSpeedMock: vi.fn(),
     shapePsiResultMock: vi.fn(),
     crawlSiteMock: vi.fn(),
+    extractGeoSignalsMock: vi.fn(),
     buildDeepReportMock: vi.fn(),
     putDeepReportMock: vi.fn(),
     markReportRunningMock: vi.fn(),
@@ -52,6 +54,9 @@ vi.mock("@/server/lib/psi/pagespeed", () => ({
 }));
 vi.mock("@/server/services/seo-check/crawl", () => ({
   crawlSite: crawlSiteMock,
+}));
+vi.mock("@/server/services/seo-check/geo-signals", () => ({
+  extractGeoSignals: extractGeoSignalsMock,
 }));
 vi.mock("@/server/services/seo-check/deep", () => ({
   buildDeepReport: buildDeepReportMock,
@@ -92,6 +97,7 @@ beforeEach(() => {
   fetchPageSpeedMock.mockResolvedValue({ raw: true });
   shapePsiResultMock.mockReturnValue(PSI);
   crawlSiteMock.mockResolvedValue(CRAWL);
+  extractGeoSignalsMock.mockResolvedValue(null);
   buildDeepReportMock.mockReturnValue(REPORT);
   putDeepReportMock.mockResolvedValue("deep-reports/r1.json");
   markReportRunningMock.mockResolvedValue(undefined);
@@ -122,6 +128,8 @@ describe("runDeepSeoCheck", () => {
       requestedUrl: "https://x.test/",
       crawl: CRAWL,
       psi: PSI,
+      // No crawled page in this fixture → GEO is skipped, never blocking.
+      geo: null,
     });
     expect(putDeepReportMock).toHaveBeenCalledWith("r1", REPORT);
     expect(markReportDoneMock).toHaveBeenCalledWith(
@@ -183,6 +191,24 @@ describe("runDeepSeoCheck", () => {
     await expect(runDeepSeoCheck(step, PARAMS)).rejects.toThrow();
     expect(markReportDoneMock).not.toHaveBeenCalled();
     expect(markReportFailedMock).toHaveBeenCalledWith("r1", expect.any(String));
+  });
+
+  // Decision C: GEO is off the critical path. A crawl with a primary page runs
+  // GEO; when GEO extraction rejects, the report still commits `done` with
+  // geo:null — a GEO failure must never fail (or block the email of) the report.
+  it("ships the report with geo:null when GEO extraction fails", async () => {
+    crawlSiteMock.mockResolvedValue({
+      pages: [{ url: "https://x.test/", statusCode: 200, page: {} }],
+    });
+    extractGeoSignalsMock.mockRejectedValue(new Error("robots fetch down"));
+
+    await runDeepSeoCheck(makeStep(), PARAMS);
+
+    expect(buildDeepReportMock).toHaveBeenCalledWith(
+      expect.objectContaining({ geo: null }),
+    );
+    expect(markReportDoneMock).toHaveBeenCalled();
+    expect(markReportFailedMock).not.toHaveBeenCalled();
   });
 
   it("announces nothing when the audit failed", async () => {

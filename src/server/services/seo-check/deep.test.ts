@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeGoodPage } from "@/server/lib/seo-rules/__tests__/on-page-signals-fixture";
 import type { PsiResult } from "@/server/lib/psi/pagespeed";
+import type { GeoSignals } from "@/server/lib/seo-rules";
 import type { CrawlResult } from "./crawl";
 import { buildDeepReport } from "./deep";
 
@@ -139,5 +140,42 @@ describe("buildDeepReport", () => {
     expect(withBroken.overallScore).toBe(baseline.overallScore);
     expect(withBroken.categoryScores).toEqual(baseline.categoryScores);
     expect(withBroken.pages).toHaveLength(2);
+  });
+
+  it("builds a separate GEO section without touching the on-page score", () => {
+    const geo: GeoSignals = {
+      botAccess: { googlebot: true, googleExtended: false, gptbot: false },
+      schemaTypes: [],
+      hasSingleH1: true,
+      hasHeadingHierarchy: true,
+      robotsMeta: null,
+      llmsTxtFound: false,
+    };
+    const withGeo = buildDeepReport({
+      requestedUrl: PRIMARY,
+      crawl: crawlOf(PRIMARY),
+      psi: PSI_WITH_CWV,
+      geo,
+    });
+    const without = buildDeepReport({
+      requestedUrl: PRIMARY,
+      crawl: crawlOf(PRIMARY),
+      psi: PSI_WITH_CWV,
+    });
+
+    expect(without.geo).toBeNull();
+    expect(withGeo.geo).not.toBeNull();
+    // The GEO score is scored on its own — the on-page number is untouched, and
+    // "geo" never appears among the main category scores.
+    expect(withGeo.overallScore).toBe(without.overallScore);
+    expect(withGeo.categoryScores.some((c) => c.category === "geo")).toBe(
+      false,
+    );
+    // Surfaced facts carry through; llms.txt/bot policy are not scored.
+    expect(withGeo.geo?.aiBots).toEqual({
+      googleExtended: false,
+      gptbot: false,
+    });
+    expect(withGeo.geo?.llmsTxt).toBe(false);
   });
 });
