@@ -40,11 +40,51 @@ export const getCrawlProgressSchema = z.object({
   auditId: z.string().min(1),
 });
 
+/**
+ * Locale for rule remediation text. Rule copy is resolved server-side (the rule
+ * catalog never ships to the client), so the viewer's locale travels with the
+ * request. `en` is the catalog's own language and re-renders byte-identically.
+ */
+const ruleLocaleSchema = z.enum(["en", "vi"]).optional().default("en");
+
+/**
+ * Issue filters stay plain strings rather than mirroring the server's group and
+ * severity enums here: this module is imported by the client route, so pulling
+ * the server rule catalog in would drag server-only code into the browser
+ * bundle. The values reach SQL only as bound equality filters, so an unknown
+ * one returns no rows instead of matching something unintended.
+ */
+export const getAuditIssueSummarySchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  locale: ruleLocaleSchema,
+});
+
+// No locale: occurrence rows are URLs and evidence, never rule prose.
+export const listAuditIssuesSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  issueGroup: z.string().min(1).max(64).optional(),
+  severity: z.string().min(1).max(64).optional(),
+  ruleId: z.string().min(1).max(128).optional(),
+  urlContains: z.string().min(1).max(2048).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
-const auditTabs = ["pages", "performance"] as const;
+const auditTabs = ["pages", "performance", "issues"] as const;
+
+export type AuditTab = (typeof auditTabs)[number];
+
+const optionalSearchStringParam = z.string().optional().catch(undefined);
 
 export const auditSearchSchema = z.object({
   auditId: z.string().optional().catch(undefined),
   tab: z.enum(auditTabs).catch("pages").default("pages"),
+  // All Issues tab state. Prefixed so it cannot collide with a future filter on
+  // the pages/performance tabs, which share this one search schema.
+  issueGroup: optionalSearchStringParam,
+  issueSeverity: optionalSearchStringParam,
 });

@@ -1,0 +1,107 @@
+import { ExternalLink } from "lucide-react";
+import { extractPathname } from "@/client/features/audit/shared";
+
+interface IssueOccurrence {
+  id: string;
+  url: string;
+  /** Null when the crawled URL is not a plain http(s) URL and must not be linked. */
+  safeUrl: string | null;
+  status: string;
+  evidence: Array<{ key: string; value: string }>;
+}
+
+/**
+ * Affected URLs for one rule, with the evidence that rule recorded.
+ *
+ * Everything here came off a third-party website. It is rendered as JSX text
+ * children, which React escapes — never through `dangerouslySetInnerHTML`. The
+ * URL is only linked when the server resolved it to an http(s) URL: a crawled
+ * `javascript:` URL is shown as text so it cannot execute from an
+ * authenticated session.
+ */
+export function IssueEvidenceTable({
+  occurrences,
+}: {
+  occurrences: IssueOccurrence[];
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="table table-sm">
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th className="w-24">Status</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {occurrences.map((occurrence) => (
+            <tr key={occurrence.id}>
+              <td className="max-w-[280px]">
+                <UrlCell url={occurrence.url} safeUrl={occurrence.safeUrl} />
+              </td>
+              <td>
+                <span
+                  className={`badge badge-sm ${
+                    occurrence.status === "fail"
+                      ? "badge-error"
+                      : "badge-warning"
+                  }`}
+                >
+                  {occurrence.status}
+                </span>
+              </td>
+              <td className="max-w-[360px]">
+                <EvidenceCell evidence={occurrence.evidence} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function UrlCell({ url, safeUrl }: { url: string; safeUrl: string | null }) {
+  if (!safeUrl) {
+    return (
+      <span className="font-mono text-xs break-all text-base-content/60">
+        {url}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={safeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="link link-primary inline-flex items-center gap-1 text-xs"
+      title={url}
+    >
+      <span className="truncate">{extractPathname(url)}</span>
+      <ExternalLink className="size-3 shrink-0" />
+    </a>
+  );
+}
+
+function EvidenceCell({
+  evidence,
+}: {
+  evidence: Array<{ key: string; value: string }>;
+}) {
+  if (evidence.length === 0) {
+    return <span className="text-xs text-base-content/40">&mdash;</span>;
+  }
+
+  return (
+    <dl className="space-y-0.5 text-xs">
+      {evidence.map((field) => (
+        <div key={field.key} className="flex gap-1.5">
+          <dt className="text-base-content/50 shrink-0">{field.key}:</dt>
+          <dd className="break-all">{field.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}

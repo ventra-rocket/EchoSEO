@@ -18,6 +18,7 @@ import {
   LighthouseScoreBadge,
 } from "@/client/features/audit/shared";
 import type { AuditResultsData } from "@/client/features/audit/results/types";
+import { safeHttpUrl } from "@/lib/safe-url";
 import {
   countActiveFilters,
   EmptyTableMessage,
@@ -42,23 +43,40 @@ import {
 const pageColumnHelper = createColumnHelper<PageRow>();
 const performanceColumnHelper = createColumnHelper<PerformanceRowData>();
 
+/**
+ * A URL the crawler read off a customer's site, so third-party input. A
+ * `javascript:` URL that reached `href` would be clickable from inside an
+ * authenticated session, so anything that is not http(s) renders as plain text
+ * instead of a link.
+ */
+function CrawledUrlCell({ url }: { url: string }) {
+  const safeUrl = safeHttpUrl(url);
+
+  if (!safeUrl) {
+    return (
+      <span className="text-xs text-base-content/60" title={url}>
+        {extractPathname(url)}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={safeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="link link-primary inline-flex items-center gap-1 text-xs"
+    >
+      <span className="truncate">{extractPathname(url)}</span>
+      <ExternalLink className="size-3 shrink-0" />
+    </a>
+  );
+}
+
 const pagesColumns: ColumnDef<PageRow>[] = [
   pageColumnHelper.accessor("url", {
     header: ({ column }) => <SortableHeader column={column} label="URL" />,
-    cell: ({ getValue }) => {
-      const url = getValue();
-      return (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="link link-primary inline-flex items-center gap-1 text-xs"
-        >
-          <span className="truncate">{extractPathname(url)}</span>
-          <ExternalLink className="size-3 shrink-0" />
-        </a>
-      );
-    },
+    cell: ({ getValue }) => <CrawledUrlCell url={getValue()} />,
     meta: { cellClassName: "max-w-[240px] truncate" },
   }),
   pageColumnHelper.accessor("statusCode", {

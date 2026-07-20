@@ -10,8 +10,12 @@ import {
   buildOccurrences,
   buildRollups,
 } from "@/server/features/audit/issues/materialize";
+import { getIssueFixText } from "@/server/features/audit/issues/issue-fix-text";
+import type { IssueEvidence } from "@/server/features/audit/issues/issue-evidence";
 import { AppError } from "@/server/lib/errors";
 import { parseAuditConfig } from "@/server/lib/audit/types";
+import type { Locale } from "@/server/lib/seo-rules";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 const MAX_ISSUE_PAGE_SIZE = 100;
 
@@ -56,6 +60,11 @@ async function materializeForAudit(input: {
   });
   const rollups = buildRollups(occurrences);
 
+  // Mark the snapshot unanswered for the duration of the rewrite. A re-run
+  // deletes the previous issues first, so a failure partway through would
+  // otherwise leave the earlier run's timestamp standing over an empty table
+  // and read as "materialized, no issues found".
+  await AuditRepository.clearSnapshotIssuesMaterialized(input.auditId);
   await AuditIssueRepository.replaceIssuesForAudit({
     auditId: input.auditId,
     projectId: input.projectId,
@@ -73,13 +82,44 @@ async function requireAudit(auditId: string, projectId: string) {
   return audit;
 }
 
-/** Per-rule counts for the All Issues summary. */
-async function getIssueSummary(auditId: string, projectId: string) {
+/**
+ * Per-rule counts for the All Issues summary.
+ *
+ * `materializedAt` is part of the contract, not a detail: an empty `rollups` is
+ * ambiguous on its own, and a reader that renders it as "no issues" would show
+ * a clean bill of health for an audit whose materializer died. Null means the
+ * question was never answered.
+ */
+async function getIssueSummary(
+  auditId: string,
+  projectId: string,
+  locale: Locale = "en",
+) {
   await requireAudit(auditId, projectId);
-  return AuditIssueRepository.getRollupsForAudit(auditId);
+
+  const [snapshot, rollups] = await Promise.all([
+    AuditRepository.getSnapshotForAudit(auditId),
+    AuditIssueRepository.getRollupsForAudit(auditId),
+  ]);
+
+  return {
+    materializedAt: snapshot?.issuesMaterializedAt ?? null,
+    rollups: rollups.map((rollup) => ({
+      ruleId: rollup.ruleId,
+      issueGroup: rollup.issueGroup,
+      severity: rollup.severity,
+      urlCount: rollup.urlCount,
+      fix: getIssueFixText(rollup.ruleId, locale),
+    })),
+  };
 }
 
-/** One page of affected URLs, filtered and counted in SQL. */
+/**
+ * One page of affected URLs, filtered and counted in SQL.
+ *
+ * No locale parameter: these rows carry no rule text. The localized guidance
+ * belongs to the rule, and the summary already resolved it once.
+ */
 async function listIssueOccurrences(input: {
   auditId: string;
   projectId: string;
@@ -107,7 +147,94 @@ async function listIssueOccurrences(input: {
     AuditIssueRepository.countOccurrences(filter),
   ]);
 
-  return { occurrences, total, limit, offset };
+  return {
+    occurrences: occurrences.map(toClientOccurrence),
+    total,
+    limit,
+    offset,
+  };
+}
+
+/**
+ * Shape an occurrence for the browser: only the fields the URL table renders.
+ *
+ * Remediation text is deliberately NOT attached per occurrence. It is identical
+ * for every row of a rule, so shipping it here would repeat the same paragraphs
+ * fifty times a page; the summary carries it once per rule instead.
+ *
+ * Two things happen here rather than in the client. `evidenceJson` is parsed
+ * once server-side so a malformed payload degrades to an empty list instead of
+ * throwing mid-render. And `url` — a string this crawler read off a customer's
+ * site — is run through the http(s) allow-list, so the client receives a
+ * `safeUrl` that is either linkable or null and never has to make that call
+ * itself. `url` is still returned for display: JSX escapes it as text, it just
+ * must not become an href.
+ */
+function toClientOccurrence(occurrence: {
+  id: string;
+  status: string;
+  url: string;
+  evidenceJson: string | null;
+}) {
+  return {
+    id: occurrence.id,
+    status: occurrence.status,
+    url: occurrence.url,
+    safeUrl: safeHttpUrl(occurrence.url),
+    evidence: parseEvidence(occurrence.evidenceJson),
+  };
+}
+
+/** One evidence field, already reduced to text the client can render as-is. */
+interface IssueEvidenceField {
+  key: string;
+  value: string;
+}
+
+/**
+ * Flatten stored evidence into display-ready key/value text.
+ *
+ * Evidence is read back from a column that any past rule version could have
+ * written, so it is re-checked rather than trusted: anything that is not a
+ * plain object degrades to an empty list. Values are reduced to strings here
+ * rather than shipped as an open-ended payload, so the client renders text and
+ * only text — nested structure is the kind of thing a renderer starts making
+ * decisions about, and this data came off a stranger's website.
+ */
+function parseEvidence(evidenceJson: string | null): IssueEvidenceField[] {
+  if (!evidenceJson) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(evidenceJson);
+  } catch {
+    return [];
+  }
+  if (!isEvidenceObject(parsed)) return [];
+
+  return Object.entries(parsed).flatMap(([key, value]) => {
+    const text = formatEvidenceValue(value);
+    return text === null ? [] : [{ key, value: text }];
+  });
+}
+
+function isEvidenceObject(value: unknown): value is IssueEvidence {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatEvidenceValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    const parts = value.flatMap((entry) => {
+      const text = formatEvidenceValue(entry);
+      return text === null ? [] : [text];
+    });
+    return parts.length > 0 ? parts.join(", ") : null;
+  }
+  return null;
 }
 
 export const AuditIssueService = {

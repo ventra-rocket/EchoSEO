@@ -11,24 +11,51 @@ import {
   PagesTable,
   PerformanceTable,
 } from "@/client/features/audit/results/ResultsTables";
+import { AllIssuesTab } from "@/client/features/audit/issues/AllIssuesTab";
+import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
+import type { AuditTab } from "@/types/schemas/audit";
 
-type ResultsTab = "pages" | "performance";
+type ResultsTab = AuditTab;
 
 export function ResultsView({
   projectId,
   data,
   onTabChange,
   tab,
+  issueFilters,
+  onIssueFiltersChange,
 }: {
   projectId: string;
   data: AuditResultsData;
   tab: string;
   onTabChange: (tab: ResultsTab) => void;
+  issueFilters: IssueFilters;
+  onIssueFiltersChange: (filters: Partial<IssueFilters>) => void;
 }) {
   const { audit, pages, lighthouse } = data;
-  const hasPerformanceTab = lighthouse.length > 0;
-  const activeTab = hasPerformanceTab ? tab : "pages";
   const stats = useResultStats(pages, lighthouse);
+
+  // Which tabs this audit can actually back with data. Performance disappears
+  // when Lighthouse never ran; Issues is always offered because "issues were
+  // never materialized" is itself a state the tab has to report, and hiding the
+  // tab would make a failed materializer invisible.
+  const availableTabs: Array<{ tab: ResultsTab; label: string }> = [
+    { tab: "pages", label: `Pages (${pages.length})` },
+    ...(lighthouse.length > 0
+      ? [
+          {
+            tab: "performance" as const,
+            label: `Performance (${lighthouse.length})`,
+          },
+        ]
+      : []),
+    { tab: "issues" as const, label: "All Issues" },
+  ];
+
+  // A tab the URL asks for but this audit cannot show falls back to Pages
+  // rather than rendering an empty shell.
+  const activeTab: ResultsTab =
+    availableTabs.find((entry) => entry.tab === tab)?.tab ?? "pages";
 
   return (
     <>
@@ -43,11 +70,12 @@ export function ResultsView({
       <div className="card bg-base-100 border border-base-300">
         <div className="card-body gap-3">
           <ResultsHeader
-            pageCount={pages.length}
-            lighthouseCount={lighthouse.length}
-            hasPerformanceTab={hasPerformanceTab}
+            tabs={availableTabs}
             activeTab={activeTab}
             onTabChange={onTabChange}
+            // The Issues tab pages through the server, so the client never
+            // holds the full set an export would need.
+            showExport={activeTab !== "issues"}
             onExport={(format) => {
               if (activeTab === "performance") {
                 exportPerformance(lighthouse, pages, format);
@@ -64,6 +92,14 @@ export function ResultsView({
               projectId={projectId}
               lighthouse={lighthouse}
               pages={pages}
+            />
+          )}
+          {activeTab === "issues" && (
+            <AllIssuesTab
+              auditId={audit.id}
+              projectId={projectId}
+              filters={issueFilters}
+              onFiltersChange={onIssueFiltersChange}
             />
           )}
         </div>
@@ -117,51 +153,40 @@ function useResultStats(
 }
 
 function ResultsHeader({
-  pageCount,
-  lighthouseCount,
-  hasPerformanceTab,
+  tabs,
   activeTab,
   onTabChange,
+  showExport,
   onExport,
 }: {
-  pageCount: number;
-  lighthouseCount: number;
-  hasPerformanceTab: boolean;
+  tabs: Array<{ tab: ResultsTab; label: string }>;
   activeTab: string;
   onTabChange: (tab: ResultsTab) => void;
+  showExport: boolean;
   onExport: (format: "csv" | "json" | "sheets") => void;
 }) {
-  const tabs: Array<{ tab: ResultsTab; label: string }> = [
-    { tab: "pages", label: `Pages (${pageCount})` },
-    { tab: "performance", label: `Performance (${lighthouseCount})` },
-  ];
-
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-      {hasPerformanceTab ? (
-        <div role="tablist" className="tabs tabs-box w-fit">
-          {tabs.map(({ label, tab }) => {
-            const isActive = activeTab === tab;
+      <div role="tablist" className="tabs tabs-box w-fit">
+        {tabs.map(({ label, tab }) => {
+          const isActive = activeTab === tab;
 
-            return (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`tab ${isActive ? "tab-active" : ""}`}
-                onClick={() => onTabChange(tab)}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <h3 className="text-base font-medium">Pages ({pageCount})</h3>
-      )}
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`tab ${isActive ? "tab-active" : ""}`}
+              onClick={() => onTabChange(tab)}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
 
-      <ExportDropdown onExport={onExport} />
+      {showExport && <ExportDropdown onExport={onExport} />}
     </div>
   );
 }

@@ -7,7 +7,8 @@ import {
   getAuditStatus,
   getCrawlProgress,
 } from "@/serverFunctions/audit";
-import { auditSearchSchema } from "@/types/schemas/audit";
+import { auditSearchSchema, type AuditTab } from "@/types/schemas/audit";
+import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import { LaunchView } from "@/client/features/audit/launch/LaunchView";
 import { ResultsView } from "@/client/features/audit/results/ResultsView";
 import {
@@ -28,11 +29,14 @@ export const Route = createFileRoute<"/_project/p/$projectId/audit/">(
 
 function SiteAuditPage() {
   const { projectId } = Route.useParams();
-  const { auditId, tab } = Route.useSearch();
+  const search = Route.useSearch();
+  const { auditId, tab } = search;
   const navigate = useNavigate({ from: Route.fullPath });
 
+  // Widened from string-only: the All Issues tab pages server-side, so a
+  // numeric page has to survive the round trip through the URL.
   const setSearchParams = useCallback(
-    (updates: Record<string, string | undefined>) => {
+    (updates: Record<string, string | number | undefined>) => {
       void navigate({
         search: (prev) => ({ ...prev, ...updates }),
         replace: true,
@@ -40,6 +44,11 @@ function SiteAuditPage() {
     },
     [navigate],
   );
+
+  const issueFilters: IssueFilters = {
+    group: search.issueGroup,
+    severity: search.issueSeverity,
+  };
 
   if (!auditId) {
     return (
@@ -55,6 +64,13 @@ function SiteAuditPage() {
       projectId={projectId}
       auditId={auditId}
       tab={tab}
+      issueFilters={issueFilters}
+      onIssueFiltersChange={(next) =>
+        setSearchParams({
+          issueGroup: next.group,
+          issueSeverity: next.severity,
+        })
+      }
       onBack={() => setSearchParams({ auditId: undefined })}
       onTabChange={(nextTab) => setSearchParams({ tab: nextTab })}
     />
@@ -65,14 +81,18 @@ function AuditDetail({
   projectId,
   auditId,
   tab,
+  issueFilters,
+  onIssueFiltersChange,
   onBack,
   onTabChange,
 }: {
   projectId: string;
   auditId: string;
   tab: string;
+  issueFilters: IssueFilters;
+  onIssueFiltersChange: (filters: Partial<IssueFilters>) => void;
   onBack: () => void;
-  onTabChange: (tab: "pages" | "performance") => void;
+  onTabChange: (tab: AuditTab) => void;
 }) {
   const statusQuery = useQuery({
     queryKey: ["audit-status", projectId, auditId],
@@ -182,6 +202,8 @@ function AuditDetail({
             data={resultsQuery.data}
             tab={tab}
             onTabChange={onTabChange}
+            issueFilters={issueFilters}
+            onIssueFiltersChange={onIssueFiltersChange}
           />
         )}
       </div>

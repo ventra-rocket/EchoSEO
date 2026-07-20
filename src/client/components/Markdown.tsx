@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { isSafeHttpUrl } from "@/lib/safe-url";
 
 type Props = {
   /** Raw Markdown source to render. */
@@ -34,7 +35,7 @@ export function Markdown({ children, className }: Props) {
 type AnchorProps = ComponentPropsWithoutRef<"a">;
 
 function SafeAnchor({ href, children, ...rest }: AnchorProps) {
-  const safeHref = isHttpUrl(href) ? href : undefined;
+  const safeHref = isSafeHttpUrl(href) ? href : undefined;
   if (!safeHref) {
     return <span className="underline decoration-dotted">{children}</span>;
   }
@@ -49,20 +50,6 @@ function SafeAnchor({ href, children, ...rest }: AnchorProps) {
       {children}
     </a>
   );
-}
-
-function isHttpUrl(value: string | undefined): value is string {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
-    // Mirror server-side `safeHttpUrl` — a `user:pass@host` URL shows one
-    // hostname in link text while auth hits another.
-    if (url.username || url.password) return false;
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export const MARKDOWN_COMPONENTS = {
