@@ -39,3 +39,32 @@ export async function getOnboardingModel(): Promise<LanguageModelV3> {
     },
   });
 }
+
+// Model for the audit issue explainer. Separate slug from the onboarding
+// override so tuning the chat model cannot silently change what the audit
+// panel costs or how it writes.
+const DEFAULT_EXPLAINER_MODEL = "minimax/minimax-m3";
+
+/**
+ * Returns the model for the audit issue explanation panel, or **null when
+ * OpenRouter is not configured**.
+ *
+ * Null rather than a throw: the panel is an optional layer over deterministic,
+ * already-cited fix steps, and a self-hosted deployment without a key must get
+ * an issue page that is simply missing the commentary — not an error.
+ *
+ * Deliberately not `getOnboardingModel`. That one pins `provider.order` and
+ * turns on a reasoning channel tuned for a streamed chat persona; this call
+ * wants a few short structured sentences, and paying for a chain-of-thought
+ * trace nobody renders would be waste. `usage: { include: true }` is kept —
+ * the credit metering reads the real USD cost off that.
+ */
+export async function getIssueExplainerModel(): Promise<LanguageModelV3 | null> {
+  const apiKey = await getOptionalEnvValue("OPENROUTER_API_KEY");
+  if (!apiKey) return null;
+
+  const modelId =
+    (await getOptionalEnvValue("OPENROUTER_EXPLAINER_MODEL")) ??
+    DEFAULT_EXPLAINER_MODEL;
+  return createOpenRouter({ apiKey })(modelId, { usage: { include: true } });
+}

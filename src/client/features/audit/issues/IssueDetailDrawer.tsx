@@ -9,6 +9,7 @@ import {
   type IssueFixText,
 } from "@/client/features/audit/issues/issue-filters";
 import { IssueEvidenceTable } from "@/client/features/audit/issues/IssueEvidenceTable";
+import { AiExplanationPanel } from "@/client/features/audit/issues/AiExplanationPanel";
 import type { SelectedRule } from "@/client/features/audit/issues/AllIssuesTab";
 
 /**
@@ -105,6 +106,13 @@ export function IssueDetailDrawer({
 
         <div className="space-y-4 p-4">
           {rule.fix && <RemediationPanel fix={rule.fix} />}
+
+          {/* Below the cited steps on purpose — commentary, not the citation. */}
+          <AiExplanationPanel
+            auditId={auditId}
+            projectId={projectId}
+            ruleId={rule.ruleId}
+          />
 
           {query.isError ? (
             <div className="alert alert-error">

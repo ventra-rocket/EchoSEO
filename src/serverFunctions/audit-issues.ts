@@ -13,8 +13,10 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { AuditIssueService } from "@/server/features/audit/services/AuditIssueService";
+import { AuditExplanationService } from "@/server/features/audit/services/AuditExplanationService";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
+  explainAuditIssueSchema,
   getAuditIssueSummarySchema,
   listAuditIssuesSchema,
 } from "@/types/schemas/audit";
@@ -28,6 +30,24 @@ export const getAuditIssueSummary = createServerFn({ method: "POST" })
       context.projectId,
       data.locale,
     );
+  });
+
+/**
+ * Optional AI commentary for one rule. Never throws for a missing key, an
+ * empty balance, a rate limit or a model failure — it answers
+ * `{ available: false }` and the caller renders the issue without a panel.
+ */
+export const explainAuditIssue = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => explainAuditIssueSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return AuditExplanationService.explainIssue({
+      auditId: data.auditId,
+      projectId: context.projectId,
+      ruleId: data.ruleId,
+      locale: data.locale,
+      billingCustomer: context,
+    });
   });
 
 export const listAuditIssues = createServerFn({ method: "POST" })

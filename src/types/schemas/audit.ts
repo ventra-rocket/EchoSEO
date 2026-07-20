@@ -72,6 +72,13 @@ export const listAuditIssuesSchema = z.object({
   offset: z.number().int().min(0).optional(),
 });
 
+export const explainAuditIssueSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  ruleId: z.string().min(1).max(128),
+  locale: ruleLocaleSchema,
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues"] as const;
