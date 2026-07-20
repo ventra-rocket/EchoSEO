@@ -14,23 +14,7 @@
  * The error stays one-sided — pages are never wrongly marked as in-sitemap.
  */
 
-/** Scheme- and www-insensitive identity for a page URL. */
-function membershipKey(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return null;
-    }
-
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-    parsed.searchParams.sort();
-    const path = parsed.pathname.replace(/\/+$/, "") || "/";
-
-    return `${host}${path}${parsed.search}`;
-  } catch {
-    return null;
-  }
-}
+import { urlEquivalenceKey } from "./url-identity";
 
 /**
  * Build a membership predicate for one crawl. Both sides of the comparison go
@@ -42,12 +26,12 @@ export function buildSitemapMembership(
 ): (pageUrl: string) => boolean {
   const keys = new Set<string>();
   for (const url of sitemapUrls) {
-    const key = membershipKey(url);
+    const key = urlEquivalenceKey(url);
     if (key) keys.add(key);
   }
 
   return (pageUrl: string) => {
-    const key = membershipKey(pageUrl);
+    const key = urlEquivalenceKey(pageUrl);
     return key !== null && keys.has(key);
   };
 }

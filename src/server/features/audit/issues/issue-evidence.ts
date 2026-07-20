@@ -5,6 +5,7 @@
  */
 import type { OnPageSignals } from "@/server/lib/seo-rules";
 import type { CoreWebVitalsSignals } from "@/server/lib/seo-rules/rules/core-web-vitals";
+import type { CrossPageSignals } from "@/server/lib/audit/rules/cross-page";
 
 export type IssueEvidence = Record<string, unknown>;
 
@@ -50,6 +51,45 @@ export function buildOnPageEvidence(
       return { robotsMeta: signals.robotsMeta };
     case "server-mixed-content":
       return { hasMixedContent: signals.hasMixedContent };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Cross-page evidence names the other URLs involved, since the whole point of a
+ * link-graph finding is being able to see which links to fix. Target lists are
+ * capped: a template-wide broken link can appear on thousands of pages and the
+ * first few are enough to act on.
+ */
+const MAX_EVIDENCE_TARGETS = 20;
+
+export function buildCrossPageEvidence(
+  ruleId: string,
+  signals: CrossPageSignals,
+): IssueEvidence | null {
+  switch (ruleId) {
+    case "audit-unreachable-url":
+      // The response time separates an immediate refusal from a timeout.
+      return {
+        statusCode: signals.statusCode,
+        responseTimeMs: signals.responseTimeMs,
+      };
+    case "audit-broken-internal-link":
+      return {
+        brokenLinkCount: signals.brokenLinkTargets.length,
+        brokenLinkTargets: signals.brokenLinkTargets.slice(
+          0,
+          MAX_EVIDENCE_TARGETS,
+        ),
+      };
+    case "audit-orphan-page":
+      return {
+        inboundInternalLinks: signals.inboundInternalLinks,
+        inSitemap: signals.inSitemap,
+      };
+    case "audit-missing-from-sitemap":
+      return { inSitemap: signals.inSitemap, isIndexable: signals.isIndexable };
     default:
       return null;
   }
