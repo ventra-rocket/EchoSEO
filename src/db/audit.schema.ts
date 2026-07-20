@@ -97,6 +97,13 @@ export const auditPages = sqliteTable(
     isIndexable: integer("is_indexable", { mode: "boolean" })
       .notNull()
       .default(true),
+    // Present in an XML sitemap — evidence for orphan detection. Matched on
+    // crawl-boundary equivalence (see sitemap-membership.ts), so a path-level
+    // redirect can still read false; the error is one-sided. Audits that predate
+    // this column also read false, so date-gate historical comparisons.
+    inSitemap: integer("in_sitemap", { mode: "boolean" })
+      .notNull()
+      .default(false),
     // Performance
     responseTimeMs: integer("response_time_ms"),
   },
@@ -168,5 +175,68 @@ export const auditTargets = sqliteTable(
       table.origin,
     ),
     index("audit_targets_organization_idx").on(table.organizationId),
+  ],
+);
+
+// One row per discovered same-scope internal link (source page -> target page),
+// deduped per audit. This is the evidence later phases use to prove orphan and
+// inlink findings with real source URLs.
+//
+// Consumption contract: `target_url` is the link as written (normalized), while
+// `audit_pages.url` is the FINAL url after redirects. A link pointing at a
+// redirecting URL therefore joins to no page row. Readers that count inlinks
+// must resolve targets through the page redirect data or accept an undercount —
+// do not present a raw unmatched target as a proven orphan.
+export const auditLinkEdges = sqliteTable(
+  "audit_link_edges",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    auditId: text("audit_id")
+      .notNull()
+      .references(() => audits.id, { onDelete: "cascade" }),
+    sourceUrl: text("source_url").notNull(),
+    targetUrl: text("target_url").notNull(),
+  },
+  (table) => [
+    // Keeps the graph normalized and makes the finalize write retry-safe.
+    uniqueIndex("audit_link_edges_unique_idx").on(
+      table.auditId,
+      table.sourceUrl,
+      table.targetUrl,
+    ),
+    // Inlink lookups ("what links to this URL") drive orphan evidence.
+    index("audit_link_edges_target_idx").on(table.auditId, table.targetUrl),
+    index("audit_link_edges_source_idx").on(table.auditId, table.sourceUrl),
+  ],
+);
+
+// Immutable completed-audit snapshot, sealed only at the finalize boundary. A
+// running or failed audit never produces a row, so comparison baselines are
+// always completed crawls.
+export const auditSnapshots = sqliteTable(
+  "audit_snapshots",
+  {
+    id: text("id").primaryKey(),
+    auditId: text("audit_id")
+      .notNull()
+      .references(() => audits.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    targetId: text("target_id")
+      .notNull()
+      .references(() => auditTargets.id, { onDelete: "cascade" }),
+    pagesCrawled: integer("pages_crawled").notNull(),
+    edgeCount: integer("edge_count").notNull(),
+    lighthouseCount: integer("lighthouse_count").notNull(),
+    sealedAt: text("sealed_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // One snapshot per audit; makes the seal write retry-safe.
+    uniqueIndex("audit_snapshots_audit_idx").on(table.auditId),
+    index("audit_snapshots_target_idx").on(table.targetId, table.sealedAt),
+    index("audit_snapshots_project_idx").on(table.projectId, table.sealedAt),
   ],
 );

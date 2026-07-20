@@ -4,7 +4,15 @@
  */
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { audits, auditLighthouseResults, auditPages } from "@/db/schema";
+import {
+  audits,
+  auditLighthouseResults,
+  auditLinkEdges,
+  auditPages,
+  auditSnapshots,
+} from "@/db/schema";
+import type { LinkEdge } from "@/server/lib/audit/link-graph";
+import { buildSitemapMembership } from "@/server/lib/audit/sitemap-membership";
 import type {
   AuditConfig,
   LighthouseResult,
@@ -12,6 +20,7 @@ import type {
 } from "@/server/lib/audit/types";
 
 const DB_BATCH_SIZE = 100;
+const EDGE_ROWS_PER_STATEMENT = 30;
 type BatchStatement = Parameters<typeof db.batch>[0][number];
 
 async function executeInBatches<T>(
@@ -125,43 +134,60 @@ async function getAuditForWorkflow(
   });
 }
 
+/**
+ * Write the crawl results.
+ *
+ * Every insert here is retry-safe. The whole finalize body runs inside one
+ * durable Workflow step, so a transient failure anywhere in it replays the step
+ * from the top with identical crawl-assigned ids; without conflict handling that
+ * replay dies on a primary-key collision and strands the audit.
+ */
 async function batchWriteResults(
   auditId: string,
   pages: StepPageResult[],
   lighthouseResults: LighthouseResult[],
+  // URLs discovered through the sitemap(s); membership is only known once
+  // discovery has run, so it is resolved here rather than during the crawl.
+  sitemapUrls: ReadonlySet<string>,
 ) {
+  const isInSitemap = buildSitemapMembership(sitemapUrls);
+
   await executeInBatches(pages, (page) =>
-    db.insert(auditPages).values({
-      id: page.id,
-      auditId,
-      url: page.url,
-      statusCode: page.statusCode,
-      redirectUrl: page.redirectUrl,
-      title: page.title,
-      metaDescription: page.metaDescription,
-      canonicalUrl: page.canonicalUrl,
-      robotsMeta: page.robotsMeta,
-      ogTitle: page.ogTitle,
-      ogDescription: page.ogDescription,
-      ogImage: page.ogImage,
-      h1Count: page.h1Count,
-      h2Count: page.h2Count,
-      h3Count: page.h3Count,
-      h4Count: page.h4Count,
-      h5Count: page.h5Count,
-      h6Count: page.h6Count,
-      headingOrderJson: JSON.stringify(page.headingOrder),
-      wordCount: page.wordCount,
-      imagesTotal: page.imagesTotal,
-      imagesMissingAlt: page.imagesMissingAlt,
-      imagesJson: JSON.stringify(page.images),
-      internalLinkCount: page.internalLinks.length,
-      externalLinkCount: page.externalLinks.length,
-      hasStructuredData: page.hasStructuredData,
-      hreflangTagsJson: JSON.stringify(page.hreflangTags),
-      isIndexable: page.isIndexable,
-      responseTimeMs: page.responseTimeMs,
-    }),
+    db
+      .insert(auditPages)
+      .values({
+        id: page.id,
+        auditId,
+        url: page.url,
+        statusCode: page.statusCode,
+        redirectUrl: page.redirectUrl,
+        title: page.title,
+        metaDescription: page.metaDescription,
+        canonicalUrl: page.canonicalUrl,
+        robotsMeta: page.robotsMeta,
+        ogTitle: page.ogTitle,
+        ogDescription: page.ogDescription,
+        ogImage: page.ogImage,
+        h1Count: page.h1Count,
+        h2Count: page.h2Count,
+        h3Count: page.h3Count,
+        h4Count: page.h4Count,
+        h5Count: page.h5Count,
+        h6Count: page.h6Count,
+        headingOrderJson: JSON.stringify(page.headingOrder),
+        wordCount: page.wordCount,
+        imagesTotal: page.imagesTotal,
+        imagesMissingAlt: page.imagesMissingAlt,
+        imagesJson: JSON.stringify(page.images),
+        internalLinkCount: page.internalLinks.length,
+        externalLinkCount: page.externalLinks.length,
+        hasStructuredData: page.hasStructuredData,
+        hreflangTagsJson: JSON.stringify(page.hreflangTags),
+        isIndexable: page.isIndexable,
+        inSitemap: isInSitemap(page.url),
+        responseTimeMs: page.responseTimeMs,
+      })
+      .onConflictDoNothing({ target: auditPages.id }),
   );
 
   if (lighthouseResults.length === 0) {
@@ -169,24 +195,93 @@ async function batchWriteResults(
   }
 
   await executeInBatches(lighthouseResults, (result) =>
-    db.insert(auditLighthouseResults).values({
-      id: crypto.randomUUID(),
-      auditId,
-      pageId: result.pageId,
-      strategy: result.strategy,
-      performanceScore: result.performanceScore,
-      accessibilityScore: result.accessibilityScore,
-      bestPracticesScore: result.bestPracticesScore,
-      seoScore: result.seoScore,
-      lcpMs: result.lcpMs,
-      cls: result.cls,
-      inpMs: result.inpMs,
-      ttfbMs: result.ttfbMs,
-      errorMessage: result.errorMessage ?? null,
-      r2Key: result.r2Key ?? null,
-      payloadSizeBytes: result.payloadSizeBytes ?? null,
-    }),
+    db
+      .insert(auditLighthouseResults)
+      .values({
+        // Derived from the page + strategy rather than random so a replay
+        // re-writes the same row instead of duplicating the measurement.
+        id: `${result.pageId}-${result.strategy}`,
+        auditId,
+        pageId: result.pageId,
+        strategy: result.strategy,
+        performanceScore: result.performanceScore,
+        accessibilityScore: result.accessibilityScore,
+        bestPracticesScore: result.bestPracticesScore,
+        seoScore: result.seoScore,
+        lcpMs: result.lcpMs,
+        cls: result.cls,
+        inpMs: result.inpMs,
+        ttfbMs: result.ttfbMs,
+        errorMessage: result.errorMessage ?? null,
+        r2Key: result.r2Key ?? null,
+        payloadSizeBytes: result.payloadSizeBytes ?? null,
+      })
+      .onConflictDoNothing({ target: auditLighthouseResults.id }),
   );
+}
+
+/**
+ * Persist the crawl's internal-link graph. The unique (audit, source, target)
+ * index plus onConflictDoNothing makes a finalize-step retry a no-op instead of
+ * duplicating the graph.
+ */
+async function batchWriteLinkEdges(auditId: string, edges: LinkEdge[]) {
+  if (edges.length === 0) return;
+
+  // A large crawl produces far more edges than pages, and every statement is a
+  // round trip inside the finalize step. Rows are grouped into multi-row inserts
+  // (kept well under D1's bound-parameter limit at 3 columns per row) so the
+  // step stays short.
+  const chunks: LinkEdge[][] = [];
+  for (let i = 0; i < edges.length; i += EDGE_ROWS_PER_STATEMENT) {
+    chunks.push(edges.slice(i, i + EDGE_ROWS_PER_STATEMENT));
+  }
+
+  await executeInBatches(chunks, (chunk) =>
+    db
+      .insert(auditLinkEdges)
+      .values(
+        chunk.map((edge) => ({
+          auditId,
+          sourceUrl: edge.sourceUrl,
+          targetUrl: edge.targetUrl,
+        })),
+      )
+      .onConflictDoNothing({
+        target: [
+          auditLinkEdges.auditId,
+          auditLinkEdges.sourceUrl,
+          auditLinkEdges.targetUrl,
+        ],
+      }),
+  );
+}
+
+/**
+ * Seal the immutable snapshot for a completed audit. Called only from the
+ * finalize boundary, so a running or failed audit never gets a row. One snapshot
+ * per audit, so a retry re-seals to the same record instead of a second baseline.
+ */
+async function sealSnapshot(input: {
+  auditId: string;
+  projectId: string;
+  targetId: string;
+  pagesCrawled: number;
+  edgeCount: number;
+  lighthouseCount: number;
+}) {
+  await db
+    .insert(auditSnapshots)
+    .values({
+      id: crypto.randomUUID(),
+      auditId: input.auditId,
+      projectId: input.projectId,
+      targetId: input.targetId,
+      pagesCrawled: input.pagesCrawled,
+      edgeCount: input.edgeCount,
+      lighthouseCount: input.lighthouseCount,
+    })
+    .onConflictDoNothing({ target: auditSnapshots.auditId });
 }
 
 async function getAuditForProject(auditId: string, projectId: string) {
@@ -286,6 +381,8 @@ export const AuditRepository = {
   failAudit,
   getAuditForWorkflow,
   batchWriteResults,
+  batchWriteLinkEdges,
+  sealSnapshot,
   getAuditForProject,
   getAuditsByProject,
   getAuditCapacityUsageForUser,
