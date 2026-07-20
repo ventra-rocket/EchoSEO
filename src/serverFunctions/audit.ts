@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { waitUntil } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
+import { getAuthMode } from "@/lib/auth-mode";
 import { AuditService } from "@/server/features/audit/services/AuditService";
 import { customerHasManagedAccess } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
   deleteAuditSchema,
@@ -19,10 +19,14 @@ export const startAudit = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .inputValidator((data: unknown) => startAuditSchema.parse(data))
   .handler(async ({ data, context }) => {
+    // Resolve the auth mode once so the payment gate and the audit
+    // role/verification gates cannot diverge on a split config.
+    const authMode = getAuthMode(env.AUTH_MODE);
+
     // The crawler runs on our Workers compute and isn't credit-metered, so
     // gate it on plan access in hosted mode (grandfathered free plans pass).
     if (
-      (await isHostedServerAuthMode()) &&
+      authMode === "hosted" &&
       !(await customerHasManagedAccess(context.organizationId))
     ) {
       throw new AppError("PAYMENT_REQUIRED", "Subscribe to run site audits");
@@ -30,6 +34,7 @@ export const startAudit = createServerFn({ method: "POST" })
 
     const result = await AuditService.startAudit({
       actorUserId: context.userId,
+      authMode,
       billingCustomer: context,
       projectId: context.projectId,
       startUrl: data.startUrl,
@@ -85,6 +90,12 @@ export const deleteAudit = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .inputValidator((data: unknown) => deleteAuditSchema.parse(data))
   .handler(async ({ data, context }) => {
-    await AuditService.remove(data.auditId, context.projectId);
+    await AuditService.remove({
+      auditId: data.auditId,
+      projectId: context.projectId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
     return { success: true };
   });

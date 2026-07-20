@@ -204,6 +204,13 @@
       "when": 1784174715872,
       "tag": "0028_elite_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1784540833211,
+      "tag": "0029_bitter_darkhawk",
+      "breakpoints": true
     }
   ]
 }
