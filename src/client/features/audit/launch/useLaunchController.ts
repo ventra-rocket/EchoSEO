@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   deleteAudit,
+  getAuditAccess,
   getAuditHistory,
   startAudit,
 } from "@/serverFunctions/audit";
@@ -47,6 +48,10 @@ export function useLaunchController({
   const historyQuery = useQuery({
     queryKey: ["audit-history", projectId],
     queryFn: () => getAuditHistory({ data: { projectId } }),
+  });
+  const accessQuery = useQuery({
+    queryKey: ["audit-access", projectId],
+    queryFn: () => getAuditAccess({ data: { projectId } }),
   });
   const { startMutation, deleteMutation } = useLaunchMutations({
     projectId,
@@ -98,6 +103,7 @@ export function useLaunchController({
   return {
     launchForm,
     historyQuery,
+    accessQuery,
     commitMaxPagesInput: () => commitMaxPagesInput(launchForm),
     deleteAudit: (auditId: string) => deleteMutation.mutate(auditId),
   };
