@@ -48,6 +48,11 @@ const GROUP_BY_RULE_ID: Record<string, AuditIssueGroup> = {
   "cwv-inp": "performance",
   "cwv-cls": "performance",
   "cwv-ttfb": "performance",
+  // Cross-page rules, which need the link graph and sitemap membership.
+  "audit-orphan-page": "links",
+  "audit-broken-internal-link": "links",
+  "audit-missing-from-sitemap": "sitemaps",
+  "audit-unreachable-url": "indexability",
 };
 
 /**

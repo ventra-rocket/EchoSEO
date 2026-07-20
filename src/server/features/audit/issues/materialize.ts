@@ -8,13 +8,20 @@ import {
   evaluateLiteSignals,
   type Issue,
 } from "@/server/lib/seo-rules";
-import type { auditLighthouseResults } from "@/db/audit.schema";
+import { evaluate } from "@/server/lib/seo-rules/engine";
+import {
+  CROSS_PAGE_RULES,
+  type CrossPageSignals,
+} from "@/server/lib/audit/rules/cross-page";
+import { buildCrossPageSignals } from "@/server/features/audit/issues/cross-page-signals";
+import type { auditLighthouseResults, auditLinkEdges } from "@/db/audit.schema";
 import {
   getIssueGroup,
   type AuditIssueGroup,
 } from "@/server/features/audit/issues/audit-issue-groups";
 import {
   buildCoreWebVitalsEvidence,
+  buildCrossPageEvidence,
   buildOnPageEvidence,
   type IssueEvidence,
 } from "@/server/features/audit/issues/issue-evidence";
@@ -24,6 +31,7 @@ import {
 } from "@/server/features/audit/issues/snapshot-signals";
 
 type AuditLighthouseRow = typeof auditLighthouseResults.$inferSelect;
+type AuditLinkEdgeRow = typeof auditLinkEdges.$inferSelect;
 
 export interface OccurrenceInput {
   pageId: string | null;
@@ -190,13 +198,42 @@ function dedupeOccurrences(occurrences: OccurrenceInput[]): OccurrenceInput[] {
   return [...byKey.values()];
 }
 
+function buildCrossPageOccurrences(
+  signals: CrossPageSignals,
+  pageId: string | null,
+): OccurrenceInput[] {
+  return evaluate(CROSS_PAGE_RULES, signals)
+    .filter(isReportable)
+    .flatMap((issue) => {
+      const occurrence = toOccurrence(
+        issue,
+        signals.url,
+        pageId,
+        buildCrossPageEvidence(issue.id, signals),
+      );
+      return occurrence ? [occurrence] : [];
+    });
+}
+
 export function buildOccurrences(input: {
   pages: AuditPageRow[];
   lighthouse: AuditLighthouseRow[];
+  edges: AuditLinkEdgeRow[];
+  startUrl: string;
+  crawlWasTruncated: boolean;
 }): OccurrenceInput[] {
   const urlByPageId = new Map(input.pages.map((page) => [page.id, page.url]));
 
   const pageOccurrences = input.pages.flatMap(buildPageOccurrences);
+
+  const crossPageOccurrences = buildCrossPageSignals({
+    pages: input.pages,
+    edges: input.edges,
+    startUrl: input.startUrl,
+    crawlWasTruncated: input.crawlWasTruncated,
+  }).flatMap(({ page, signals }) =>
+    buildCrossPageOccurrences(signals, page.id),
+  );
 
   const lighthouseOccurrences = input.lighthouse.flatMap((row) => {
     if (row.strategy !== CWV_STRATEGY) return [];
@@ -206,7 +243,11 @@ export function buildOccurrences(input: {
     return buildLighthouseOccurrences(row, url);
   });
 
-  return dedupeOccurrences([...pageOccurrences, ...lighthouseOccurrences]);
+  return dedupeOccurrences([
+    ...pageOccurrences,
+    ...crossPageOccurrences,
+    ...lighthouseOccurrences,
+  ]);
 }
 
 /** Per-rule counts for the All Issues summary. */

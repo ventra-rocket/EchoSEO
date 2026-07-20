@@ -286,6 +286,14 @@ async function sealSnapshot(input: {
     .onConflictDoNothing({ target: auditSnapshots.auditId });
 }
 
+/** The crawl's internal-link edges, used by the cross-page rules. */
+async function getLinkEdgesForAudit(auditId: string) {
+  return db
+    .select()
+    .from(auditLinkEdges)
+    .where(eq(auditLinkEdges.auditId, auditId));
+}
+
 /**
  * Record that issues have been materialized for a sealed snapshot. Readers use
  * this to tell "no issues found" apart from "not materialized".
@@ -405,6 +413,7 @@ export const AuditRepository = {
   batchWriteLinkEdges,
   sealSnapshot,
   getSnapshotForAudit,
+  getLinkEdgesForAudit,
   markSnapshotIssuesMaterialized,
   getAuditForProject,
   getAuditsByProject,

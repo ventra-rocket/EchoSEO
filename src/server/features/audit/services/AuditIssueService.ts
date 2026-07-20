@@ -11,6 +11,7 @@ import {
   buildRollups,
 } from "@/server/features/audit/issues/materialize";
 import { AppError } from "@/server/lib/errors";
+import { parseAuditConfig } from "@/server/lib/audit/types";
 
 const MAX_ISSUE_PAGE_SIZE = 100;
 
@@ -38,7 +39,21 @@ async function materializeForAudit(input: {
     return { materialized: false, occurrenceCount: 0 };
   }
 
-  const occurrences = buildOccurrences({ pages, lighthouse });
+  const edges = await AuditRepository.getLinkEdgesForAudit(input.auditId);
+  // A crawl that stopped at its page cap has an incomplete link graph: pages
+  // that would have linked to the ones it did fetch were never fetched
+  // themselves. Rules that reason about the graph must know that.
+  const maxPages = parseAuditConfig(audit.config)?.maxPages;
+  const crawlWasTruncated =
+    maxPages !== undefined && audit.pagesCrawled >= maxPages;
+
+  const occurrences = buildOccurrences({
+    pages,
+    lighthouse,
+    edges,
+    startUrl: audit.startUrl,
+    crawlWasTruncated,
+  });
   const rollups = buildRollups(occurrences);
 
   await AuditIssueRepository.replaceIssuesForAudit({

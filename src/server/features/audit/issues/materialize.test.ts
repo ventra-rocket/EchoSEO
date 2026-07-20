@@ -5,82 +5,29 @@
  * missing measurement must never be scored as a good one.
  */
 import { describe, expect, it } from "vitest";
-import { buildOccurrences, buildRollups } from "./materialize";
+import { buildRollups } from "./materialize";
 import { toOnPageSignals, type AuditPageRow } from "./snapshot-signals";
 import { getIssueGroup } from "./audit-issue-groups";
+import {
+  lighthouseRow,
+  occurrencesFor,
+  pageRow,
+} from "./__tests__/issue-fixtures";
 import { CORE_WEB_VITALS_RULES } from "@/server/lib/seo-rules/rules/core-web-vitals";
+import { CROSS_PAGE_RULES } from "@/server/lib/audit/rules/cross-page";
 import { LITE_RULES, evaluateLiteSignals } from "@/server/lib/seo-rules";
 import { analyzeHtml } from "@/server/lib/audit/page-analyzer";
 import type { PageAnalysis } from "@/server/lib/audit/types";
-import type { auditLighthouseResults } from "@/db/audit.schema";
-
-type LighthouseRow = typeof auditLighthouseResults.$inferSelect;
-
-function pageRow(overrides: Partial<AuditPageRow> = {}): AuditPageRow {
-  return {
-    id: "p1",
-    auditId: "a1",
-    url: "https://example.com/",
-    statusCode: 200,
-    redirectUrl: null,
-    title: "A perfectly reasonable title for a page",
-    metaDescription:
-      "A meta description that is comfortably inside the range the rule wants to see on a healthy page.",
-    canonicalUrl: "https://example.com/",
-    robotsMeta: null,
-    ogTitle: null,
-    ogDescription: null,
-    ogImage: null,
-    h1Count: 1,
-    h2Count: 0,
-    h3Count: 0,
-    h4Count: 0,
-    h5Count: 0,
-    h6Count: 0,
-    headingOrderJson: "[1]",
-    wordCount: 800,
-    imagesTotal: 0,
-    imagesMissingAlt: 0,
-    imagesJson: "[]",
-    internalLinkCount: 0,
-    externalLinkCount: 0,
-    hasStructuredData: true,
-    hreflangTagsJson: "[]",
-    isIndexable: true,
-    hasMixedContent: false,
-    isHtml: true,
-    inSitemap: true,
-    responseTimeMs: 100,
-    ...overrides,
-  };
-}
-
-function lighthouseRow(overrides: Partial<LighthouseRow> = {}): LighthouseRow {
-  return {
-    id: "lh1",
-    auditId: "a1",
-    pageId: "p1",
-    strategy: "mobile",
-    performanceScore: 50,
-    accessibilityScore: null,
-    bestPracticesScore: null,
-    seoScore: null,
-    lcpMs: 9000,
-    cls: 0.01,
-    inpMs: 100,
-    ttfbMs: 200,
-    errorMessage: null,
-    r2Key: null,
-    payloadSizeBytes: null,
-    ...overrides,
-  };
-}
 
 describe("rule group coverage", () => {
   it("maps every rule the audit evaluates to a display group", () => {
     // Without this, a rule would evaluate and then be silently dropped for
     // having nowhere to appear.
-    for (const rule of [...LITE_RULES, ...CORE_WEB_VITALS_RULES]) {
+    for (const rule of [
+      ...LITE_RULES,
+      ...CORE_WEB_VITALS_RULES,
+      ...CROSS_PAGE_RULES,
+    ]) {
       expect(
         getIssueGroup(rule.id),
         `missing group for ${rule.id}`,
@@ -148,13 +95,11 @@ describe("stored page reproduces the live verdict", () => {
   });
 
   it("stores no occurrence for a clean page", () => {
-    expect(buildOccurrences({ pages: [pageRow()], lighthouse: [] })).toEqual(
-      [],
-    );
+    expect(occurrencesFor({ pages: [pageRow()], lighthouse: [] })).toEqual([]);
   });
 
   it("flags mixed content now that the crawl records it", () => {
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [pageRow({ hasMixedContent: true })],
       lighthouse: [],
     });
@@ -163,7 +108,7 @@ describe("stored page reproduces the live verdict", () => {
   });
 
   it("records the rule revision and evidence with each occurrence", () => {
-    const [occurrence] = buildOccurrences({
+    const [occurrence] = occurrencesFor({
       pages: [pageRow({ title: "" })],
       lighthouse: [],
     });
@@ -177,7 +122,7 @@ describe("stored page reproduces the live verdict", () => {
 
 describe("core web vitals occurrences", () => {
   it("evaluates the mobile run and records the metric as evidence", () => {
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [pageRow()],
       lighthouse: [lighthouseRow()],
     });
@@ -188,7 +133,7 @@ describe("core web vitals occurrences", () => {
   });
 
   it("ignores the desktop run so one URL yields one verdict per rule", () => {
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [pageRow()],
       lighthouse: [lighthouseRow({ id: "lh2", strategy: "desktop" })],
     });
@@ -197,7 +142,7 @@ describe("core web vitals occurrences", () => {
   });
 
   it("does not score an incomplete run — a missing metric is not a good one", () => {
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [pageRow()],
       lighthouse: [lighthouseRow({ lcpMs: null })],
     });
@@ -206,7 +151,7 @@ describe("core web vitals occurrences", () => {
   });
 
   it("skips a measurement whose page is no longer in the snapshot", () => {
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [pageRow()],
       lighthouse: [lighthouseRow({ pageId: "ghost" })],
     });
@@ -219,7 +164,7 @@ describe("rows that are not judgeable documents", () => {
   it("does not judge a non-HTML resource as a contentless page", () => {
     // A PDF listed in a sitemap is stored with empty placeholder fields; the
     // content rules would otherwise report it as missing title, H1 and body.
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [
         pageRow({
           isHtml: false,
@@ -239,7 +184,7 @@ describe("rows that are not judgeable documents", () => {
   });
 
   it("does not judge an error page's content", () => {
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [pageRow({ statusCode: 404, title: null, h1Count: 0 })],
       lighthouse: [],
     });
@@ -249,16 +194,14 @@ describe("rows that are not judgeable documents", () => {
     expect(ruleIds).not.toContain("meta-title");
   });
 
-  it("reports nothing for a URL the crawler never reached", () => {
-    // Status 0 means no response at all. The frozen catalog grades it milder
-    // than a 404, so it is deferred to the cross-page rules rather than
-    // mis-reported here.
-    expect(
-      buildOccurrences({
-        pages: [pageRow({ statusCode: 0, title: null, h1Count: 0 })],
-        lighthouse: [],
-      }),
-    ).toEqual([]);
+  it("reports a URL the crawler never reached as unreachable, and nothing else", () => {
+    // Status 0 means no response at all. The frozen catalog would grade it
+    // milder than a 404, so the cross-page rule owns it instead.
+    const occurrences = occurrencesFor({
+      pages: [pageRow({ statusCode: 0, title: null, h1Count: 0 })],
+    });
+
+    expect(occurrences.map((o) => o.ruleId)).toEqual(["audit-unreachable-url"]);
   });
 });
 
@@ -267,7 +210,7 @@ describe("duplicate final URLs", () => {
     // http -> https and www -> apex both converge after redirects, so one final
     // URL can be stored twice. Two rows for one (rule, url) would break the
     // one-occurrence-per-URL guarantee the storage layer enforces.
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [
         pageRow({ id: "p1", url: "https://example.com/dup", title: "" }),
         pageRow({ id: "p2", url: "https://example.com/dup", title: "" }),
@@ -281,7 +224,7 @@ describe("duplicate final URLs", () => {
 
   it("keeps the worse verdict when duplicates disagree", () => {
     // meta-description: absent fails, too-short warns.
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [
         pageRow({
           id: "p1",
@@ -306,7 +249,7 @@ describe("duplicate final URLs", () => {
 
 describe("buildRollups", () => {
   it("counts distinct affected URLs per rule", () => {
-    const occurrences = buildOccurrences({
+    const occurrences = occurrencesFor({
       pages: [
         pageRow({ id: "p1", url: "https://example.com/a", title: "" }),
         pageRow({ id: "p2", url: "https://example.com/b", title: "" }),
