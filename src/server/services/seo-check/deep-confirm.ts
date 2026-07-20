@@ -21,6 +21,7 @@ import {
   tryQueueConfirmingReport,
 } from "./seo-reports-repository";
 import { dispatchDeepCheck } from "./deep-dispatch";
+import { recordCheckMetric } from "./metrics";
 import {
   clientIp,
   errorResponse,
@@ -75,6 +76,13 @@ export async function handleConfirmDeepCheckRequest(
         url: report.url,
         emailNormalized: lead.emailNormalized,
       });
+      // The double-opt-in conversion: a confirmed email that reached dispatch.
+      // Logged AFTER dispatch returns, not before — a dispatch that throws and
+      // reverts the queue CAS (the compensation path) then does not count until
+      // a retry actually dispatches. A deduped/quota-blocked/paused dispatch
+      // resolves without throwing and is counted (the report was processed);
+      // its downstream outcome — done, failed, or deduped — is a separate event.
+      recordCheckMetric("deep_confirm", { domain: report.domain });
     }
 
     // Hand the report id back so the confirm page can link straight to /r/{id}.

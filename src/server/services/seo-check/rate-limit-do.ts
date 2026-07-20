@@ -20,6 +20,11 @@ export class IpRateLimiterDO extends DurableObject {
     limit: number,
     windowMs: number,
   ): Promise<RateLimitDecision> {
+    // Invariant this counter's accuracy depends on: the only awaits between the
+    // read and the write below are DO storage ops, so the DO's input gate keeps
+    // a concurrent burst serialized (no interleaved read-modify-write). Do NOT
+    // add an `await fetch()` or other I/O here — it would open the gate and let
+    // two requests both read the same count and both admit.
     const now = Date.now();
     const state =
       (await this.ctx.storage.get<RateLimitState>(STORAGE_KEY)) ?? null;

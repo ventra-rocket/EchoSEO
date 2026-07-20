@@ -21,6 +21,7 @@ import { isDeepCheckDisabled } from "./deep-check-config";
 import { verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { createLeadWithReport } from "./leads-repository";
+import { recordCheckMetric } from "./metrics";
 import { isDisposableEmail, normalizeEmail } from "./disposable-email";
 import { getEmailSender } from "./email/sender";
 import { sendDeepCheckConfirmation } from "./email/deep-check-confirmation";
@@ -144,6 +145,9 @@ export async function handleStartDeepCheckRequest(
       locale: requestLocale,
     });
 
+    // Funnel numerator for Lite→email: a confirmation was sent (consent not yet
+    // given — that is `deep_confirm`).
+    recordCheckMetric("deep_start", { domain });
     return jsonResponse({ status: "confirmation_sent" }, 202);
   } catch (error) {
     return errorResponse(error, request);

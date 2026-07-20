@@ -16,6 +16,7 @@ import { freeSeoCheckRequestSchema } from "@/shared/free-seo-check";
 import { verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { getCachedLiteReport, putCachedLiteReport } from "./cache";
+import { recordCheckMetric } from "./metrics";
 import { isDeepCheckDisabled } from "./deep-check-config";
 import { runLiteCheck } from "./lite";
 import type { LiteReport } from "./types";
@@ -73,6 +74,7 @@ export async function handleFreeSeoCheckRequest(
 
     const cached = await getCachedLiteReport(domain);
     if (cached) {
+      recordCheckMetric("lite_check", { domain, cached: true });
       return jsonResponse({
         report: localizeReport(cached),
         cached: true,
@@ -83,6 +85,11 @@ export async function handleFreeSeoCheckRequest(
     const report = await runLiteCheck(normalizedUrl);
     await putCachedLiteReport(domain, report);
 
+    recordCheckMetric("lite_check", {
+      domain,
+      cached: false,
+      score: report.overallScore,
+    });
     return jsonResponse({
       report: localizeReport(report),
       cached: false,

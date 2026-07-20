@@ -25,6 +25,7 @@ import {
   getScreenshotDailyCeiling,
 } from "./deep-check-config";
 import { getSiteScreenshot, putSiteScreenshot } from "./site-screenshot-store";
+import { recordCheckMetric } from "./metrics";
 import { clientIp, errorResponse } from "./http-response";
 
 /** A cached capture older than this is re-rendered; the edge caches it too. */
@@ -138,6 +139,7 @@ function cachedType(object: R2ObjectBody): string {
 async function renderScreenshot(url: string) {
   const apiKey = await getRequiredEnvValue("GOOGLE_PSI_API_KEY");
   try {
+    recordCheckMetric("psi_call", { kind: "screenshot" });
     const raw = await fetchPageSpeed(
       url,
       apiKey,
