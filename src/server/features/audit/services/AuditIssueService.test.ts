@@ -33,6 +33,8 @@ vi.mock("@/db", () => ({
 }));
 
 const { AuditIssueService } = await import("./AuditIssueService");
+const { AuditIssueRepository } =
+  await import("@/server/features/audit/repositories/AuditIssueRepository");
 
 const AUDIT_ID = "audit1";
 const PROJECT_ID = "proj1";
@@ -232,5 +234,150 @@ describe("AuditIssueService", () => {
     await expect(
       AuditIssueService.getIssueSummary(AUDIT_ID, "someone-elses-project"),
     ).rejects.toThrow();
+  });
+
+  it("separates 'not materialized' from 'no issues found'", async () => {
+    // The distinction the persisted timestamp exists for: a crawl whose issue
+    // analysis never ran must not be readable as a clean site. Both states
+    // carry an empty rollup list, so the timestamp is the only thing telling
+    // them apart.
+    await seedPage(harness, "p1", "https://example.com/");
+    await sealSnapshot(harness);
+
+    const beforeMaterializing = await AuditIssueService.getIssueSummary(
+      AUDIT_ID,
+      PROJECT_ID,
+    );
+    expect(beforeMaterializing.materializedAt).toBeNull();
+    expect(beforeMaterializing.rollups).toHaveLength(0);
+
+    await AuditIssueService.materializeForAudit({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+
+    const afterMaterializing = await AuditIssueService.getIssueSummary(
+      AUDIT_ID,
+      PROJECT_ID,
+    );
+    expect(afterMaterializing.materializedAt).not.toBeNull();
+    expect(afterMaterializing.rollups.length).toBeGreaterThan(0);
+  });
+
+  it("does not leave a failed re-run looking like a clean site", async () => {
+    // Re-materialization deletes the previous issues before writing new ones.
+    // If it dies in between while the earlier run's success timestamp still
+    // stands, the audit reads as "materialized, no issues" over a table that
+    // was just emptied — the exact false clean bill of health the timestamp
+    // exists to prevent.
+    await seedPage(harness, "p1", "https://example.com/");
+    await sealSnapshot(harness);
+    await AuditIssueService.materializeForAudit({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+    expect(
+      (await AuditIssueService.getIssueSummary(AUDIT_ID, PROJECT_ID))
+        .materializedAt,
+    ).not.toBeNull();
+
+    const replace = vi
+      .spyOn(AuditIssueRepository, "replaceIssuesForAudit")
+      .mockRejectedValueOnce(new Error("write failed"));
+
+    await expect(
+      AuditIssueService.materializeForAudit({
+        auditId: AUDIT_ID,
+        projectId: PROJECT_ID,
+      }),
+    ).rejects.toThrow("write failed");
+    replace.mockRestore();
+
+    const summary = await AuditIssueService.getIssueSummary(
+      AUDIT_ID,
+      PROJECT_ID,
+    );
+    expect(summary.materializedAt).toBeNull();
+  });
+
+  it("carries remediation text and a citation on every summary row", async () => {
+    await seedPage(harness, "p1", "https://example.com/");
+    await sealSnapshot(harness);
+    await AuditIssueService.materializeForAudit({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+
+    const summary = await AuditIssueService.getIssueSummary(
+      AUDIT_ID,
+      PROJECT_ID,
+    );
+
+    for (const rollup of summary.rollups) {
+      expect(rollup.fix, `no fix text for ${rollup.ruleId}`).not.toBeNull();
+      expect(rollup.fix?.googleSourceUrl).toMatch(/^https:\/\//);
+    }
+  });
+
+  it("refuses to hand the client a crawled URL it should not link", async () => {
+    // The crawler stores whatever a customer's site pointed at. A
+    // `javascript:` URL reaching an href would be clickable from inside an
+    // authenticated session, so the linkable form is resolved here, once.
+    await seedPage(harness, "p1", "javascript:alert(document.cookie)");
+    await sealSnapshot(harness);
+    await AuditIssueService.materializeForAudit({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+
+    const listed = await AuditIssueService.listIssueOccurrences({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(listed.occurrences.length).toBeGreaterThan(0);
+    for (const occurrence of listed.occurrences) {
+      expect(occurrence.safeUrl).toBeNull();
+      // Still returned for display — JSX escapes it as text.
+      expect(occurrence.url).toBe("javascript:alert(document.cookie)");
+    }
+  });
+
+  it("keeps an ordinary crawled URL linkable", async () => {
+    await seedPage(harness, "p1", "https://example.com/alpha");
+    await sealSnapshot(harness);
+    await AuditIssueService.materializeForAudit({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+
+    const listed = await AuditIssueService.listIssueOccurrences({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(listed.occurrences[0]?.safeUrl).toBe("https://example.com/alpha");
+  });
+
+  it("flattens evidence into renderable text", async () => {
+    await seedPage(harness, "p1", "https://example.com/");
+    await sealSnapshot(harness);
+    await AuditIssueService.materializeForAudit({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+    });
+
+    const listed = await AuditIssueService.listIssueOccurrences({
+      auditId: AUDIT_ID,
+      projectId: PROJECT_ID,
+      ruleId: "structure-h1",
+    });
+
+    const evidence = listed.occurrences[0]?.evidence ?? [];
+    expect(evidence.length).toBeGreaterThan(0);
+    for (const field of evidence) {
+      expect(typeof field.key).toBe("string");
+      expect(typeof field.value).toBe("string");
+    }
   });
 });

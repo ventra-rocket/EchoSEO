@@ -305,6 +305,22 @@ async function markSnapshotIssuesMaterialized(auditId: string) {
     .where(eq(auditSnapshots.auditId, auditId));
 }
 
+/**
+ * Reset a snapshot to "not materialized" before its issues are rewritten.
+ *
+ * Re-materialization deletes the old issues before inserting the new ones. If
+ * the write fails in between and this timestamp still held the *previous*
+ * run's success, the audit would read as "materialized, no issues" — a clean
+ * bill of health for a crawl whose issues had just been deleted. Clearing
+ * first makes the failure honest: null means nobody has answered the question.
+ */
+async function clearSnapshotIssuesMaterialized(auditId: string) {
+  await db
+    .update(auditSnapshots)
+    .set({ issuesMaterializedAt: null })
+    .where(eq(auditSnapshots.auditId, auditId));
+}
+
 /** The sealed snapshot for an audit, or null while it is running/failed. */
 async function getSnapshotForAudit(auditId: string) {
   const row = await db.query.auditSnapshots.findFirst({
@@ -415,6 +431,7 @@ export const AuditRepository = {
   getSnapshotForAudit,
   getLinkEdgesForAudit,
   markSnapshotIssuesMaterialized,
+  clearSnapshotIssuesMaterialized,
   getAuditForProject,
   getAuditsByProject,
   getAuditCapacityUsageForUser,
