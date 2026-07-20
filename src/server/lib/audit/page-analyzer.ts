@@ -7,6 +7,7 @@
  */
 import * as cheerio from "cheerio";
 import { normalizeUrl, isSameOrigin } from "./url-utils";
+import { detectMixedContent } from "./mixed-content";
 import type { PageAnalysis } from "./types";
 
 /**
@@ -124,5 +125,6 @@ export function analyzeHtml(
     externalLinks,
     hasStructuredData,
     hreflangTags,
+    hasMixedContent: detectMixedContent($, pageUrl),
   };
 }

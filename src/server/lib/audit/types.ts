@@ -60,6 +60,9 @@ export interface PageAnalysis {
 
   // Hreflang
   hreflangTags: string[];
+
+  /** An HTTPS page referencing an HTTP sub-resource. */
+  hasMixedContent: boolean;
 }
 
 /** Lighthouse result for a single URL+strategy. */
@@ -107,6 +110,13 @@ export interface StepPageResult {
   externalLinks: string[];
   hasStructuredData: boolean;
   hreflangTags: string[];
+  hasMixedContent: boolean;
   isIndexable: boolean;
+  /**
+   * The response actually was an HTML document. False for a non-HTML resource
+   * (PDF, image) and for a failed fetch, where the page fields are empty
+   * placeholders rather than observations.
+   */
+  isHtml: boolean;
   responseTimeMs: number;
 }

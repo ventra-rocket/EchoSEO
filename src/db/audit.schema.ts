@@ -97,6 +97,17 @@ export const auditPages = sqliteTable(
     isIndexable: integer("is_indexable", { mode: "boolean" })
       .notNull()
       .default(true),
+    // An HTTPS page referencing an HTTP sub-resource. Captured during the crawl
+    // so the shared rule catalog can evaluate it from stored facts. Rows crawled
+    // before this column existed read false; re-materialize to trust it.
+    hasMixedContent: integer("has_mixed_content", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    // The response really was an HTML document. Non-HTML resources (PDF, image)
+    // and failed fetches are stored with empty placeholder fields, and judging
+    // those placeholders as content would invent findings — so document-level
+    // rules only run when this is true. Pre-existing rows default to true.
+    isHtml: integer("is_html", { mode: "boolean" }).notNull().default(true),
     // Present in an XML sitemap — evidence for orphan detection. Matched on
     // crawl-boundary equivalence (see sitemap-membership.ts), so a path-level
     // redirect can still read false; the error is one-sided. Audits that predate
@@ -210,6 +221,80 @@ export const auditLinkEdges = sqliteTable(
   ],
 );
 
+// One row per rule that did not pass, per affected URL, materialized from a
+// sealed snapshot. Only warn/fail are stored: a passing check is not an issue,
+// and storing passes would add ~12 rows per crawled page with no reader.
+//
+// `ruleVersion` is the rule's lastReviewedDate at materialization time, so an
+// occurrence always states which revision of the knowledge base judged it.
+export const auditIssueOccurrences = sqliteTable(
+  "audit_issue_occurrences",
+  {
+    id: text("id").primaryKey(),
+    auditId: text("audit_id")
+      .notNull()
+      .references(() => audits.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // Null for site-level issues that belong to no single crawled page.
+    pageId: text("page_id").references(() => auditPages.id, {
+      onDelete: "cascade",
+    }),
+    ruleId: text("rule_id").notNull(),
+    ruleVersion: text("rule_version").notNull(),
+    issueGroup: text("issue_group").notNull(),
+    severity: text("severity").notNull(),
+    status: text("status", { enum: ["warn", "fail"] }).notNull(),
+    // Denormalized so the issue list can filter and page without joining.
+    url: text("url").notNull(),
+    evidenceJson: text("evidence_json"),
+    firstSeenAt: text("first_seen_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    lastSeenAt: text("last_seen_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // Makes re-materializing a snapshot a no-op rather than a duplicate set.
+    uniqueIndex("audit_issue_occurrences_unique_idx").on(
+      table.auditId,
+      table.ruleId,
+      table.url,
+    ),
+    index("audit_issue_occurrences_group_idx").on(
+      table.auditId,
+      table.issueGroup,
+      table.severity,
+    ),
+    index("audit_issue_occurrences_rule_idx").on(table.auditId, table.ruleId),
+  ],
+);
+
+// Per-rule counts for one audit, so the All Issues summary costs one small read
+// instead of aggregating every occurrence row on each page load.
+export const auditIssueRollups = sqliteTable(
+  "audit_issue_rollups",
+  {
+    id: text("id").primaryKey(),
+    auditId: text("audit_id")
+      .notNull()
+      .references(() => audits.id, { onDelete: "cascade" }),
+    ruleId: text("rule_id").notNull(),
+    issueGroup: text("issue_group").notNull(),
+    severity: text("severity").notNull(),
+    urlCount: integer("url_count").notNull(),
+  },
+  (table) => [
+    uniqueIndex("audit_issue_rollups_unique_idx").on(
+      table.auditId,
+      table.ruleId,
+    ),
+    index("audit_issue_rollups_group_idx").on(table.auditId, table.issueGroup),
+  ],
+);
+
 // Immutable completed-audit snapshot, sealed only at the finalize boundary. A
 // running or failed audit never produces a row, so comparison baselines are
 // always completed crawls.
@@ -232,6 +317,10 @@ export const auditSnapshots = sqliteTable(
     sealedAt: text("sealed_at")
       .notNull()
       .default(sql`(current_timestamp)`),
+    // Set once issues have been materialized for this snapshot. Null means "not
+    // materialized", which readers must present differently from "no issues
+    // found" — otherwise a broken materializer looks like a clean site.
+    issuesMaterializedAt: text("issues_materialized_at"),
   },
   (table) => [
     // One snapshot per audit; makes the seal write retry-safe.

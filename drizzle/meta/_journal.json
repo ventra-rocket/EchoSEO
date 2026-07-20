@@ -218,6 +218,20 @@
       "when": 1784544512058,
       "tag": "0030_amusing_rick_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1784547804873,
+      "tag": "0031_lean_mauler",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1784556163858,
+      "tag": "0032_late_wonder_man",
+      "breakpoints": true
     }
   ]
 }
