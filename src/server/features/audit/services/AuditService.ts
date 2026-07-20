@@ -1,6 +1,17 @@
 import { env } from "cloudflare:workers";
+import type { AuthMode } from "@/lib/auth-mode";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
+import {
+  canInvestigate,
+  resolveWorkspaceRole,
+} from "@/server/features/audit/authz/workspace-role";
+import {
+  evaluateTargetVerification,
+  isLaunchBlockedByVerification,
+} from "@/server/features/audit/authz/target-verification";
+import { GscConnectionRepository } from "@/server/features/gsc/repositories/GscConnectionRepository";
 import {
   MAX_USER_AUDIT_USAGE,
   clampAuditMaxPages,
@@ -14,17 +25,64 @@ import {
   type LighthouseStrategy,
 } from "@/server/lib/audit/types";
 import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
+import { getOrigin } from "@/server/lib/audit/url-utils";
 
 async function startAudit(input: {
   actorUserId: string;
+  authMode: AuthMode;
   billingCustomer: BillingCustomerContext;
   projectId: string;
   startUrl: string;
   maxPages?: number;
   lighthouseStrategy?: LighthouseStrategy;
 }) {
-  const maxPages = clampAuditMaxPages(input.maxPages);
+  const role = await resolveWorkspaceRole({
+    userId: input.actorUserId,
+    organizationId: input.billingCustomer.organizationId,
+    authMode: input.authMode,
+  });
+  if (!canInvestigate(role)) {
+    throw new AppError("FORBIDDEN", "You cannot run audits in this workspace");
+  }
+
+  const startUrl = await normalizeAndValidateStartUrl(input.startUrl);
+  const origin = getOrigin(startUrl);
+
+  // Bind the run to the project's audit target (created on first use). The
+  // target caps crawl size, so requested pages are clamped to its limit.
+  const target = await AuditTargetRepository.getOrCreateTarget({
+    projectId: input.projectId,
+    organizationId: input.billingCustomer.organizationId,
+    origin,
+  });
+  const maxPages = Math.min(
+    clampAuditMaxPages(input.maxPages),
+    target.maxPagesLimit,
+  );
   const lighthouseStrategy = input.lighthouseStrategy ?? "auto";
+
+  // Large hosted crawls require a verified domain; verification is derived from
+  // the connected GSC property. An IndexNow key can never satisfy this.
+  const gscConnection = await GscConnectionRepository.getByProjectId(
+    input.projectId,
+  );
+  const verification = evaluateTargetVerification({
+    origin,
+    gscSiteUrl: gscConnection?.siteUrl,
+  });
+  if (
+    isLaunchBlockedByVerification({
+      authMode: input.authMode,
+      maxPages,
+      verification,
+    })
+  ) {
+    throw new AppError(
+      "FORBIDDEN",
+      "Verify domain ownership in Search Console to run an audit of this size",
+    );
+  }
+
   const reservation = getEstimatedAuditCapacity({
     maxPages,
     lighthouseStrategy,
@@ -40,7 +98,6 @@ async function startAudit(input: {
 
   const auditId = crypto.randomUUID();
   const config: AuditConfig = { maxPages, lighthouseStrategy };
-  const startUrl = await normalizeAndValidateStartUrl(input.startUrl);
 
   await AuditRepository.createAudit({
     id: auditId,
@@ -159,7 +216,26 @@ async function getCrawlProgress(auditId: string, projectId: string) {
   return AuditProgressKV.getCrawledUrls(auditId);
 }
 
-async function remove(auditId: string, projectId: string) {
+async function remove(input: {
+  auditId: string;
+  projectId: string;
+  actorUserId: string;
+  organizationId: string;
+  authMode: AuthMode;
+}) {
+  const { auditId, projectId } = input;
+  const role = await resolveWorkspaceRole({
+    userId: input.actorUserId,
+    organizationId: input.organizationId,
+    authMode: input.authMode,
+  });
+  if (!canInvestigate(role)) {
+    throw new AppError(
+      "FORBIDDEN",
+      "You cannot delete audits in this workspace",
+    );
+  }
+
   const audit = await AuditRepository.getAuditForProject(auditId, projectId);
   if (!audit) {
     throw new AppError("NOT_FOUND");

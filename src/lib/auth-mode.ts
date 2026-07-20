@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-type AuthMode = "cloudflare_access" | "local_noauth" | "hosted";
+export type AuthMode = "cloudflare_access" | "local_noauth" | "hosted";
 
 const authModeSchema = z
   .enum(["cloudflare_access", "local_noauth", "hosted"])
