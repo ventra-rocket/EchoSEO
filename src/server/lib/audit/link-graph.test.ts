@@ -30,7 +30,9 @@ function page(url: string, internalLinks: string[]): StepPageResult {
     externalLinks: [],
     hasStructuredData: false,
     hreflangTags: [],
+    hasMixedContent: false,
     isIndexable: true,
+    isHtml: true,
     responseTimeMs: 0,
   };
 }

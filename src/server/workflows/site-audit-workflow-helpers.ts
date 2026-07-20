@@ -76,7 +76,9 @@ export async function crawlPage(
       externalLinks: analysis.externalLinks,
       hasStructuredData: analysis.hasStructuredData,
       hreflangTags: analysis.hreflangTags,
+      hasMixedContent: analysis.hasMixedContent,
       isIndexable,
+      isHtml: true,
       responseTimeMs,
     };
   } catch (error) {
@@ -119,7 +121,11 @@ function emptyPageResult(
     externalLinks: [],
     hasStructuredData: false,
     hreflangTags: [],
+    hasMixedContent: false,
     isIndexable: false,
+    // No HTML document was parsed: either a non-HTML resource or a failed
+    // fetch. Every field above is a placeholder, not an observation.
+    isHtml: false,
     responseTimeMs,
   };
 }

@@ -184,6 +184,8 @@ async function batchWriteResults(
         hasStructuredData: page.hasStructuredData,
         hreflangTagsJson: JSON.stringify(page.hreflangTags),
         isIndexable: page.isIndexable,
+        hasMixedContent: page.hasMixedContent,
+        isHtml: page.isHtml,
         inSitemap: isInSitemap(page.url),
         responseTimeMs: page.responseTimeMs,
       })
@@ -282,6 +284,25 @@ async function sealSnapshot(input: {
       lighthouseCount: input.lighthouseCount,
     })
     .onConflictDoNothing({ target: auditSnapshots.auditId });
+}
+
+/**
+ * Record that issues have been materialized for a sealed snapshot. Readers use
+ * this to tell "no issues found" apart from "not materialized".
+ */
+async function markSnapshotIssuesMaterialized(auditId: string) {
+  await db
+    .update(auditSnapshots)
+    .set({ issuesMaterializedAt: new Date().toISOString() })
+    .where(eq(auditSnapshots.auditId, auditId));
+}
+
+/** The sealed snapshot for an audit, or null while it is running/failed. */
+async function getSnapshotForAudit(auditId: string) {
+  const row = await db.query.auditSnapshots.findFirst({
+    where: eq(auditSnapshots.auditId, auditId),
+  });
+  return row ?? null;
 }
 
 async function getAuditForProject(auditId: string, projectId: string) {
@@ -383,6 +404,8 @@ export const AuditRepository = {
   batchWriteResults,
   batchWriteLinkEdges,
   sealSnapshot,
+  getSnapshotForAudit,
+  markSnapshotIssuesMaterialized,
   getAuditForProject,
   getAuditsByProject,
   getAuditCapacityUsageForUser,

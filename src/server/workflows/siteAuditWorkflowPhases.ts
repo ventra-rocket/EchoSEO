@@ -9,6 +9,7 @@ import { getOrigin } from "@/server/lib/audit/url-utils";
 import { buildLinkEdges } from "@/server/lib/audit/link-graph";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
+import { AuditIssueService } from "@/server/features/audit/services/AuditIssueService";
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import type {
   AuditConfig,
@@ -97,6 +98,42 @@ export async function runAuditPhases(
     allPages,
     lighthouseResults,
     sitemapUrls: discovery.sitemapUrls,
+  });
+
+  await materializeIssues(step, auditId, projectId, billingCustomer);
+}
+
+/**
+ * Turn the sealed snapshot into issues. Deliberately its own step AFTER
+ * finalize: the finalize body is the replay-sensitive one, and issue
+ * materialization must never be the reason a completed crawl is marked failed.
+ * A failure here leaves the snapshot intact for an explicit reprocess.
+ */
+async function materializeIssues(
+  step: WorkflowStep,
+  auditId: string,
+  projectId: string,
+  billingCustomer: BillingCustomerContext,
+) {
+  await step.do("materialize-issues", async () => {
+    try {
+      await AuditIssueService.materializeForAudit({ auditId, projectId });
+    } catch (error) {
+      console.error(
+        `Failed to materialize issues for audit ${auditId}:`,
+        error,
+      );
+      // Swallowing keeps a completed crawl from being marked failed, but a
+      // silent swallow would make a broken materializer look like a clean site,
+      // so the failure is reported. The snapshot's issuesMaterializedAt stays
+      // null, which readers must surface as "not materialized".
+      await captureServerEvent({
+        distinctId: billingCustomer.userId,
+        event: "site_audit:issues_materialize_failed",
+        organizationId: billingCustomer.organizationId,
+        properties: { project_id: projectId, audit_id: auditId },
+      });
+    }
   });
 }
 
