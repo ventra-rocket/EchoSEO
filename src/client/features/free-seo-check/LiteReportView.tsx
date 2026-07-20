@@ -6,6 +6,7 @@ import { SignalRow } from "./SignalRow";
 import { DeepRequestForm } from "./DeepRequestForm";
 import { DeepTierPausedNotice } from "./DeepTierPitch";
 import { scoreHeadline } from "./score-presentation";
+import { SiteScreenshot } from "./SiteScreenshot";
 
 /**
  * Composes the full Lite report: score hero, category cards, signals, and the
@@ -36,6 +37,8 @@ export function LiteReportView({
           {report.finalUrl}
         </p>
       </div>
+
+      <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
 
       <CategoryScoreCards
         categoryScores={report.categoryScores}

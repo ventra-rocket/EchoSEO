@@ -12,6 +12,7 @@
  */
 import { getRetentionWindows } from "./deep-check-config";
 import { deleteDeepReports } from "./report-store";
+import { sweepStaleSiteScreenshots } from "./site-screenshot-store";
 import {
   deleteLeadsByIds,
   findAbandonedLeadIds,
@@ -32,6 +33,14 @@ export const FREE_CHECK_RETENTION_CRON = "0 3 * * *";
  * never deletes anything at all.
  */
 const MAX_LEADS_PER_SWEEP = 500;
+
+/**
+ * Days a domain's page capture is kept without being re-viewed. Captures carry
+ * no PII (a public homepage) and re-render on demand, so this only bounds
+ * storage; it is deliberately longer than the 24h serve-cache so a domain
+ * checked daily is never re-rendered by the sweep.
+ */
+const SITE_SCREENSHOT_RETENTION_DAYS = 7;
 
 interface RetentionSweepResult {
   expiredLeads: number;
@@ -61,6 +70,24 @@ function toSqliteTimestamp(date: Date): string {
 export async function sweepFreeCheckRetention(
   now: Date = new Date(),
 ): Promise<RetentionSweepResult> {
+  // Independent of the lead sweep and best-effort: captures carry no PII, so a
+  // failure here must never abort the run that deletes email addresses. It is
+  // caught (not thrown) for exactly the reason the payload purge below is —
+  // failing the cron would leave PII undeleted, which is the worse outcome.
+  // Runs unconditionally, even on a day with no leads to expire.
+  try {
+    const purged = await sweepStaleSiteScreenshots(
+      daysBefore(now, SITE_SCREENSHOT_RETENTION_DAYS),
+    );
+    if (purged > 0) {
+      console.log(
+        `[cron] free-seo-check retention: purged ${purged} stale capture(s)`,
+      );
+    }
+  } catch (error) {
+    console.error("free-seo-check: stale-capture sweep failed", error);
+  }
+
   const { reportRetentionDays, unconfirmedGraceDays } =
     await getRetentionWindows();
 
@@ -92,10 +119,10 @@ export async function sweepFreeCheckRetention(
 
   // Purge R2 first so a payload is never left with no row pointing at it. Keys
   // R2 refuses are reported, not rethrown: we still delete the rows below,
-  // because an orphaned object holds only the audited URL (and its screenshot)
-  // and is logged here for manual cleanup, whereas keeping the rows would
-  // retain the email — the PII retention exists to remove. Failing closed on a
-  // transient R2 error would mean never deleting anyone's data.
+  // because an orphaned payload holds only the audited URL and is logged here
+  // for manual cleanup, whereas keeping the rows would retain the email — the
+  // PII retention exists to remove. Failing closed on a transient R2 error
+  // would mean never deleting anyone's data.
   const orphaned = await deleteDeepReports(keys);
   if (orphaned.length > 0) {
     console.error(

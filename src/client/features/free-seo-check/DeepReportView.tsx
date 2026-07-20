@@ -4,7 +4,7 @@ import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { ScoreGauge } from "./ScoreGauge";
 import { CategoryScoreCards } from "./CategoryScoreCards";
 import { CoreWebVitalsCards } from "./CoreWebVitalsCards";
-import { ReportScreenshot } from "./ReportScreenshot";
+import { SiteScreenshot } from "./SiteScreenshot";
 import { SignalRow } from "./SignalRow";
 import { scoreHeadline } from "./score-presentation";
 
@@ -55,12 +55,9 @@ function LighthouseScores({
  * link can read whatever is here.
  */
 export function DeepReportView({
-  reportId,
   report,
   locale,
 }: {
-  /** Route param, not report data — the screenshot endpoint is keyed by it. */
-  reportId: string;
   report: DeepReport;
   locale: Locale;
 }) {
@@ -81,12 +78,7 @@ export function DeepReportView({
         </p>
       </div>
 
-      <ReportScreenshot
-        reportId={reportId}
-        finalUrl={report.finalUrl}
-        screenshot={report.screenshot}
-        locale={locale}
-      />
+      <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
 
       <CategoryScoreCards
         categoryScores={report.categoryScores}

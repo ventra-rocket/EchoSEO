@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   getRetentionWindowsMock,
   deleteDeepReportsMock,
+  sweepStaleSiteScreenshotsMock,
   findExpiredLeadIdsMock,
   findAbandonedLeadIdsMock,
   findReportKeysForLeadsMock,
@@ -10,6 +11,7 @@ const {
 } = vi.hoisted(() => ({
   getRetentionWindowsMock: vi.fn(),
   deleteDeepReportsMock: vi.fn(),
+  sweepStaleSiteScreenshotsMock: vi.fn(),
   findExpiredLeadIdsMock: vi.fn(),
   findAbandonedLeadIdsMock: vi.fn(),
   findReportKeysForLeadsMock: vi.fn(),
@@ -20,6 +22,9 @@ vi.mock("./deep-check-config", () => ({
   getRetentionWindows: getRetentionWindowsMock,
 }));
 vi.mock("./report-store", () => ({ deleteDeepReports: deleteDeepReportsMock }));
+vi.mock("./site-screenshot-store", () => ({
+  sweepStaleSiteScreenshots: sweepStaleSiteScreenshotsMock,
+}));
 vi.mock("./retention-repository", () => ({
   findExpiredLeadIds: findExpiredLeadIdsMock,
   findAbandonedLeadIds: findAbandonedLeadIdsMock,
@@ -43,6 +48,7 @@ beforeEach(() => {
   findAbandonedLeadIdsMock.mockResolvedValue([]);
   findReportKeysForLeadsMock.mockResolvedValue([]);
   deleteDeepReportsMock.mockResolvedValue([]);
+  sweepStaleSiteScreenshotsMock.mockResolvedValue(0);
   deleteLeadsByIdsMock.mockImplementation(async (ids: string[]) => ids.length);
 });
 
@@ -80,7 +86,7 @@ describe("sweepFreeCheckRetention", () => {
     );
   });
 
-  it("touches nothing when there is nothing to sweep", async () => {
+  it("touches no leads when there is nothing to sweep", async () => {
     const result = await sweepFreeCheckRetention(NOW);
 
     expect(deleteDeepReportsMock).not.toHaveBeenCalled();
@@ -90,6 +96,30 @@ describe("sweepFreeCheckRetention", () => {
       abandonedLeads: 0,
       leadsDeleted: 0,
     });
+  });
+
+  // Captures are not tied to any lead, so a day with no leads to expire must
+  // still reap stale captures — otherwise they would accumulate forever on a
+  // quiet deployment. The cutoff is 7 days back from the sweep time.
+  it("reaps stale captures even when no leads expire", async () => {
+    await sweepFreeCheckRetention(NOW);
+
+    expect(sweepStaleSiteScreenshotsMock).toHaveBeenCalledWith(
+      new Date("2026-07-08T03:00:00.000Z"),
+    );
+  });
+
+  // The capture sweep is best-effort: an R2 failure there must never abort the
+  // run that deletes email addresses. This is the whole reason the two are not
+  // in one throwing sequence.
+  it("still deletes PII when the capture sweep throws", async () => {
+    sweepStaleSiteScreenshotsMock.mockRejectedValue(new Error("r2 list down"));
+    findExpiredLeadIdsMock.mockResolvedValue(["lead-1"]);
+
+    const result = await sweepFreeCheckRetention(NOW);
+
+    expect(result.leadsDeleted).toBe(1);
+    expect(deleteLeadsByIdsMock).toHaveBeenCalledWith(["lead-1"]);
   });
 
   it("purges R2 payloads before deleting the rows that point at them", async () => {

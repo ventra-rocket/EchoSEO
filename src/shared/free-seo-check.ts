@@ -24,16 +24,18 @@ export const FREE_SEO_CHECK_CONFIRM_ROUTE = "/free-seo-check/confirm";
 /** Public GET — reads a finished Deep report by id (`?id=<uuid>`). */
 export const FREE_SEO_CHECK_REPORT_PATH = "/api/free-seo-check/report";
 /**
- * Public GET — the report's page capture (`?id=<uuid>`), used as the `src` of
- * the screenshot on `/r/{id}`. Sits under the same `/api/free-seo-check*`
- * prefix as the endpoints above, which is what keeps it on the existing
- * Cloudflare Access bypass without spending a destination.
+ * Public GET — a desktop page capture for a URL (`?url=<url>`), used as the
+ * capture shown on both the Lite result and the Deep report. Keyed by domain,
+ * not report id, so both tiers share one cached image. Sits under the same
+ * `/api/free-seo-check*` prefix as the endpoints above, which keeps it on the
+ * existing Cloudflare Access bypass without spending a destination.
  */
-export const FREE_SEO_CHECK_SCREENSHOT_PATH = "/api/free-seo-check/screenshot";
+export const FREE_SEO_CHECK_SITE_SCREENSHOT_PATH =
+  "/api/free-seo-check/site-screenshot";
 
-/** The image URL for a report id — single source for the handler and the view. */
-export function screenshotUrl(reportId: string): string {
-  return `${FREE_SEO_CHECK_SCREENSHOT_PATH}?id=${encodeURIComponent(reportId)}`;
+/** The capture URL for a page — single source for the handler and both views. */
+export function siteScreenshotUrl(pageUrl: string): string {
+  return `${FREE_SEO_CHECK_SITE_SCREENSHOT_PATH}?url=${encodeURIComponent(pageUrl)}`;
 }
 /**
  * Path prefix of the shareable report page. The id is an unguessable capability

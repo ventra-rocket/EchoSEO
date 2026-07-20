@@ -60,9 +60,13 @@ interface CheckResultCopy {
     otherPagesHeading: (count: number) => string;
     noIssues: string;
     issuesToFix: (count: number) => string;
-    /** The page capture: caption above it, alt text on the image itself. */
-    screenshotLabel: string;
-    screenshotAlt: (url: string) => string;
+  };
+  /** The desktop page capture, shown on both the Lite result and Deep report. */
+  screenshot: {
+    label: string;
+    alt: (host: string) => string;
+    /** Shown in the frame when a capture could not be produced. */
+    unavailable: string;
   };
   /** DeepTierPitch + the paused notice that stands in for the request form. */
   deepPitch: {
@@ -152,8 +156,11 @@ const EN: CheckResultCopy = {
     otherPagesHeading: (count) => `Other pages crawled (${count})`,
     noIssues: "no issues",
     issuesToFix: (count) => `${count} to fix`,
-    screenshotLabel: "What we loaded",
-    screenshotAlt: (url) => `Screenshot of ${url} as our checker rendered it`,
+  },
+  screenshot: {
+    label: "What we loaded",
+    alt: (host) => `Screenshot of ${host} as our checker rendered it`,
+    unavailable: "Preview unavailable",
   },
   deepPitch: {
     unlockTitle: "Unlock the Deep report",
@@ -278,9 +285,12 @@ const VI: CheckResultCopy = {
     otherPagesHeading: (count) => `Các trang khác đã quét (${count})`,
     noIssues: "không lỗi",
     issuesToFix: (count) => `${count} cần sửa`,
-    screenshotLabel: "Trang chúng tôi đã tải",
-    screenshotAlt: (url) =>
-      `Ảnh chụp màn hình ${url} khi trình kiểm tra của chúng tôi tải trang`,
+  },
+  screenshot: {
+    label: "Trang chúng tôi đã tải",
+    alt: (host) =>
+      `Ảnh chụp màn hình ${host} khi trình kiểm tra của chúng tôi tải trang`,
+    unavailable: "Không có ảnh xem trước",
   },
   deepPitch: {
     unlockTitle: "Mở khoá báo cáo chuyên sâu",
