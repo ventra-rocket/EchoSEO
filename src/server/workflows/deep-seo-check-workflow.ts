@@ -21,6 +21,7 @@ import {
 import { crawlSite } from "@/server/services/seo-check/crawl";
 import { buildDeepReport } from "@/server/services/seo-check/deep";
 import { putDeepReport } from "@/server/services/seo-check/report-store";
+import { recordCheckMetric } from "@/server/services/seo-check/metrics";
 import { sendReportReadyEmail } from "@/server/services/seo-check/report-ready-email";
 import {
   markReportDone,
@@ -54,6 +55,9 @@ export async function runDeepSeoCheck(
       const apiKey = await getRequiredEnvValue("GOOGLE_PSI_API_KEY");
       let raw: unknown;
       try {
+        // Counted before the result: a spent PSI call is the cost to track,
+        // whether or not it ends up yielding a usable report.
+        recordCheckMetric("psi_call", { kind: "deep", reportId });
         raw = await fetchPageSpeed(url, apiKey);
       } catch (error) {
         // Retry transient 429/5xx; a permanent 4xx (bad URL / key) won't
@@ -87,6 +91,7 @@ export async function runDeepSeoCheck(
       const report = buildDeepReport({ requestedUrl: url, crawl, psi });
       const r2Key = await putDeepReport(reportId, report);
       await markReportDone(reportId, r2Key);
+      recordCheckMetric("deep_done", { reportId });
     });
   } catch (error) {
     console.error(`Deep check ${reportId} failed:`, error);
@@ -96,9 +101,12 @@ export async function runDeepSeoCheck(
     // The "finished" email for a failed check is left to the cron sweep, which
     // picks up any terminal report: failures are rare, and the alternative is
     // duplicating the send on the one path that is already handling an error.
-    await step.do("mark-failed", () =>
-      markReportFailed(reportId, FAILURE_MESSAGE),
-    );
+    await step.do("mark-failed", async () => {
+      await markReportFailed(reportId, FAILURE_MESSAGE);
+      // Inside the step so a workflow replay (which re-runs the run() body but
+      // reuses committed step results) cannot double-count the failure.
+      recordCheckMetric("deep_failed", { reportId });
+    });
     throw error;
   }
 

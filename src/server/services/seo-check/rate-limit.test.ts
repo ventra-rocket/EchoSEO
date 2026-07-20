@@ -36,6 +36,27 @@ describe("decideRateLimit", () => {
     expect(decision.remaining).toBe(0);
   });
 
+  // A concurrent burst against one IP arrives at the Durable Object, which
+  // serializes it — so the effect is exactly this fold of same-instant calls
+  // through the counter. However many hit at once, only `limit` are admitted and
+  // the rest are blocked; the DO's serialization is what makes the fold sound.
+  it("admits exactly the limit under a same-window burst, blocking the rest", () => {
+    const BURST = LIMIT + 5;
+    let state: ReturnType<typeof decideRateLimit>["nextState"] | null = null;
+    let allowed = 0;
+    let blocked = 0;
+
+    for (let i = 0; i < BURST; i++) {
+      const result = decideRateLimit(state, 0, LIMIT, WINDOW_MS);
+      state = result.nextState;
+      if (result.decision.allowed) allowed++;
+      else blocked++;
+    }
+
+    expect(allowed).toBe(LIMIT);
+    expect(blocked).toBe(BURST - LIMIT);
+  });
+
   it("resets the counter once the window has expired", () => {
     const expired = { count: LIMIT, windowStart: 0 };
 
