@@ -44,7 +44,6 @@ const {
   findReportKeysForLeads,
   deleteLeadsByIds,
 } = await import("./retention-repository");
-const { screenshotKey } = await import("./report-keys");
 
 /** Far enough in the past that a freshly-written row is never "expired". */
 const PAST_CUTOFF = "2020-01-01 00:00:00";
@@ -287,22 +286,9 @@ describe("findReportKeysForLeads / deleteLeadsByIds", () => {
       withKey.leadId,
       withoutKey.leadId,
     ]);
-    expect(keys).toContain(`deep-reports/${withKey.reportId}.json`);
-    // No payload was ever stored for this one, so its `r2_key` is null — but
-    // the derived screenshot key is still swept.
-    expect(keys).not.toContain(`deep-reports/${withoutKey.reportId}.json`);
-  });
-
-  // A screenshot's presence is not recorded in D1, so the sweep asks R2 to drop
-  // the derived key for every report it touches. Purging only the reports known
-  // to have one would mean a schema column; purging a key that was never
-  // written is free.
-  it("sweeps the derived screenshot key alongside every report", async () => {
-    const { leadId, reportId } = await seedConfirmedLead();
-    await markReportDone(reportId, `deep-reports/${reportId}.json`);
-
-    const keys = await findReportKeysForLeads([leadId]);
-    expect(keys).toContain(screenshotKey(reportId));
+    // Only the report that stored a payload contributes a key; the other's
+    // `r2_key` is null.
+    expect(keys).toEqual([`deep-reports/${withKey.reportId}.json`]);
   });
 
   it("returns nothing for an empty id list without hitting the database", async () => {
@@ -330,8 +316,7 @@ describe("findReportKeysForLeads / deleteLeadsByIds", () => {
       leadIds.push(leadId);
     }
 
-    // Two keys per report — the payload and its derived screenshot.
-    expect(await findReportKeysForLeads(leadIds)).toHaveLength(240);
+    expect(await findReportKeysForLeads(leadIds)).toHaveLength(120);
     expect(await deleteLeadsByIds(leadIds)).toBe(120);
 
     const left = await raw.execute("SELECT COUNT(*) AS c FROM leads");

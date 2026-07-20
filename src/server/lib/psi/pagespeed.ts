@@ -118,6 +118,7 @@ export async function fetchPageSpeed(
   url: string,
   apiKey: string,
   strategy: "mobile" | "desktop" = "mobile",
+  signal?: AbortSignal,
 ): Promise<unknown> {
   const endpoint = new URL(PSI_ENDPOINT);
   endpoint.searchParams.set("url", url);
@@ -129,6 +130,7 @@ export async function fetchPageSpeed(
 
   const response = await fetch(endpoint, {
     headers: { accept: "application/json" },
+    signal,
   });
   if (!response.ok) {
     throw new PsiRequestError(response.status);
@@ -172,7 +174,9 @@ function labCwv(response: PsiResponse): CoreWebVitalsSignals | null {
  * that value crosses a Workflow step boundary, where results are capped at
  * 1 MiB, and this image runs to a few hundred KB. */
 export interface PsiScreenshot {
-  bytes: Uint8Array;
+  // Backed by a plain ArrayBuffer (not the generic ArrayBufferLike) so it is
+  // accepted as a BlobPart/BodyInit when the capture is served or stored.
+  bytes: Uint8Array<ArrayBuffer>;
   contentType: string;
   width: number;
   height: number;

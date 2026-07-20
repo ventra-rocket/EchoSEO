@@ -38,7 +38,6 @@ const REPORT: DeepReport = {
     wordCount: 120,
   },
   crawl: { pagesCrawled: 1 },
-  screenshot: null,
 };
 
 /** Stands in for the R2 object body the Worker runtime hands back. */
@@ -97,18 +96,6 @@ describe("getDeepReport", () => {
     );
 
     await expect(getDeepReport("r1")).resolves.toBeNull();
-  });
-
-  // Every report written before screenshots existed lacks the field. Payloads
-  // are re-validated on every read, so without the schema default those reports
-  // would fail validation and 404 — losing reports that are otherwise intact.
-  it("still reads a payload written before screenshots existed", async () => {
-    const { screenshot: _omitted, ...legacy } = REPORT;
-    r2GetMock.mockResolvedValue(r2Object(async () => legacy));
-
-    const read = await getDeepReport("r1");
-    expect(read).not.toBeNull();
-    expect(read!.screenshot).toBeNull();
   });
 });
 

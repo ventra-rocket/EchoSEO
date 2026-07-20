@@ -42,6 +42,26 @@ export async function isDeepCheckDisabled(): Promise<boolean> {
 }
 
 /**
+ * Kill-switch for the page-capture endpoint alone. Screenshots are the only
+ * part of the free checker that spends a PSI call for the anonymous Lite tier,
+ * so this can be flipped to stop that spend without pausing scoring.
+ */
+export async function isScreenshotDisabled(): Promise<boolean> {
+  return (await getOptionalEnvValue("FREE_SCREENSHOT_DISABLED")) === "true";
+}
+
+/** Ceiling on how many fresh page captures may be RENDERED across all visitors
+ * in a rolling day; cache hits are free and never counted. Guards the shared
+ * PSI daily quota against the high-volume Lite tier. */
+const DEFAULT_SCREENSHOT_DAILY_CEILING = 300;
+export async function getScreenshotDailyCeiling(): Promise<number> {
+  return readPositiveInt(
+    "FREE_SCREENSHOT_DAILY_CEILING",
+    DEFAULT_SCREENSHOT_DAILY_CEILING,
+  );
+}
+
+/**
  * Origin the report links in outgoing mail are built on, e.g.
  * `https://echoseo.ventrarocket.vn`.
  *

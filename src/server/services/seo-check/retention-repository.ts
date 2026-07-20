@@ -26,7 +26,6 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db";
 import { leads, seoReports } from "@/db/schema";
-import { screenshotKey } from "./report-keys";
 
 /**
  * D1 rejects a query with more than 100 bound parameters. The sweep collects
@@ -138,16 +137,11 @@ export async function findReportKeysForLeads(
   const keys: string[] = [];
   for (const batch of chunk(leadIds, MAX_BOUND_PARAMS)) {
     const rows = await db
-      .select({ id: seoReports.id, r2Key: seoReports.r2Key })
+      .select({ r2Key: seoReports.r2Key })
       .from(seoReports)
       .where(inArray(seoReports.leadId, batch));
     for (const row of rows) {
       if (row.r2Key !== null) keys.push(row.r2Key);
-      // Unconditional: the screenshot is optional and its presence is not
-      // tracked in D1, so the sweep always asks R2 to drop the derived key.
-      // Deleting a key that was never written is a no-op — cheaper than a
-      // column and a migration to record which reports happen to have one.
-      keys.push(screenshotKey(row.id));
     }
   }
   return keys;

@@ -6,11 +6,9 @@ const {
   getRequiredEnvValueMock,
   fetchPageSpeedMock,
   shapePsiResultMock,
-  extractScreenshotMock,
   crawlSiteMock,
   buildDeepReportMock,
   putDeepReportMock,
-  putReportScreenshotMock,
   markReportRunningMock,
   markReportDoneMock,
   markReportFailedMock,
@@ -28,11 +26,9 @@ const {
     getRequiredEnvValueMock: vi.fn(),
     fetchPageSpeedMock: vi.fn(),
     shapePsiResultMock: vi.fn(),
-    extractScreenshotMock: vi.fn(),
     crawlSiteMock: vi.fn(),
     buildDeepReportMock: vi.fn(),
     putDeepReportMock: vi.fn(),
-    putReportScreenshotMock: vi.fn(),
     markReportRunningMock: vi.fn(),
     markReportDoneMock: vi.fn(),
     markReportFailedMock: vi.fn(),
@@ -52,7 +48,6 @@ vi.mock("@/server/lib/runtime-env", () => ({
 vi.mock("@/server/lib/psi/pagespeed", () => ({
   fetchPageSpeed: fetchPageSpeedMock,
   shapePsiResult: shapePsiResultMock,
-  extractScreenshot: extractScreenshotMock,
   PsiRequestError,
 }));
 vi.mock("@/server/services/seo-check/crawl", () => ({
@@ -63,7 +58,6 @@ vi.mock("@/server/services/seo-check/deep", () => ({
 }));
 vi.mock("@/server/services/seo-check/report-store", () => ({
   putDeepReport: putDeepReportMock,
-  putReportScreenshot: putReportScreenshotMock,
 }));
 vi.mock("@/server/services/seo-check/report-ready-email", () => ({
   sendReportReadyEmail: sendReportReadyEmailMock,
@@ -78,17 +72,11 @@ const { runDeepSeoCheck } = await import("./deep-seo-check-workflow");
 
 function makeStep() {
   const order: string[] = [];
-  /** Each step's durable output — what a retry would replay, and what the
-   * 1 MiB cap applies to. */
-  const results = new Map<string, unknown>();
   return {
     order,
-    results,
     do: async <T>(name: string, callback: () => Promise<T> | T): Promise<T> => {
       order.push(name);
-      const result = await callback();
-      results.set(name, result);
-      return result;
+      return callback();
     },
   };
 }
@@ -106,8 +94,6 @@ beforeEach(() => {
   crawlSiteMock.mockResolvedValue(CRAWL);
   buildDeepReportMock.mockReturnValue(REPORT);
   putDeepReportMock.mockResolvedValue("deep-reports/r1.json");
-  extractScreenshotMock.mockReturnValue(null);
-  putReportScreenshotMock.mockResolvedValue(undefined);
   markReportRunningMock.mockResolvedValue(undefined);
   markReportDoneMock.mockResolvedValue(undefined);
   markReportFailedMock.mockResolvedValue(undefined);
@@ -115,44 +101,6 @@ beforeEach(() => {
 });
 
 describe("runDeepSeoCheck", () => {
-  const SHOT = {
-    bytes: new Uint8Array([1]),
-    contentType: "image/webp",
-    width: 412,
-    height: 900,
-  };
-
-  it("stores the capture inside the PSI step and reports only its size", async () => {
-    extractScreenshotMock.mockReturnValue(SHOT);
-    const step = makeStep();
-    await runDeepSeoCheck(step, PARAMS);
-
-    expect(putReportScreenshotMock).toHaveBeenCalledWith("r1", SHOT);
-    // Assert the step's own durable output, not what buildDeepReport received:
-    // step results are capped at 1 MiB, so what matters is that the image bytes
-    // never appear in the value that crosses the boundary.
-    expect(step.results.get("pagespeed")).toEqual({
-      psi: PSI,
-      screenshot: { width: 412, height: 900 },
-    });
-  });
-
-  // The capture is corroborating evidence, never a precondition: a report is
-  // still worth delivering without a picture.
-  it("still finishes the report when the capture cannot be stored", async () => {
-    extractScreenshotMock.mockReturnValue(SHOT);
-    putReportScreenshotMock.mockRejectedValue(new Error("r2 down"));
-
-    const step = makeStep();
-    await runDeepSeoCheck(step, PARAMS);
-
-    expect(step.order).toContain("send-report-email");
-    expect(markReportDoneMock).toHaveBeenCalled();
-    expect(buildDeepReportMock).toHaveBeenCalledWith(
-      expect.objectContaining({ screenshot: null }),
-    );
-  });
-
   it("runs PSI then crawl+persist and commits done R2-first", async () => {
     const step = makeStep();
     await runDeepSeoCheck(step, PARAMS);
@@ -174,7 +122,6 @@ describe("runDeepSeoCheck", () => {
       requestedUrl: "https://x.test/",
       crawl: CRAWL,
       psi: PSI,
-      screenshot: null,
     });
     expect(putDeepReportMock).toHaveBeenCalledWith("r1", REPORT);
     expect(markReportDoneMock).toHaveBeenCalledWith(
