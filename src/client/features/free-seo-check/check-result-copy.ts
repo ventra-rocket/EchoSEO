@@ -68,6 +68,23 @@ interface CheckResultCopy {
     /** Shown in the frame when a capture could not be produced. */
     unavailable: string;
   };
+  /** The GEO / AI-search section — scored separately, framed as directional. */
+  geoSection: {
+    heading: string;
+    /** The honesty line: reinforces fundamentals, not a guarantee. */
+    disclaimer: string;
+    scoreLabel: string;
+    policyHeading: string;
+    botAllowed: string;
+    botBlocked: string;
+    googleExtendedLabel: string;
+    gptbotLabel: string;
+    llmsTxtLabel: string;
+    llmsTxtFound: string;
+    llmsTxtMissing: string;
+    /** Trails the llms.txt row — reminds it is not a Google standard. */
+    llmsTxtNote: string;
+  };
   /** DeepTierPitch + the paused notice that stands in for the request form. */
   deepPitch: {
     unlockTitle: string;
@@ -132,6 +149,7 @@ const EN: CheckResultCopy = {
     structure: "Page Structure",
     server: "Server",
     "core-web-vitals": "Core Web Vitals",
+    geo: "AI Search",
   },
   signal: {
     statusBadge: { pass: "pass", warn: "warn", fail: "fail" },
@@ -161,6 +179,21 @@ const EN: CheckResultCopy = {
     label: "What we loaded",
     alt: (host) => `Screenshot of ${host} as our checker rendered it`,
     unavailable: "Preview unavailable",
+  },
+  geoSection: {
+    heading: "AI Search readiness",
+    disclaimer:
+      "Directional — Google's AI features run on the same ranking systems as Search, so these checks reinforce SEO fundamentals. They are not a guarantee of appearing in AI answers.",
+    scoreLabel: "AI readiness",
+    policyHeading: "AI crawler policy",
+    botAllowed: "allowed",
+    botBlocked: "blocked",
+    googleExtendedLabel: "Google-Extended (Gemini, Vertex)",
+    gptbotLabel: "GPTBot (OpenAI)",
+    llmsTxtLabel: "llms.txt",
+    llmsTxtFound: "found",
+    llmsTxtMissing: "not found",
+    llmsTxtNote: "experimental — not a Google standard, optional",
   },
   deepPitch: {
     unlockTitle: "Unlock the Deep report",
@@ -259,6 +292,7 @@ const VI: CheckResultCopy = {
     structure: "Cấu trúc trang",
     server: "Máy chủ",
     "core-web-vitals": "Core Web Vitals",
+    geo: "AI Search",
   },
   signal: {
     statusBadge: { pass: "đạt", warn: "cảnh báo", fail: "lỗi" },
@@ -291,6 +325,21 @@ const VI: CheckResultCopy = {
     alt: (host) =>
       `Ảnh chụp màn hình ${host} khi trình kiểm tra của chúng tôi tải trang`,
     unavailable: "Không có ảnh xem trước",
+  },
+  geoSection: {
+    heading: "Mức sẵn sàng cho AI Search",
+    disclaimer:
+      "Mang tính định hướng — tính năng AI của Google chạy trên cùng hệ thống xếp hạng như Tìm kiếm, nên các mục này củng cố nền tảng SEO. Chúng không đảm bảo trang sẽ xuất hiện trong câu trả lời AI.",
+    scoreLabel: "Sẵn sàng cho AI",
+    policyHeading: "Chính sách với trình thu thập AI",
+    botAllowed: "cho phép",
+    botBlocked: "chặn",
+    googleExtendedLabel: "Google-Extended (Gemini, Vertex)",
+    gptbotLabel: "GPTBot (OpenAI)",
+    llmsTxtLabel: "llms.txt",
+    llmsTxtFound: "có",
+    llmsTxtMissing: "không có",
+    llmsTxtNote: "thử nghiệm — không phải chuẩn của Google, tùy chọn",
   },
   deepPitch: {
     unlockTitle: "Mở khoá báo cáo chuyên sâu",

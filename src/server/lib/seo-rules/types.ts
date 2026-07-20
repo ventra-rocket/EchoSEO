@@ -15,6 +15,7 @@ export const RULE_CATEGORIES = [
   "structure",
   "server",
   "core-web-vitals",
+  "geo",
 ] as const;
 export type RuleCategory = (typeof RULE_CATEGORIES)[number];
 
@@ -81,4 +82,29 @@ export interface OnPageSignals extends PageAnalysis {
 /** The evaluated result of one rule against a page. */
 export interface Issue extends Omit<RuleMeta, "locales"> {
   status: IssueStatus;
+}
+
+/**
+ * Normalized GEO / AI-search signals a `Rule<GeoSignals>` evaluates against.
+ *
+ * Assembled by `services/seo-check/geo-signals.ts` from the page HTML plus two
+ * side fetches (robots.txt, llms.txt). Everything here is a plain boolean/array
+ * so the rules stay pure — the network work happens in the extractor, off the
+ * report's critical path (decision C: GEO never blocks report delivery).
+ */
+export interface GeoSignals {
+  /** Whether each agent is allowed to fetch the page per robots.txt. Googlebot
+   * gates AI eligibility; Google-Extended/GPTBot are surfaced as policy facts,
+   * never moralized — the operator decides. */
+  botAccess: { googlebot: boolean; googleExtended: boolean; gptbot: boolean };
+  /** Distinct JSON-LD `@type` values found on the page (e.g. Article, FAQPage). */
+  schemaTypes: string[];
+  /** The page states exactly one <h1>. */
+  hasSingleH1: boolean;
+  /** Heading levels descend without skipping (h1→h2→h3, no h1→h3 jump). */
+  hasHeadingHierarchy: boolean;
+  /** The page's `<meta name="robots">` content, for noindex/nosnippet checks. */
+  robotsMeta: string | null;
+  /** `/llms.txt` exists — surfaced, but labeled experimental (not a Google standard). */
+  llmsTxtFound: boolean;
 }

@@ -1,10 +1,17 @@
 import type { OnPageSignals } from "../types";
 
-/** A fully "good" page — every on-page/technical rule should pass against it. */
+/**
+ * A fully "good" page — every on-page/technical rule should pass against it.
+ *
+ * Carries `schemaTypes` (which `OnPageSignals` itself does not) so the same
+ * fixture stands in for a services-layer `ParsedPage` in the Deep/crawl tests
+ * without every call site having to spread it in.
+ */
 export function makeGoodPage(
-  overrides: Partial<OnPageSignals> = {},
-): OnPageSignals {
+  overrides: Partial<OnPageSignals & { schemaTypes: string[] }> = {},
+): OnPageSignals & { schemaTypes: string[] } {
   return {
+    schemaTypes: [],
     url: "https://good.test/",
     statusCode: 200,
     redirectUrl: null,

@@ -20,6 +20,7 @@ import {
 } from "@/server/lib/psi/pagespeed";
 import { crawlSite } from "@/server/services/seo-check/crawl";
 import { buildDeepReport } from "@/server/services/seo-check/deep";
+import { extractGeoSignals } from "@/server/services/seo-check/geo-signals";
 import { putDeepReport } from "@/server/services/seo-check/report-store";
 import { recordCheckMetric } from "@/server/services/seo-check/metrics";
 import { sendReportReadyEmail } from "@/server/services/seo-check/report-ready-email";
@@ -88,7 +89,20 @@ export async function runDeepSeoCheck(
     // canonical_report_id — no fan-out write here.
     await step.do("crawl-and-persist", async () => {
       const crawl = await crawlSite(url);
-      const report = buildDeepReport({ requestedUrl: url, crawl, psi });
+      // GEO is off the critical path (decision C): extract it best-effort and
+      // let a failure degrade to a report with no GEO section, never a failed
+      // report. crawlSite guarantees a primary page or it would have thrown.
+      const primary = crawl.pages[0];
+      const geo = primary
+        ? await extractGeoSignals(url, primary.page).catch((error: unknown) => {
+            console.error(
+              `Deep check ${reportId} GEO extraction failed:`,
+              error,
+            );
+            return null;
+          })
+        : null;
+      const report = buildDeepReport({ requestedUrl: url, crawl, psi, geo });
       const r2Key = await putDeepReport(reportId, report);
       await markReportDone(reportId, r2Key);
       recordCheckMetric("deep_done", { reportId });

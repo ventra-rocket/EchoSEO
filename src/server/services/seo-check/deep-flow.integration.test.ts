@@ -115,6 +115,19 @@ vi.mock("./crawl", () => ({
       pages: [{ url, statusCode: 200, page: makeGoodPage({ url }) }],
     }),
 }));
+// GEO makes its own side fetches (robots.txt, llms.txt); stub it so the flow
+// test stays hermetic. Its own extraction is covered in geo-signals.test.ts.
+vi.mock("./geo-signals", () => ({
+  extractGeoSignals: () =>
+    Promise.resolve({
+      botAccess: { googlebot: true, googleExtended: true, gptbot: true },
+      schemaTypes: ["Article"],
+      hasSingleH1: true,
+      hasHeadingHierarchy: true,
+      robotsMeta: null,
+      llmsTxtFound: false,
+    }),
+}));
 
 const { handleStartDeepCheckRequest } = await import("./deep-start");
 const { handleConfirmDeepCheckRequest } = await import("./deep-confirm");
@@ -224,9 +237,11 @@ describe("Deep check full flow", () => {
     expect(reportDone.status).toBe("done");
     expect(r2Store.has(text(reportDone.r2_key))).toBe(true);
 
-    // 4. Read it back the way the /r/{id} page does: a renderable done report.
+    // 4. Read it back the way the /r/{id} page does: a renderable done report
+    //    carrying the GEO section the workflow attached.
     const view = await loadReportView(text(reportBefore.id));
     expect(view?.status).toBe("done");
+    if (view?.status === "done") expect(view.report.geo).not.toBeNull();
   });
 
   it("recovers a confirm replay without enqueuing a second workflow", async () => {

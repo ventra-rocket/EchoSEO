@@ -8,7 +8,14 @@ import {
   CORE_WEB_VITALS_RULES,
   type CoreWebVitalsSignals,
 } from "./rules/core-web-vitals";
-import type { Locale, OnPageSignals, Rule, RuleMeta } from "./types";
+import { GEO_RULES } from "./rules/geo";
+import type {
+  GeoSignals,
+  Locale,
+  OnPageSignals,
+  Rule,
+  RuleMeta,
+} from "./types";
 
 export { score } from "./scoring";
 export * from "./types";
@@ -32,11 +39,20 @@ export function evaluateCoreWebVitals(signals: CoreWebVitalsSignals) {
   return evaluate(CORE_WEB_VITALS_RULES, signals);
 }
 
+/**
+ * Runs the GEO / AI-search rule set against extracted signals. Deep-tier only,
+ * scored separately from the on-page number and shown as directional.
+ */
+export function evaluateGeoSignals(signals: GeoSignals) {
+  return evaluate(GEO_RULES, signals);
+}
+
 const ALL_RULE_META: RuleMeta[] = [
   ...ON_PAGE_RULES,
   STRUCTURED_DATA_GUIDANCE,
   ...TECHNICAL_RULES,
   ...CORE_WEB_VITALS_RULES,
+  ...GEO_RULES,
 ];
 const RULE_META_BY_ID = new Map<string, RuleMeta>(
   ALL_RULE_META.map((rule) => [rule.id, rule]),

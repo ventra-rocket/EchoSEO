@@ -5,6 +5,7 @@ import { ScoreGauge } from "./ScoreGauge";
 import { CategoryScoreCards } from "./CategoryScoreCards";
 import { CoreWebVitalsCards } from "./CoreWebVitalsCards";
 import { SiteScreenshot } from "./SiteScreenshot";
+import { GeoSection } from "./GeoSection";
 import { SignalRow } from "./SignalRow";
 import { scoreHeadline } from "./score-presentation";
 
@@ -106,6 +107,8 @@ export function DeepReportView({
           ))}
         </div>
       </section>
+
+      {report.geo ? <GeoSection geo={report.geo} locale={locale} /> : null}
 
       {report.pages.length > 1 ? (
         <section className="space-y-2">

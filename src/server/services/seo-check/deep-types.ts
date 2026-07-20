@@ -47,6 +47,21 @@ const deepPageSchema = z.object({
   signals: z.array(deepSignalSchema),
 });
 
+/**
+ * The GEO / AI-search section — scored separately from the on-page number and
+ * shown as directional. `null` when extraction failed or was skipped: GEO is
+ * off the report's critical path and never blocks delivery (decision C).
+ */
+const geoSectionSchema = z.object({
+  score: z.number(),
+  signals: z.array(deepSignalSchema),
+  /** Policy facts surfaced, not scored — the operator sets AI-crawler policy. */
+  aiBots: z.object({ googleExtended: z.boolean(), gptbot: z.boolean() }),
+  /** Experimental, non-Google-standard — reported, never scored. */
+  llmsTxt: z.boolean(),
+});
+export type GeoSection = z.infer<typeof geoSectionSchema>;
+
 /** Exported so the read path can validate an R2 payload it did not just write. */
 export const deepReportSchema = z.object({
   requestedUrl: z.string(),
@@ -74,5 +89,11 @@ export const deepReportSchema = z.object({
     wordCount: z.number(),
   }),
   crawl: z.object({ pagesCrawled: z.number() }),
+  /**
+   * GEO / AI-search section, or null when it was skipped or its extraction
+   * failed. `.default(null)` so reports written before GEO existed still
+   * validate on read (same reason the read path re-validates every payload).
+   */
+  geo: geoSectionSchema.nullable().default(null),
 });
 export type DeepReport = z.infer<typeof deepReportSchema>;
