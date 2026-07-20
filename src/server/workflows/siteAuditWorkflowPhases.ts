@@ -6,7 +6,9 @@ import {
   selectLighthouseSample,
 } from "@/server/lib/audit/lighthouse";
 import { getOrigin } from "@/server/lib/audit/url-utils";
+import { buildLinkEdges } from "@/server/lib/audit/link-graph";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import type {
   AuditConfig,
@@ -90,9 +92,11 @@ export async function runAuditPhases(
     workflowInstanceId,
     billingCustomer,
     projectId,
+    origin,
     config,
     allPages,
     lighthouseResults,
+    sitemapUrls: discovery.sitemapUrls,
   });
 }
 
@@ -259,9 +263,11 @@ async function finalizeAudit(args: {
   workflowInstanceId: string;
   billingCustomer: BillingCustomerContext;
   projectId: string;
+  origin: string;
   config: AuditConfig;
   allPages: StepPageResult[];
   lighthouseResults: LighthouseResult[];
+  sitemapUrls: string[];
 }) {
   const {
     step,
@@ -269,23 +275,36 @@ async function finalizeAudit(args: {
     workflowInstanceId,
     billingCustomer,
     projectId,
+    origin,
     config,
     allPages,
     lighthouseResults,
+    sitemapUrls,
   } = args;
 
   await step.do("finalize", async () => {
     await AuditRepository.updateAuditProgress(auditId, workflowInstanceId, {
       currentPhase: "finalizing",
     });
+    const linkEdges = buildLinkEdges(allPages);
     await AuditRepository.batchWriteResults(
       auditId,
       allPages,
       lighthouseResults,
+      new Set(sitemapUrls),
     );
+    await AuditRepository.batchWriteLinkEdges(auditId, linkEdges);
     await AuditRepository.completeAudit(auditId, workflowInstanceId, {
       pagesCrawled: allPages.length,
       pagesTotal: allPages.length,
+    });
+    await sealAuditSnapshot({
+      auditId,
+      projectId,
+      origin,
+      pagesCrawled: allPages.length,
+      edgeCount: linkEdges.length,
+      lighthouseCount: lighthouseResults.length,
     });
     await captureServerEvent({
       distinctId: billingCustomer.userId,
@@ -300,5 +319,40 @@ async function finalizeAudit(args: {
       },
     });
     await AuditProgressKV.clear(auditId);
+  });
+}
+
+/**
+ * Seal the completed crawl as an immutable snapshot. The target is looked up by
+ * (project, origin); it is created when the audit is launched, so a missing row
+ * means the project is being torn down and there is no baseline worth keeping.
+ */
+async function sealAuditSnapshot(input: {
+  auditId: string;
+  projectId: string;
+  origin: string;
+  pagesCrawled: number;
+  edgeCount: number;
+  lighthouseCount: number;
+}) {
+  const target = await AuditTargetRepository.getByProjectAndOrigin(
+    input.projectId,
+    input.origin,
+  );
+
+  if (!target) {
+    console.warn(
+      `No audit target for ${input.auditId} (${input.origin}); snapshot not sealed`,
+    );
+    return;
+  }
+
+  await AuditRepository.sealSnapshot({
+    auditId: input.auditId,
+    projectId: input.projectId,
+    targetId: target.id,
+    pagesCrawled: input.pagesCrawled,
+    edgeCount: input.edgeCount,
+    lighthouseCount: input.lighthouseCount,
   });
 }
