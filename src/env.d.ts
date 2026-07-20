@@ -45,6 +45,9 @@ declare namespace Cloudflare {
     OPENROUTER_API_KEY?: string;
     // Optional OpenRouter model slug override (defaults in openrouter.ts).
     OPENROUTER_MODEL?: string;
+    // Optional model slug for the audit issue explainer, kept separate so
+    // retuning the chat model cannot change the audit panel's cost or voice.
+    OPENROUTER_EXPLAINER_MODEL?: string;
   }
 }
 
