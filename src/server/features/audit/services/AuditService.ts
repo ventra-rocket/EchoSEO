@@ -9,6 +9,7 @@ import {
 } from "@/server/features/audit/authz/workspace-role";
 import {
   evaluateTargetVerification,
+  getVerificationPageThreshold,
   isLaunchBlockedByVerification,
 } from "@/server/features/audit/authz/target-verification";
 import { GscConnectionRepository } from "@/server/features/gsc/repositories/GscConnectionRepository";
@@ -141,6 +142,35 @@ async function startAudit(input: {
   return { auditId };
 }
 
+/**
+ * What the current caller may do with audits in this project, plus the domain
+ * verification context the launch form needs to explain a blocked large crawl
+ * before the user runs into it.
+ */
+async function getAccess(input: {
+  projectId: string;
+  actorUserId: string;
+  organizationId: string;
+  authMode: AuthMode;
+}) {
+  const role = await resolveWorkspaceRole({
+    userId: input.actorUserId,
+    organizationId: input.organizationId,
+    authMode: input.authMode,
+  });
+  const gscConnection = await GscConnectionRepository.getByProjectId(
+    input.projectId,
+  );
+
+  return {
+    canLaunch: canInvestigate(role),
+    verifiedSiteUrl: gscConnection?.siteUrl ?? null,
+    // Non-null only where an unverified domain actually blocks a large crawl;
+    // self-host stays permissive at any size.
+    verificationPageThreshold: getVerificationPageThreshold(input.authMode),
+  };
+}
+
 async function getStatus(auditId: string, projectId: string) {
   const audit = await AuditRepository.getAuditForProject(auditId, projectId);
   if (!audit) throw new AppError("NOT_FOUND");
@@ -265,6 +295,7 @@ async function remove(input: {
 
 export const AuditService = {
   startAudit,
+  getAccess,
   getStatus,
   getCrawlProgress,
   getResults,

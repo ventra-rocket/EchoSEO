@@ -8,11 +8,13 @@ export function AuditHistorySection({
   history,
   isLoading,
   onDelete,
+  canDelete,
 }: {
   projectId: string;
   history: Awaited<ReturnType<typeof getAuditHistory>>;
   isLoading: boolean;
   onDelete: (auditId: string) => void;
+  canDelete: boolean;
 }) {
   if (history.length === 0 && !isLoading) {
     return (
@@ -64,6 +66,7 @@ export function AuditHistorySection({
                       projectId={projectId}
                       auditId={audit.id}
                       onDelete={onDelete}
+                      canDelete={canDelete}
                     />
                   </td>
                 </tr>
@@ -80,10 +83,12 @@ function HistoryActions({
   projectId,
   auditId,
   onDelete,
+  canDelete,
 }: {
   projectId: string;
   auditId: string;
   onDelete: (auditId: string) => void;
+  canDelete: boolean;
 }) {
   return (
     <div className="flex items-center justify-end gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
@@ -95,7 +100,9 @@ function HistoryActions({
       >
         View
       </Link>
-      <div className="dropdown dropdown-end">
+      {/* Read-only members keep the View link but get no action the server
+          would reject. */}
+      <div className={`dropdown dropdown-end ${canDelete ? "" : "hidden"}`}>
         <div
           tabIndex={0}
           role="button"

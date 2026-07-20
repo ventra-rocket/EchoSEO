@@ -11,11 +11,33 @@ type Props = {
   commitMaxPagesInput: () => number;
 };
 
-export function LaunchFormCard({ commitMaxPagesInput, launchForm }: Props) {
+type AuditAccess = NonNullable<
+  ReturnType<typeof useLaunchController>["accessQuery"]["data"]
+>;
+
+export function LaunchFormCard({
+  commitMaxPagesInput,
+  launchForm,
+  access,
+}: Props & { access: AuditAccess | undefined }) {
+  // Until access resolves, assume the caller may launch: the server is the
+  // authority and rejects a viewer anyway, and a flashing disabled button on
+  // every load is worse than a request that fails for the rare read-only user.
+  const canLaunch = access?.canLaunch ?? true;
+
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body gap-4">
         <h2 className="card-title text-base">Start New Audit</h2>
+
+        {canLaunch ? null : (
+          <div className="alert alert-info py-2">
+            <span className="text-sm">
+              You have read-only access to this workspace, so you can review
+              existing audits but not start new ones.
+            </span>
+          </div>
+        )}
 
         <form
           className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center"
@@ -52,7 +74,7 @@ export function LaunchFormCard({ commitMaxPagesInput, launchForm }: Props) {
               <button
                 type="submit"
                 className="btn btn-primary btn-sm w-full lg:col-span-3"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !canLaunch}
               >
                 {isSubmitting ? (
                   <>
@@ -74,6 +96,7 @@ export function LaunchFormCard({ commitMaxPagesInput, launchForm }: Props) {
           </div>
         </form>
 
+        <VerificationNote access={access} />
         <LaunchErrors launchForm={launchForm} />
       </div>
     </div>
@@ -153,6 +176,24 @@ function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
         }
       </launchForm.Subscribe>
     </div>
+  );
+}
+
+/**
+ * Explains the ownership rule before a large crawl is rejected for it. Only
+ * rendered where the rule applies — self-host deployments have no threshold.
+ */
+function VerificationNote({ access }: { access: AuditAccess | undefined }) {
+  if (!access?.verificationPageThreshold) {
+    return null;
+  }
+
+  return (
+    <p className="text-xs text-base-content/60">
+      {access.verifiedSiteUrl
+        ? `Search Console property connected (${access.verifiedSiteUrl}). Crawls over ${access.verificationPageThreshold.toLocaleString()} pages are allowed on domains this property covers.`
+        : `Crawls over ${access.verificationPageThreshold.toLocaleString()} pages require a matching verified Search Console property for the domain.`}
+    </p>
   );
 }
 

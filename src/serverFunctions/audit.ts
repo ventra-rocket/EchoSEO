@@ -8,6 +8,7 @@ import { captureServerEvent } from "@/server/lib/posthog";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
   deleteAuditSchema,
+  getAuditAccessSchema,
   getAuditHistorySchema,
   getAuditResultsSchema,
   getAuditStatusSchema,
@@ -56,6 +57,18 @@ export const startAudit = createServerFn({ method: "POST" })
     );
 
     return result;
+  });
+
+export const getAuditAccess = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => getAuditAccessSchema.parse(data))
+  .handler(async ({ context }) => {
+    return AuditService.getAccess({
+      projectId: context.projectId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
   });
 
 export const getAuditStatus = createServerFn({ method: "POST" })

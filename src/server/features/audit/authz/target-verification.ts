@@ -82,6 +82,22 @@ export function requiresVerifiedDomain(input: {
 }
 
 /**
+ * The crawl size above which this auth mode demands a verified domain, or null
+ * where the mode has no such gate. Derived from the launch rule itself so the
+ * explanation shown before launch cannot drift from the rule enforced at launch.
+ */
+export function getVerificationPageThreshold(
+  authMode: AuthMode,
+): number | null {
+  return requiresVerifiedDomain({
+    authMode,
+    maxPages: Number.POSITIVE_INFINITY,
+  })
+    ? AUDIT_VERIFICATION_PAGE_THRESHOLD
+    : null;
+}
+
+/**
  * Whether a launch must be blocked because a large hosted crawl targets an
  * unverified domain.
  */

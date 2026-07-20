@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AUDIT_VERIFICATION_PAGE_THRESHOLD,
   evaluateTargetVerification,
+  getVerificationPageThreshold,
   hasGoogleFacingAuthority,
   isLaunchBlockedByVerification,
   originMatchesGscSiteUrl,
@@ -104,6 +105,33 @@ describe("requiresVerifiedDomain", () => {
     expect(
       requiresVerifiedDomain({ authMode: "cloudflare_access", maxPages: 5000 }),
     ).toBe(false);
+  });
+});
+
+describe("getVerificationPageThreshold", () => {
+  it("reports a threshold exactly where the launch gate applies", () => {
+    // The launch form explains this number before a crawl is rejected for it,
+    // so it must stay derived from the rule rather than restated next to it.
+    expect(getVerificationPageThreshold("hosted")).toBe(
+      AUDIT_VERIFICATION_PAGE_THRESHOLD,
+    );
+    expect(getVerificationPageThreshold("local_noauth")).toBeNull();
+    expect(getVerificationPageThreshold("cloudflare_access")).toBeNull();
+  });
+
+  it("agrees with the launch gate for every auth mode", () => {
+    const modes = ["hosted", "local_noauth", "cloudflare_access"] as const;
+
+    for (const authMode of modes) {
+      const threshold = getVerificationPageThreshold(authMode);
+      const gateBlocksLargeCrawl = isLaunchBlockedByVerification({
+        authMode,
+        maxPages: AUDIT_VERIFICATION_PAGE_THRESHOLD + 1,
+        verification: "unverified",
+      });
+
+      expect(threshold !== null).toBe(gateBlocksLargeCrawl);
+    }
   });
 });
 

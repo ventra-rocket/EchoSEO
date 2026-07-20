@@ -19,6 +19,7 @@ export function LaunchView({
         <LaunchFormCard
           launchForm={controller.launchForm}
           commitMaxPagesInput={controller.commitMaxPagesInput}
+          access={controller.accessQuery.data}
         />
 
         <AuditHistorySection
@@ -26,6 +27,7 @@ export function LaunchView({
           history={controller.historyQuery.data ?? []}
           isLoading={controller.historyQuery.isLoading}
           onDelete={controller.deleteAudit}
+          canDelete={controller.accessQuery.data?.canLaunch ?? true}
         />
       </div>
     </div>
