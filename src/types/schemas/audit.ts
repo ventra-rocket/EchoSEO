@@ -94,6 +94,14 @@ export const getAuditIssueComparisonSchema = z.object({
   locale: ruleLocaleSchema,
 });
 
+// Page-fact changes carry no rule prose, so no locale. `baselineAuditId` absent
+// means auto-pick the most recent prior sealed crawl.
+export const getAuditPageChangesSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  baselineAuditId: z.string().min(1).optional(),
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues"] as const;

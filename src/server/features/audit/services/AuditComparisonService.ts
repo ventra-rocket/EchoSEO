@@ -15,8 +15,17 @@ import {
   computeIssueDelta,
   type IssueDelta,
 } from "@/server/features/audit/history/issue-delta";
+import {
+  computePageChanges,
+  type PageChange,
+  type PageChangesTotals,
+} from "@/server/features/audit/history/page-changes";
+import { safeHttpUrl } from "@/lib/safe-url";
 import type { Locale } from "@/server/lib/seo-rules";
 import { AppError } from "@/server/lib/errors";
+
+/** Never ship an unbounded changed-URL list to the client; counts still total all. */
+const MAX_PAGE_CHANGES = 200;
 
 /** A snapshot the comparison can name, on either side of the diff. */
 interface SnapshotRef {
@@ -56,6 +65,22 @@ export interface ComparableSnapshot {
   /** True for the snapshot the comparison is anchored on. */
   isCurrent: boolean;
 }
+
+/** A changed URL with the linkable form of its address resolved once, server-side. */
+type PageChangeView = PageChange & { safeUrl: string | null };
+
+export type PageChangesComparison =
+  | { state: "single_snapshot" }
+  | {
+      state: "comparable";
+      source: "crawl";
+      baseline: SnapshotRef;
+      window: { from: string; to: string };
+      totals: PageChangesTotals;
+      changes: PageChangeView[];
+      /** True when more URLs changed than the capped list carries. */
+      truncated: boolean;
+    };
 
 type TargetSnapshot = Awaited<
   ReturnType<typeof AuditRepository.listSealedSnapshotsForTarget>
@@ -125,17 +150,20 @@ function toRef(snapshot: TargetSnapshot): SnapshotRef {
  *
  * Explicit selection wins and is validated against the target's own snapshot
  * list, so a baseline from another project or target can never be smuggled in.
- * With no explicit choice, auto-mode prefers the most recent *materialized*
- * prior crawl (the last one that can actually be diffed) and falls back to the
- * most recent prior crawl otherwise, letting the gate explain why that one
- * cannot be compared. `null` means there is no prior crawl at all.
+ * With no explicit choice, auto-mode picks the most recent prior crawl. When
+ * `preferMaterialized` is set (the issue delta needs a diffable baseline), it
+ * prefers the most recent prior whose issues materialized, falling back to the
+ * most recent prior so the gate can explain why that one cannot be compared.
+ * Page-fact comparisons pass it false: a snapshot's page facts are sealed
+ * regardless of issue materialization. `null` means there is no prior crawl.
  */
 function pickBaseline(input: {
   current: TargetSnapshot;
   snapshots: TargetSnapshot[];
   baselineAuditId?: string;
+  preferMaterialized: boolean;
 }): TargetSnapshot | null {
-  const { current, snapshots, baselineAuditId } = input;
+  const { current, snapshots, baselineAuditId, preferMaterialized } = input;
 
   const priors = snapshots.filter(
     (s) => s.auditId !== current.auditId && s.sealedAt < current.sealedAt,
@@ -157,8 +185,14 @@ function pickBaseline(input: {
 
   if (priors.length === 0) return null;
 
-  const materializedPrior = priors.find((s) => s.issuesMaterializedAt !== null);
-  return materializedPrior ?? priors[0];
+  if (preferMaterialized) {
+    const materializedPrior = priors.find(
+      (s) => s.issuesMaterializedAt !== null,
+    );
+    return materializedPrior ?? priors[0];
+  }
+
+  return priors[0];
 }
 
 async function resolveComparison(input: {
@@ -179,6 +213,7 @@ async function resolveComparison(input: {
     current,
     snapshots,
     baselineAuditId: input.baselineAuditId,
+    preferMaterialized: true,
   });
   if (!baseline) return { state: "single_snapshot" };
 
@@ -221,7 +256,60 @@ async function resolveComparison(input: {
   };
 }
 
+/**
+ * Diff this crawl's page facts against a baseline crawl of the same target.
+ *
+ * Unlike the issue delta, this needs no materialization gate: a snapshot's page
+ * facts are sealed at crawl time regardless of whether its issues were ever
+ * materialized, so any prior sealed crawl is a valid baseline. The changed-URL
+ * list is capped for the wire while the totals still count every change.
+ */
+async function resolvePageChanges(input: {
+  auditId: string;
+  projectId: string;
+  baselineAuditId?: string;
+}): Promise<PageChangesComparison> {
+  const { current, snapshots } = await loadTargetSnapshots(
+    input.auditId,
+    input.projectId,
+  );
+  if (!current) return { state: "single_snapshot" };
+
+  const baseline = pickBaseline({
+    current,
+    snapshots,
+    baselineAuditId: input.baselineAuditId,
+    preferMaterialized: false,
+  });
+  if (!baseline) return { state: "single_snapshot" };
+
+  const [currentPages, baselinePages] = await Promise.all([
+    AuditRepository.getPageFactsForAudit(current.auditId),
+    AuditRepository.getPageFactsForAudit(baseline.auditId),
+  ]);
+
+  const { totals, changes } = computePageChanges(currentPages, baselinePages);
+
+  // `url` is a string this crawler read off a customer's site, so its linkable
+  // form is resolved through the http(s) allow-list once here — the client
+  // receives a safeUrl that is either linkable or null, never an href decision.
+  const capped: PageChangeView[] = changes
+    .slice(0, MAX_PAGE_CHANGES)
+    .map((change) => ({ ...change, safeUrl: safeHttpUrl(change.url) }));
+
+  return {
+    state: "comparable",
+    source: "crawl",
+    baseline: toRef(baseline),
+    window: { from: baseline.sealedAt, to: current.sealedAt },
+    totals,
+    changes: capped,
+    truncated: changes.length > MAX_PAGE_CHANGES,
+  };
+}
+
 export const AuditComparisonService = {
   listComparableSnapshots,
   resolveComparison,
+  resolvePageChanges,
 } as const;

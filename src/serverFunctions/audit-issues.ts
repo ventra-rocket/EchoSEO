@@ -20,6 +20,7 @@ import {
   explainAuditIssueSchema,
   getAuditIssueComparisonSchema,
   getAuditIssueSummarySchema,
+  getAuditPageChangesSchema,
   getComparableSnapshotsSchema,
   listAuditIssuesSchema,
 } from "@/types/schemas/audit";
@@ -94,5 +95,21 @@ export const getAuditIssueComparison = createServerFn({ method: "POST" })
       projectId: context.projectId,
       baselineAuditId: data.baselineAuditId,
       locale: data.locale,
+    });
+  });
+
+/**
+ * Crawl-only page-fact changes against a baseline snapshot of the same target:
+ * for URLs present in both crawls, which stored facts (title, meta, status,
+ * indexability, sitemap membership, H1/word counts) differ.
+ */
+export const getAuditPageChanges = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => getAuditPageChangesSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return AuditComparisonService.resolvePageChanges({
+      auditId: data.auditId,
+      projectId: context.projectId,
+      baselineAuditId: data.baselineAuditId,
     });
   });

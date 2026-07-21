@@ -286,6 +286,29 @@ async function sealSnapshot(input: {
     .onConflictDoNothing({ target: auditSnapshots.auditId });
 }
 
+/**
+ * A lean projection of an audit's page facts for snapshot comparison — only the
+ * columns the page-fact diff compares, not the whole row (which carries JSON
+ * blobs a comparison never reads). Keyed by the stored final URL.
+ */
+async function getPageFactsForAudit(auditId: string) {
+  return db
+    .select({
+      url: auditPages.url,
+      title: auditPages.title,
+      metaDescription: auditPages.metaDescription,
+      h1Count: auditPages.h1Count,
+      wordCount: auditPages.wordCount,
+      statusCode: auditPages.statusCode,
+      canonicalUrl: auditPages.canonicalUrl,
+      isIndexable: auditPages.isIndexable,
+      inSitemap: auditPages.inSitemap,
+      isHtml: auditPages.isHtml,
+    })
+    .from(auditPages)
+    .where(eq(auditPages.auditId, auditId));
+}
+
 /** The crawl's internal-link edges, used by the cross-page rules. */
 async function getLinkEdgesForAudit(auditId: string) {
   return db
@@ -453,6 +476,7 @@ export const AuditRepository = {
   sealSnapshot,
   getSnapshotForAudit,
   listSealedSnapshotsForTarget,
+  getPageFactsForAudit,
   getLinkEdgesForAudit,
   markSnapshotIssuesMaterialized,
   clearSnapshotIssuesMaterialized,
