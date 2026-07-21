@@ -17,6 +17,7 @@ import { IssueGroupList } from "@/client/features/audit/issues/IssueGroupList";
 import { IssueDetailDrawer } from "@/client/features/audit/issues/IssueDetailDrawer";
 import { ComparisonBar } from "@/client/features/audit/history/ComparisonBar";
 import { BaselineSelector } from "@/client/features/audit/history/BaselineSelector";
+import { AuditExportPanel } from "@/client/features/audit/exports/AuditExportPanel";
 
 /**
  * How many times to re-ask before accepting that materialization is not coming.
@@ -169,13 +170,20 @@ export function AllIssuesTab({
           </div>
         </div>
       ) : (
-        <IssueGroupList
-          rollups={sortedRollups}
-          deltaByRule={deltaByRule}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-          onSelectRule={setSelectedRule}
-        />
+        <>
+          <AuditExportPanel
+            auditId={auditId}
+            projectId={projectId}
+            filters={filters}
+          />
+          <IssueGroupList
+            rollups={sortedRollups}
+            deltaByRule={deltaByRule}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            onSelectRule={setSelectedRule}
+          />
+        </>
       )}
 
       <p className="text-xs text-base-content/50">{UNCOVERED_GROUPS_NOTE}</p>

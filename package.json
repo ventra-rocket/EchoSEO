@@ -85,6 +85,7 @@
     "dataforseo-client": "^2.0.19",
     "drizzle-orm": "^0.44.4",
     "fast-xml-parser": "^5.4.1",
+    "fflate": "^0.8.3",
     "jose": "^6.0.12",
     "lucide-react": "^0.542.0",
     "papaparse": "^5.5.3",
