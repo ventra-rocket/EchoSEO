@@ -79,6 +79,21 @@ export const explainAuditIssueSchema = z.object({
   locale: ruleLocaleSchema,
 });
 
+export const getComparableSnapshotsSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
+// `baselineAuditId` is optional: absent means auto-pick the most recent
+// comparable prior crawl. Rule copy for resolved-only rules is resolved
+// server-side, so the viewer's locale rides along like the summary's.
+export const getAuditIssueComparisonSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  baselineAuditId: z.string().min(1).optional(),
+  locale: ruleLocaleSchema,
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues"] as const;

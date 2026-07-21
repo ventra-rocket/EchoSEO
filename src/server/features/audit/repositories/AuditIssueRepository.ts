@@ -87,6 +87,24 @@ async function getRollupsForAudit(auditId: string) {
 }
 
 /**
+ * The (rule, url) keys of an audit's issues, plus the group/severity a resolved
+ * rule needs to describe itself. Deliberately excludes evidence and timestamps:
+ * a snapshot comparison diffs two of these key sets and never renders a row, so
+ * shipping the heavy columns would only inflate the read.
+ */
+async function getOccurrenceKeysForAudit(auditId: string) {
+  return db
+    .select({
+      ruleId: auditIssueOccurrences.ruleId,
+      url: auditIssueOccurrences.url,
+      issueGroup: auditIssueOccurrences.issueGroup,
+      severity: auditIssueOccurrences.severity,
+    })
+    .from(auditIssueOccurrences)
+    .where(eq(auditIssueOccurrences.auditId, auditId));
+}
+
+/**
  * `%` and `_` are LIKE wildcards, and `_` is common in real URLs. Escaping them
  * keeps a search for `my_page` from also matching `myXpage`.
  */
@@ -153,6 +171,7 @@ async function countOccurrences(input: {
 export const AuditIssueRepository = {
   replaceIssuesForAudit,
   getRollupsForAudit,
+  getOccurrenceKeysForAudit,
   listOccurrences,
   countOccurrences,
 } as const;
