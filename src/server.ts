@@ -45,6 +45,7 @@ import {
   FREE_CHECK_RETENTION_CRON,
   sweepFreeCheckRetention,
 } from "@/server/services/seo-check/retention";
+import { sweepAuditRetention } from "@/server/features/audit/retention";
 import {
   FREE_CHECK_REPORT_EMAIL_CRON,
   sweepReportReadyEmails,
@@ -206,7 +207,19 @@ export default {
     // report emails every 5 minutes — so neither inherits rank tracking's
     // 15-minute tick and the D1 work each does stays proportional to its job.
     if (controller.cron === FREE_CHECK_RETENTION_CRON) {
-      await sweepFreeCheckRetention();
+      // Two independent daily sweeps share this schedule. Each is caught on its
+      // own: a failure in one must not skip the other, since both delete data
+      // past its retention deadline.
+      try {
+        await sweepFreeCheckRetention();
+      } catch (error) {
+        console.error("[cron] free-check retention sweep failed", error);
+      }
+      try {
+        await sweepAuditRetention();
+      } catch (error) {
+        console.error("[cron] audit retention sweep failed", error);
+      }
       return;
     }
 
