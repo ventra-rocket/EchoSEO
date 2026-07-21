@@ -4,7 +4,7 @@
  */
 import { env } from "cloudflare:workers";
 
-function auditExportKey(jobId: string): string {
+export function auditExportKey(jobId: string): string {
   return `audit-exports/${jobId}.zip`;
 }
 
@@ -23,4 +23,31 @@ export async function putAuditExport(
 /** Reads the stored artifact for streaming, or null if the object is gone. */
 export async function getAuditExport(key: string) {
   return env.R2.get(key);
+}
+
+/** R2 rejects a delete carrying more keys than this. */
+const R2_DELETE_LIMIT = 1000;
+
+/**
+ * Purges export artifacts by key (retention sweep), returning any key it could
+ * not delete so the caller can log precisely what leaked. Chunked to stay under
+ * R2's per-call key cap; a failed batch is caught, not thrown, so one bad call
+ * cannot skip the rest — the caller still updates/deletes the D1 rows, after
+ * which a missed key can never be derived again and the object is orphaned.
+ */
+export async function deleteAuditExports(keys: string[]): Promise<string[]> {
+  const failed: string[] = [];
+  for (let i = 0; i < keys.length; i += R2_DELETE_LIMIT) {
+    const batch = keys.slice(i, i + R2_DELETE_LIMIT);
+    try {
+      await env.R2.delete(batch);
+    } catch (error) {
+      console.error(
+        `audit-exports: R2 delete failed for ${batch.length} key(s)`,
+        error,
+      );
+      failed.push(...batch);
+    }
+  }
+  return failed;
 }

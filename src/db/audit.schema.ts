@@ -301,10 +301,11 @@ export const auditIssueRollups = sqliteTable(
 // aggregate counts plus provenance (provider, queried target/coverage, when) —
 // never the raw provider payload or any per-domain list.
 //
-// Retention: NOT yet enforced. Professional-audit tables have no cron sweep
-// today (audit_snapshots and audit_targets.retentionDays are likewise
-// unenforced). Rows are a handful of integers with no raw payload and no PII; a
-// sweep is deferred to a later slice rather than claimed here.
+// Retention: this table is deliberately NOT swept. The daily audit retention
+// sweep now enforces `audit_targets.retentionDays` on completed crawls (and ages
+// out export artifacts), but these off-page readings are a target-bound time
+// series — a handful of integers, no raw payload, no PII — kept for trend across
+// crawls, so they are intentionally left untouched by that sweep.
 export const auditReferringDomainSnapshots = sqliteTable(
   "audit_referring_domain_snapshots",
   {
