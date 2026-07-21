@@ -13,6 +13,7 @@ import {
 } from "@/client/features/audit/results/ResultsTables";
 import { AllIssuesTab } from "@/client/features/audit/issues/AllIssuesTab";
 import { PageChangesPanel } from "@/client/features/audit/history/PageChangesPanel";
+import { AuditSearchSignalsPanel } from "@/client/features/audit/search/AuditSearchSignalsPanel";
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import type { AuditTab } from "@/types/schemas/audit";
 
@@ -51,6 +52,9 @@ export function ResultsView({
         ]
       : []),
     { tab: "issues" as const, label: "All Issues" },
+    // Always offered: "Search Console isn't connected" is itself a state the tab
+    // reports, and hiding it would make a missing connection invisible.
+    { tab: "search" as const, label: "Search" },
   ];
 
   // A tab the URL asks for but this audit cannot show falls back to Pages
@@ -74,9 +78,9 @@ export function ResultsView({
             tabs={availableTabs}
             activeTab={activeTab}
             onTabChange={onTabChange}
-            // The Issues tab pages through the server, so the client never
-            // holds the full set an export would need.
-            showExport={activeTab !== "issues"}
+            // Only the two client-held tables export. Issues page through the
+            // server and Search is live GSC data — neither has a full set here.
+            showExport={activeTab === "pages" || activeTab === "performance"}
             onExport={(format) => {
               if (activeTab === "performance") {
                 exportPerformance(lighthouse, pages, format);
@@ -107,6 +111,9 @@ export function ResultsView({
               filters={issueFilters}
               onFiltersChange={onIssueFiltersChange}
             />
+          )}
+          {activeTab === "search" && (
+            <AuditSearchSignalsPanel auditId={audit.id} projectId={projectId} />
           )}
         </div>
       </div>

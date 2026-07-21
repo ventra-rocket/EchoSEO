@@ -102,9 +102,16 @@ export const getAuditPageChangesSchema = z.object({
   baselineAuditId: z.string().min(1).optional(),
 });
 
+// GSC signals for an audit's target. The window is server-fixed (last 28 days
+// vs the previous 28), so the request carries no dates.
+export const getAuditSearchSignalsSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
-const auditTabs = ["pages", "performance", "issues"] as const;
+const auditTabs = ["pages", "performance", "issues", "search"] as const;
 
 export type AuditTab = (typeof auditTabs)[number];
 
