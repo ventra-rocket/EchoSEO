@@ -42,6 +42,11 @@
       "binding": "DEEP_SEO_CHECK_WORKFLOW",
       "class_name": "DeepSeoCheckWorkflow",
     },
+    {
+      "name": "audit-export-workflow",
+      "binding": "AUDIT_EXPORT_WORKFLOW",
+      "class_name": "AuditExportWorkflow",
+    },
   ],
   // Durable Objects: onboarding chat (Agents SDK AIChatAgent, one instance per
   // project) and the free SEO checker's per-IP rate limiter (one instance per

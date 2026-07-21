@@ -117,6 +117,23 @@ export const auditReferringDomainsRequestSchema = z.object({
   auditId: z.string().min(1),
 });
 
+// Request an async issue export. The optional filters mirror listAuditIssues so
+// the export covers exactly the filtered view; they are plain bounded strings
+// (see listAuditIssuesSchema for why the server enums are not imported here).
+export const requestAuditExportSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  issueGroup: z.string().min(1).max(64).optional(),
+  severity: z.string().min(1).max(64).optional(),
+  ruleId: z.string().min(1).max(128).optional(),
+  urlContains: z.string().min(1).max(2048).optional(),
+});
+
+export const listAuditExportsSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues", "search"] as const;
