@@ -246,6 +246,13 @@
       "when": 1784612468797,
       "tag": "0034_striped_joseph",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1784649364222,
+      "tag": "0035_nebulous_stryfe",
+      "breakpoints": true
     }
   ]
 }

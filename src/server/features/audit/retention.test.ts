@@ -20,6 +20,7 @@ import {
   auditTargets,
 } from "@/db/audit.schema";
 import { auditExportJobs } from "@/db/audit-export.schema";
+import { auditScreenshots } from "@/db/audit-screenshot.schema";
 
 const { testDb } = vi.hoisted(() => ({
   testDb: { current: null } as { current: unknown },
@@ -36,6 +37,13 @@ const { deleteAuditExportsMock } = vi.hoisted(() => ({
 vi.mock("@/server/features/audit/exports/audit-export-store", () => ({
   deleteAuditExports: deleteAuditExportsMock,
   auditExportKey: (jobId: string) => `audit-exports/${jobId}.zip`,
+}));
+
+const { deleteAuditScreenshotsMock } = vi.hoisted(() => ({
+  deleteAuditScreenshotsMock: vi.fn<(keys: string[]) => Promise<string[]>>(),
+}));
+vi.mock("@/server/features/audit/evidence/audit-screenshot-store", () => ({
+  deleteAuditScreenshots: deleteAuditScreenshotsMock,
 }));
 
 const { sweepAuditRetention } = await import("./retention");
@@ -116,9 +124,33 @@ async function seedLighthouse(auditId: string, r2Key: string) {
   });
 }
 
+async function seedScreenshot(input: {
+  id: string;
+  auditId: string;
+  status: "ready" | "failed";
+  r2Key?: string | null;
+  capturedAt: string;
+}) {
+  await harness.db.insert(auditScreenshots).values({
+    id: input.id,
+    auditId: input.auditId,
+    projectId: PROJECT_ID,
+    organizationId: ORG_ID,
+    url: `https://example.com/${input.id}`,
+    pageId: null,
+    status: input.status,
+    r2Key: input.r2Key ?? null,
+    capturedAt: input.capturedAt,
+  });
+}
+
 async function jobById(id: string) {
   const rows = await harness.db.select().from(auditExportJobs);
   return rows.find((job) => job.id === id) ?? null;
+}
+
+async function screenshotIds(): Promise<string[]> {
+  return (await harness.db.select().from(auditScreenshots)).map((s) => s.id);
 }
 
 async function auditIds(): Promise<string[]> {
@@ -131,6 +163,8 @@ describe("sweepAuditRetention", () => {
     testDb.current = harness.db;
     deleteAuditExportsMock.mockReset();
     deleteAuditExportsMock.mockResolvedValue([]);
+    deleteAuditScreenshotsMock.mockReset();
+    deleteAuditScreenshotsMock.mockResolvedValue([]);
 
     await harness.db.insert(organization).values({
       id: ORG_ID,
@@ -241,6 +275,15 @@ describe("sweepAuditRetention", () => {
         expiresAt: new Date(Date.now() + DAY_MS).toISOString(), // not part A's job
       });
       await seedLighthouse("old-audit", "site-audit/proj1/old-audit/lh.json");
+      // A recent screenshot (within its own 30-day window, so part D leaves it)
+      // must still be purged from R2 when its audit is deleted.
+      await seedScreenshot({
+        id: "shot-old",
+        auditId: "old-audit",
+        status: "ready",
+        r2Key: "audit-screenshots/old-audit/shot-old",
+        capturedAt: new Date().toISOString(),
+      });
 
       await seedAudit("recent-audit");
       await seedSnapshot("recent-audit", toSqlite(new Date()));
@@ -248,14 +291,81 @@ describe("sweepAuditRetention", () => {
       const result = await sweepAuditRetention();
 
       expect(result.auditsPurged).toBe(1);
-      // Both the export ZIP and the Lighthouse payload are purged before delete.
+      // The export ZIP, the Lighthouse payload and the screenshot are all purged
+      // before delete.
       const purgedKeys = deleteAuditExportsMock.mock.calls.flat().flat();
       expect(purgedKeys).toContain("audit-exports/old-export.zip");
       expect(purgedKeys).toContain("site-audit/proj1/old-audit/lh.json");
+      expect(purgedKeys).toContain("audit-screenshots/old-audit/shot-old");
       const remaining = await auditIds();
       expect(remaining).toEqual(["recent-audit"]);
-      // Cascade removed the old audit's export row.
+      // Cascade removed the old audit's export + screenshot rows.
       expect(await jobById("old-export")).toBeNull();
+      expect(await screenshotIds()).toEqual([]);
+    });
+  });
+
+  describe("part D — expire stale screenshots", () => {
+    it("purges R2 then deletes an out-of-window capture, sparing an in-window one", async () => {
+      await seedAudit("a1");
+      await seedScreenshot({
+        id: "shot-old",
+        auditId: "a1",
+        status: "ready",
+        r2Key: "audit-screenshots/a1/shot-old",
+        capturedAt: new Date(Date.now() - 31 * DAY_MS).toISOString(),
+      });
+      await seedScreenshot({
+        id: "shot-fresh",
+        auditId: "a1",
+        status: "ready",
+        r2Key: "audit-screenshots/a1/shot-fresh",
+        capturedAt: new Date(Date.now() - DAY_MS).toISOString(),
+      });
+
+      const result = await sweepAuditRetention();
+
+      expect(result.screenshotsExpired).toBe(1);
+      expect(deleteAuditScreenshotsMock).toHaveBeenCalledWith([
+        "audit-screenshots/a1/shot-old",
+      ]);
+      expect(await screenshotIds()).toEqual(["shot-fresh"]);
+    });
+
+    it("deletes a failed capture past its window without an R2 delete", async () => {
+      await seedAudit("a1");
+      await seedScreenshot({
+        id: "shot-failed",
+        auditId: "a1",
+        status: "failed",
+        r2Key: null,
+        capturedAt: new Date(Date.now() - 31 * DAY_MS).toISOString(),
+      });
+
+      const result = await sweepAuditRetention();
+
+      expect(result.screenshotsExpired).toBe(1);
+      // No object exists for a failed capture, so R2 is never asked to delete one.
+      expect(deleteAuditScreenshotsMock).not.toHaveBeenCalled();
+      expect(await screenshotIds()).toEqual([]);
+    });
+
+    it("still deletes the row when the R2 purge fails", async () => {
+      await seedAudit("a1");
+      await seedScreenshot({
+        id: "shot-old",
+        auditId: "a1",
+        status: "ready",
+        r2Key: "audit-screenshots/a1/shot-old",
+        capturedAt: new Date(Date.now() - 31 * DAY_MS).toISOString(),
+      });
+      deleteAuditScreenshotsMock.mockResolvedValue([
+        "audit-screenshots/a1/shot-old",
+      ]);
+
+      await sweepAuditRetention();
+
+      expect(await screenshotIds()).toEqual([]);
     });
   });
 
