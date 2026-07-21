@@ -295,6 +295,60 @@ export const auditIssueRollups = sqliteTable(
   ],
 );
 
+// One aggregate off-page reading per explicit, credit-spending refresh of a
+// target. Bound to the target (not a single crawl) so referring-domain figures
+// accrue as a time series independent of when audits run. Stores only the
+// aggregate counts plus provenance (provider, queried target/coverage, when) —
+// never the raw provider payload or any per-domain list.
+//
+// Retention: NOT yet enforced. Professional-audit tables have no cron sweep
+// today (audit_snapshots and audit_targets.retentionDays are likewise
+// unenforced). Rows are a handful of integers with no raw payload and no PII; a
+// sweep is deferred to a later slice rather than claimed here.
+export const auditReferringDomainSnapshots = sqliteTable(
+  "audit_referring_domain_snapshots",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    targetId: text("target_id")
+      .notNull()
+      .references(() => auditTargets.id, { onDelete: "cascade" }),
+    // Provenance: which data provider produced these numbers.
+    provider: text("provider").notNull(),
+    // The normalized provider target actually queried, e.g. "example.com".
+    target: text("target").notNull(),
+    // What the count covers, e.g. "domain+subdomains" (backlinks queries with
+    // include_subdomains). Disclosed so a number is never read out of context.
+    coverage: text("coverage").notNull(),
+    // Current total referring domains at query time.
+    referringDomains: integer("referring_domains").notNull(),
+    // New / lost referring domains over the provider's own tracking period.
+    // Nullable: a provider response may omit them.
+    newReferringDomains: integer("new_referring_domains"),
+    lostReferringDomains: integer("lost_referring_domains"),
+    // When the provider was queried — the provenance date shown with the figure.
+    // No column default on purpose: the writer supplies a full ISO timestamp so
+    // every row shares one lexicographically-sortable format. A `current_timestamp`
+    // default would render `YYYY-MM-DD HH:MM:SS`, which sorts inconsistently
+    // against ISO `T` values, so an omitted write must fail loudly, not default.
+    queriedAt: text("queried_at").notNull(),
+    // Who spent the credit for this refresh.
+    triggeredByUserId: text("triggered_by_user_id").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // Latest reading + the previous one (for the snapshot-over-snapshot trend).
+    index("audit_referring_domain_snapshots_target_idx").on(
+      table.targetId,
+      table.queriedAt,
+    ),
+  ],
+);
+
 // Immutable completed-audit snapshot, sealed only at the finalize boundary. A
 // running or failed audit never produces a row, so comparison baselines are
 // always completed crawls.

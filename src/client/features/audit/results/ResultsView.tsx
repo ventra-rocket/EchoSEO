@@ -14,6 +14,7 @@ import {
 import { AllIssuesTab } from "@/client/features/audit/issues/AllIssuesTab";
 import { PageChangesPanel } from "@/client/features/audit/history/PageChangesPanel";
 import { AuditSearchSignalsPanel } from "@/client/features/audit/search/AuditSearchSignalsPanel";
+import { AuditReferringDomainsPanel } from "@/client/features/audit/search/AuditReferringDomainsPanel";
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import type { AuditTab } from "@/types/schemas/audit";
 
@@ -113,7 +114,32 @@ export function ResultsView({
             />
           )}
           {activeTab === "search" && (
-            <AuditSearchSignalsPanel auditId={audit.id} projectId={projectId} />
+            <div className="space-y-6">
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-base-content/80">
+                  Search Console
+                  <span className="ml-2 font-normal text-base-content/50">
+                    first-party · free
+                  </span>
+                </h3>
+                <AuditSearchSignalsPanel
+                  auditId={audit.id}
+                  projectId={projectId}
+                />
+              </section>
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-base-content/80">
+                  Off-page · Referring domains
+                  <span className="ml-2 font-normal text-base-content/50">
+                    provider data · uses credits
+                  </span>
+                </h3>
+                <AuditReferringDomainsPanel
+                  auditId={audit.id}
+                  projectId={projectId}
+                />
+              </section>
+            </div>
           )}
         </div>
       </div>
