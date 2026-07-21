@@ -12,6 +12,7 @@ import {
   PerformanceTable,
 } from "@/client/features/audit/results/ResultsTables";
 import { AllIssuesTab } from "@/client/features/audit/issues/AllIssuesTab";
+import { PageChangesPanel } from "@/client/features/audit/history/PageChangesPanel";
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import type { AuditTab } from "@/types/schemas/audit";
 
@@ -85,7 +86,12 @@ export function ResultsView({
             }}
           />
 
-          {activeTab === "pages" && <PagesTable pages={pages} />}
+          {activeTab === "pages" && (
+            <div className="space-y-3">
+              <PageChangesPanel auditId={audit.id} projectId={projectId} />
+              <PagesTable pages={pages} />
+            </div>
+          )}
           {activeTab === "performance" && lighthouse.length > 0 && (
             <PerformanceTable
               auditId={audit.id}
