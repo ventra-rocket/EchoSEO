@@ -125,7 +125,11 @@ export function IssueDetailDrawer({
             </div>
           ) : (
             <>
-              <IssueEvidenceTable occurrences={occurrences} />
+              <IssueEvidenceTable
+                auditId={auditId}
+                projectId={projectId}
+                occurrences={occurrences}
+              />
               {pageCount > 1 && (
                 <Pagination
                   page={page}

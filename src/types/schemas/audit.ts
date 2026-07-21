@@ -134,6 +134,16 @@ export const listAuditExportsSchema = z.object({
   auditId: z.string().min(1),
 });
 
+// Read/capture an evidence screenshot for one affected URL. The URL is a bounded
+// string; the authoritative check is server-side — it must already be a crawled
+// HTML page of this audit, so an unknown value simply resolves to "unavailable"
+// (read) or NOT_FOUND (capture) rather than rendering anything.
+export const auditScreenshotRequestSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  url: z.string().min(1).max(2048),
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues", "search"] as const;

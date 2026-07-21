@@ -23,6 +23,7 @@ import {
   auditTargets,
 } from "@/db/audit.schema";
 import { auditExportJobs } from "@/db/audit-export.schema";
+import { auditScreenshots } from "@/db/audit-screenshot.schema";
 
 const MAX_BOUND_PARAMS = 90;
 
@@ -156,7 +157,55 @@ async function findLighthouseKeysForAudits(
   return keys;
 }
 
-/** Delete audits by id; cascade removes pages/issues/edges/lighthouse/snapshot/exports. */
+/**
+ * Screenshot rows whose capture is older than the retention window. `capturedAt`
+ * is written by the service as ISO, so it is compared against an ISO cutoff (the
+ * same format contract as `expiresAt`).
+ */
+async function findExpiredScreenshots(
+  cutoffIso: string,
+  limit: number,
+): Promise<Array<{ id: string; r2Key: string | null }>> {
+  return db
+    .select({ id: auditScreenshots.id, r2Key: auditScreenshots.r2Key })
+    .from(auditScreenshots)
+    .where(lt(auditScreenshots.capturedAt, cutoffIso))
+    .limit(limit);
+}
+
+async function deleteScreenshotsByIds(ids: string[]): Promise<void> {
+  for (const batch of chunk(ids, MAX_BOUND_PARAMS)) {
+    await db
+      .delete(auditScreenshots)
+      .where(inArray(auditScreenshots.id, batch));
+  }
+}
+
+/**
+ * Screenshot object keys belonging to the given audits. These live in R2 too and
+ * the cascade only removes their D1 rows, so they must be purged before the
+ * audit is deleted or they orphan permanently. Failed captures have a null key.
+ */
+async function findScreenshotKeysForAudits(
+  auditIds: string[],
+): Promise<string[]> {
+  const keys: string[] = [];
+  for (const batch of chunk(auditIds, MAX_BOUND_PARAMS)) {
+    const rows = await db
+      .select({ r2Key: auditScreenshots.r2Key })
+      .from(auditScreenshots)
+      .where(
+        and(
+          inArray(auditScreenshots.auditId, batch),
+          isNotNull(auditScreenshots.r2Key),
+        ),
+      );
+    for (const row of rows) if (row.r2Key) keys.push(row.r2Key);
+  }
+  return keys;
+}
+
+/** Delete audits by id; cascade removes pages/issues/edges/lighthouse/snapshot/exports/screenshots. */
 async function deleteAuditsByIds(auditIds: string[]): Promise<void> {
   for (const batch of chunk(auditIds, MAX_BOUND_PARAMS)) {
     await db.delete(audits).where(inArray(audits.id, batch));
@@ -171,5 +220,8 @@ export const AuditRetentionRepository = {
   findAuditIdsPastRetention,
   findExportKeysForAudits,
   findLighthouseKeysForAudits,
+  findExpiredScreenshots,
+  deleteScreenshotsByIds,
+  findScreenshotKeysForAudits,
   deleteAuditsByIds,
 } as const;
