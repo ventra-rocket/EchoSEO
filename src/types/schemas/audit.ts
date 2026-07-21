@@ -109,6 +109,14 @@ export const getAuditSearchSignalsSchema = z.object({
   auditId: z.string().min(1),
 });
 
+// Off-page referring-domain signals for an audit's target. Read, access and the
+// credit-spending refresh all key off the audit alone; the provider target and
+// window are derived server-side, so one shape covers every server function.
+export const auditReferringDomainsRequestSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues", "search"] as const;

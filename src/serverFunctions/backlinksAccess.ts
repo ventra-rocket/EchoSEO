@@ -1,14 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  fetchDataforseoAccountState,
-  hasActiveDataforseoSubscription,
-} from "@/server/lib/dataforseoAccountState";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { env } from "cloudflare:workers";
+import { getAuthMode } from "@/lib/auth-mode";
+import { resolveBacklinksProviderAccess } from "@/server/features/backlinks/services/backlinks-provider-access";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import { backlinksProjectSchema } from "@/types/schemas/backlinks";
-
-const BACKLINKS_NOT_ENABLED_MESSAGE =
-  "Backlinks is not enabled for the connected DataForSEO account yet. Turn it on in DataForSEO, then confirm here.";
 
 type BacklinksAccessStatus = {
   enabled: boolean;
@@ -19,16 +14,8 @@ export const getBacklinksAccessSetupStatus = createServerFn({ method: "GET" })
   .middleware(requireProjectContext)
   .inputValidator((data: unknown) => backlinksProjectSchema.parse(data))
   .handler(async (): Promise<BacklinksAccessStatus> => {
-    if (await isHostedServerAuthMode()) {
-      return { enabled: true, errorMessage: null };
-    }
-
-    const state = await fetchDataforseoAccountState();
-    const enabled = hasActiveDataforseoSubscription(
-      state?.backlinksSubscriptionExpiryDate ?? null,
+    const { enabled, message } = await resolveBacklinksProviderAccess(
+      getAuthMode(env.AUTH_MODE),
     );
-    return {
-      enabled,
-      errorMessage: enabled ? null : BACKLINKS_NOT_ENABLED_MESSAGE,
-    };
+    return { enabled, errorMessage: message };
   });
