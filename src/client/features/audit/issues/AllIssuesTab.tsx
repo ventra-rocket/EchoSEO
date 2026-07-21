@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Info } from "lucide-react";
-import { getAuditIssueSummary } from "@/serverFunctions/audit-issues";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  getAuditIssueComparison,
+  getAuditIssueSummary,
+  getComparableSnapshots,
+} from "@/serverFunctions/audit-issues";
 import { useLocale } from "@/client/i18n/I18nProvider";
 import {
   compareSeverity,
@@ -11,6 +15,8 @@ import {
 } from "@/client/features/audit/issues/issue-filters";
 import { IssueGroupList } from "@/client/features/audit/issues/IssueGroupList";
 import { IssueDetailDrawer } from "@/client/features/audit/issues/IssueDetailDrawer";
+import { ComparisonBar } from "@/client/features/audit/history/ComparisonBar";
+import { BaselineSelector } from "@/client/features/audit/history/BaselineSelector";
 
 /**
  * How many times to re-ask before accepting that materialization is not coming.
@@ -33,13 +39,15 @@ export interface SelectedRule {
 
 /**
  * All Issues: every rule the audit found a problem for, grouped, with the
- * affected URLs one click away.
+ * affected URLs one click away, and — once a second crawl exists — what changed
+ * since a chosen baseline.
  *
  * Three summary states are deliberately distinct. `materializedAt === null`
  * means issue analysis never ran (or died) for this crawl, which must never be
  * drawn as a clean result — the whole reason the timestamp is persisted. An
  * empty rollup list with a timestamp is a genuinely clean crawl. Anything else
- * is the grouped list.
+ * is the grouped list. The comparison bar layers a further distinction on top:
+ * first-crawl vs not-yet-comparable vs a real delta.
  */
 export function AllIssuesTab({
   auditId,
@@ -54,6 +62,10 @@ export function AllIssuesTab({
 }) {
   const { locale } = useLocale();
   const [selectedRule, setSelectedRule] = useState<SelectedRule | null>(null);
+  // undefined = let the server auto-pick the most recent comparable prior crawl.
+  const [baselineAuditId, setBaselineAuditId] = useState<string | undefined>(
+    undefined,
+  );
 
   const summaryQuery = useQuery({
     queryKey: ["audit-issue-summary", projectId, auditId, locale],
@@ -70,6 +82,32 @@ export function AllIssuesTab({
         ? 4000
         : false,
     staleTime: 0,
+  });
+
+  const isMaterialized = summaryQuery.data?.materializedAt != null;
+
+  // Both comparison reads wait for materialization: before it, there is nothing
+  // to diff and the summary is still polling. They degrade independently of the
+  // issue list — a failed comparison just hides the bar, never the issues.
+  const comparisonQuery = useQuery({
+    queryKey: [
+      "audit-issue-comparison",
+      projectId,
+      auditId,
+      baselineAuditId ?? "auto",
+      locale,
+    ],
+    queryFn: () =>
+      getAuditIssueComparison({
+        data: { projectId, auditId, baselineAuditId, locale },
+      }),
+    enabled: isMaterialized,
+  });
+
+  const snapshotsQuery = useQuery({
+    queryKey: ["audit-comparable-snapshots", projectId, auditId],
+    queryFn: () => getComparableSnapshots({ data: { projectId, auditId } }),
+    enabled: isMaterialized,
   });
 
   if (summaryQuery.isLoading) {
@@ -95,9 +133,10 @@ export function AllIssuesTab({
     return <NotMaterializedState stillWaiting={summaryQuery.isFetching} />;
   }
 
-  if (rollups.length === 0) {
-    return <NoIssuesState />;
-  }
+  const comparison = comparisonQuery.data;
+  const snapshots = snapshotsQuery.data ?? [];
+  const deltaByRule =
+    comparison?.state === "comparable" ? comparison.byRule : undefined;
 
   const sortedRollups = rollups.toSorted(
     (a, b) =>
@@ -106,14 +145,38 @@ export function AllIssuesTab({
 
   return (
     <div className="space-y-4">
-      <FirstCrawlNotice />
-
-      <IssueGroupList
-        rollups={sortedRollups}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-        onSelectRule={setSelectedRule}
+      {/* Renders nothing until a valid earlier crawl exists to compare against. */}
+      <BaselineSelector
+        snapshots={snapshots}
+        value={baselineAuditId}
+        onChange={setBaselineAuditId}
       />
+
+      <ComparisonBar
+        comparison={comparison}
+        isLoading={comparisonQuery.isFetching}
+        isError={comparisonQuery.isError}
+      />
+
+      {rollups.length === 0 ? (
+        <div className="alert alert-success">
+          <CheckCircle2 className="size-5" />
+          <div className="space-y-1">
+            <p className="font-medium">No issues found.</p>
+            <p className="text-sm">
+              Every check this audit runs passed on every crawled page.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <IssueGroupList
+          rollups={sortedRollups}
+          deltaByRule={deltaByRule}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          onSelectRule={setSelectedRule}
+        />
+      )}
 
       <p className="text-xs text-base-content/50">{UNCOVERED_GROUPS_NOTE}</p>
 
@@ -159,41 +222,6 @@ function NotMaterializedState({ stillWaiting }: { stillWaiting: boolean }) {
             : "The pages were crawled, but the checks that turn them into a list of issues did not finish. This is not a clean result — run the audit again to get one."}
         </p>
       </div>
-    </div>
-  );
-}
-
-function NoIssuesState() {
-  return (
-    <div className="space-y-4">
-      <FirstCrawlNotice />
-      <div className="alert alert-success">
-        <CheckCircle2 className="size-5" />
-        <div className="space-y-1">
-          <p className="font-medium">No issues found.</p>
-          <p className="text-sm">
-            Every check this audit runs passed on every crawled page.
-          </p>
-        </div>
-      </div>
-      <p className="text-xs text-base-content/50">{UNCOVERED_GROUPS_NOTE}</p>
-    </div>
-  );
-}
-
-/**
- * There is exactly one crawl to report on, so there is nothing to compare
- * against. Saying so is better than showing change counters that would have to
- * be invented; real new/resolved counts arrive with audit history.
- */
-function FirstCrawlNotice() {
-  return (
-    <div className="flex items-start gap-2 rounded-lg border border-base-300 bg-base-200/40 px-3 py-2 text-sm text-base-content/70">
-      <Info className="size-4 shrink-0 mt-0.5" />
-      <span>
-        Findings from this crawl only. Comparing against a previous crawl —
-        what's new, what's fixed — needs a second audit of this site.
-      </span>
     </div>
   );
 }

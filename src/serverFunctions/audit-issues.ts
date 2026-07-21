@@ -14,10 +14,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { AuditIssueService } from "@/server/features/audit/services/AuditIssueService";
 import { AuditExplanationService } from "@/server/features/audit/services/AuditExplanationService";
+import { AuditComparisonService } from "@/server/features/audit/services/AuditComparisonService";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
   explainAuditIssueSchema,
+  getAuditIssueComparisonSchema,
   getAuditIssueSummarySchema,
+  getComparableSnapshotsSchema,
   listAuditIssuesSchema,
 } from "@/types/schemas/audit";
 
@@ -63,5 +66,33 @@ export const listAuditIssues = createServerFn({ method: "POST" })
       urlContains: data.urlContains,
       limit: data.limit,
       offset: data.offset,
+    });
+  });
+
+/** Sealed snapshots of this audit's target, for the comparison baseline picker. */
+export const getComparableSnapshots = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => getComparableSnapshotsSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return AuditComparisonService.listComparableSnapshots({
+      auditId: data.auditId,
+      projectId: context.projectId,
+    });
+  });
+
+/**
+ * Crawl-only issue delta against a baseline snapshot of the same target. Refuses
+ * to compare when either snapshot's issues were never materialized — an
+ * unmaterialized baseline would otherwise read as a wholesale resolution.
+ */
+export const getAuditIssueComparison = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => getAuditIssueComparisonSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return AuditComparisonService.resolveComparison({
+      auditId: data.auditId,
+      projectId: context.projectId,
+      baselineAuditId: data.baselineAuditId,
+      locale: data.locale,
     });
   });

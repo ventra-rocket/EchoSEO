@@ -329,6 +329,29 @@ async function getSnapshotForAudit(auditId: string) {
   return row ?? null;
 }
 
+/**
+ * Every sealed snapshot for a target, newest first — the candidate baselines a
+ * comparison can pick from. Joined to `audits` only for the human-facing crawl
+ * completion date. `issuesMaterializedAt` rides along so the caller can refuse
+ * to compare against a snapshot whose issues were never materialized.
+ */
+async function listSealedSnapshotsForTarget(targetId: string) {
+  return db
+    .select({
+      auditId: auditSnapshots.auditId,
+      projectId: auditSnapshots.projectId,
+      targetId: auditSnapshots.targetId,
+      sealedAt: auditSnapshots.sealedAt,
+      issuesMaterializedAt: auditSnapshots.issuesMaterializedAt,
+      pagesCrawled: auditSnapshots.pagesCrawled,
+      completedAt: audits.completedAt,
+    })
+    .from(auditSnapshots)
+    .innerJoin(audits, eq(auditSnapshots.auditId, audits.id))
+    .where(eq(auditSnapshots.targetId, targetId))
+    .orderBy(desc(auditSnapshots.sealedAt));
+}
+
 async function getAuditForProject(auditId: string, projectId: string) {
   return db.query.audits.findFirst({
     where: and(eq(audits.id, auditId), eq(audits.projectId, projectId)),
@@ -429,6 +452,7 @@ export const AuditRepository = {
   batchWriteLinkEdges,
   sealSnapshot,
   getSnapshotForAudit,
+  listSealedSnapshotsForTarget,
   getLinkEdgesForAudit,
   markSnapshotIssuesMaterialized,
   clearSnapshotIssuesMaterialized,

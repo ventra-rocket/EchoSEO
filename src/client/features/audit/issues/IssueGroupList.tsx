@@ -7,6 +7,7 @@ import {
   type IssueFixText,
 } from "@/client/features/audit/issues/issue-filters";
 import type { SelectedRule } from "@/client/features/audit/issues/AllIssuesTab";
+import type { RuleDelta } from "@/server/features/audit/history/issue-delta";
 
 interface Rollup {
   ruleId: string;
@@ -27,11 +28,18 @@ interface Rollup {
  */
 export function IssueGroupList({
   rollups,
+  deltaByRule,
   filters,
   onFiltersChange,
   onSelectRule,
 }: {
   rollups: Rollup[];
+  /**
+   * Per-rule change counts against a baseline crawl. Present only once a
+   * comparison resolves; absent means "no baseline", which renders no badges
+   * rather than zeros.
+   */
+  deltaByRule?: Record<string, RuleDelta>;
   filters: IssueFilters;
   onFiltersChange: (filters: Partial<IssueFilters>) => void;
   onSelectRule: (rule: SelectedRule) => void;
@@ -108,6 +116,7 @@ export function IssueGroupList({
                   <span className="flex-1 text-sm">
                     {rule.fix?.label ?? rule.ruleId}
                   </span>
+                  <RuleChangeBadges delta={deltaByRule?.[rule.ruleId]} />
                   <span className="text-sm tabular-nums text-base-content/70">
                     {rule.urlCount.toLocaleString()}
                   </span>
@@ -119,6 +128,36 @@ export function IssueGroupList({
         </section>
       ))}
     </div>
+  );
+}
+
+/**
+ * New/resolved counts for one rule against the baseline crawl. Only non-zero
+ * sides are drawn — a rule with no change shows nothing rather than "+0", which
+ * would read as a measurement where there was none.
+ */
+function RuleChangeBadges({ delta }: { delta: RuleDelta | undefined }) {
+  if (!delta || (delta.added === 0 && delta.resolved === 0)) return null;
+
+  return (
+    <span className="flex items-center gap-1">
+      {delta.added > 0 && (
+        <span
+          className="badge badge-xs badge-warning"
+          title="New since baseline"
+        >
+          +{delta.added}
+        </span>
+      )}
+      {delta.resolved > 0 && (
+        <span
+          className="badge badge-xs badge-success"
+          title="Resolved since baseline"
+        >
+          −{delta.resolved}
+        </span>
+      )}
+    </span>
   );
 }
 
