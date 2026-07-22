@@ -1,6 +1,9 @@
 import { getAuth, hasHostedAuthConfig } from "@/lib/auth";
 import { getActiveOrganizationId } from "@/lib/auth-session";
-import { getOrCreateDefaultHostedOrganization } from "@/server/auth/default-hosted-organization";
+import {
+  getOrCreateDefaultHostedOrganization,
+  isHostedOrganizationMember,
+} from "@/server/auth/default-hosted-organization";
 import { AppError } from "@/server/lib/errors";
 import type { EnsuredUserContext } from "./types";
 
@@ -27,7 +30,15 @@ export async function resolveHostedContext(
   const session = await requireHostedSession(headers);
   const activeOrganizationId = getActiveOrganizationId(session);
 
-  if (activeOrganizationId) {
+  // Trust the session's active org only while the user is still a member of it.
+  // The pointer outlives the membership — a removed member's session keeps naming
+  // the org — so without this re-check they would retain read access (and could
+  // download a previously-ready export or view an evidence screenshot) until the
+  // session expired. Falling through resets them to their own workspace.
+  if (
+    activeOrganizationId &&
+    (await isHostedOrganizationMember(session.user.id, activeOrganizationId))
+  ) {
     return {
       userId: session.user.id,
       userEmail: session.user.email,

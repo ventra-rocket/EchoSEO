@@ -12,11 +12,12 @@
  * gitignore has an unanchored `screenshots/` rule for local asset folders that
  * would otherwise stop this source file being committed.
  *
- * Authorization is by the caller's active-organization session. Note this shares
- * the platform's session seam — in hosted mode a removed member's still-live
- * session keeps resolving its old organization until the session ends, so
- * per-member revocation is a session-layer concern handled with the
- * workspace-invite slice, not an immediate effect of this route.
+ * Authorization is by the caller's active-organization session. Hosted membership
+ * revocation is enforced one layer up, at session resolution — a removed member's
+ * session stops resolving the organization on its next request (it re-checks live
+ * membership), so `resolveView` then refuses the capture as belonging to a
+ * different organization. The invite and role-management surface that removes
+ * members is a separate slice.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { resolveUserContextFromHeaders } from "@/middleware/ensure-user/resolve";
