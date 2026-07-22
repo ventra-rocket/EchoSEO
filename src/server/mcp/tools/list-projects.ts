@@ -4,6 +4,7 @@ import {
   requireMcpToolAuthContext,
   type ToolExtra,
 } from "@/server/mcp/context";
+import { requireLiveOrgMembership } from "@/server/mcp/project-auth";
 import { optionalMetaOutputSchema } from "@/server/mcp/output-schemas";
 import { buildDashboardUrl } from "@/server/mcp/urls";
 import { z } from "zod";
@@ -36,6 +37,9 @@ export const listProjectsTool = {
   },
   handler: async (_args: Record<string, never>, extra: ToolExtra) => {
     const { baseUrl, ...auth } = requireMcpToolAuthContext(extra);
+    // Same revocation gate as project-scoped tools: a removed member must not
+    // enumerate the org they were dropped from via a still-live token.
+    await requireLiveOrgMembership(auth);
     const projects = await ProjectService.listProjects(auth.organizationId);
     const lines =
       projects.length === 0
