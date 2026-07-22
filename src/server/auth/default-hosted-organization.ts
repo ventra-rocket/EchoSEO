@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { member, user as authUser } from "@/db/better-auth-schema";
 import { slugify, toHex } from "./org-slug";
@@ -29,6 +29,29 @@ function getDefaultHostedOrganizationSlug(user: HostedUser) {
     user.name?.trim() || user.email.split("@")[0] || "workspace";
   const suffix = toHex(user.id).slice(0, 12);
   return `${slugify(slugSource)}-${suffix}`;
+}
+
+/**
+ * Whether the user currently holds a membership in the given organization.
+ *
+ * The session's `activeOrganizationId` is a stored field that outlives the
+ * `member` row it points at — removing a member deletes the row but not the
+ * session pointer. Callers re-check membership here so a removed member's session
+ * cannot keep resolving (and reading) an organization they no longer belong to.
+ */
+export async function isHostedOrganizationMember(
+  userId: string,
+  organizationId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: member.id })
+    .from(member)
+    .where(
+      and(eq(member.userId, userId), eq(member.organizationId, organizationId)),
+    )
+    .limit(1);
+
+  return row != null;
 }
 
 async function findFirstOrganizationIdForUser(userId: string) {

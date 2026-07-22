@@ -8,11 +8,11 @@
  * and never exposes an R2 URL. An unexpected fault answers a generic 500.
  *
  * Authorization is by the caller's active-organization session: a job whose
- * organization differs is refused. Note this shares the platform's session seam
- * — in hosted mode a removed member's still-live session keeps resolving its old
- * organization until the session ends, so per-member revocation is a
- * session-layer concern to be handled with the workspace-invite slice, not an
- * immediate effect of this route.
+ * organization differs is refused. Hosted membership revocation is enforced one
+ * layer up, at session resolution — a removed member's session stops resolving the
+ * organization on its next request (it re-checks live membership), so this route
+ * then refuses the job as belonging to a different organization. The invite and
+ * role-management surface that removes members is a separate slice.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { resolveUserContextFromHeaders } from "@/middleware/ensure-user/resolve";
