@@ -17,9 +17,9 @@ import {
  * role name and already maps both; this module only makes the names assignable
  * and keeps Better Auth's own org endpoints authorized correctly.
  *
- * Server-only: it configures the auth instance. Client-side permission checks
- * (which would need the same `roles` on `organizationClient`) ride with the
- * member-management UI slice.
+ * Isomorphic: both the server auth instance and the browser `organizationClient`
+ * import these roles so their role sets line up — the client needs them for
+ * `inviteMember`/`updateMemberRole` to accept editor/viewer.
  */
 export const roles = {
   owner: ownerAc,
