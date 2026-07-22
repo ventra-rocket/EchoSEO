@@ -127,6 +127,52 @@ export async function sendHostedVerificationEmail({
   });
 }
 
+/**
+ * Emails a workspace invitation. Unlike verification/reset, this must never throw:
+ * an invitation row is written by Better Auth before this runs, so a missing
+ * template or a Loops outage should not fail the invite — the inviter can resend.
+ * If the optional invite template is not configured, it logs and skips.
+ */
+export async function sendHostedInvitationEmail({
+  email,
+  inviterName,
+  organizationName,
+  acceptUrl,
+}: {
+  email: string;
+  inviterName: string;
+  organizationName: string;
+  acceptUrl: string;
+}) {
+  const apiKey = getOptionalEnv("LOOPS_API_KEY");
+  const transactionalId = getOptionalEnv("LOOPS_TRANSACTIONAL_INVITE_ID");
+
+  if (!apiKey || !transactionalId) {
+    console.warn(
+      "Skipping workspace invitation email: LOOPS_API_KEY or LOOPS_TRANSACTIONAL_INVITE_ID is not set",
+    );
+    return;
+  }
+
+  try {
+    await sendLoopsTransactionalEmail({
+      apiKey,
+      email,
+      transactionalId,
+      dataVariables: {
+        appName: "EchoSEO",
+        inviterName,
+        organizationName,
+        acceptUrl,
+      },
+    });
+  } catch (error) {
+    // A Loops outage must not fail invite-member: the invitation row is already
+    // written and the inviter can resend. Swallow after logging.
+    console.error("Failed to send workspace invitation email", error);
+  }
+}
+
 export async function sendHostedPasswordResetEmail({
   email,
   resetUrl,

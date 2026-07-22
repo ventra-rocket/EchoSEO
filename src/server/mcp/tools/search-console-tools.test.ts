@@ -34,6 +34,12 @@ vi.mock("cloudflare:workers", () => ({ env: {} }));
 vi.mock("@/server/lib/runtime-env", () => ({
   isHostedServerAuthMode: mocks.isHostedServerAuthMode,
 }));
+// These tools run in hosted mode, which now re-checks live org membership in the
+// MCP project-access gate; the caller is a member here (revocation is covered by
+// project-auth's own tests).
+vi.mock("@/server/auth/default-hosted-organization", () => ({
+  isHostedOrganizationMember: () => Promise.resolve(true),
+}));
 vi.mock("@/server/features/gsc/oauth-config", () => ({
   hasSelfHostedGscConfig: mocks.hasSelfHostedGscConfig,
 }));

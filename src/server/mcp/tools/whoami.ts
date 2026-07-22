@@ -5,6 +5,7 @@ import {
 } from "@/shared/billing";
 import { mcpResponse } from "@/server/mcp/formatters";
 import { getAuth, type ToolExtra } from "@/server/mcp/context";
+import { requireLiveOrgMembership } from "@/server/mcp/project-auth";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { optionalMetaOutputSchema } from "@/server/mcp/output-schemas";
 import { z } from "zod";
@@ -42,6 +43,8 @@ export const whoamiTool = {
   },
   handler: async (_args: Record<string, never>, extra: ToolExtra) => {
     const auth = getAuth(extra);
+    // A removed member's still-live token must not read the old org's billing.
+    await requireLiveOrgMembership(auth);
     const isHosted = await isHostedServerAuthMode();
     let creditsRemaining: number | null = null;
     if (isHosted) {
