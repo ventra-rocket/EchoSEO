@@ -33,6 +33,8 @@ export const vi: Messages = {
   "account.members": "Thành viên",
   "account.settings": "Cài đặt",
   "account.signOut": "Đăng xuất",
+  "account.workspaces": "Workspace",
+  "account.workspaceSwitchError": "Không thể chuyển workspace",
 
   "members.title": "Thành viên",
   "members.subtitle":

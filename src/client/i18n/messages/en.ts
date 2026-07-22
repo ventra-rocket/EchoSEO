@@ -33,6 +33,8 @@ export const en = {
   "account.members": "Members",
   "account.settings": "Settings",
   "account.signOut": "Sign out",
+  "account.workspaces": "Workspaces",
+  "account.workspaceSwitchError": "Could not switch workspace",
 
   "members.title": "Members",
   "members.subtitle":

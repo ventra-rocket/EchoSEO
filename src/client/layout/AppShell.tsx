@@ -25,6 +25,7 @@ import { BILLING_ROUTE } from "@/shared/billing";
 import { getSeoApiKeyStatus } from "@/serverFunctions/config";
 import { getProjects } from "@/serverFunctions/projects";
 import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
+import { OrgSwitcherSection } from "@/client/features/organizations/OrgSwitcher";
 import { getLastProjectId } from "@/client/lib/active-project";
 
 const DATAFORSEO_HELP_PATH = "/help/dataforseo-api-key";
@@ -355,6 +356,7 @@ function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
               </span>
             </li>
           ) : null}
+          {isHostedMode ? <OrgSwitcherSection /> : null}
           {mobileOnly ? (
             <li>
               <Link to={SUPPORT_PATH} className="flex items-center gap-2">
