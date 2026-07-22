@@ -2,6 +2,10 @@ import { env } from "cloudflare:workers";
 import { genericOAuth, organization } from "better-auth/plugins";
 import { baseAuthOptions } from "@/lib/auth-options";
 import { roles } from "@/lib/auth-access-control";
+import {
+  assertNotLastOwnerDemotion,
+  assertNotLastOwnerRemoval,
+} from "@/lib/auth-organization-hooks";
 import { sendHostedInvitationEmail } from "@/server/email/loops";
 import { GSC_OAUTH_PROVIDER_ID, GSC_OAUTH_SCOPES } from "@/shared/gsc";
 
@@ -31,6 +35,38 @@ export function createBaseAuthConfig() {
         // editor/viewer are assignable seats; the audit matrix governs what they
         // can do in-product (see auth-access-control.ts).
         roles,
+        // Defense-in-depth: Better Auth already blocks removing/demoting the last
+        // owner at its endpoints; re-assert it here so an upstream regression
+        // can't strand a workspace with no one able to manage it.
+        organizationHooks: {
+          beforeRemoveMember: async ({
+            member,
+            organization: org,
+          }: {
+            member: { role: string };
+            organization: { id: string };
+          }) => {
+            await assertNotLastOwnerRemoval({
+              role: member.role,
+              organizationId: org.id,
+            });
+          },
+          beforeUpdateMemberRole: async ({
+            member,
+            newRole,
+            organization: org,
+          }: {
+            member: { role: string };
+            newRole: string;
+            organization: { id: string };
+          }) => {
+            await assertNotLastOwnerDemotion({
+              role: member.role,
+              newRole,
+              organizationId: org.id,
+            });
+          },
+        },
         // Never throws — an invite must survive a missing template or Loops
         // outage. No-ops in non-hosted mode (no LOOPS_* / BETTER_AUTH_URL).
         sendInvitationEmail: async (data) => {

@@ -10,6 +10,7 @@ import {
   Menu,
   Settings,
   User,
+  Users,
 } from "lucide-react";
 import {
   AppContent,
@@ -367,6 +368,14 @@ function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
               <Link to={BILLING_ROUTE} className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 {intl.formatMessage({ id: "account.billing" })}
+              </Link>
+            </li>
+          ) : null}
+          {isHostedMode ? (
+            <li>
+              <Link to="/members" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                {intl.formatMessage({ id: "account.members" })}
               </Link>
             </li>
           ) : null}

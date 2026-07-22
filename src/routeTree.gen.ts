@@ -23,6 +23,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as ViKiemTraSeoRouteImport } from './routes/vi.kiem-tra-seo'
 import { Route as RIdRouteImport } from './routes/r.$id'
 import { Route as FreeSeoCheckConfirmRouteImport } from './routes/free-seo-check_.confirm'
+import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
 import { Route as AuthenticatedSubscribeRouteImport } from './routes/_authenticated.subscribe'
 import { Route as AuthenticatedOauthConsentRouteImport } from './routes/_authenticated.oauth-consent'
 import { Route as AuthSignUpRouteImport } from './routes/_auth.sign-up'
@@ -30,6 +31,7 @@ import { Route as AuthSignInRouteImport } from './routes/_auth.sign-in'
 import { Route as AppSupportRouteImport } from './routes/_app/support'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppProjectsRouteImport } from './routes/_app/projects'
+import { Route as AppMembersRouteImport } from './routes/_app/members'
 import { Route as AppBillingRouteImport } from './routes/_app/billing'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
 import { Route as Char91DotwellKnownChar93OpenaiAppsChallengeRouteImport } from './routes/[.well-known]/openai-apps-challenge'
@@ -124,6 +126,11 @@ const FreeSeoCheckConfirmRoute = FreeSeoCheckConfirmRouteImport.update({
   path: '/free-seo-check/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcceptInvitationIdRoute = AcceptInvitationIdRouteImport.update({
+  id: '/accept-invitation/$id',
+  path: '/accept-invitation/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSubscribeRoute = AuthenticatedSubscribeRouteImport.update({
   id: '/subscribe',
   path: '/subscribe',
@@ -158,6 +165,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppProjectsRoute = AppProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppMembersRoute = AppMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppBillingRoute = AppBillingRouteImport.update({
@@ -321,6 +333,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
   '/billing': typeof AppBillingRoute
+  '/members': typeof AppMembersRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
   '/support': typeof AppSupportRoute
@@ -328,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof AuthSignUpRoute
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
   '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
@@ -367,6 +381,7 @@ export interface FileRoutesByTo {
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
   '/billing': typeof AppBillingRoute
+  '/members': typeof AppMembersRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
   '/support': typeof AppSupportRoute
@@ -374,6 +389,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof AuthSignUpRoute
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
   '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
@@ -414,6 +430,7 @@ export interface FileRoutesById {
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/_app/ai': typeof AppAiRoute
   '/_app/billing': typeof AppBillingRoute
+  '/_app/members': typeof AppMembersRoute
   '/_app/projects': typeof AppProjectsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/support': typeof AppSupportRoute
@@ -421,6 +438,7 @@ export interface FileRoutesById {
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_authenticated/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/_authenticated/subscribe': typeof AuthenticatedSubscribeRoute
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/free-seo-check_/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
   '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
@@ -463,6 +481,7 @@ export interface FileRouteTypes {
     | '/.well-known/openai-apps-challenge'
     | '/ai'
     | '/billing'
+    | '/members'
     | '/projects'
     | '/settings'
     | '/support'
@@ -470,6 +489,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/oauth-consent'
     | '/subscribe'
+    | '/accept-invitation/$id'
     | '/free-seo-check/confirm'
     | '/r/$id'
     | '/vi/kiem-tra-seo'
@@ -509,6 +529,7 @@ export interface FileRouteTypes {
     | '/.well-known/openai-apps-challenge'
     | '/ai'
     | '/billing'
+    | '/members'
     | '/projects'
     | '/settings'
     | '/support'
@@ -516,6 +537,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/oauth-consent'
     | '/subscribe'
+    | '/accept-invitation/$id'
     | '/free-seo-check/confirm'
     | '/r/$id'
     | '/vi/kiem-tra-seo'
@@ -555,6 +577,7 @@ export interface FileRouteTypes {
     | '/.well-known/openai-apps-challenge'
     | '/_app/ai'
     | '/_app/billing'
+    | '/_app/members'
     | '/_app/projects'
     | '/_app/settings'
     | '/_app/support'
@@ -562,6 +585,7 @@ export interface FileRouteTypes {
     | '/_auth/sign-up'
     | '/_authenticated/oauth-consent'
     | '/_authenticated/subscribe'
+    | '/accept-invitation/$id'
     | '/free-seo-check_/confirm'
     | '/r/$id'
     | '/vi/kiem-tra-seo'
@@ -604,6 +628,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
+  AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
   FreeSeoCheckConfirmRoute: typeof FreeSeoCheckConfirmRoute
   RIdRoute: typeof RIdRoute
   ViKiemTraSeoRoute: typeof ViKiemTraSeoRoute
@@ -714,6 +739,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FreeSeoCheckConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accept-invitation/$id': {
+      id: '/accept-invitation/$id'
+      path: '/accept-invitation/$id'
+      fullPath: '/accept-invitation/$id'
+      preLoaderRoute: typeof AcceptInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/subscribe': {
       id: '/_authenticated/subscribe'
       path: '/subscribe'
@@ -761,6 +793,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof AppProjectsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/members': {
+      id: '/_app/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof AppMembersRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/billing': {
@@ -958,6 +997,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteRouteChildren {
   AppAiRoute: typeof AppAiRoute
   AppBillingRoute: typeof AppBillingRoute
+  AppMembersRoute: typeof AppMembersRoute
   AppProjectsRoute: typeof AppProjectsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSupportRoute: typeof AppSupportRoute
@@ -968,6 +1008,7 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAiRoute: AppAiRoute,
   AppBillingRoute: AppBillingRoute,
+  AppMembersRoute: AppMembersRoute,
   AppProjectsRoute: AppProjectsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSupportRoute: AppSupportRoute,
@@ -1105,6 +1146,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute:
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,
+  AcceptInvitationIdRoute: AcceptInvitationIdRoute,
   FreeSeoCheckConfirmRoute: FreeSeoCheckConfirmRoute,
   RIdRoute: RIdRoute,
   ViKiemTraSeoRoute: ViKiemTraSeoRoute,
