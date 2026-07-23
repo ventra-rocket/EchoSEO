@@ -4,6 +4,7 @@ import { getAuthMode } from "@/lib/auth-mode";
 import { AuditService } from "@/server/features/audit/services/AuditService";
 import { AuditVerificationService } from "@/server/features/audit/services/AuditVerificationService";
 import { IndexNowService } from "@/server/features/audit/services/IndexNowService";
+import { AuditIndexStatusService } from "@/server/features/audit/services/AuditIndexStatusService";
 import { customerHasManagedAccess } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
@@ -13,10 +14,12 @@ import {
   getAuditAccessSchema,
   getAuditHistorySchema,
   getAuditResultsSchema,
+  getAuditIndexStatusSchema,
   getAuditStatusSchema,
   getAuditVerificationOutcomeSchema,
   getCrawlProgressSchema,
   indexNowRequestSchema,
+  inspectAuditUrlSchema,
   startAuditSchema,
 } from "@/types/schemas/audit";
 
@@ -162,6 +165,30 @@ export const submitIndexNow = createServerFn({ method: "POST" })
     return IndexNowService.submit({
       projectId: context.projectId,
       auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
+  });
+
+export const getAuditIndexStatus = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => getAuditIndexStatusSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return AuditIndexStatusService.getContext({
+      projectId: context.projectId,
+      auditId: data.auditId,
+    });
+  });
+
+export const inspectAuditUrl = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => inspectAuditUrlSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return AuditIndexStatusService.inspectUrl({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      url: data.url,
       actorUserId: context.userId,
       organizationId: context.organizationId,
       authMode: getAuthMode(env.AUTH_MODE),

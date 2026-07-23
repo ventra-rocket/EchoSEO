@@ -30,6 +30,20 @@ export const indexNowRequestSchema = z.object({
   auditId: z.string().min(1),
 });
 
+// Google index-status context for an audit (connected property + deep links).
+export const getAuditIndexStatusSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
+// Inspect one of the audit's own URLs against the connected GSC property. The
+// server enforces same-origin + editor-and-up; the URL is a bounded string.
+export const inspectAuditUrlSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  url: z.string().min(1).max(2048),
+});
+
 export const getAuditStatusSchema = z.object({
   projectId: z.string().min(1),
   auditId: z.string().min(1),
