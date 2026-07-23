@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  getAuditAccess,
   getAuditResults,
   getAuditStatus,
   getCrawlProgress,
@@ -13,6 +14,7 @@ import { LaunchView } from "@/client/features/audit/launch/LaunchView";
 import { ResultsView } from "@/client/features/audit/results/ResultsView";
 import { RecrawlVerifyButton } from "@/client/features/audit/verification/RecrawlVerifyButton";
 import { VerificationOutcomeBanner } from "@/client/features/audit/verification/VerificationOutcomeBanner";
+import { IndexNowCard } from "@/client/features/audit/indexnow/IndexNowCard";
 import {
   extractHostname,
   extractPathname,
@@ -116,6 +118,11 @@ function AuditDetail({
     queryKey: ["audit-results", projectId, auditId],
     queryFn: () => getAuditResults({ data: { projectId, auditId } }),
     enabled: isComplete,
+  });
+
+  const accessQuery = useQuery({
+    queryKey: ["audit-access", projectId],
+    queryFn: () => getAuditAccess({ data: { projectId } }),
   });
 
   if (statusQuery.isLoading) {
@@ -228,6 +235,9 @@ function AuditDetail({
               issueFilters={issueFilters}
               onIssueFiltersChange={onIssueFiltersChange}
             />
+            {accessQuery.data?.canManage && (
+              <IndexNowCard projectId={projectId} auditId={auditId} />
+            )}
           </>
         )}
       </div>

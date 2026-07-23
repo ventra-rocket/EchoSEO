@@ -1,5 +1,6 @@
 export * from "./app.schema";
 export * from "./audit.schema";
+export * from "./audit-action.schema";
 export * from "./audit-export.schema";
 export * from "./audit-screenshot.schema";
 export * from "./better-auth-schema";

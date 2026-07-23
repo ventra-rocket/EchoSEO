@@ -3,6 +3,7 @@ import { env, waitUntil } from "cloudflare:workers";
 import { getAuthMode } from "@/lib/auth-mode";
 import { AuditService } from "@/server/features/audit/services/AuditService";
 import { AuditVerificationService } from "@/server/features/audit/services/AuditVerificationService";
+import { IndexNowService } from "@/server/features/audit/services/IndexNowService";
 import { customerHasManagedAccess } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
@@ -15,6 +16,7 @@ import {
   getAuditStatusSchema,
   getAuditVerificationOutcomeSchema,
   getCrawlProgressSchema,
+  indexNowRequestSchema,
   startAuditSchema,
 } from "@/types/schemas/audit";
 
@@ -111,6 +113,58 @@ export const getAuditVerificationOutcome = createServerFn({ method: "POST" })
     return AuditVerificationService.resolveVerificationOutcome({
       auditId: data.auditId,
       projectId: context.projectId,
+    });
+  });
+
+export const getIndexNowStatus = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => indexNowRequestSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return IndexNowService.getStatus({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
+  });
+
+export const setupIndexNow = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => indexNowRequestSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return IndexNowService.setupKey({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
+  });
+
+export const verifyIndexNowKey = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => indexNowRequestSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return IndexNowService.verifyKey({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
+  });
+
+export const submitIndexNow = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => indexNowRequestSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return IndexNowService.submit({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
     });
   });
 
