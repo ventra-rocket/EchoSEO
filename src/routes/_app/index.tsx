@@ -28,7 +28,15 @@ function IndexRedirect() {
   });
 
   useEffect(() => {
-    if (!data || data.length === 0) return;
+    if (!data) return;
+
+    // An org with no projects (e.g. a member who switched to their own empty
+    // workspace) has nothing to open — send them to Projects to create one
+    // instead of leaving them on an endless spinner.
+    if (data.length === 0) {
+      void navigate({ to: "/projects" });
+      return;
+    }
 
     // localStorage is untrusted — only honor the remembered project if it's
     // actually in the org's list; otherwise fall back to the most recent and

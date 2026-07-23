@@ -34,6 +34,9 @@ interface InvitationRow {
   email: string;
   role: string;
   status: string;
+  /** Past its expiry: still listed as pending by Better Auth, but no longer
+   * acceptable, so it is shown as expired (and can be cancelled to clear it). */
+  expired: boolean;
 }
 
 /**
@@ -76,6 +79,9 @@ export function MembersManager() {
           email: invite.email,
           role: invite.role,
           status: invite.status,
+          expired: invite.expiresAt
+            ? new Date(invite.expiresAt).getTime() < Date.now()
+            : false,
         }));
     },
   });
@@ -215,8 +221,14 @@ export function MembersManager() {
                 <span className="min-w-0 flex-1 truncate">
                   {invitation.email}
                 </span>
-                <span className="text-base-content/50">
-                  {roleLabel(intl, invitation.role)}
+                <span
+                  className={
+                    invitation.expired ? "text-warning" : "text-base-content/50"
+                  }
+                >
+                  {invitation.expired
+                    ? intl.formatMessage({ id: "members.invites.expired" })
+                    : roleLabel(intl, invitation.role)}
                 </span>
                 <button
                   type="button"
