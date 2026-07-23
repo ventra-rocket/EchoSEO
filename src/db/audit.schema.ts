@@ -179,6 +179,10 @@ export const auditTargets = sqliteTable(
     maxPagesLimit: integer("max_pages_limit").notNull().default(10_000),
     // Completed-snapshot retention window (plan default: 90 days).
     retentionDays: integer("retention_days").notNull().default(90),
+    // The target's IndexNow key, generated when an owner sets IndexNow up; null
+    // until then. Host-submission proof only (placed publicly at
+    // https://host/<key>.txt) — never Google-facing authority, and not a secret.
+    indexnowKey: text("indexnow_key"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(current_timestamp)`),

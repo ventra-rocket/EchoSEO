@@ -23,6 +23,13 @@ export const getAuditVerificationOutcomeSchema = z.object({
   auditId: z.string().min(1),
 });
 
+// IndexNow status/setup/verify/submit all key off one audit (which resolves the
+// target); owner/admin authorization is enforced server-side.
+export const indexNowRequestSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
 export const getAuditStatusSchema = z.object({
   projectId: z.string().min(1),
   auditId: z.string().min(1),

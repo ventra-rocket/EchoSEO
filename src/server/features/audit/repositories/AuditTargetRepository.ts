@@ -1,7 +1,7 @@
 /**
  * Data access for professional audit targets (project/domain-bound audit scope).
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { auditTargets } from "@/db/schema";
 
@@ -52,7 +52,24 @@ async function getOrCreateTarget(input: {
   return row;
 }
 
+/**
+ * Store the target's generated IndexNow key (host-submission proof), but only
+ * while it is still unset. The `IS NULL` guard makes two concurrent set-ups
+ * converge on the first key written instead of the second clobbering it (which
+ * would leave a caller believing a key that is no longer stored). Callers re-read
+ * the target to learn the key that actually won.
+ */
+async function setIndexNowKey(targetId: string, key: string): Promise<void> {
+  await db
+    .update(auditTargets)
+    .set({ indexnowKey: key, updatedAt: new Date().toISOString() })
+    .where(
+      and(eq(auditTargets.id, targetId), isNull(auditTargets.indexnowKey)),
+    );
+}
+
 export const AuditTargetRepository = {
   getByProjectAndOrigin,
   getOrCreateTarget,
+  setIndexNowKey,
 } as const;

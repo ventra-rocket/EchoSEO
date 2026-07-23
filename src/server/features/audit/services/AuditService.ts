@@ -5,6 +5,7 @@ import { AuditRepository } from "@/server/features/audit/repositories/AuditRepos
 import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
 import {
   canInvestigate,
+  canManageTarget,
   resolveWorkspaceRole,
 } from "@/server/features/audit/authz/workspace-role";
 import {
@@ -189,6 +190,8 @@ async function getAccess(input: {
 
   return {
     canLaunch: canInvestigate(role),
+    // Owner/admin gate for target-management actions (e.g. IndexNow submission).
+    canManage: canManageTarget(role),
     verifiedSiteUrl: gscConnection?.siteUrl ?? null,
     // Non-null only where an unverified domain actually blocks a large crawl;
     // self-host stays permissive at any size.
