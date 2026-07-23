@@ -3,24 +3,41 @@
  * the sole owner must be blocked, while the same action on a non-last owner (or a
  * non-owner) must be allowed.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createFreeCheckTestDb,
   type FreeCheckTestDb,
 } from "@/server/services/seo-check/__tests__/free-check-test-db";
 import { member, organization, user } from "@/db/better-auth-schema";
 
-const { testDb } = vi.hoisted(() => ({
+const { testDb, checkInviteThrottleMock } = vi.hoisted(() => ({
   testDb: { current: null } as { current: unknown },
+  checkInviteThrottleMock:
+    vi.fn<
+      (input: {
+        organizationId: string;
+        emailNormalized: string;
+      }) => Promise<{ allowed: boolean }>
+    >(),
 }));
 vi.mock("@/db", () => ({
   get db() {
     return testDb.current;
   },
 }));
+// invite-throttle statically imports `cloudflare:workers` (the DO binding); mock
+// it so loading the module under test resolves in the node test env, and so the
+// throttle decision is driven directly. runtime-env is left real and steered via
+// process.env.AUTH_MODE below.
+vi.mock("@/server/auth/invite-throttle", () => ({
+  checkInviteThrottle: checkInviteThrottleMock,
+}));
 
-const { assertNotLastOwnerRemoval, assertNotLastOwnerDemotion } =
-  await import("./auth-organization-hooks");
+const {
+  assertNotLastOwnerRemoval,
+  assertNotLastOwnerDemotion,
+  assertInviteWithinThrottle,
+} = await import("./auth-organization-hooks");
 
 const ORG = "org1";
 let harness: FreeCheckTestDb;
@@ -116,5 +133,40 @@ describe("last-owner guards", () => {
         }),
       ).resolves.toBeUndefined();
     });
+  });
+});
+
+describe("assertInviteWithinThrottle", () => {
+  const INVITE = { organizationId: "org1", email: "  New.Person@Example.com " };
+
+  beforeEach(() => {
+    checkInviteThrottleMock.mockResolvedValue({ allowed: true });
+  });
+
+  afterEach(() => {
+    delete process.env.AUTH_MODE;
+  });
+
+  it("throws TOO_MANY_REQUESTS when the throttle blocks (hosted)", async () => {
+    process.env.AUTH_MODE = "hosted";
+    checkInviteThrottleMock.mockResolvedValue({ allowed: false });
+    await expect(assertInviteWithinThrottle(INVITE)).rejects.toThrow(
+      /too many invitations/i,
+    );
+  });
+
+  it("resolves under the cap and passes a normalized email (hosted)", async () => {
+    process.env.AUTH_MODE = "hosted";
+    await expect(assertInviteWithinThrottle(INVITE)).resolves.toBeUndefined();
+    expect(checkInviteThrottleMock).toHaveBeenCalledWith({
+      organizationId: "org1",
+      emailNormalized: "new.person@example.com",
+    });
+  });
+
+  it("skips the throttle entirely outside hosted mode", async () => {
+    process.env.AUTH_MODE = "cloudflare_access";
+    await expect(assertInviteWithinThrottle(INVITE)).resolves.toBeUndefined();
+    expect(checkInviteThrottleMock).not.toHaveBeenCalled();
   });
 });
