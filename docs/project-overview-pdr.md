@@ -1,6 +1,6 @@
 # EchoSEO — Product Definition & Requirements (PDR)
 
-**Version:** 0.1 (foundation) · **Date:** 2026-07-03 · **Status:** Pre-fork
+**Version:** 0.3 · **Date:** 2026-07-23 · **Status:** Free SEO Checker + Professional Site Audit built, verified and deployed in production (self-host / Cloudflare Access mode). The hosted multi-tenant + billing layer is built but not yet launched. Inherited keyword/rank/backlink/competitor surfaces run on the open-seo base with a BYO DataForSEO key. The content-optimization engine and the autonomous read-write loop (§3) are the V1 goal — not yet built.
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` (+ 4 source reports)
 
 ---
@@ -44,7 +44,16 @@ Primary buyer (decided): **prosumer, open-core**. Agencies are a V1 expansion, n
 
 ### In scope (phased — see roadmap)
 
-Keyword research + clustering, rank tracking (global → local + SERP features), backlinks, technical/site audit (basic → scheduled/deep), competitor/domain analysis, on-page content optimization, GSC → GA4 + Bing integrations, MCP + agent skills (assisted → autonomous read-write), AI-search/GEO visibility, white-label reporting, bilingual VN/EN, programmatic SEO (Later).
+Keyword research + clustering, rank tracking (global → local + SERP features), backlinks, technical/site audit (free bounded check → private professional audit → scheduled/deep), competitor/domain analysis, on-page content optimization, GSC → GA4 + Bing integrations, MCP + agent skills (assisted → autonomous read-write), AI-search/GEO visibility, white-label reporting, bilingual VN/EN, programmatic SEO (Later).
+
+### Audit product contracts (locked 2026-07-13)
+
+- **Free acquisition checker:** public Lite and email-gated bounded Deep check. Its `/r/{id}` report is an expiring/noindex bearer link, read-rate-limited and free of email/other PII. It is not a company audit workspace.
+- **Professional Site Audit:** authenticated, private-by-default project/domain audit. It stores crawl snapshots, rule occurrences, affected-URL evidence and artifact metadata; it provides All Issues, AI-guided step-by-step fixes, history, background CSV/JSON/ZIP export, selective screenshots and workspace/invite review.
+- **Data provenance:** crawler findings cover crawl/on-page/link/sitemap facts. Traffic, Top-10 and referring-domain deltas require persisted GSC or explicitly enabled BYO DataForSEO snapshots and must state their source.
+- **Indexation actions:** only a verified target may submit IndexNow URLs. For ordinary Google pages EchoSEO directs authorized users to Search Console URL Inspection/manual recrawl; it does not promise a general Google indexing API.
+- **Authority and roles:** a Google Search Console verified property (or project-owned DNS proof) is required for privileged Google-facing actions; an IndexNow key proves only that host. Workspace `owner/admin` manage targets, verification, invitations and actions; `editor` can investigate/export; `viewer` is read-only. The Cloudflare Access, hosted and local-noauth identity paths must all resolve to the same project-membership contract before private sharing ships.
+- **Artifact defaults:** professional exports expire after 7 days, screenshots and nonessential browser artifacts after 30 days, and completed audit snapshots after 90 days by default. Self-host deployments may configure these values; purge removes both metadata and the R2 object.
 
 ### Out of scope (YAGNI)
 
@@ -82,6 +91,7 @@ Owning a backlink crawl/index, proxy-fleet SERP scraping, PPC/paid-media managem
 - **First-party fusion:** extend GSC to GA4 + Bing Webmaster (reuse GSC OAuth pattern).
 - **Content-optimization engine** (V1): briefs, entity/NLP, content score, AI writing, internal linking.
 - **Read-write agent loop** (V1): autonomous keyword→brief→draft→fix→monitor with guardrails + eval harness.
+- **Professional Site Audit** (post-Free-Checker): authenticated domain targets, immutable crawl snapshots, rule occurrence/URL evidence records, asynchronous R2 export/artifacts and private review authorization. Screenshot capture is on-demand or high-severity only.
 - **Managed cloud + PAYG metering** (V1): keep/extend Autumn-style metering behind hosted flag.
 - **Rebrand:** OpenSEO → EchoSEO across UI, MCP tool descriptions, skills, wrangler names, `web/` site.
 
@@ -108,14 +118,15 @@ Prioritized (★ = stack-native): scheduled SERP rank loop (SerpBear), GSC-actua
 
 **North star:** weekly active self-hosted instances running ≥1 agent workflow.
 
-| Stage           | Metric                                             | Target (directional) |
-| --------------- | -------------------------------------------------- | -------------------- |
-| Adoption        | GitHub stars; self-host deploys                    | Track from launch    |
-| Activation      | % installs that connect GSC + run first agent task | ≥ 40%                |
-| Engagement      | Weekly active instances w/ ≥1 scheduled job        | Grow MoM             |
-| Differentiation | % using read-write agent loop (V1)                 | Track                |
-| Revenue (V1)    | Managed-cloud conversions; PAYG credit revenue     | Post-V1              |
-| Retention       | Instances active at day 30                         | ≥ 30%                |
+| Stage           | Metric                                                                         | Target (directional) |
+| --------------- | ------------------------------------------------------------------------------ | -------------------- |
+| Adoption        | GitHub stars; self-host deploys                                                | Track from launch    |
+| Activation      | % installs that connect GSC + run first agent task                             | ≥ 40%                |
+| Engagement      | Weekly active instances w/ ≥1 scheduled job                                    | Grow MoM             |
+| Audit quality   | Completed audits; high/critical issues resolved after re-crawl; export success | Track from launch    |
+| Differentiation | % using read-write agent loop (V1)                                             | Track                |
+| Revenue (V1)    | Managed-cloud conversions; PAYG credit revenue                                 | Post-V1              |
+| Retention       | Instances active at day 30                                                     | ≥ 30%                |
 
 ## 11. Risks & Mitigations
 
@@ -130,6 +141,9 @@ Prioritized (★ = stack-native): scheduled SERP rank loop (SerpBear), GSC-actua
 | **Balanced posture = more MVP surface**                  | Reuse OpenSEO's shipped dashboard; agent panel is incremental                             |
 | **GEO/AI-visibility immaturity**                         | Build flexible; expect churn in LLM-citation surfaces                                     |
 | **Upstream drift**                                       | Track upstream remote; scheduled merge cadence                                            |
+| **Public-link / private-audit boundary**                 | Separate routes, tables and authorization; never reuse free `/r/{id}` for workspace data  |
+| **Screenshot/export cost and retention**                 | On-demand screenshot policy; Workflow/R2 caps, expiry and audit-scoped access             |
+| **History/data freshness**                               | Source-label metrics; require comparable snapshots; show unavailable rather than zero     |
 
 ## 12. Open Items to Verify
 
@@ -138,3 +152,5 @@ Prioritized (★ = stack-native): scheduled SERP rank loop (SerpBear), GSC-actua
 - First-party API volume ceilings at managed scale (GSC ~50k rows/day, GA4 200k tokens/day per property).
 - Read-write publishing surface scope (WordPress/Webflow/CMS APIs) for the V1 agent loop.
 - Team Cloudflare fluency (Workers/D1/DO/Workflows) — training need?
+- Professional-audit domain ownership UX and the threshold that upgrades an unverified crawl to verified-only.
+- Professional-audit export/artifact retention and screenshot compute/storage caps.
