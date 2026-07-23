@@ -36,6 +36,8 @@ async function startAudit(input: {
   startUrl: string;
   maxPages?: number;
   lighthouseStrategy?: LighthouseStrategy;
+  // Set when this launch is a re-crawl to verify fixes against an earlier crawl.
+  baselineAuditId?: string;
 }) {
   const role = await resolveWorkspaceRole({
     userId: input.actorUserId,
@@ -84,6 +86,28 @@ async function startAudit(input: {
     );
   }
 
+  // A verification re-crawl must name an earlier COMPLETED crawl of THIS target
+  // in THIS project. Reject anything else rather than silently drop it, so the
+  // outcome the user later reads can never be anchored to a foreign baseline.
+  let baselineAuditId: string | null = null;
+  if (input.baselineAuditId) {
+    const baseline = await AuditRepository.getAuditForProject(
+      input.baselineAuditId,
+      input.projectId,
+    );
+    if (
+      !baseline ||
+      baseline.status !== "completed" ||
+      getOrigin(baseline.startUrl) !== origin
+    ) {
+      throw new AppError(
+        "NOT_FOUND",
+        "Baseline must be a completed audit of this target.",
+      );
+    }
+    baselineAuditId = baseline.id;
+  }
+
   const reservation = getEstimatedAuditCapacity({
     maxPages,
     lighthouseStrategy,
@@ -109,6 +133,7 @@ async function startAudit(input: {
     config,
     pagesTotal: reservation.pagesTotal,
     lighthouseTotal: reservation.lighthouseTotal,
+    baselineAuditId,
   });
 
   try {
@@ -211,6 +236,9 @@ async function getResults(auditId: string, projectId: string) {
       startedAt: audit.startedAt,
       completedAt: audit.completedAt,
       config: parsedConfig,
+      // Present only on a re-crawl launched to verify fixes; drives the
+      // verification banner and lets a re-crawl name its own baseline.
+      baselineAuditId: audit.baselineAuditId,
     },
     pages,
     lighthouse,

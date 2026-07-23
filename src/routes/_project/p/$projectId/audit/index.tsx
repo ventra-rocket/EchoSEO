@@ -11,6 +11,8 @@ import { auditSearchSchema, type AuditTab } from "@/types/schemas/audit";
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import { LaunchView } from "@/client/features/audit/launch/LaunchView";
 import { ResultsView } from "@/client/features/audit/results/ResultsView";
+import { RecrawlVerifyButton } from "@/client/features/audit/verification/RecrawlVerifyButton";
+import { VerificationOutcomeBanner } from "@/client/features/audit/verification/VerificationOutcomeBanner";
 import {
   extractHostname,
   extractPathname,
@@ -73,6 +75,7 @@ function SiteAuditPage() {
       }
       onBack={() => setSearchParams({ auditId: undefined })}
       onTabChange={(nextTab) => setSearchParams({ tab: nextTab })}
+      onOpenAudit={(id) => setSearchParams({ auditId: id, tab: undefined })}
     />
   );
 }
@@ -85,6 +88,7 @@ function AuditDetail({
   onIssueFiltersChange,
   onBack,
   onTabChange,
+  onOpenAudit,
 }: {
   projectId: string;
   auditId: string;
@@ -93,6 +97,7 @@ function AuditDetail({
   onIssueFiltersChange: (filters: Partial<IssueFilters>) => void;
   onBack: () => void;
   onTabChange: (tab: AuditTab) => void;
+  onOpenAudit: (auditId: string) => void;
 }) {
   const statusQuery = useQuery({
     queryKey: ["audit-status", projectId, auditId],
@@ -148,11 +153,22 @@ function AuditDetail({
           <button className="btn btn-ghost btn-sm px-0" onClick={onBack}>
             &larr; All audits
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h1 className="text-2xl font-semibold">Site Audit</h1>
-            {status?.status !== "running" && status && (
-              <StatusBadge status={status.status} />
-            )}
+            <div className="flex items-center gap-2">
+              {resultsQuery.data?.audit && (
+                <RecrawlVerifyButton
+                  projectId={projectId}
+                  baselineAuditId={resultsQuery.data.audit.id}
+                  startUrl={resultsQuery.data.audit.startUrl}
+                  config={resultsQuery.data.audit.config}
+                  onStarted={onOpenAudit}
+                />
+              )}
+              {status?.status !== "running" && status && (
+                <StatusBadge status={status.status} />
+              )}
+            </div>
           </div>
           {status && (
             <p className="text-sm text-base-content/70">
@@ -197,14 +213,22 @@ function AuditDetail({
         )}
 
         {isComplete && resultsQuery.data && (
-          <ResultsView
-            projectId={projectId}
-            data={resultsQuery.data}
-            tab={tab}
-            onTabChange={onTabChange}
-            issueFilters={issueFilters}
-            onIssueFiltersChange={onIssueFiltersChange}
-          />
+          <>
+            {resultsQuery.data.audit.baselineAuditId && (
+              <VerificationOutcomeBanner
+                projectId={projectId}
+                auditId={auditId}
+              />
+            )}
+            <ResultsView
+              projectId={projectId}
+              data={resultsQuery.data}
+              tab={tab}
+              onTabChange={onTabChange}
+              issueFilters={issueFilters}
+              onIssueFiltersChange={onIssueFiltersChange}
+            />
+          </>
         )}
       </div>
     </div>

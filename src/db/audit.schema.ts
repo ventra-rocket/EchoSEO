@@ -30,6 +30,12 @@ export const audits = sqliteTable(
       .notNull()
       .default("running"),
     workflowInstanceId: text("workflow_instance_id"),
+    // Set when this crawl was launched to verify fixes against an earlier
+    // completed crawl of the same target; null for an ordinary crawl. A plain
+    // pointer, not a foreign key: if the baseline is later deleted the
+    // verification resolver simply reports no baseline, so a dangling id is
+    // harmless and needs no cascade.
+    baselineAuditId: text("baseline_audit_id"),
     // JSON config: { maxPages, lighthouseStrategy }
     config: text("config").notNull().default("{}"),
     // Progress & summary
