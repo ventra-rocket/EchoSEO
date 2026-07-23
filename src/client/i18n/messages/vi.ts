@@ -70,6 +70,7 @@ export const vi: Messages = {
   "members.invites.empty": "Không có lời mời đang chờ.",
   "members.invites.error": "Không thể tải danh sách lời mời.",
   "members.invites.cancel": "Huỷ",
+  "members.invites.expired": "Hết hạn",
 
   "invite.title": "Lời mời vào workspace",
   "invite.body": "Bạn được mời tham gia {organization}.",

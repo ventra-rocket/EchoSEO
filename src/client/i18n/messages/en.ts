@@ -69,6 +69,7 @@ export const en = {
   "members.invites.empty": "No pending invitations.",
   "members.invites.error": "We couldn't load the invitations.",
   "members.invites.cancel": "Cancel",
+  "members.invites.expired": "Expired",
 
   "invite.title": "Workspace invitation",
   "invite.body": "You've been invited to join {organization}.",

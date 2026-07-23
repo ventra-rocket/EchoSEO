@@ -8,9 +8,11 @@ import {
 // the report, so they must never end up in a search index. The `/r/{id}`
 // response also carries `X-Robots-Tag: noindex` (server.ts) — this file is the
 // crawler-facing half of the same rule, and the only one a crawler sees before
-// requesting the page.
+// requesting the page. `/accept-invitation/{id}` is likewise a capability link
+// (its id gates joining a workspace) and has no reason to be crawled or indexed.
 const ROBOTS_TXT = `User-agent: *
 Disallow: ${FREE_SEO_CHECK_REPORT_ROUTE_PREFIX}
+Disallow: /accept-invitation
 Sitemap: ${publicUrl("/sitemap.xml")}
 `;
 
