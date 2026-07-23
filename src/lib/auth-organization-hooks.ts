@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 import { db } from "@/db";
 import { member } from "@/db/better-auth-schema";
+import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { checkInviteThrottle } from "@/server/auth/invite-throttle";
 
 /**
  * Defense-in-depth guards for Better Auth's organization mutations.
@@ -49,6 +51,35 @@ export async function assertNotLastOwnerDemotion(input: {
   if ((await ownerCount(input.organizationId)) <= 1) {
     throw new APIError("BAD_REQUEST", {
       message: "You can't change the role of the last owner of a workspace.",
+    });
+  }
+}
+
+/**
+ * Rate-limit invite creation so cancel+reinvite can't be used to email arbitrary
+ * addresses without bound (`invitationLimit` only caps *pending* invites). Runs
+ * in the `beforeCreateInvitation` hook, so a block aborts before the invitation
+ * row is created and before its email is sent.
+ *
+ * Hosted-only: invites never happen in the delegated/self-host modes, so the
+ * throttle is skipped there and those deployments are unchanged. Throwing the
+ * APIError here (not in a serverFn) means its message reaches the client toast.
+ */
+export async function assertInviteWithinThrottle(input: {
+  organizationId: string;
+  email: string;
+}): Promise<void> {
+  if (!(await isHostedServerAuthMode())) return;
+
+  const decision = await checkInviteThrottle({
+    organizationId: input.organizationId,
+    // Normalize so case/whitespace variants of one address share a counter.
+    emailNormalized: input.email.trim().toLowerCase(),
+  });
+  if (!decision.allowed) {
+    throw new APIError("TOO_MANY_REQUESTS", {
+      message:
+        "Too many invitations from this workspace right now. Please try again later.",
     });
   }
 }

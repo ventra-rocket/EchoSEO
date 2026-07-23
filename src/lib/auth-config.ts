@@ -3,6 +3,7 @@ import { genericOAuth, organization } from "better-auth/plugins";
 import { baseAuthOptions } from "@/lib/auth-options";
 import { roles } from "@/lib/auth-access-control";
 import {
+  assertInviteWithinThrottle,
   assertNotLastOwnerDemotion,
   assertNotLastOwnerRemoval,
 } from "@/lib/auth-organization-hooks";
@@ -39,6 +40,20 @@ export function createBaseAuthConfig() {
         // owner at its endpoints; re-assert it here so an upstream regression
         // can't strand a workspace with no one able to manage it.
         organizationHooks: {
+          // Rate-limit invite creation (hosted only). Blocks before the invite
+          // row + email, so cancel+reinvite can't spam arbitrary addresses.
+          beforeCreateInvitation: async ({
+            invitation,
+            organization: org,
+          }: {
+            invitation: { email: string };
+            organization: { id: string };
+          }) => {
+            await assertInviteWithinThrottle({
+              organizationId: org.id,
+              email: invitation.email,
+            });
+          },
           beforeRemoveMember: async ({
             member,
             organization: org,
