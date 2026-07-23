@@ -6,6 +6,7 @@ import {
   assertInviteWithinThrottle,
   assertNotLastOwnerDemotion,
   assertNotLastOwnerRemoval,
+  repairOrphanedOwnership,
 } from "@/lib/auth-organization-hooks";
 import { sendHostedInvitationEmail } from "@/server/email/loops";
 import { GSC_OAUTH_PROVIDER_ID, GSC_OAUTH_SCOPES } from "@/shared/gsc";
@@ -80,6 +81,33 @@ export function createBaseAuthConfig() {
               newRole,
               organizationId: org.id,
             });
+          },
+          // The before-guards can't be atomic against Better Auth's write, so a
+          // concurrent double removal/demotion could still strand an org with no
+          // owner. These repair that rare slip after the fact. Best-effort: the
+          // mutation already committed, so a repair failure must not fail the
+          // response — the next mutation on this org re-runs the repair.
+          afterRemoveMember: async ({
+            organization: org,
+          }: {
+            organization: { id: string };
+          }) => {
+            try {
+              await repairOrphanedOwnership(org.id);
+            } catch (error) {
+              console.error("[org-integrity] repair failed", error);
+            }
+          },
+          afterUpdateMemberRole: async ({
+            organization: org,
+          }: {
+            organization: { id: string };
+          }) => {
+            try {
+              await repairOrphanedOwnership(org.id);
+            } catch (error) {
+              console.error("[org-integrity] repair failed", error);
+            }
           },
         },
         // Never throws — an invite must survive a missing template or Loops

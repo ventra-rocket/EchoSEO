@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 import { db } from "@/db";
 import { member } from "@/db/better-auth-schema";
@@ -65,6 +65,50 @@ export async function assertNotLastOwnerDemotion(input: {
  * throttle is skipped there and those deployments are unchanged. Throwing the
  * APIError here (not in a serverFn) means its message reaches the client toast.
  */
+/**
+ * Repair an organization left with members but no owner.
+ *
+ * The last-owner before-guards are read-then-act, so two concurrent owner
+ * removals/demotions on one org can both pass the check and strand it with
+ * members but no owner (Better Auth's own endpoint guard has the same shape;
+ * neither can be made atomic against the other's write in D1 — no `SELECT FOR
+ * UPDATE`, and the write is Better Auth's, not ours). Run from `afterRemoveMember`
+ * / `afterUpdateMemberRole`, this repairs that rare slip by promoting the
+ * earliest-joined remaining member back to owner. A fully-emptied org has nothing
+ * to strand, so it is left alone.
+ *
+ * Scope: only removeMember / updateMemberRole fire organization hooks in Better
+ * Auth v1.5.5. The `organization/leave` endpoint fires none, so a concurrent
+ * double-leave of the last two owners is out of this repair's reach — bounded
+ * only by Better Auth's built-in single-owner-leave block (that endpoint is not
+ * used by the app UI).
+ *
+ * Writes the role directly (not through Better Auth's updateMemberRole) so it
+ * bypasses the before-guard and cannot recurse.
+ */
+export async function repairOrphanedOwnership(
+  organizationId: string,
+): Promise<void> {
+  const rows = await db
+    .select({ id: member.id, role: member.role })
+    .from(member)
+    .where(eq(member.organizationId, organizationId))
+    .orderBy(asc(member.createdAt));
+
+  if (rows.some((row) => hasOwnerRole(row.role))) return;
+
+  const [earliest] = rows;
+  if (!earliest) return; // empty org — nothing to strand
+
+  await db
+    .update(member)
+    .set({ role: "owner" })
+    .where(eq(member.id, earliest.id));
+  console.error(
+    `[org-integrity] owner_repaired org=${organizationId} member=${earliest.id}`,
+  );
+}
+
 export async function assertInviteWithinThrottle(input: {
   organizationId: string;
   email: string;
