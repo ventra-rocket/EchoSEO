@@ -44,6 +44,7 @@ async function createAudit(data: {
   config: AuditConfig;
   pagesTotal: number;
   lighthouseTotal: number;
+  baselineAuditId?: string | null;
 }) {
   await db.insert(audits).values({
     id: data.id,
@@ -51,6 +52,7 @@ async function createAudit(data: {
     startedByUserId: data.startedByUserId,
     startUrl: data.startUrl,
     workflowInstanceId: data.workflowInstanceId,
+    baselineAuditId: data.baselineAuditId ?? null,
     config: JSON.stringify(data.config),
     status: "running",
     pagesTotal: data.pagesTotal,

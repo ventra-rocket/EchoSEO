@@ -10,6 +10,17 @@ export const startAuditSchema = z.object({
     .enum(["auto", "all", "manual", "none"])
     .optional()
     .default("auto"),
+  // Set when this launch is a re-crawl to verify fixes against an earlier
+  // completed crawl of the same target. The server validates it belongs to this
+  // project + target before trusting it.
+  baselineAuditId: z.string().min(1).optional(),
+});
+
+// The verification outcome of a re-crawl compared to the baseline it was
+// launched against. Read-only; no locale (the payload is counts + URLs).
+export const getAuditVerificationOutcomeSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
 });
 
 export const getAuditStatusSchema = z.object({

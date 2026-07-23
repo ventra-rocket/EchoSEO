@@ -1,0 +1,1 @@
+ALTER TABLE `audits` ADD `baseline_audit_id` text;

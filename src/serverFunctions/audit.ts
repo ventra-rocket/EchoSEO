@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { env, waitUntil } from "cloudflare:workers";
 import { getAuthMode } from "@/lib/auth-mode";
 import { AuditService } from "@/server/features/audit/services/AuditService";
+import { AuditVerificationService } from "@/server/features/audit/services/AuditVerificationService";
 import { customerHasManagedAccess } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
@@ -12,6 +13,7 @@ import {
   getAuditHistorySchema,
   getAuditResultsSchema,
   getAuditStatusSchema,
+  getAuditVerificationOutcomeSchema,
   getCrawlProgressSchema,
   startAuditSchema,
 } from "@/types/schemas/audit";
@@ -41,6 +43,7 @@ export const startAudit = createServerFn({ method: "POST" })
       startUrl: data.startUrl,
       maxPages: data.maxPages,
       lighthouseStrategy: data.lighthouseStrategy,
+      baselineAuditId: data.baselineAuditId,
     });
 
     waitUntil(
@@ -97,6 +100,18 @@ export const getCrawlProgress = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => getCrawlProgressSchema.parse(data))
   .handler(async ({ data, context }) => {
     return AuditService.getCrawlProgress(data.auditId, context.projectId);
+  });
+
+export const getAuditVerificationOutcome = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) =>
+    getAuditVerificationOutcomeSchema.parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    return AuditVerificationService.resolveVerificationOutcome({
+      auditId: data.auditId,
+      projectId: context.projectId,
+    });
   });
 
 export const deleteAudit = createServerFn({ method: "POST" })
