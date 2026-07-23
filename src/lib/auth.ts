@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { z } from "zod";
 import { isHostedAuthMode } from "@/lib/auth-mode";
 import { createBaseAuthConfig } from "@/lib/auth-config";
-import { getOrCreateDefaultHostedOrganization } from "@/server/auth/default-hosted-organization";
+import { resolveInitialActiveOrganization } from "@/server/auth/default-hosted-organization";
 import {
   sendHostedPasswordResetEmail,
   sendHostedVerificationEmail,
@@ -79,9 +79,10 @@ function createAuth() {
       session: {
         create: {
           before: async (session) => {
-            // Inject Better Auth's createOrganization here so the helper can
-            // stay reusable without importing auth.ts and creating a cycle.
-            const organizationId = await getOrCreateDefaultHostedOrganization(
+            // Restore the workspace the user last worked in (or their default);
+            // inject Better Auth's createOrganization so the helper can stay
+            // reusable without importing auth.ts and creating a cycle.
+            const organizationId = await resolveInitialActiveOrganization(
               session.userId,
               (body) => auth.api.createOrganization({ body }),
             );
