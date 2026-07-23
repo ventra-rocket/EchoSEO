@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
-import { member, user as authUser } from "@/db/better-auth-schema";
+import { member, session, user as authUser } from "@/db/better-auth-schema";
 import { slugify, toHex } from "./org-slug";
 
 type HostedUser = {
@@ -117,4 +117,40 @@ export async function getOrCreateDefaultHostedOrganization(
 
   const hostedUser = await getHostedUser(userId);
   return createDefaultHostedOrganization(hostedUser, createOrganization);
+}
+
+/**
+ * The organization to make active on a fresh session (login).
+ *
+ * Restores the workspace the user last worked in — read from their most recent
+ * still-valid prior session — so an invited member who switched to a shared
+ * workspace stays there across logins instead of being bounced back to their own
+ * empty workspace. The new session row is inserted only after the
+ * `session.create.before` hook that calls this, so the query sees prior sessions.
+ *
+ * Membership is re-checked: a workspace the user was removed from since is never
+ * restored (mirrors resolveHostedContext), and anything unresolvable — no prior
+ * session, an expired one, or a lost membership — falls back to the user's own
+ * default workspace.
+ */
+export async function resolveInitialActiveOrganization(
+  userId: string,
+  createOrganization: HostedOrganizationCreator,
+): Promise<string> {
+  const [priorSession] = await db
+    .select({ activeOrganizationId: session.activeOrganizationId })
+    .from(session)
+    .where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())))
+    .orderBy(desc(session.updatedAt))
+    .limit(1);
+
+  const lastActiveOrganizationId = priorSession?.activeOrganizationId ?? null;
+  if (
+    lastActiveOrganizationId &&
+    (await isHostedOrganizationMember(userId, lastActiveOrganizationId))
+  ) {
+    return lastActiveOrganizationId;
+  }
+
+  return getOrCreateDefaultHostedOrganization(userId, createOrganization);
 }

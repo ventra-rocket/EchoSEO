@@ -4,6 +4,7 @@
  * non-owner) must be allowed.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import {
   createFreeCheckTestDb,
   type FreeCheckTestDb,
@@ -37,12 +38,19 @@ const {
   assertNotLastOwnerRemoval,
   assertNotLastOwnerDemotion,
   assertInviteWithinThrottle,
+  repairOrphanedOwnership,
 } = await import("./auth-organization-hooks");
 
 const ORG = "org1";
+const OTHER_ORG = "org2";
 let harness: FreeCheckTestDb;
 
-async function seedMember(id: string, role: string) {
+async function seedMember(
+  id: string,
+  role: string,
+  createdAt = new Date(),
+  organizationId = ORG,
+) {
   await harness.db.insert(user).values({
     id,
     name: id,
@@ -51,11 +59,21 @@ async function seedMember(id: string, role: string) {
   });
   await harness.db.insert(member).values({
     id: `m-${id}`,
-    organizationId: ORG,
+    organizationId,
     userId: id,
     role,
-    createdAt: new Date(),
+    createdAt,
   });
+}
+
+async function membersByRole(
+  organizationId = ORG,
+): Promise<Record<string, string>> {
+  const rows = await harness.db
+    .select({ userId: member.userId, role: member.role })
+    .from(member)
+    .where(eq(member.organizationId, organizationId));
+  return Object.fromEntries(rows.map((row) => [row.userId, row.role]));
 }
 
 describe("last-owner guards", () => {
@@ -168,5 +186,72 @@ describe("assertInviteWithinThrottle", () => {
     process.env.AUTH_MODE = "cloudflare_access";
     await expect(assertInviteWithinThrottle(INVITE)).resolves.toBeUndefined();
     expect(checkInviteThrottleMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("repairOrphanedOwnership", () => {
+  beforeEach(async () => {
+    harness = await createFreeCheckTestDb();
+    testDb.current = harness.db;
+    await harness.db
+      .insert(organization)
+      .values({ id: ORG, name: "Org", slug: "org-r", createdAt: new Date() });
+  });
+
+  it("promotes the earliest-joined member when the org has no owner", async () => {
+    // Insert the later-joined member first so insertion order differs from
+    // createdAt order — the promotion must follow createdAt, not scan order.
+    await seedMember("viewer1", "viewer", new Date(2000));
+    await seedMember("editor1", "editor", new Date(1000));
+
+    await repairOrphanedOwnership(ORG);
+
+    expect(await membersByRole()).toEqual({
+      editor1: "owner",
+      viewer1: "viewer",
+    });
+  });
+
+  it("only repairs the target org, never another tenant", async () => {
+    await harness.db.insert(organization).values({
+      id: OTHER_ORG,
+      name: "Other",
+      slug: "org-o",
+      createdAt: new Date(),
+    });
+    await seedMember("editor1", "editor", new Date(1000)); // ORG, no owner
+    await seedMember("otherowner", "owner", new Date(1000), OTHER_ORG);
+
+    await repairOrphanedOwnership(ORG);
+
+    expect(await membersByRole(ORG)).toEqual({ editor1: "owner" });
+    expect(await membersByRole(OTHER_ORG)).toEqual({ otherowner: "owner" });
+  });
+
+  it("does nothing when an owner already exists", async () => {
+    await seedMember("owner1", "owner", new Date(1000));
+    await seedMember("editor1", "editor", new Date(2000));
+
+    await repairOrphanedOwnership(ORG);
+
+    expect(await membersByRole()).toEqual({
+      owner1: "owner",
+      editor1: "editor",
+    });
+  });
+
+  it("does nothing for an org with no members", async () => {
+    await repairOrphanedOwnership(ORG);
+
+    expect(await membersByRole()).toEqual({});
+  });
+
+  it("is idempotent when run twice", async () => {
+    await seedMember("editor1", "editor", new Date(1000));
+
+    await repairOrphanedOwnership(ORG);
+    await repairOrphanedOwnership(ORG);
+
+    expect(await membersByRole()).toEqual({ editor1: "owner" });
   });
 });
