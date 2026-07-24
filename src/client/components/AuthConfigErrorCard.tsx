@@ -1,7 +1,7 @@
 import { ShieldAlert } from "lucide-react";
 
 const README_CLOUDFLARE_ACCESS_URL =
-  "https://github.com/every-app/open-seo#cloudflare-deployment--access-setup";
+  "https://github.com/ventra-rocket/EchoSEO/blob/main/docs/SELF_HOSTING_CLOUDFLARE.md";
 
 type AuthConfigErrorCardProps = {
   message: string;

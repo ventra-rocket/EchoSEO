@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 const SUPPORT_EMAIL = "ventrarocket.work@gmail.com";
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
-const GITHUB_URL = "https://github.com/every-app/open-seo";
+const GITHUB_URL = "https://github.com/ventra-rocket/EchoSEO";
 
 export const Route = createFileRoute("/_app/support")({
   component: SupportPage,

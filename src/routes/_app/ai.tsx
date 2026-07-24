@@ -20,19 +20,19 @@ const SKILL_NAMES = [
   "competitor-analysis",
   "link-prospecting",
 ];
-const SKILLS_INSTALL = `npx skills add every-app/open-seo`;
-const ALL_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*'`;
-const CLAUDE_CODE_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*' --agent claude-code`;
-const CODEX_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*' --agent codex`;
-const SKILLS_MANUAL_INSTALL = `git clone https://github.com/every-app/open-seo.git
+const SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO`;
+const ALL_SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO --skill '*'`;
+const CLAUDE_CODE_SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO --skill '*' --agent claude-code`;
+const CODEX_SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO --skill '*' --agent codex`;
+const SKILLS_MANUAL_INSTALL = `git clone https://github.com/ventra-rocket/EchoSEO.git
 
 # Codex
 mkdir -p ~/.codex/skills
-cp -R open-seo/.agents/skills/* ~/.codex/skills/
+cp -R EchoSEO/.agents/skills/* ~/.codex/skills/
 
 # Claude Code
 mkdir -p ~/.claude/skills
-cp -R open-seo/.agents/skills/* ~/.claude/skills/`;
+cp -R EchoSEO/.agents/skills/* ~/.claude/skills/`;
 
 export const Route = createFileRoute("/_app/ai")({
   component: AiPage,
