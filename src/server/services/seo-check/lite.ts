@@ -7,6 +7,7 @@
  */
 import { AppError } from "@/server/lib/errors";
 import { safeFetch, readBoundedText } from "./safe-fetch";
+import { isAuthInterstitialUrl } from "./auth-interstitial";
 import { parseLitePage, type ParsedPage } from "./parse-html";
 import {
   evaluateLiteSignals,
@@ -28,6 +29,17 @@ const CORE_WEB_VITALS_METRIC_COUNT = 4;
 export async function runLiteCheck(inputUrl: string): Promise<LiteReport> {
   const startedAt = Date.now();
   const { response, finalUrl } = await safeFetch(inputUrl);
+  // A site whose content sits behind an auth gate (Cloudflare Access, Google/
+  // Microsoft/Okta SSO) redirects to a login page that answers 200 — safeFetch
+  // followed it, so finalUrl is that interstitial. Scoring it would hand back a
+  // confident number for a login screen, not the site the visitor asked about.
+  if (isAuthInterstitialUrl(finalUrl)) {
+    throw new AppError(
+      "TARGET_BEHIND_AUTH",
+      "Target redirected to an auth interstitial",
+      { finalUrl },
+    );
+  }
   // Only a 2xx body is the page the visitor asked about. A non-2xx response
   // still carries HTML — a 404 page, an origin's 5xx, or (for a hostname that
   // does not resolve) Cloudflare's own error page — and scoring that markup
