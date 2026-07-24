@@ -55,3 +55,7 @@ docs/*.zip
 assets/
 screenshots/
 docs/screenshots/
+
+# Local agents — the 7 committed skills stay tracked; ignore any new .agents/ drops
+AGENTS.md
+.agents/
