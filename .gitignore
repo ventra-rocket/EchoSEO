@@ -48,6 +48,9 @@ __pycache__
 plans/**/*
 !plans/templates/*
 
+# Customer data exports (audit ZIP drops, etc.) — never commit these
+docs/*.zip
+
 # Local marketing/showoff assets
 assets/
 screenshots/
