@@ -50,6 +50,7 @@ import {
   FREE_CHECK_REPORT_EMAIL_CRON,
   sweepReportReadyEmails,
 } from "@/server/services/seo-check/report-ready-email";
+import { parseAssistantWorkspaceName } from "@/shared/assistant-workspace";
 
 const appFetch = createStartHandler(defaultStreamHandler);
 const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
@@ -85,6 +86,31 @@ async function authorizeOnboardingChat(
   return undefined;
 }
 
+async function authorizeAssistantWorkspace(
+  request: Request,
+  name: string,
+): Promise<Response | undefined> {
+  const identity = parseAssistantWorkspaceName(name);
+  if (!identity) {
+    return new Response("Invalid assistant workspace", { status: 400 });
+  }
+
+  let context;
+  try {
+    context = await resolveUserContextFromHeaders(request.headers);
+  } catch {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  if (context.userId !== identity.userId) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  const project = await ProjectRepository.getProjectForOrganization(
+    identity.projectId,
+    context.organizationId,
+  );
+  return project ? undefined : new Response("Forbidden", { status: 403 });
+}
+
 // Route /agents/* to the onboarding chat DO. Auth happens here (both the WS
 // upgrade and any HTTP message-history fetch), keeping it off the OAuth wrapper
 // and TanStack route guard below.
@@ -93,8 +119,14 @@ async function routeOnboardingChatAgent(
   env: Env,
 ): Promise<Response> {
   const response = await routeAgentRequest(request, env, {
-    onBeforeConnect: (req, lobby) => authorizeOnboardingChat(req, lobby.name),
-    onBeforeRequest: (req, lobby) => authorizeOnboardingChat(req, lobby.name),
+    onBeforeConnect: (req, lobby) =>
+      new URL(req.url).pathname.startsWith("/agents/assistant-workspace/")
+        ? authorizeAssistantWorkspace(req, lobby.name)
+        : authorizeOnboardingChat(req, lobby.name),
+    onBeforeRequest: (req, lobby) =>
+      new URL(req.url).pathname.startsWith("/agents/assistant-workspace/")
+        ? authorizeAssistantWorkspace(req, lobby.name)
+        : authorizeOnboardingChat(req, lobby.name),
   });
   return response ?? new Response("Not found", { status: 404 });
 }
@@ -192,6 +224,7 @@ export { DeepSeoCheckWorkflow } from "./server/workflows/deep-seo-check-workflow
 export { AuditExportWorkflow } from "./server/workflows/AuditExportWorkflow";
 // Durable Object class for the onboarding strategy chat (Agents SDK).
 export { OnboardingChatAgent } from "./server/features/onboarding/OnboardingChatAgent";
+export { AssistantWorkspaceAgent } from "./server/features/assistant-workspace/AssistantWorkspaceAgent";
 // Durable Object class for the free SEO checker's per-IP rate limiter.
 export { IpRateLimiterDO } from "./server/services/seo-check/rate-limit-do";
 

@@ -8,6 +8,9 @@ export default defineConfig({
   dbCredentials: {
     accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
     databaseId: process.env.CLOUDFLARE_DATABASE_ID!,
-    token: process.env.CLOUDFLARE_API_TOKEN,
+    // Production migrations cannot authenticate without this secret. The
+    // non-null assertion preserves Drizzle's required credential contract;
+    // Wrangler/Cloudflare then fails the command clearly if it is absent.
+    token: process.env.CLOUDFLARE_API_TOKEN!,
   },
 });

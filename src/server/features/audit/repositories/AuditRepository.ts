@@ -18,6 +18,11 @@ import type {
   LighthouseResult,
   StepPageResult,
 } from "@/server/lib/audit/types";
+import {
+  getAuditsByProject,
+  getLatestAuditByProject,
+  getLatestCompletedAuditByProject,
+} from "./command-center-audit-queries";
 
 const DB_BATCH_SIZE = 100;
 const EDGE_ROWS_PER_STATEMENT = 30;
@@ -383,16 +388,6 @@ async function getAuditForProject(auditId: string, projectId: string) {
   });
 }
 
-async function getAuditsByProject(projectId: string) {
-  const rows = await db
-    .select({ audit: audits })
-    .from(audits)
-    .where(eq(audits.projectId, projectId))
-    .orderBy(desc(audits.startedAt));
-
-  return rows.map(({ audit }) => audit);
-}
-
 async function getAuditCapacityUsageForUser(userId: string) {
   const rows = await db.query.audits.findMany({
     where: eq(audits.startedByUserId, userId),
@@ -484,6 +479,8 @@ export const AuditRepository = {
   clearSnapshotIssuesMaterialized,
   getAuditForProject,
   getAuditsByProject,
+  getLatestAuditByProject,
+  getLatestCompletedAuditByProject,
   getAuditCapacityUsageForUser,
   getAuditResultsForProject,
   getLighthouseResultById,

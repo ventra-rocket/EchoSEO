@@ -50,7 +50,10 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                 key={linkProps.to}
                 {...linkProps}
                 onClick={onNavigate}
-                activeOptions={{ exact: false, includeSearch: false }}
+                activeOptions={{
+                  exact: entry.item.matchSegment === "/",
+                  includeSearch: false,
+                }}
                 className="relative flex items-center gap-3 px-4 py-2 text-sm text-base-content/60 transition-colors hover:bg-base-200 hover:text-base-content"
                 activeProps={{ className: "text-base-content font-medium" }}
               >
@@ -79,7 +82,10 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                     key={linkProps.to}
                     {...linkProps}
                     onClick={onNavigate}
-                    activeOptions={{ exact: false, includeSearch: false }}
+                    activeOptions={{
+                      exact: item.matchSegment === "/",
+                      includeSearch: false,
+                    }}
                     className="relative flex items-center gap-3 px-4 py-2 text-sm text-base-content/60 transition-colors hover:bg-base-200 hover:text-base-content"
                     activeProps={{ className: "text-base-content font-medium" }}
                   >

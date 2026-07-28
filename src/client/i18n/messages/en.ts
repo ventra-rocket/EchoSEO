@@ -10,6 +10,7 @@ export const en = {
   "language.vietnamese": "Tiếng Việt",
 
   "nav.keywordResearch": "Keyword Research",
+  "nav.overview": "Overview",
   "nav.savedKeywords": "Saved Keywords",
   "nav.rankTracking": "Rank Tracking",
   "nav.searchPerformance": "Search Performance",
@@ -19,6 +20,7 @@ export const en = {
   "nav.brandLookup": "Brand Lookup",
   "nav.promptExplorer": "Prompt Explorer",
   "nav.aiMcp": "AI & MCP",
+  "nav.assistantWorkspace": "AI Workspace",
 
   "nav.group.keywords": "Keywords",
   "nav.group.domain": "Domain",

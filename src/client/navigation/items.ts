@@ -3,6 +3,7 @@ import {
   Bookmark,
   Bot,
   ClipboardCheck,
+  LayoutDashboard,
   Globe,
   Link2,
   type LucideIcon,
@@ -26,6 +27,12 @@ type NavItemDef = {
 };
 
 const projectNavItems = [
+  {
+    to: "/p/$projectId",
+    labelId: "nav.overview",
+    icon: LayoutDashboard,
+    matchSegment: "/",
+  },
   {
     to: "/p/$projectId/keywords",
     labelId: "nav.keywordResearch",
@@ -80,6 +87,12 @@ const projectNavItems = [
     icon: MessageSquare,
     matchSegment: "/prompt-explorer",
   },
+  {
+    to: "/p/$projectId/assistant",
+    labelId: "nav.assistantWorkspace",
+    icon: Bot,
+    matchSegment: "/assistant",
+  },
 ] as const satisfies readonly NavItemDef[];
 
 const aiNavItem = linkOptions({
@@ -104,6 +117,10 @@ export function getProjectNavGroups(projectId: string) {
   const bySegment = (seg: string) => all.find((i) => i.matchSegment === seg)!;
 
   return [
+    {
+      type: "standalone" as const,
+      item: bySegment("/"),
+    },
     {
       type: "group" as const,
       labelId: "nav.group.keywords" satisfies MessageId,
@@ -136,6 +153,10 @@ export function getProjectNavGroups(projectId: string) {
       icon: Sparkles,
       matchSegments: ["/brand-lookup", "/prompt-explorer"],
       items: [bySegment("/brand-lookup"), bySegment("/prompt-explorer")],
+    },
+    {
+      type: "standalone" as const,
+      item: bySegment("/assistant"),
     },
     {
       type: "standalone" as const,

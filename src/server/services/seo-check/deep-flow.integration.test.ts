@@ -81,9 +81,17 @@ vi.mock("./rate-limit-do", () => ({
 vi.mock("@/server/lib/audit/url-policy", () => ({
   normalizeAndValidateStartUrl: (u: string) => Promise.resolve(u),
 }));
+// The production preflight rejects login walls before it stores a lead. Keep
+// this integration test hermetic and model the ordinary public-target case.
+vi.mock("./safe-fetch", () => ({
+  safeFetch: (url: string) => Promise.resolve({ finalUrl: url }),
+}));
 vi.mock("@/server/lib/runtime-env", () => ({
   getRequiredEnvValue: () => Promise.resolve("test-key"),
   getOptionalEnvValue: () => Promise.resolve(undefined),
+  // `captureServerError` now checks hosted mode before touching PostHog. The
+  // flow stays hermetic by explicitly modelling its self-hosted test runtime.
+  isHostedServerAuthMode: () => Promise.resolve(false),
 }));
 vi.mock("./deep-check-config", () => ({
   isDeepCheckDisabled: () => Promise.resolve(false),

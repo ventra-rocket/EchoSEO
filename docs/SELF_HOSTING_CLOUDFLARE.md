@@ -45,14 +45,14 @@ In the Cloudflare dashboard:
 Set secrets in Workers **only for the features you enable**. Do not put values
 in `wrangler.jsonc` or commit local environment files.
 
-| Feature | Required secret / variable | When missing |
-| --- | --- | --- |
-| Competitive keyword, rank, backlink, and domain data | `DATAFORSEO_API_KEY` | Data-backed screens ask the user to add their own key; no provider request is made. |
-| AI onboarding and assisted explanations | `OPENROUTER_API_KEY` | AI surfaces show setup or skip optional explanations. |
-| Google Search Console | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` | The user cannot connect a Search Console property; existing dashboard features still run. |
-| Public Lite checker | `TURNSTILE_SECRET_KEY` plus public `TURNSTILE_SITE_KEY` | Anonymous checks refuse requests rather than bypassing abuse protection. |
-| Public Deep checker and screenshots | `GOOGLE_PSI_API_KEY` | Deep reports and PSI screenshots fail closed; Lite remains available. |
-| Deep-check email delivery | `RESEND_API_KEY`, `FREE_CHECK_EMAIL_FROM`, `FREE_CHECK_PUBLIC_ORIGIN` | The report can complete but no email is sent; delivery logs explain the missing setup. |
+| Feature                                              | Required secret / variable                                            | When missing                                                                              |
+| ---------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Competitive keyword, rank, backlink, and domain data | `DATAFORSEO_API_KEY`                                                  | Data-backed screens ask the user to add their own key; no provider request is made.       |
+| AI onboarding and assisted explanations              | `OPENROUTER_API_KEY`                                                  | AI surfaces show setup or skip optional explanations.                                     |
+| Google Search Console                                | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET`      | The user cannot connect a Search Console property; existing dashboard features still run. |
+| Public Lite checker                                  | `TURNSTILE_SECRET_KEY` plus public `TURNSTILE_SITE_KEY`               | Anonymous checks refuse requests rather than bypassing abuse protection.                  |
+| Public Deep checker and screenshots                  | `GOOGLE_PSI_API_KEY`                                                  | Deep reports and PSI screenshots fail closed; Lite remains available.                     |
+| Deep-check email delivery                            | `RESEND_API_KEY`, `FREE_CHECK_EMAIL_FROM`, `FREE_CHECK_PUBLIC_ORIGIN` | The report can complete but no email is sent; delivery logs explain the missing setup.    |
 
 `FREE_CHECK_EMAIL_FROM` and `FREE_CHECK_PUBLIC_ORIGIN` may be committed Worker
 variables for a single deployment, but must match the sender/domain you own.
