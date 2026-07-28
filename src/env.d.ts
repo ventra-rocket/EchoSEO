@@ -18,6 +18,8 @@ declare namespace Cloudflare {
     POSTHOG_HOST?: string;
     BETTER_AUTH_SECRET?: string;
     BETTER_AUTH_URL?: string;
+    AUTH_EMAIL_FROM?: string;
+    RESEND_API_KEY?: string;
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
     LOOPS_API_KEY?: string;

@@ -176,22 +176,16 @@ function getSocialProviders() {
     return {};
   }
 
-  return {
-    google: getGoogleSocialProviderConfig(),
-  };
+  const google = getGoogleSocialProviderConfig();
+
+  return google ? { google } : {};
 }
 
 function getGoogleSocialProviderConfig() {
   const googleClientId = env.GOOGLE_CLIENT_ID?.trim();
   const googleClientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
 
-  if (!googleClientId) {
-    throw new Error("GOOGLE_CLIENT_ID is required in hosted mode");
-  }
-
-  if (!googleClientSecret) {
-    throw new Error("GOOGLE_CLIENT_SECRET is required in hosted mode");
-  }
+  if (!googleClientId || !googleClientSecret) return null;
 
   return {
     clientId: googleClientId,
@@ -203,23 +197,16 @@ function getGoogleSocialProviderConfig() {
 }
 
 function hasHostedAuthEmailConfig() {
-  const loopsVars = [
-    "LOOPS_API_KEY",
-    "LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID",
-    "LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID",
-  ];
+  const resendKey = env.RESEND_API_KEY?.trim();
+  const from = env.AUTH_EMAIL_FROM?.trim();
 
-  return loopsVars.every((name) => {
-    const value: unknown = Reflect.get(env, name);
-    return typeof value === "string" && value.trim() !== "";
-  });
+  return Boolean(resendKey && from);
 }
 
 export function hasHostedAuthConfig() {
   try {
     getHostedBaseUrl();
     getHostedSecret();
-    getGoogleSocialProviderConfig();
     return (
       Reflect.get(env, "BYPASS_EMAIL_VERIFICATION") === "true" ||
       hasHostedAuthEmailConfig()

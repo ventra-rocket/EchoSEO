@@ -3,14 +3,27 @@ import {
   getContactNameParts,
   updateLoopsContact,
 } from "@/server/email/loops-client";
-
-const LOOPS_TRANSACTIONAL_URL = "https://app.loops.so/api/v1/transactional";
+import { sendViaResend } from "@/server/services/seo-check/email/resend-client";
 
 function getOptionalEnv(name: string) {
   const value: unknown = Reflect.get(env, name);
   const trimmed = typeof value === "string" ? value.trim() : "";
 
   return trimmed || null;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+
+    return entities[character];
+  });
 }
 
 function getRequiredEnv(name: string) {
@@ -25,56 +38,42 @@ function getRequiredEnv(name: string) {
 
 function getHostedAuthEmailConfig() {
   return {
-    apiKey: getRequiredEnv("LOOPS_API_KEY"),
-    verificationTemplateId: getRequiredEnv(
-      "LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID",
-    ),
-    passwordResetTemplateId: getRequiredEnv(
-      "LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID",
-    ),
+    apiKey: getRequiredEnv("RESEND_API_KEY"),
+    from: getRequiredEnv("AUTH_EMAIL_FROM"),
   };
 }
 
-async function sendLoopsTransactionalEmail({
-  apiKey,
+async function getIdempotencyKey(value: string) {
+  const encoded = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return `echoseo-auth-${Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("")}`;
+}
+
+async function sendHostedAuthEmail({
   email,
-  transactionalId,
-  dataVariables,
+  subject,
+  text,
+  html,
+  idempotencyContext,
 }: {
-  apiKey: string;
   email: string;
-  transactionalId: string;
-  dataVariables: Record<string, string>;
+  subject: string;
+  text: string;
+  html: string;
+  idempotencyContext: string;
 }) {
-  const response = await fetch(LOOPS_TRANSACTIONAL_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      transactionalId,
-      email,
-      addToAudience: false,
-      dataVariables,
-    }),
+  const { apiKey, from } = getHostedAuthEmailConfig();
+  await sendViaResend({
+    apiKey,
+    from,
+    to: email,
+    subject,
+    text,
+    html,
+    idempotencyKey: await getIdempotencyKey(idempotencyContext),
   });
-
-  if (response.ok) {
-    return;
-  }
-
-  const errorPayload = await response.json().catch(() => null);
-  console.error("Loops transactional email error:", {
-    status: response.status,
-    email,
-    transactionalId,
-    errorPayload,
-  });
-
-  throw new Error(
-    `Failed to send Loops transactional email (${response.status})`,
-  );
 }
 
 export async function upsertHostedSignupContact({
@@ -115,23 +114,21 @@ export async function sendHostedVerificationEmail({
   email: string;
   confirmationUrl: string;
 }) {
-  const config = getHostedAuthEmailConfig();
-  await sendLoopsTransactionalEmail({
-    apiKey: config.apiKey,
+  const safeConfirmationUrl = escapeHtml(confirmationUrl);
+
+  await sendHostedAuthEmail({
     email,
-    transactionalId: config.verificationTemplateId,
-    dataVariables: {
-      appName: "EchoSEO",
-      confirmationUrl,
-    },
+    subject: "Verify your EchoSEO account",
+    text: `Verify your EchoSEO account: ${confirmationUrl}`,
+    html: `<p>Verify your EchoSEO account.</p><p><a href="${safeConfirmationUrl}">Verify email</a></p>`,
+    idempotencyContext: `verify:${email}:${confirmationUrl}`,
   });
 }
 
 /**
  * Emails a workspace invitation. Unlike verification/reset, this must never throw:
- * an invitation row is written by Better Auth before this runs, so a missing
- * template or a Loops outage should not fail the invite — the inviter can resend.
- * If the optional invite template is not configured, it logs and skips.
+ * an invitation row is written by Better Auth before this runs, so a mail
+ * outage should not fail the invite — the inviter can resend.
  */
 export async function sendHostedInvitationEmail({
   email,
@@ -144,30 +141,19 @@ export async function sendHostedInvitationEmail({
   organizationName: string;
   acceptUrl: string;
 }) {
-  const apiKey = getOptionalEnv("LOOPS_API_KEY");
-  const transactionalId = getOptionalEnv("LOOPS_TRANSACTIONAL_INVITE_ID");
-
-  if (!apiKey || !transactionalId) {
-    console.warn(
-      "Skipping workspace invitation email: LOOPS_API_KEY or LOOPS_TRANSACTIONAL_INVITE_ID is not set",
-    );
-    return;
-  }
-
   try {
-    await sendLoopsTransactionalEmail({
-      apiKey,
+    const safeInviterName = escapeHtml(inviterName);
+    const safeOrganizationName = escapeHtml(organizationName);
+    const safeAcceptUrl = escapeHtml(acceptUrl);
+    await sendHostedAuthEmail({
       email,
-      transactionalId,
-      dataVariables: {
-        appName: "EchoSEO",
-        inviterName,
-        organizationName,
-        acceptUrl,
-      },
+      subject: `${inviterName} invited you to ${organizationName} on EchoSEO`,
+      text: `${inviterName} invited you to join ${organizationName} on EchoSEO: ${acceptUrl}`,
+      html: `<p>${safeInviterName} invited you to join ${safeOrganizationName} on EchoSEO.</p><p><a href="${safeAcceptUrl}">Accept invitation</a></p>`,
+      idempotencyContext: `invite:${email}:${acceptUrl}`,
     });
   } catch (error) {
-    // A Loops outage must not fail invite-member: the invitation row is already
+    // A mail outage must not fail invite-member: the invitation row is already
     // written and the inviter can resend. Swallow after logging.
     console.error("Failed to send workspace invitation email", error);
   }
@@ -180,14 +166,13 @@ export async function sendHostedPasswordResetEmail({
   email: string;
   resetUrl: string;
 }) {
-  const config = getHostedAuthEmailConfig();
-  await sendLoopsTransactionalEmail({
-    apiKey: config.apiKey,
+  const safeResetUrl = escapeHtml(resetUrl);
+
+  await sendHostedAuthEmail({
     email,
-    transactionalId: config.passwordResetTemplateId,
-    dataVariables: {
-      appName: "EchoSEO",
-      resetUrl,
-    },
+    subject: "Reset your EchoSEO password",
+    text: `Reset your EchoSEO password: ${resetUrl}`,
+    html: `<p>Reset your EchoSEO password.</p><p><a href="${safeResetUrl}">Reset password</a></p>`,
+    idempotencyContext: `reset:${email}:${resetUrl}`,
   });
 }

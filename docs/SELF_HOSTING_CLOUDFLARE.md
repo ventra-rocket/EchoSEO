@@ -4,9 +4,10 @@ This guide covers:
 
 1. [Initial setup after clicking Deploy to Cloudflare](#initial-setup)
 2. [Manual deploy with Wrangler](#manual-deploy-with-wrangler)
-3. [How to connect the EchoSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
-4. [How to update to the latest EchoSEO version](#how-to-update-to-the-latest-echoseo-version)
-5. [How to add teammates](#give-teammates-access-to-echoseo)
+3. [How to run a public hosted SaaS](#run-a-public-hosted-saas)
+4. [How to connect the EchoSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
+5. [How to update to the latest EchoSEO version](#how-to-update-to-the-latest-echoseo-version)
+6. [How to add teammates](#give-teammates-access-to-echoseo)
 
 ## Initial setup
 
@@ -16,10 +17,10 @@ This guide covers:
 
 Click the deploy button, there are lots of fields on the deploy form, but you only need to do the below steps.
 
-> **Note:** EchoSEO has a small required Access setup and feature-specific
-> secrets. The default self-host path below runs in single-workspace Cloudflare
-> Access mode; the table below states exactly what remains unavailable when an
-> optional feature is not configured.
+> **Note:** Select the authentication model before configuring the domain.
+> `AUTH_MODE=hosted` is for a public SaaS where customers create their own
+> accounts. `AUTH_MODE=cloudflare_access` is only for a private self-hosted
+> deployment managed through Cloudflare Access.
 
 1. Connect your Git provider (GitHub/GitLab).
 2. Leave the resource naming fields as default unless you have a reason to change them.
@@ -29,6 +30,12 @@ Click the deploy button, there are lots of fields on the deploy form, but you on
 If deploy fails with `Cannot provision a KV Namespace with the title "open-seo" because it already exists`, use the [manual deploy with Wrangler](#manual-deploy-with-wrangler) flow instead.
 
 ### 2) Configure authentication and secrets
+
+For a public SaaS, follow [Run a public hosted SaaS](#run-a-public-hosted-saas)
+instead. Do not enable Cloudflare Access for the same hostname: it intercepts
+visitors before EchoSEO can show its own sign-up and sign-in pages.
+
+For a private Cloudflare Access deployment:
 
 In the Cloudflare dashboard:
 
@@ -71,13 +78,45 @@ If you changed the R2 bucket name during deploy, replace `open-seo` with your bu
 
 Without a lifecycle rule, cached objects under `dataforseo-cache/` will accumulate indefinitely and increase storage costs over time.
 
-### 4) Validate setup
+### 4) Validate private Access setup
 
 1. Open your Worker URL again.
 2. Sign in with Cloudflare Access.
 3. EchoSEO should load after login.
 
 If login fails, re-check the three secrets and Access toggle.
+
+## Run a public hosted SaaS
+
+Use this mode when customers must sign up and sign in directly at your domain.
+It uses EchoSEO's Better Auth account flow and email verification; it does not
+use Cloudflare Access.
+
+1. In `wrangler.jsonc`, set `vars.AUTH_MODE` to `hosted` and set
+   `vars.AUTH_EMAIL_FROM` to a verified Resend sender, for example
+   `EchoSEO <noreply@example.com>`.
+2. Add Workers secrets (never commit their values):
+
+   ```bash
+   pnpm exec wrangler secret put BETTER_AUTH_SECRET
+   pnpm exec wrangler secret put BETTER_AUTH_URL
+   pnpm exec wrangler secret put RESEND_API_KEY
+   ```
+
+   Set `BETTER_AUTH_URL` to your exact public origin, such as
+   `https://echoseo.example.com`. Generate `BETTER_AUTH_SECRET` with at least
+   32 random bytes.
+
+3. Do **not** create or enable a Cloudflare Access Application for this public
+   hostname. If one exists from an earlier private deployment, delete that
+   application after the hosted Worker has been deployed.
+4. Deploy with `AUTH_MODE=hosted pnpm run deploy` so the browser bundle and
+   Worker use the same auth mode.
+5. Open `/sign-up`, create a test account, complete the verification email,
+   then sign in at `/sign-in`.
+
+Google Search Console is optional. Add `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET` only when you are ready to offer that integration.
 
 ## Connect the MCP server through Cloudflare Access
 

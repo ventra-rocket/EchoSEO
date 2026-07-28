@@ -7,7 +7,6 @@ import { hasSelfHostedGscConfig } from "@/server/features/gsc/oauth-config";
 import { createSelfHostedGscAuthorizationUrl } from "@/server/features/gsc/selfHostedOAuth";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { getPublicOrigin } from "@/server/mcp/public-origin";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import {
   requireAuthenticatedContext,
   requireProjectContext,
@@ -34,17 +33,15 @@ export const getGscConnection = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .inputValidator((data: unknown) => projectScopedSchema.parse(data))
   .handler(async ({ context }) => {
-    const [connection, currentUserHasGrant, hosted, gscConfigured] =
-      await Promise.all([
-        GscService.getConnection(context.projectId),
-        GscService.userHasGrant(context.userId),
-        isHostedServerAuthMode(),
-        hasSelfHostedGscConfig(),
-      ]);
+    const [connection, currentUserHasGrant, gscConfigured] = await Promise.all([
+      GscService.getConnection(context.projectId),
+      GscService.userHasGrant(context.userId),
+      hasSelfHostedGscConfig(),
+    ]);
     return {
       connected: Boolean(connection),
       currentUserHasGrant,
-      googleOAuthConfigured: hosted || gscConfigured,
+      googleOAuthConfigured: gscConfigured,
       siteUrl: connection?.siteUrl ?? null,
       connectedByEmail: connection?.connectedAccountEmail ?? null,
       connectedAt: connection?.createdAt ?? null,

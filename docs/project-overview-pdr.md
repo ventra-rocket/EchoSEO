@@ -1,6 +1,6 @@
 # EchoSEO — Product Definition & Requirements (PDR)
 
-**Version:** 0.3 · **Date:** 2026-07-23 · **Status:** Free SEO Checker + Professional Site Audit built, verified and deployed in production (self-host / Cloudflare Access mode). The hosted multi-tenant + billing layer is built but not yet launched. Inherited keyword/rank/backlink/competitor surfaces run on the open-seo base with a BYO DataForSEO key. The content-optimization engine and the autonomous read-write loop (§3) are the V1 goal — not yet built.
+**Version:** 0.4 · **Date:** 2026-07-28 · **Status:** Free SEO Checker and Professional Site Audit are deployed in production. EchoSEO is a public hosted SaaS with customer email/password signup and verification; billing is not yet launched. Inherited keyword/rank/backlink/competitor surfaces run on the open-seo base with a BYO DataForSEO key. The content-optimization engine and the autonomous read-write loop (§3) are the V1 goal — not yet built.
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` (+ 4 source reports)
 
 ---
