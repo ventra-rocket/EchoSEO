@@ -174,6 +174,21 @@ describe("handleFreeSeoCheckRequest", () => {
     expect(putCachedLiteReportMock).not.toHaveBeenCalled();
   });
 
+  it("does not serve a cached score for an auth interstitial", async () => {
+    getCachedLiteReportMock.mockResolvedValue({
+      ...FAKE_REPORT,
+      finalUrl: "https://team.cloudflareaccess.com/cdn-cgi/access/login",
+    });
+
+    const response = await handleFreeSeoCheckRequest(
+      makeRequest({ url: "example.test", turnstileToken: "ok" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "TARGET_BEHIND_AUTH" });
+    expect(runLiteCheckMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["a cache hit", true],
     ["a cache miss", false],

@@ -18,6 +18,7 @@ import { checkIpRateLimit } from "./rate-limit-do";
 import { getCachedLiteReport, putCachedLiteReport } from "./cache";
 import { recordCheckMetric } from "./metrics";
 import { isDeepCheckDisabled } from "./deep-check-config";
+import { isAuthInterstitialUrl } from "./auth-interstitial";
 import { runLiteCheck } from "./lite";
 import type { LiteReport } from "./types";
 import { clientIp, errorResponse, jsonResponse } from "./http-response";
@@ -74,6 +75,16 @@ export async function handleFreeSeoCheckRequest(
 
     const cached = await getCachedLiteReport(domain);
     if (cached) {
+      // Older cached reports can predate the auth-interstitial guard. Their
+      // final URL is enough to reject a known bad score without a new fetch or
+      // waiting for the 24-hour TTL to expire.
+      if (isAuthInterstitialUrl(cached.finalUrl)) {
+        throw new AppError(
+          "TARGET_BEHIND_AUTH",
+          "Cached report points at an auth interstitial",
+          { finalUrl: cached.finalUrl },
+        );
+      }
       recordCheckMetric("lite_check", { domain, cached: true });
       return jsonResponse({
         report: localizeReport(cached),

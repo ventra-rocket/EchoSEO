@@ -25,6 +25,8 @@ import { recordCheckMetric } from "./metrics";
 import { isDisposableEmail, normalizeEmail } from "./disposable-email";
 import { getEmailSender } from "./email/sender";
 import { sendDeepCheckConfirmation } from "./email/deep-check-confirmation";
+import { isAuthInterstitialUrl } from "./auth-interstitial";
+import { safeFetch } from "./safe-fetch";
 import {
   clientIp,
   errorResponse,
@@ -62,6 +64,22 @@ function buildConfirmUrl(
   // keep those links unchanged.
   if (locale !== "en") url.searchParams.set("lang", locale);
   return url.toString();
+}
+
+/**
+ * A Deep run calls PageSpeed only after email confirmation. Check the final
+ * redirect target before creating that lead so an Access/SSO login page cannot
+ * consume PSI quota or cause a misleading report later in the workflow.
+ */
+async function assertDeepTargetIsPublic(url: string): Promise<void> {
+  const { finalUrl } = await safeFetch(url);
+  if (isAuthInterstitialUrl(finalUrl)) {
+    throw new AppError(
+      "TARGET_BEHIND_AUTH",
+      "Target redirected to an auth interstitial",
+      { finalUrl },
+    );
+  }
 }
 
 export async function handleStartDeepCheckRequest(
@@ -107,6 +125,11 @@ export async function handleStartDeepCheckRequest(
     // SSRF gate — first thing that touches the user-supplied URL.
     const normalizedUrl = await normalizeAndValidateStartUrl(url);
     const domain = new URL(normalizedUrl).hostname.toLowerCase();
+
+    // This bounded, SSRF-safe preflight is intentionally before lead creation
+    // and opt-in email. The workflow's later crawl repeats its own guard in
+    // case a target changes between confirmation and execution.
+    await assertDeepTargetIsPublic(normalizedUrl);
 
     const leadId = crypto.randomUUID();
     const reportId = crypto.randomUUID();
