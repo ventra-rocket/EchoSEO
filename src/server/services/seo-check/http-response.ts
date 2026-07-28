@@ -40,6 +40,7 @@ export function jsonResponse(data: unknown, status = 200): Response {
 const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
   VALIDATION_ERROR: 400,
   CRAWL_TARGET_BLOCKED: 400,
+  TARGET_BEHIND_AUTH: 400,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,

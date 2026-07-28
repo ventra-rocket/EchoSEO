@@ -165,6 +165,8 @@ const EN: LandingCopy = {
     RATE_LIMITED: "You've hit the free-check limit for now — try again later.",
     UPSTREAM_UNAVAILABLE:
       "We couldn't reach that site. Check the URL and try again.",
+    TARGET_BEHIND_AUTH:
+      "That site is behind a login, so we can't check its pages.",
   },
   errorDefault: "Something went wrong — please try again.",
   intro:
@@ -315,6 +317,8 @@ const VI: LandingCopy = {
       "Bạn đã dùng hết lượt kiểm tra miễn phí lúc này — vui lòng thử lại sau.",
     UPSTREAM_UNAVAILABLE:
       "Chúng tôi không truy cập được trang đó. Kiểm tra lại URL rồi thử lần nữa.",
+    TARGET_BEHIND_AUTH:
+      "Trang đó nằm sau lớp đăng nhập nên chúng tôi không kiểm tra được.",
   },
   errorDefault: "Đã có lỗi xảy ra — vui lòng thử lại.",
   intro:

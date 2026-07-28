@@ -27,6 +27,8 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
   RATE_LIMITED: "Too many requests. Please wait and try again.",
   UPSTREAM_UNAVAILABLE:
     "The data provider is temporarily unavailable. Please retry in a moment.",
+  TARGET_BEHIND_AUTH:
+    "That site is behind a login or access gate, so its pages can't be checked.",
   CONFLICT: "This request conflicts with existing data.",
   INTERNAL_ERROR:
     "An unexpected error occurred. Please check server logs and try again.",

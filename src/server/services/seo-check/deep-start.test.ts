@@ -35,6 +35,7 @@ const {
   checkIpRateLimitMock,
   getRequiredEnvValueMock,
   normalizeAndValidateStartUrlMock,
+  safeFetchMock,
   captureServerErrorMock,
   createLeadWithReportMock,
   getEmailSenderMock,
@@ -45,6 +46,7 @@ const {
   checkIpRateLimitMock: vi.fn(),
   getRequiredEnvValueMock: vi.fn(),
   normalizeAndValidateStartUrlMock: vi.fn(),
+  safeFetchMock: vi.fn(),
   captureServerErrorMock: vi.fn(),
   createLeadWithReportMock:
     vi.fn<(lead: LeadArg, report: ReportArg) => Promise<void>>(),
@@ -72,6 +74,7 @@ vi.mock("@/server/lib/runtime-env", () => ({
 vi.mock("@/server/lib/audit/url-policy", () => ({
   normalizeAndValidateStartUrl: normalizeAndValidateStartUrlMock,
 }));
+vi.mock("./safe-fetch", () => ({ safeFetch: safeFetchMock }));
 vi.mock("@/server/lib/posthog", () => ({
   captureServerError: captureServerErrorMock,
 }));
@@ -114,6 +117,7 @@ beforeEach(() => {
     resetAt: Date.now() + 1_000,
   });
   normalizeAndValidateStartUrlMock.mockResolvedValue("https://example.test/");
+  safeFetchMock.mockResolvedValue({ finalUrl: "https://example.test/" });
   createLeadWithReportMock.mockResolvedValue(undefined);
   getEmailSenderMock.mockReturnValue({ send: vi.fn() });
   sendDeepCheckConfirmationMock.mockResolvedValue(undefined);
@@ -194,6 +198,19 @@ describe("handleStartDeepCheckRequest", () => {
     );
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "CRAWL_TARGET_BLOCKED" });
+    expect(createLeadWithReportMock).not.toHaveBeenCalled();
+    expect(sendDeepCheckConfirmationMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an auth interstitial before creating a lead or sending email", async () => {
+    safeFetchMock.mockResolvedValue({
+      finalUrl: "https://team.cloudflareaccess.com/cdn-cgi/access/login",
+    });
+
+    const response = await handleStartDeepCheckRequest(makeRequest(VALID_BODY));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "TARGET_BEHIND_AUTH" });
     expect(createLeadWithReportMock).not.toHaveBeenCalled();
     expect(sendDeepCheckConfirmationMock).not.toHaveBeenCalled();
   });

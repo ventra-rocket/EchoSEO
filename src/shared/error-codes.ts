@@ -17,6 +17,7 @@ const ERROR_CODES = [
   "DATAFORSEO_AUTH_FAILED",
   "RATE_LIMITED",
   "UPSTREAM_UNAVAILABLE",
+  "TARGET_BEHIND_AUTH",
   "CONFLICT",
   "INTERNAL_ERROR",
 ] as const;
@@ -35,6 +36,9 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   // public report page polls while a check runs, so one visitor behind a shared
   // NAT can emit a long 429 run — capturing each one is pure noise and cost.
   "RATE_LIMITED",
+  // The visitor asked us to check a site whose content is behind a login/SSO
+  // gate — an expected "can't check this target" outcome, not a fault.
+  "TARGET_BEHIND_AUTH",
 ]);
 
 export function isErrorCode(value: string): value is ErrorCode {

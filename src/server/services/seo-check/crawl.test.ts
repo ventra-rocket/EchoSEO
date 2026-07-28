@@ -133,6 +133,23 @@ describe("crawlSite", () => {
     );
   });
 
+  // An auth-gated site 302s the primary page to a login screen that answers
+  // 2xx; auditing it would score the login page, not the site.
+  it("throws when the primary page redirects to an auth interstitial", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: 200 },
+        finalUrl:
+          url === PRIMARY
+            ? "https://team.cloudflareaccess.com/cdn-cgi/access/login/site.test"
+            : url,
+      }),
+    );
+    await expect(crawlSite(PRIMARY)).rejects.toThrow(
+      "Target redirected to an auth interstitial",
+    );
+  });
+
   // The mirror of the rule above: only the primary page feeds the headline
   // score, so a broken internal URL stays in the report as a finding.
   it("keeps a non-2xx internal page in the crawl as a finding", async () => {

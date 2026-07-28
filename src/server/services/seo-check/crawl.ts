@@ -17,6 +17,7 @@ import {
 } from "@/server/lib/audit/url-utils";
 import { safeFetch, readBoundedText } from "./safe-fetch";
 import { parseLitePage, type ParsedPage } from "./parse-html";
+import { isAuthInterstitialUrl } from "./auth-interstitial";
 
 /** Primary page + up to (cap - 1) internal pages. */
 const DEFAULT_MAX_PAGES = 10;
@@ -90,6 +91,17 @@ export async function crawlSite(
     throw new AppError(
       "UPSTREAM_UNAVAILABLE",
       "Could not fetch the target page",
+    );
+  }
+  // The submitted page redirected to an auth/SSO login screen — which answers
+  // 2xx — so we crawled a login page, not the site. Reject rather than audit and
+  // score a screen the visitor can't see. Only the primary is guarded: an
+  // internal link to a login page is a legitimate finding, not a reason to
+  // abandon the audit.
+  if (isAuthInterstitialUrl(primary.url)) {
+    throw new AppError(
+      "TARGET_BEHIND_AUTH",
+      "Target redirected to an auth interstitial",
     );
   }
 

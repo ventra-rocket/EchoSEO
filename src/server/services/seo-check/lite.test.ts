@@ -121,6 +121,21 @@ describe("runLiteCheck", () => {
     },
   );
 
+  // An auth-gated site 302s to a login page that answers 200, so "we got a 2xx
+  // body" is not evidence we reached the site. Without this guard the login page
+  // scores like any other document and the visitor gets a number for a screen
+  // they can't even see.
+  it("refuses to score an auth interstitial the target redirected to", async () => {
+    mockPage(
+      GOOD_HTML,
+      200,
+      "https://team.cloudflareaccess.com/cdn-cgi/access/login/gated.test",
+    );
+    await expect(runLiteCheck("https://gated.test/")).rejects.toThrow(
+      "Target redirected to an auth interstitial",
+    );
+  });
+
   it("exposes a fixed Core Web Vitals teaser count for the Deep tier", async () => {
     mockPage(GOOD_HTML);
 
