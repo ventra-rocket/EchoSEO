@@ -1,0 +1,19 @@
+# gitleaks configuration for EchoSEO.
+#
+# Extends the default ruleset and allowlists two values the generic-api-key rule
+# flags that are NOT secrets:
+#   1. A fake IndexNow key used only as a unit-test fixture.
+#   2. The OpenAI Apps domain-verification token, which is public by design — it
+#      is served unauthenticated at /.well-known/openai-apps-challenge to prove
+#      domain ownership.
+# Verified 2026-07-23 before the public release; git history is otherwise clean.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Non-secrets: unit-test fixture key + public OpenAI Apps verification token"
+regexes = [
+  '''abcdef0123456789abcdef0123456789''',
+  '''GEqD0QcIISUHCDhQXqm18K9Hm4Fixm8RMbDxz3nUXsw''',
+]

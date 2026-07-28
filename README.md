@@ -1,71 +1,86 @@
 # EchoSEO
 
-> The open, agent-native SEO platform — comprehensive SEO tooling that _does the work_ and proves it against your own data, at bring-your-own-key cost.
+> The open, agent-native SEO platform — SEO tooling that _does the work_ and **proves it** against your own data, at bring-your-own-key cost.
 
-EchoSEO is a self-hostable, open-core alternative to Semrush/Ahrefs. It is built by forking the excellent MIT-licensed [every-app/open-seo](https://github.com/every-app/open-seo) and extending it with a balanced dashboard + AI-agent experience, first-party data fusion (GSC/GA4/Bing), bilingual (🇻🇳/🇬🇧) support, and an open-core business model.
+EchoSEO is a self-hostable, open-core alternative to Semrush/Ahrefs, built by **[VentraRocket](https://echoseo.ventrarocket.vn)**. It stands on the excellent MIT-licensed [every-app/open-seo](https://github.com/every-app/open-seo) base and extends it with a free public SEO checker, a professional site audit that verifies its own fixes, first-party Google Search Console data fusion, and bilingual (🇻🇳/🇬🇧) support — all Cloudflare-native and self-hostable.
 
-**Status:** Foundation / pre-fork. This repo currently holds the project definition, research, and roadmap. Code lands once the fork is set up (see roadmap Phase 0).
+**Status:** Alpha, actively developed. The free SEO checker and the professional site audit are built and running in production ([echoseo.ventrarocket.vn](https://echoseo.ventrarocket.vn)); the inherited keyword/rank/backlink/competitor surfaces come from the open-seo base and work with your own DataForSEO key. Not a 1.0 release yet — see [Roadmap](docs/project-roadmap.md) for what is shipped vs. planned.
 
 ## Why EchoSEO
 
-- **Agent-native, read-WRITE.** Not just "ask an MCP server for rankings" (every incumbent now does that, read-only). EchoSEO's agents run the full loop: keyword → brief → draft → on-page fix → GSC-monitored → refresh.
-- **Your data, fused.** Combines paid competitive data (DataForSEO) with your own Search Console / GA4 / Bing ground truth in one agent context.
-- **BYO-key economics.** ~$0.0006/SERP self-host cost undercuts $99–$500/mo suites by 1–2 orders of magnitude for targeted usage.
-- **Open + self-hostable.** MIT core, no lock-in. Free to self-host; managed cloud when you want the convenience.
-- **Bilingual.** Vietnamese and English from day one.
+- **An audit that proves the fix.** Not just a list of issues: EchoSEO re-crawls the site to verify each fix actually landed (resolved / still-present / regressed), cites the relevant Google guidance per issue, and scores GEO / AI-search readiness separately.
+- **A free SEO checker that is a real product.** A public instant on-page check plus an email-gated deep check (Google PageSpeed Insights + our own bounded crawl) — $0 marginal cost per check, delivered as an emailed report and a shareable link. It doubles as a live demo of the audit engine.
+- **BYO-key economics.** Paid competitive data (DataForSEO) runs at your own cost behind a thin provider seam — undercutting $99–$500/mo suites by 1–2 orders of magnitude for targeted usage.
+- **Agent-native.** An 18-tool MCP server + portable agent skills let Claude Code (or any MCP client) run **assisted** SEO workflows against your data. (The fully autonomous read-write loop is the V1 goal, not shipped yet — see roadmap.)
+- **Open + self-hostable.** MIT core, Cloudflare-native, no lock-in. Free to self-host with your own keys; a managed cloud tier is planned.
+- **Bilingual.** Vietnamese and English (the public checker surfaces are fully localized; the dashboard is being localized incrementally).
 
-## Feature scope
+## What's shipped vs. planned
 
-| Area                                         | MVP | V1  | Later |
-| -------------------------------------------- | :-: | :-: | :---: |
-| Keyword research + clustering                | ✅  |     |       |
-| Rank tracking (global)                       | ✅  |     |       |
-| Backlinks                                    | ✅  |     |       |
-| Site audit + Core Web Vitals                 | ✅  |     |       |
-| Competitor / domain overview                 | ✅  |     |       |
-| GSC integration                              | ✅  |     |       |
-| MCP server + agent skills (assisted)         | ✅  |     |       |
-| AI-search visibility (basic)                 | ✅  |     |       |
-| Bilingual VN + EN                            | ✅  |     |       |
-| Content optimization engine                  |     | ✅  |       |
-| Scheduled/deep technical audit               |     | ✅  |       |
-| Local + SERP-feature rank tracking           |     | ✅  |       |
-| GA4 + Bing integrations                      |     | ✅  |       |
-| White-label reporting                        |     | ✅  |       |
-| Managed cloud (PAYG) + read-write agent loop |     | ✅  |       |
-| Programmatic SEO engine                      |     |     |  ✅   |
-| Fully autonomous agent pipelines             |     |     |  ✅   |
+Legend: ✅ built & deployed by EchoSEO · ◐ inherited from the open-seo base (present; bring your own DataForSEO key; not yet independently hardened as EchoSEO) · ○ planned
 
-See `docs/project-roadmap.md` for the full plan.
+| Area                                                                             |       Status        |
+| -------------------------------------------------------------------------------- | :-----------------: |
+| Free SEO Checker — public Lite + email-gated Deep, shareable report              |         ✅          |
+| Professional Site Audit — crawl snapshots, All Issues, per-URL AI remediation    |         ✅          |
+| Audit history + GSC search-signal fusion, async ZIP export, evidence screenshots |         ✅          |
+| Verified indexation — IndexNow submit, GSC index-status, re-crawl verification   |         ✅          |
+| Bilingual VN + EN — public checker surfaces                                      |         ✅          |
+| Keyword research (DataForSEO)                                                    |          ◐          |
+| Rank tracking (global, scheduled)                                                |          ◐          |
+| Backlinks · Competitor / domain overview                                         |          ◐          |
+| GSC integration (search performance)                                             |          ◐          |
+| MCP server (18 tools) + agent skills — assisted                                  |          ◐          |
+| AI-search visibility (Brand Lookup + Prompt Explorer)                            |          ◐          |
+| Managed cloud (hosted, PAYG credits, team seats)                                 | built, not launched |
+| Keyword clustering                                                               |          ○          |
+| Content optimization engine (briefs, entities, score, AI writing)                |        ○ V1         |
+| Autonomous read-write agent loop                                                 |        ○ V1         |
+| GA4 + Bing Webmaster integrations                                                |        ○ V1         |
+| Local + SERP-feature rank tracking · White-label reporting                       |        ○ V1         |
+| Dashboard VN localization · Programmatic SEO · Autonomous pipelines              |       ○ Later       |
 
-## Tech stack (inherited from OpenSEO)
+See [`docs/project-roadmap.md`](docs/project-roadmap.md) for the full plan.
 
-- **App:** TanStack Start (React 19), Vite 7, Tailwind 4 + daisyUI 5, TypeScript
+## Tech stack
+
+- **App:** TanStack Start (React 19), Vite, Tailwind 4 + daisyUI 5, TypeScript
 - **Runtime:** Cloudflare Workers + D1 (SQLite) + Durable Objects + Workflows + KV + R2
 - **ORM:** Drizzle · **Auth:** Better Auth (+ Cloudflare Access / local modes)
 - **AI:** Vercel AI SDK 6 + OpenRouter · **MCP:** `@modelcontextprotocol/sdk`
-- **SEO data:** DataForSEO (BYO-key) + GSC/GA4/Bing (first-party)
+- **SEO data:** DataForSEO (BYO-key) + Google PageSpeed Insights + GSC (first-party)
 
-## Repository layout (current)
+## Self-hosting
 
+EchoSEO deploys as a single Cloudflare Worker.
+
+- **Cloudflare (recommended):** [`docs/SELF_HOSTING_CLOUDFLARE.md`](docs/SELF_HOSTING_CLOUDFLARE.md)
+- **Docker:** [`docs/SELF_HOSTING_DOCKER.md`](docs/SELF_HOSTING_DOCKER.md)
+
+Quick local start:
+
+```bash
+corepack enable
+pnpm install
+pnpm dev
 ```
-CLAUDE.md                     Project contract (always-loaded)
-README.md                     This file
-docs/                         Product, roadmap, marketing docs
-plans/                        Plans + research reports
-  reports/                    Research synthesis + source reports
-.claude/                      ClaudeKit engineer config, rules, skills
-```
 
-## Getting started (marketing/product workflows)
+You will need your own keys based on the features you enable: DataForSEO for
+competitive data, OpenRouter for AI assistance, and Turnstile + Google
+PageSpeed Insights + Resend for the public checker’s full Deep/email flow. See
+the self-hosting guides for the full environment setup and safe degradation
+when a feature is not configured.
 
-This is a ClaudeKit-managed project. Common next steps:
+## Documentation
 
-- Read the research: `plans/reports/research-summary-260703-1047-ventra-seo.md`
-- Plan the fork: `/ckm:plan` — "Fork OpenSEO and set up EchoSEO foundation (Phase 0)"
-- Personas & positioning: `/ckm:persona`, `/ckm:competitor`
-- Content & SEO for our own site: `/ckm:seo`, `/ckm:write:blog`
+- [`docs/project-overview-pdr.md`](docs/project-overview-pdr.md) — product definition, personas, scope, architecture
+- [`docs/project-roadmap.md`](docs/project-roadmap.md) — phased roadmap and milestones
+- [`docs/marketing-overview.md`](docs/marketing-overview.md) — positioning, GTM, pricing
+
+## Relationship to open-seo
+
+EchoSEO is a friendly fork of [every-app/open-seo](https://github.com/every-app/open-seo) (MIT). We track it as a git remote and pull security/feature updates upstream where they fit. Net-new EchoSEO work — the free public checker, the professional site audit and its verification loop, bilingual support, and the hosted collaboration layer — is layered on top. Credit for the base platform goes to its authors.
 
 ## License
 
-MIT (inherited from OpenSEO). See upstream terms; attribution retained.
+MIT. See [`LICENSE`](LICENSE). EchoSEO is © VentraRocket; the upstream open-seo copyright is retained alongside it, both preserved per the MIT terms.

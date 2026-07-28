@@ -1,12 +1,19 @@
 # Docker Self-Hosting
 
-Run OpenSEO locally with Docker.
+Run EchoSEO locally with Docker.
 
-In Docker mode, OpenSEO uses `AUTH_MODE=local_noauth` (no auth checks, local admin user `admin@localhost`). Only expose it behind your own auth-protected reverse proxy, tunnel, or private network.
+In Docker mode, EchoSEO uses `AUTH_MODE=local_noauth` (no auth checks, local admin user `admin@localhost`). Only expose it behind your own auth-protected reverse proxy, tunnel, or private network.
 
 The default `compose.yaml` uses the published GHCR image:
 
 - `ghcr.io/every-app/open-seo:latest`
+
+> **Important:** that published image is the **open-seo base**, not EchoSEO —
+> EchoSEO does not publish a prebuilt image yet. To run EchoSEO's own features
+> (free checker, professional audit, etc.), use the [Build your own image
+> locally](#build-your-own-image-locally) path, which builds from this repo.
+> The recommended production path is Cloudflare — see
+> [`SELF_HOSTING_CLOUDFLARE.md`](SELF_HOSTING_CLOUDFLARE.md).
 
 ## Prerequisites
 

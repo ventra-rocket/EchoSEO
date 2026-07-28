@@ -4,17 +4,22 @@ This guide covers:
 
 1. [Initial setup after clicking Deploy to Cloudflare](#initial-setup)
 2. [Manual deploy with Wrangler](#manual-deploy-with-wrangler)
-3. [How to connect the OpenSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
-4. [How to update to the latest OpenSEO version](#how-to-update-to-the-latest-openseo-version)
-5. [How to add teammates](#give-teammates-access-to-openseo)
+3. [How to connect the EchoSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
+4. [How to update to the latest EchoSEO version](#how-to-update-to-the-latest-echoseo-version)
+5. [How to add teammates](#give-teammates-access-to-echoseo)
 
 ## Initial setup
 
 ### 1) Deploy from GitHub
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/every-app/open-seo)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ventra-rocket/EchoSEO)
 
 Click the deploy button, there are lots of fields on the deploy form, but you only need to do the below steps.
+
+> **Note:** EchoSEO has a small required Access setup and feature-specific
+> secrets. The default self-host path below runs in single-workspace Cloudflare
+> Access mode; the table below states exactly what remains unavailable when an
+> optional feature is not configured.
 
 1. Connect your Git provider (GitHub/GitLab).
 2. Leave the resource naming fields as default unless you have a reason to change them.
@@ -27,14 +32,32 @@ If deploy fails with `Cannot provision a KV Namespace with the title "open-seo" 
 
 In the Cloudflare dashboard:
 
-1. Go to `Compute` -> `Workers & Pages` -> your OpenSEO Worker.
+1. Go to `Compute` -> `Workers & Pages` -> your EchoSEO Worker.
 2. Open `Settings`.
 3. In `Domains & Routes`, enable `Cloudflare Access` for the `workers.dev` route.
 4. Save the values shown by Cloudflare Access.
 5. In `Variables & Secrets`, add:
    - `POLICY_AUD` (from Access setup)
    - `TEAM_DOMAIN` (domain from `JWKS_URL`, for example `https://your-team.cloudflareaccess.com`)
-   - `DATAFORSEO_API_KEY`
+
+### Feature keys and safe degradation
+
+Set secrets in Workers **only for the features you enable**. Do not put values
+in `wrangler.jsonc` or commit local environment files.
+
+| Feature | Required secret / variable | When missing |
+| --- | --- | --- |
+| Competitive keyword, rank, backlink, and domain data | `DATAFORSEO_API_KEY` | Data-backed screens ask the user to add their own key; no provider request is made. |
+| AI onboarding and assisted explanations | `OPENROUTER_API_KEY` | AI surfaces show setup or skip optional explanations. |
+| Google Search Console | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` | The user cannot connect a Search Console property; existing dashboard features still run. |
+| Public Lite checker | `TURNSTILE_SECRET_KEY` plus public `TURNSTILE_SITE_KEY` | Anonymous checks refuse requests rather than bypassing abuse protection. |
+| Public Deep checker and screenshots | `GOOGLE_PSI_API_KEY` | Deep reports and PSI screenshots fail closed; Lite remains available. |
+| Deep-check email delivery | `RESEND_API_KEY`, `FREE_CHECK_EMAIL_FROM`, `FREE_CHECK_PUBLIC_ORIGIN` | The report can complete but no email is sent; delivery logs explain the missing setup. |
+
+`FREE_CHECK_EMAIL_FROM` and `FREE_CHECK_PUBLIC_ORIGIN` may be committed Worker
+variables for a single deployment, but must match the sender/domain you own.
+Use Workers secrets for all credentials. See the dedicated
+[Search Console guide](SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md) for OAuth setup.
 
 ### 3) Optional: add an R2 lifecycle rule
 
@@ -52,18 +75,18 @@ Without a lifecycle rule, cached objects under `dataforseo-cache/` will accumula
 
 1. Open your Worker URL again.
 2. Sign in with Cloudflare Access.
-3. OpenSEO should load after login.
+3. EchoSEO should load after login.
 
 If login fails, re-check the three secrets and Access toggle.
 
 ## Connect the MCP server through Cloudflare Access
 
-Use the same Cloudflare Access application that protects your OpenSEO Worker.
+Use the same Cloudflare Access application that protects your EchoSEO Worker.
 Managed OAuth is required for MCP clients and is not enabled by default.
 
 1. Open Cloudflare Zero Trust.
 2. Go to `Access controls` -> `Applications`.
-3. Find your OpenSEO application, then select `Edit`.
+3. Find your EchoSEO application, then select `Edit`.
 4. Go to `Additional settings` -> `OAuth`.
 5. Turn on `Managed OAuth`.
 6. In `Managed OAuth settings`, allow the redirect URIs your MCP clients use:
@@ -80,26 +103,27 @@ MCP clients should connect to:
 https://YOUR_WORKER_HOSTNAME/mcp
 ```
 
-## How to update to the latest OpenSEO version
+## How to update to the latest EchoSEO version
 
 If your repo was created from the Cloudflare Deploy button, use this flow.
 
 ### One-time setup
 
-Run this once in your local repo:
+Run this once in your local repo. The remote points at **EchoSEO**, not the
+open-seo base — resetting to the open-seo base would wipe every EchoSEO feature.
 
 ```bash
-git remote add upstream https://github.com/every-app/open-seo.git
-git fetch upstream
+git remote add echoseo https://github.com/ventra-rocket/EchoSEO.git
+git fetch echoseo
 ```
 
 ### Update steps (use every time)
 
 ```bash
-git fetch upstream
+git fetch echoseo
 cp wrangler.jsonc wrangler.local.backup.jsonc
 git checkout main
-git reset --hard upstream/main
+git reset --hard echoseo/main
 cp wrangler.local.backup.jsonc wrangler.jsonc
 git add wrangler.jsonc
 git commit -m "restore Cloudflare settings" || true
@@ -109,13 +133,15 @@ git push --force-with-lease origin main
 Why this is needed:
 
 - `wrangler.jsonc` has your Cloudflare resource IDs.
-- The update step keeps your IDs while pulling the newest OpenSEO code.
+- The update step keeps your IDs while pulling the newest EchoSEO code.
+- `git reset --hard` discards local code edits — if you have customized EchoSEO
+  beyond `wrangler.jsonc`, merge (`git merge echoseo/main`) instead of resetting.
 
-## Give teammates access to OpenSEO
+## Give teammates access to EchoSEO
 
 1. Open Cloudflare Zero Trust.
 2. Go to Access -> Applications.
-3. Open your OpenSEO application.
+3. Open your EchoSEO application.
 4. Edit the `Allow` policy.
 5. Add teammate emails (or your company email domain / group).
 6. Save.
@@ -125,29 +151,29 @@ Screenshots from the setup flow:
 - [Edit the Access policy](https://github.com/user-attachments/assets/c7bbc7b4-a18e-4ae4-9fe5-3b33c72048a7)
 - [Add teammate emails to the allow list](https://github.com/user-attachments/assets/fa4ecaf2-31f7-4a64-9001-210cf729747b)
 
-After saving, teammates can open your OpenSEO URL and sign in through Cloudflare
-Access. OpenSEO will use a shared workspace for everyone allowed by the policy.
+After saving, teammates can open your EchoSEO URL and sign in through Cloudflare
+Access. EchoSEO will use a shared workspace for everyone allowed by the policy.
 
 ## Manual deploy with Wrangler
 
 Use this flow if the Deploy to Cloudflare button fails with `Cannot provision a KV Namespace with the title "open-seo" because it already exists`. The reliable path is to create Cloudflare resources yourself, put their IDs into `wrangler.jsonc`, then deploy with Wrangler.
 
-### 1) Clone your OpenSEO repo
+### 1) Clone your EchoSEO repo
 
-Fork `every-app/open-seo` on GitHub if you want a repo you control for future updates, then clone it locally:
+Fork `ventra-rocket/EchoSEO` on GitHub if you want a repo you control for future updates, then clone it locally:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USER/open-seo.git
-cd open-seo
+git clone https://github.com/YOUR_GITHUB_USER/EchoSEO.git
+cd EchoSEO
 corepack enable
 pnpm install
 ```
 
-If you do not need a fork, clone the upstream repo instead:
+If you do not need a fork, clone the EchoSEO repo directly instead:
 
 ```bash
-git clone https://github.com/every-app/open-seo.git
-cd open-seo
+git clone https://github.com/ventra-rocket/EchoSEO.git
+cd EchoSEO
 corepack enable
 pnpm install
 ```
@@ -219,7 +245,7 @@ pnpm run deploy
 
 In the Cloudflare dashboard:
 
-1. Go to `Compute` -> `Workers & Pages` -> your OpenSEO Worker.
+1. Go to `Compute` -> `Workers & Pages` -> your EchoSEO Worker.
 2. Open `Settings`.
 3. In `Domains & Routes`, enable `Cloudflare Access` for the `workers.dev` route.
 4. Save the values shown by Cloudflare Access.
@@ -246,6 +272,6 @@ pnpm exec wrangler r2 bucket lifecycle add open-seo-YOUR_SUFFIX dataforseo-cache
 
 1. Open your Worker URL again.
 2. Sign in with Cloudflare Access.
-3. OpenSEO should load after login.
+3. EchoSEO should load after login.
 
 If login fails, re-check the three secrets, the Access toggle, and the binding values in `wrangler.jsonc`.
