@@ -10,6 +10,7 @@ export const vi: Messages = {
   "language.vietnamese": "Tiếng Việt",
 
   "nav.keywordResearch": "Nghiên cứu từ khóa",
+  "nav.overview": "Tổng quan",
   "nav.savedKeywords": "Từ khóa đã lưu",
   "nav.rankTracking": "Theo dõi thứ hạng",
   "nav.searchPerformance": "Hiệu suất tìm kiếm",
@@ -19,6 +20,7 @@ export const vi: Messages = {
   "nav.brandLookup": "Tra cứu thương hiệu",
   "nav.promptExplorer": "Khám phá prompt",
   "nav.aiMcp": "AI & MCP",
+  "nav.assistantWorkspace": "Không gian AI",
 
   "nav.group.keywords": "Từ khóa",
   "nav.group.domain": "Tên miền",

@@ -243,4 +243,29 @@ describe("AuditRepository snapshot + link graph", () => {
 
     expect(rows).toHaveLength(0);
   });
+
+  it("keeps the newest completed audit available while a newer crawl runs", async () => {
+    await harness.db
+      .update(audits)
+      .set({ startedAt: "2026-07-28T10:00:00.000Z" })
+      .where(eq(audits.id, AUDIT_ID));
+    await harness.db.insert(audits).values({
+      id: "completed-audit",
+      projectId: "proj1",
+      startedByUserId: "u1",
+      startUrl: "https://a.com/",
+      workflowInstanceId: "completed-audit",
+      status: "completed",
+      startedAt: "2026-07-28T09:00:00.000Z",
+      completedAt: "2026-07-28T09:05:00.000Z",
+    });
+
+    const [latest, latestCompleted] = await Promise.all([
+      AuditRepository.getLatestAuditByProject("proj1"),
+      AuditRepository.getLatestCompletedAuditByProject("proj1"),
+    ]);
+
+    expect(latest?.id).toBe(AUDIT_ID);
+    expect(latestCompleted?.id).toBe("completed-audit");
+  });
 });

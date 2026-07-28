@@ -8,6 +8,7 @@ declare namespace Cloudflare {
 
     // Durable Object backing the onboarding strategy chat (see wrangler.jsonc).
     ONBOARDING_CHAT: DurableObjectNamespace;
+    ASSISTANT_WORKSPACE: DurableObjectNamespace;
 
     AUTH_MODE?: "cloudflare_access" | "local_noauth" | "hosted";
     BYPASS_EMAIL_VERIFICATION?: string;

@@ -268,6 +268,34 @@ async function getHistory(projectId: string) {
   });
 }
 
+function toHistoryEntry(
+  audit: Awaited<ReturnType<typeof AuditRepository.getLatestAuditByProject>>,
+) {
+  if (!audit) return null;
+  const parsedConfig = parseAuditConfig(audit.config);
+  return {
+    id: audit.id,
+    startUrl: audit.startUrl,
+    status: audit.status,
+    pagesCrawled: audit.pagesCrawled,
+    pagesTotal: audit.pagesTotal,
+    ranLighthouse: parsedConfig?.lighthouseStrategy !== "none",
+    startedAt: audit.startedAt,
+    completedAt: audit.completedAt,
+  };
+}
+
+async function getCommandCenterAudits(projectId: string) {
+  const [latest, latestCompleted] = await Promise.all([
+    AuditRepository.getLatestAuditByProject(projectId),
+    AuditRepository.getLatestCompletedAuditByProject(projectId),
+  ]);
+  return {
+    latest: toHistoryEntry(latest),
+    latestCompleted: toHistoryEntry(latestCompleted),
+  };
+}
+
 async function getCrawlProgress(auditId: string, projectId: string) {
   const audit = await AuditRepository.getAuditForProject(auditId, projectId);
   if (!audit) {
@@ -331,5 +359,6 @@ export const AuditService = {
   getCrawlProgress,
   getResults,
   getHistory,
+  getCommandCenterAudits,
   remove,
 } as const;

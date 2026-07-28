@@ -59,6 +59,10 @@
         "class_name": "OnboardingChatAgent",
       },
       {
+        "name": "ASSISTANT_WORKSPACE",
+        "class_name": "AssistantWorkspaceAgent",
+      },
+      {
         "name": "RATE_LIMIT_DO",
         "class_name": "IpRateLimiterDO",
       },
@@ -72,6 +76,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["IpRateLimiterDO"],
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["AssistantWorkspaceAgent"],
     },
   ],
   "triggers": {

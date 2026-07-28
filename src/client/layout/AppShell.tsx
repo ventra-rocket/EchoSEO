@@ -215,7 +215,11 @@ function TopNav({
                   labelId,
                   ...linkProps
                 } = entry.item;
-                const isActive = pathname.includes(matchSegment);
+                const isActive =
+                  matchSegment === "/"
+                    ? pathname === `/p/${projectId}` ||
+                      pathname === `/p/${projectId}/`
+                    : pathname.includes(matchSegment);
                 return (
                   <Link
                     key={linkProps.to}
