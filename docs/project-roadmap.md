@@ -1,6 +1,6 @@
 # EchoSEO — Roadmap
 
-**Version:** 0.4 · **Date:** 2026-07-23 · **Status:** M0 complete. Free SEO Checker and the Professional Site Audit are built, verified and deployed in production (self-host / Cloudflare Access). The hosted multi-tenant + billing layer is built but not launched. Remaining MVP work is dogfooding + hardening the inherited surfaces and the public OSS release; the content engine and read-write agent loop are unbuilt V1 goals.
+**Version:** 0.5 · **Date:** 2026-07-28 · **Status:** M0 complete. Free SEO Checker and the Professional Site Audit are built and deployed in production (self-host / Cloudflare Access). The Command Center and private, read-only assisted AI workspace are release-ready; production verification is the next release gate. The hosted multi-tenant + billing layer is built but not launched. Remaining MVP work is dogfooding + hardening the inherited surfaces and the public OSS release; the content engine and read-write agent loop are unbuilt V1 goals.
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` · Companion: `docs/project-overview-pdr.md`
 
 Phases are scope-ordered, not date-locked. Durations are rough estimates for a small team and should be re-baselined after Phase 0.
@@ -43,7 +43,7 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 
 **EchoSEO additions in MVP:**
 
-- [ ] **Balanced UX:** polished dashboard + first-class agent panel (both first-class).
+- [~] **Balanced UX:** Command Center and private, read-only assisted AI workspace are built; production verification pending. Autonomous or write-capable workflows remain V1+.
 - [ ] **Bilingual VN + EN** across all shipped surfaces.
 - [ ] Borrowed quick-wins (★ stack-native, mostly zero API cost):
   - [ ] Scheduled SERP rank loop refinement + change alerts (SerpBear pattern)
