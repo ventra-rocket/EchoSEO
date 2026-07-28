@@ -65,7 +65,11 @@ pnpm install
 pnpm dev
 ```
 
-You will need your own keys (DataForSEO for paid data, an OpenRouter key for the agent features). See the self-hosting guides for the full environment setup.
+You will need your own keys based on the features you enable: DataForSEO for
+competitive data, OpenRouter for AI assistance, and Turnstile + Google
+PageSpeed Insights + Resend for the public checker’s full Deep/email flow. See
+the self-hosting guides for the full environment setup and safe degradation
+when a feature is not configured.
 
 ## Documentation
 

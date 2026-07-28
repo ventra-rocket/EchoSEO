@@ -5,8 +5,8 @@ This guide covers:
 1. [Initial setup after clicking Deploy to Cloudflare](#initial-setup)
 2. [Manual deploy with Wrangler](#manual-deploy-with-wrangler)
 3. [How to connect the EchoSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
-4. [How to update to the latest EchoSEO version](#how-to-update-to-the-latest-openseo-version)
-5. [How to add teammates](#give-teammates-access-to-openseo)
+4. [How to update to the latest EchoSEO version](#how-to-update-to-the-latest-echoseo-version)
+5. [How to add teammates](#give-teammates-access-to-echoseo)
 
 ## Initial setup
 
@@ -16,12 +16,10 @@ This guide covers:
 
 Click the deploy button, there are lots of fields on the deploy form, but you only need to do the below steps.
 
-> **Note:** EchoSEO needs more than the three secrets below to run every feature.
-> `DATAFORSEO_API_KEY` unlocks the paid competitive data; the AI-agent features
-> additionally need an OpenRouter key, and the hosted (multi-tenant) mode needs
-> its own auth/email/billing secrets. `wrangler.jsonc` is the source of truth for
-> the required bindings, and `.dev.vars.example` (if present) lists the env vars.
-> The default self-host path below runs in single-workspace Cloudflare Access mode.
+> **Note:** EchoSEO has a small required Access setup and feature-specific
+> secrets. The default self-host path below runs in single-workspace Cloudflare
+> Access mode; the table below states exactly what remains unavailable when an
+> optional feature is not configured.
 
 1. Connect your Git provider (GitHub/GitLab).
 2. Leave the resource naming fields as default unless you have a reason to change them.
@@ -41,7 +39,25 @@ In the Cloudflare dashboard:
 5. In `Variables & Secrets`, add:
    - `POLICY_AUD` (from Access setup)
    - `TEAM_DOMAIN` (domain from `JWKS_URL`, for example `https://your-team.cloudflareaccess.com`)
-   - `DATAFORSEO_API_KEY`
+
+### Feature keys and safe degradation
+
+Set secrets in Workers **only for the features you enable**. Do not put values
+in `wrangler.jsonc` or commit local environment files.
+
+| Feature | Required secret / variable | When missing |
+| --- | --- | --- |
+| Competitive keyword, rank, backlink, and domain data | `DATAFORSEO_API_KEY` | Data-backed screens ask the user to add their own key; no provider request is made. |
+| AI onboarding and assisted explanations | `OPENROUTER_API_KEY` | AI surfaces show setup or skip optional explanations. |
+| Google Search Console | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` | The user cannot connect a Search Console property; existing dashboard features still run. |
+| Public Lite checker | `TURNSTILE_SECRET_KEY` plus public `TURNSTILE_SITE_KEY` | Anonymous checks refuse requests rather than bypassing abuse protection. |
+| Public Deep checker and screenshots | `GOOGLE_PSI_API_KEY` | Deep reports and PSI screenshots fail closed; Lite remains available. |
+| Deep-check email delivery | `RESEND_API_KEY`, `FREE_CHECK_EMAIL_FROM`, `FREE_CHECK_PUBLIC_ORIGIN` | The report can complete but no email is sent; delivery logs explain the missing setup. |
+
+`FREE_CHECK_EMAIL_FROM` and `FREE_CHECK_PUBLIC_ORIGIN` may be committed Worker
+variables for a single deployment, but must match the sender/domain you own.
+Use Workers secrets for all credentials. See the dedicated
+[Search Console guide](SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md) for OAuth setup.
 
 ### 3) Optional: add an R2 lifecycle rule
 
