@@ -57,7 +57,7 @@ EchoSEO is open source and can be self-hosted for free.
 
 Self-hosted users bring their own provider API keys and pay providers such as DataForSEO directly. Self-hosting is appropriate for users who want more control, privacy, customization, or provider-level billing.
 
-The open-source repository is at `https://github.com/every-app/open-seo`.
+The open-source repository is at `https://github.com/ventra-rocket/EchoSEO`.
 
 ## Data sources
 

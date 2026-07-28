@@ -20,19 +20,19 @@ const SKILL_NAMES = [
   "competitor-analysis",
   "link-prospecting",
 ];
-const SKILLS_INSTALL = `npx skills add every-app/open-seo`;
-const ALL_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*'`;
-const CLAUDE_CODE_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*' --agent claude-code`;
-const CODEX_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*' --agent codex`;
-const SKILLS_MANUAL_INSTALL = `git clone https://github.com/every-app/open-seo.git
+const SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO`;
+const ALL_SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO --skill '*'`;
+const CLAUDE_CODE_SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO --skill '*' --agent claude-code`;
+const CODEX_SKILLS_INSTALL = `npx skills add ventra-rocket/EchoSEO --skill '*' --agent codex`;
+const SKILLS_MANUAL_INSTALL = `git clone https://github.com/ventra-rocket/EchoSEO.git
 
 # Codex
 mkdir -p ~/.codex/skills
-cp -R open-seo/.agents/skills/* ~/.codex/skills/
+cp -R EchoSEO/.agents/skills/* ~/.codex/skills/
 
 # Claude Code
 mkdir -p ~/.claude/skills
-cp -R open-seo/.agents/skills/* ~/.claude/skills/`;
+cp -R EchoSEO/.agents/skills/* ~/.claude/skills/`;
 
 export const Route = createFileRoute("/_app/ai")({
   component: AiPage,
@@ -88,7 +88,7 @@ function AiPage() {
                 Run this in your terminal:
               </p>
               <CodeBlock
-                code={`claude mcp add --transport http --scope user openseo ${mcpUrl}`}
+                code={`claude mcp add --transport http --scope user echoseo ${mcpUrl}`}
               />
               <p className="text-sm text-base-content/70">
                 Approve the login when prompted.
@@ -141,7 +141,7 @@ function AiPage() {
               <p className="text-sm text-base-content/70">
                 Run this in your terminal:
               </p>
-              <CodeBlock code={`codex mcp add openseo --url ${mcpUrl}`} />
+              <CodeBlock code={`codex mcp add echoseo --url ${mcpUrl}`} />
               <p className="text-sm text-base-content/70">
                 Approve the login when prompted.
               </p>
@@ -249,11 +249,13 @@ function AiPage() {
         </section>
 
         <section className="mt-12">
-          <h2 className="text-base font-semibold">Sam: AI SEO teammate</h2>
+          <h2 className="text-base font-semibold">
+            Open-source workflow reference
+          </h2>
           <p className="mt-1.5 text-sm text-base-content/70 leading-relaxed">
-            Sam is an experimental content workflow for Claude Code and other
-            coding agents. It combines keyword research, source discovery,
-            drafting, and QA.
+            Sam is a separate upstream experiment for content workflows. EchoSEO
+            keeps attribution here while its own in-app assisted workspace is
+            developed independently.
           </p>
           <a
             href={SAM_GITHUB_URL}
@@ -261,7 +263,7 @@ function AiPage() {
             rel="noreferrer"
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-base-content transition-colors hover:text-base-content/60"
           >
-            View Sam on GitHub
+            View upstream reference
             <ArrowUpRight className="size-3.5" />
           </a>
         </section>
