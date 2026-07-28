@@ -56,6 +56,6 @@ assets/
 screenshots/
 docs/screenshots/
 
-# Local agents — the 7 committed skills stay tracked; ignore any new .agents/ drops
-AGENTS.md
-.agents/
+# Local agent-runner metadata. Product skills under `.agents/skills/` are source
+# artifacts and must remain addable when EchoSEO ships a new workflow.
+/.agents/AGENTS.md
