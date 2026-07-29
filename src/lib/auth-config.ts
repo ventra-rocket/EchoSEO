@@ -12,6 +12,8 @@ import { sendHostedInvitationEmail } from "@/server/email/loops";
 import { GSC_OAUTH_PROVIDER_ID, GSC_OAUTH_SCOPES } from "@/shared/gsc";
 
 export function createBaseAuthConfig() {
+  const googleOAuthConfig = getGoogleOAuthConfig();
+
   return {
     ...baseAuthOptions,
     account: {
@@ -134,21 +136,28 @@ export function createBaseAuthConfig() {
           }
         },
       }),
-      genericOAuth({
-        config: [
-          {
-            providerId: GSC_OAUTH_PROVIDER_ID,
-            clientId: env.GOOGLE_CLIENT_ID?.trim() ?? "",
-            clientSecret: env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
-            discoveryUrl:
-              "https://accounts.google.com/.well-known/openid-configuration",
-            scopes: [...GSC_OAUTH_SCOPES],
-            accessType: "offline", // request a refresh token
-            prompt: "consent", // force refresh-token issuance on re-consent
-            pkce: true,
-          },
-        ],
-      }),
+      ...(googleOAuthConfig
+        ? [genericOAuth({ config: [googleOAuthConfig] })]
+        : []),
     ],
+  };
+}
+
+function getGoogleOAuthConfig() {
+  const clientId = env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
+
+  if (!clientId || !clientSecret) return null;
+
+  return {
+    providerId: GSC_OAUTH_PROVIDER_ID,
+    clientId,
+    clientSecret,
+    discoveryUrl:
+      "https://accounts.google.com/.well-known/openid-configuration",
+    scopes: [...GSC_OAUTH_SCOPES],
+    accessType: "offline" as const,
+    prompt: "consent" as const,
+    pkce: true,
   };
 }

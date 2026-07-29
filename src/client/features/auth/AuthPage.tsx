@@ -17,16 +17,20 @@ export function useAuthPageState(redirect: string | undefined) {
       ? getOAuthSignedQuery(window.location.search)
       : null;
   const isHostedMode = isHostedClientAuthMode();
+  const isGoogleAuthEnabled =
+    isHostedMode && import.meta.env.GOOGLE_AUTH_ENABLED === "true";
 
   return {
     redirectTo,
     oauthQuery,
     isHostedMode,
+    isGoogleAuthEnabled,
   };
 }
 
 export function AuthMethodChooser({
   googleLabel,
+  showGoogle = false,
   emailLabel = "Continue with email",
   isBusy,
   disabled,
@@ -34,6 +38,7 @@ export function AuthMethodChooser({
   onContinueWithEmail,
 }: {
   googleLabel: string;
+  showGoogle?: boolean;
   emailLabel?: string;
   isBusy?: boolean;
   disabled?: boolean;
@@ -42,15 +47,17 @@ export function AuthMethodChooser({
 }) {
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        className="btn w-full border border-black/10 bg-white text-neutral-900 hover:border-black/20 hover:bg-neutral-50 disabled:bg-white disabled:text-neutral-500 disabled:opacity-70"
-        onClick={onContinueWithGoogle}
-        disabled={disabled || isBusy}
-      >
-        <GoogleLogo />
-        {isBusy ? "Opening Google..." : googleLabel}
-      </button>
+      {showGoogle ? (
+        <button
+          type="button"
+          className="btn w-full border border-black/10 bg-white text-neutral-900 hover:border-black/20 hover:bg-neutral-50 disabled:bg-white disabled:text-neutral-500 disabled:opacity-70"
+          onClick={onContinueWithGoogle}
+          disabled={disabled || isBusy}
+        >
+          <GoogleLogo />
+          {isBusy ? "Opening Google..." : googleLabel}
+        </button>
+      ) : null}
 
       <button
         type="button"

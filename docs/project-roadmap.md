@@ -1,6 +1,6 @@
 # EchoSEO — Roadmap
 
-**Version:** 0.5 · **Date:** 2026-07-28 · **Status:** M0 complete. Free SEO Checker and the Professional Site Audit are built and deployed in production (self-host / Cloudflare Access). The Command Center and private, read-only assisted AI workspace are release-ready; production verification is the next release gate. The hosted multi-tenant + billing layer is built but not launched. Remaining MVP work is dogfooding + hardening the inherited surfaces and the public OSS release; the content engine and read-write agent loop are unbuilt V1 goals.
+**Version:** 0.6 · **Date:** 2026-07-28 · **Status:** M0 complete. Free SEO Checker and the Professional Site Audit are deployed in production. EchoSEO now runs as a public hosted SaaS with customer email/password signup; billing remains unlaunched. The Command Center and private, read-only assisted AI workspace are release-ready; production verification is the next release gate. Remaining MVP work is dogfooding + hardening the inherited surfaces and the public OSS release; the content engine and read-write agent loop are unbuilt V1 goals.
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` · Companion: `docs/project-overview-pdr.md`
 
 Phases are scope-ordered, not date-locked. Durations are rough estimates for a small team and should be re-baselined after Phase 0.
@@ -13,7 +13,8 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 
 - [x] Fork `every-app/open-seo`; import into this repo; add `upstream` remote for security/feature pulls.
 - [x] Provision Cloudflare infra: D1, KV ×2, R2, Durable Objects, Workflows, cron.
-- [x] Deploy **self-host mode** (`cloudflare_access`) end-to-end — live at `echoseo.ventrarocket.vn` behind Cloudflare Access.
+- [x] Deploy a private self-host mode (`cloudflare_access`) end-to-end.
+- [x] Convert `echoseo.ventrarocket.vn` to public hosted SaaS mode with customer email/password signup and verification.
 - [x] **Rebrand** OpenSEO → EchoSEO: UI, MCP tool descriptions, agent skills, `wrangler` names, fact sheet. _(→ `web/` marketing site rebrand deferred — separate un-deployed surface; see M0 follow-ups.)_
 - [x] Strip/gate hosted-only couplings behind hosted flag: PostHog, Reddit-attribution, Loops, Autumn billing, Svix (upstream already gated all network-firing paths behind the `hosted` auth mode; added reddit lib/client guards + self-host no-op tests). _(→ trivial `@every-app/sdk` dependency drop still pending.)_
 - [x] **i18n scaffolding (VN + EN):** react-intl wired into TanStack Start, shell strings extracted, Vietnamese seed catalog (machine-translated, flagged for review). _(Net-new vs OpenSEO.)_

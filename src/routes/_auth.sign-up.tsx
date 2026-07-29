@@ -46,7 +46,9 @@ export const Route = createFileRoute("/_auth/sign-up")({
 function SignUpPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { redirectTo, isHostedMode } = useAuthPageState(search.redirect);
+  const { redirectTo, isHostedMode, isGoogleAuthEnabled } = useAuthPageState(
+    search.redirect,
+  );
   const postSignupRedirect = redirectTo === "/" ? "/onboarding" : redirectTo;
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [isStartingGoogle, setIsStartingGoogle] = useState(false);
@@ -206,6 +208,7 @@ function SignUpPage() {
         <>
           <AuthMethodChooser
             googleLabel="Continue with Google"
+            showGoogle={isGoogleAuthEnabled}
             disabled={!isHostedMode}
             isBusy={isStartingGoogle}
             onContinueWithGoogle={() => {

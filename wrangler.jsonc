@@ -7,11 +7,10 @@
   "observability": {
     "enabled": true,
   },
-  // Secure default: validate Cloudflare Access JWTs. The Access app + allow
-  // policy live in the ventrarocket Zero Trust org; POLICY_AUD and TEAM_DOMAIN
-  // are set as Worker secrets.
+  // Public SaaS: customer identity is handled by Better Auth sessions, not a
+  // Cloudflare Access OTP in front of the product routes.
   "vars": {
-    "AUTH_MODE": "cloudflare_access",
+    "AUTH_MODE": "hosted",
     // Where the free checker's outgoing mail points its report links. Request
     // handlers read their own origin off the request; the Workflow and the email
     // cron have no request, so this is the only way they can know.
@@ -21,6 +20,15 @@
     // RESEND_API_KEY secret — without both, the checker logs mail instead of
     // sending it, which is the correct default for a fork or a self-hoster.
     "FREE_CHECK_EMAIL_FROM": "EchoSEO <reports@mail.echoseo.ventrarocket.vn>",
+    // Reuse the verified EchoSEO sender for account verification, password
+    // reset, and workspace invitations. The Resend API key stays a secret.
+    "AUTH_EMAIL_FROM": "EchoSEO <reports@mail.echoseo.ventrarocket.vn>",
+    // Browser-visible feature flag only. OAuth credentials remain encrypted
+    // Worker secrets, so self-hosters don't see an unusable Google button.
+    "GOOGLE_AUTH_ENABLED": "true",
+    // Turnstile site keys are intentionally public and baked into the client
+    // bundle. TURNSTILE_SECRET_KEY remains an encrypted Worker secret.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAD04Kn1C68CSFRS3",
   },
   // EchoSEO deploys to its own zone (ventrarocket.vn) as a custom domain.
   // workers_dev is disabled so deploys don't require a workers.dev subdomain.

@@ -9,6 +9,8 @@ import { z } from "zod";
  * same way /agents/* and the Autumn webhook are.
  */
 export const FREE_SEO_CHECK_API_PATH = "/api/free-seo-check";
+/** Public GET — returns browser-safe configuration for the checker. */
+export const FREE_SEO_CHECK_CONFIG_PATH = "/api/free-seo-check/config";
 /** Public POST — start a Deep check (creates an unconfirmed lead + sends the opt-in email). */
 export const FREE_SEO_CHECK_DEEP_START_PATH = "/api/free-seo-check/deep";
 /** Public POST — confirm the double opt-in via the emailed token. */

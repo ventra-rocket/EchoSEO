@@ -18,6 +18,8 @@ declare namespace Cloudflare {
     POSTHOG_HOST?: string;
     BETTER_AUTH_SECRET?: string;
     BETTER_AUTH_URL?: string;
+    AUTH_EMAIL_FROM?: string;
+    RESEND_API_KEY?: string;
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
     LOOPS_API_KEY?: string;
@@ -57,6 +59,8 @@ interface ImportMetaEnv {
   readonly BYPASS_EMAIL_VERIFICATION?: string;
   readonly POSTHOG_PUBLIC_KEY?: string;
   readonly POSTHOG_HOST?: string;
+  // Public feature flag. Google OAuth client credentials stay Worker secrets.
+  readonly GOOGLE_AUTH_ENABLED?: string;
   readonly VITE_E2E_DOMAIN_FIXTURES?: string;
   readonly VITE_E2E_KEYWORD_FIXTURES?: string;
   // Cloudflare Turnstile site key — public by design, baked in at build time.
