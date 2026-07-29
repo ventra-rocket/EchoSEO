@@ -6,6 +6,7 @@ import {
   FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
   FREE_SEO_CHECK_VI_LANDING_PATH,
   isPublicSsrPath,
+  LITE_REPORT_FIXTURE_ROUTE,
 } from "./free-seo-check";
 import {
   LEGAL_PRIVACY_PATH,
@@ -29,6 +30,13 @@ describe("isPublicSsrPath", () => {
     expect(isPublicSsrPath(LEGAL_PRIVACY_PATH)).toBe(true);
     expect(isPublicSsrPath(LEGAL_TERMS_PATH_VI)).toBe(true);
     expect(isPublicSsrPath(LEGAL_PRIVACY_PATH_VI)).toBe(true);
+  });
+
+  it("matches the test-only result fixture route", () => {
+    // It renders the result state, so it needs the same SSR treatment a real
+    // result gets — otherwise the fixture would exercise a different code path
+    // than the thing it exists to stand in for.
+    expect(isPublicSsrPath(LITE_REPORT_FIXTURE_ROUTE)).toBe(true);
   });
 
   it("matches any report page under the bearer-link prefix", () => {
@@ -91,6 +99,7 @@ describe("public SSR surface stays free of request-shared singletons", () => {
     "src/routes/privacy.tsx",
     "src/routes/vi.dieu-khoan.tsx",
     "src/routes/vi.quyen-rieng-tu.tsx",
+    "src/routes/dev-fixtures.lite-report.tsx",
     ...readdirSync(join(REPO_ROOT, "src/client/features/free-seo-check"), {
       recursive: true,
     })

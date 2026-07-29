@@ -63,6 +63,8 @@ interface ImportMetaEnv {
   readonly GOOGLE_AUTH_ENABLED?: string;
   readonly VITE_E2E_DOMAIN_FIXTURES?: string;
   readonly VITE_E2E_KEYWORD_FIXTURES?: string;
+  /** Enables the Lite-result fixture route. Never set in a shipped build. */
+  readonly VITE_E2E_RESULT_FIXTURES?: string;
   // Cloudflare Turnstile site key — public by design, baked in at build time.
   readonly TURNSTILE_SITE_KEY?: string;
   // Absolute public origin for canonical/OG/sitemap URLs. Overridable for forks;

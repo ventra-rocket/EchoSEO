@@ -53,6 +53,12 @@ export function siteScreenshotUrl(pageUrl: string): string {
 export const FREE_SEO_CHECK_REPORT_ROUTE_PREFIX = "/r/";
 
 /**
+ * Test-only route that renders the Lite result from a fixture. Exported so the
+ * SSR allowlist, robots.txt, and the tests all name one string.
+ */
+export const LITE_REPORT_FIXTURE_ROUTE = "/dev-fixtures/lite-report";
+
+/**
  * Public routes that must server-render their body (not just their `<head>`).
  * The rest of the app renders inside `<ClientOnly>` in `__root.tsx` because it is
  * an authenticated dashboard where SSR buys nothing; these routes are the public,
@@ -75,6 +81,10 @@ const PUBLIC_SSR_EXACT_PATHS: ReadonlySet<string> = new Set([
   LEGAL_PRIVACY_PATH,
   LEGAL_TERMS_PATH_VI,
   LEGAL_PRIVACY_PATH_VI,
+  // The fixture route renders the result state outside the authenticated
+  // island, the same way a real result renders. It 404s in any build without
+  // VITE_E2E_RESULT_FIXTURES, so listing it here costs a shipped build nothing.
+  LITE_REPORT_FIXTURE_ROUTE,
 ]);
 
 export function isPublicSsrPath(pathname: string): boolean {
