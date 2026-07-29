@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { LEGAL_PRIVACY_PATH, LEGAL_TERMS_PATH } from "@/shared/legal";
+import {
+  LEGAL_PRIVACY_PATH,
+  LEGAL_PRIVACY_PATH_VI,
+  LEGAL_TERMS_PATH,
+  LEGAL_TERMS_PATH_VI,
+} from "@/shared/legal";
 
 /**
  * Raw Worker-level route (not a TanStack `createServerFn`) — every server
@@ -68,6 +73,8 @@ const PUBLIC_SSR_EXACT_PATHS: ReadonlySet<string> = new Set([
   // set is the app-wide public list, not a checker-only one.
   LEGAL_TERMS_PATH,
   LEGAL_PRIVACY_PATH,
+  LEGAL_TERMS_PATH_VI,
+  LEGAL_PRIVACY_PATH_VI,
 ]);
 
 export function isPublicSsrPath(pathname: string): boolean {

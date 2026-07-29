@@ -4,7 +4,12 @@ import {
   FREE_SEO_CHECK_VI_LANDING_PATH,
   publicUrl,
 } from "@/shared/free-seo-check";
-import { LEGAL_PRIVACY_PATH, LEGAL_TERMS_PATH } from "@/shared/legal";
+import {
+  LEGAL_PRIVACY_PATH,
+  LEGAL_PRIVACY_PATH_VI,
+  LEGAL_TERMS_PATH,
+  LEGAL_TERMS_PATH_VI,
+} from "@/shared/legal";
 
 // Curated landings only — never the `/r/` report pages, which are unlisted
 // bearer links (robots.txt disallows them and each carries X-Robots-Tag:
@@ -17,9 +22,12 @@ const LANDING_PATHS = [
   FREE_SEO_CHECK_VI_LANDING_PATH,
   // The legal pages belong here too: they are public, indexable, and someone
   // deciding whether to trust the service should be able to reach them from
-  // search rather than only from the sign-up form.
+  // search rather than only from the sign-up form. Both languages of each are
+  // listed, the same way both language landings are.
   LEGAL_TERMS_PATH,
   LEGAL_PRIVACY_PATH,
+  LEGAL_TERMS_PATH_VI,
+  LEGAL_PRIVACY_PATH_VI,
 ];
 
 function sitemapXml(): string {

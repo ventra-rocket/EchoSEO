@@ -15,6 +15,26 @@ export const LEGAL_TERMS_PATH = "/terms-and-conditions";
 export const LEGAL_PRIVACY_PATH = "/privacy";
 
 /**
+ * Vietnamese documents live at their own Vietnamese URLs, the same way the
+ * checker landing does, so each language is a distinct indexable page that
+ * hreflang can pair with its translation. A locale query parameter or cookie
+ * would give both languages one URL and nothing for a crawler to choose between.
+ */
+export const LEGAL_TERMS_PATH_VI = "/vi/dieu-khoan";
+export const LEGAL_PRIVACY_PATH_VI = "/vi/quyen-rieng-tu";
+
+/** Both languages of one document, keyed by locale — the hreflang pair. */
+export const LEGAL_TERMS_PATH_BY_LOCALE = {
+  en: LEGAL_TERMS_PATH,
+  vi: LEGAL_TERMS_PATH_VI,
+} as const;
+
+export const LEGAL_PRIVACY_PATH_BY_LOCALE = {
+  en: LEGAL_PRIVACY_PATH,
+  vi: LEGAL_PRIVACY_PATH_VI,
+} as const;
+
+/**
  * The address in both documents for privacy requests (access, erasure, consent
  * withdrawal). Kept next to the paths so the pages, and any test that pins the
  * documents' contact route, read one value.
