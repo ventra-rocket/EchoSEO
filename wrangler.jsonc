@@ -26,6 +26,9 @@
     // Browser-visible feature flag only. OAuth credentials remain encrypted
     // Worker secrets, so self-hosters don't see an unusable Google button.
     "GOOGLE_AUTH_ENABLED": "true",
+    // Turnstile site keys are intentionally public and baked into the client
+    // bundle. TURNSTILE_SECRET_KEY remains an encrypted Worker secret.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAD04Kn1C68CSFRS3",
   },
   // EchoSEO deploys to its own zone (ventrarocket.vn) as a custom domain.
   // workers_dev is disabled so deploys don't require a workers.dev subdomain.

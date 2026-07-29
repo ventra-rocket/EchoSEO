@@ -5,6 +5,7 @@ import type { Locale } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { TurnstileWidget } from "./TurnstileWidget";
 import { DeepTierPitch } from "./DeepTierPitch";
+import { useTurnstileSiteKey } from "./use-turnstile-site-key";
 
 /**
  * Email-gated entry point to the Deep report.
@@ -28,7 +29,7 @@ export function DeepRequestForm({
   locale: Locale;
 }) {
   const copy = CHECK_RESULT_COPY[locale].deepForm;
-  const siteKey = import.meta.env.TURNSTILE_SITE_KEY;
+  const siteKey = useTurnstileSiteKey();
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -154,8 +155,12 @@ export function DeepRequestForm({
               setStatus("error");
             }}
           />
-        ) : (
+        ) : siteKey === null ? (
           <p className="text-xs text-base-content/50">{copy.unconfigured}</p>
+        ) : (
+          <div className="flex justify-center" role="status">
+            <span className="loading loading-spinner loading-sm" />
+          </div>
         )}
 
         {errorMessage ? (

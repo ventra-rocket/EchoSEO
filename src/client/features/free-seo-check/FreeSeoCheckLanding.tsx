@@ -15,6 +15,7 @@ import { ScanLog } from "./ScanLog";
 import { LandingContent } from "./LandingContent";
 import { SampleReportPreview } from "./SampleReportPreview";
 import { LANDING_COPY } from "./landing-copy";
+import { useTurnstileSiteKey } from "./use-turnstile-site-key";
 
 interface CheckResponse {
   report: LiteReport;
@@ -37,7 +38,7 @@ interface CheckErrorResponse {
  */
 export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   const copy = LANDING_COPY[locale];
-  const siteKey = import.meta.env.TURNSTILE_SITE_KEY;
+  const siteKey = useTurnstileSiteKey();
   // The language switch is a plain full-page anchor, not a router Link: a
   // language change swaps URL, <head>, and hreflang identity, so a real
   // navigation is the correct (and simplest) behavior.
@@ -172,9 +173,13 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
                 onExpire={() => setTurnstileToken(null)}
                 onLoadError={() => setErrorMessage(copy.turnstileLoadError)}
               />
-            ) : (
+            ) : siteKey === null ? (
               <div className="alert alert-warning text-sm" role="alert">
                 {copy.turnstileUnconfigured}
+              </div>
+            ) : (
+              <div className="flex justify-center" role="status">
+                <span className="loading loading-spinner loading-sm" />
               </div>
             )}
 

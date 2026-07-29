@@ -32,6 +32,18 @@ Required public Worker variables:
 - `AUTH_EMAIL_FROM`
 - `GOOGLE_AUTH_ENABLED=true` when Google sign-in is enabled
 
+## Public Free SEO Checker
+
+The checker needs both sides of the Cloudflare Turnstile pair:
+
+- Worker secret: `TURNSTILE_SECRET_KEY`
+- Public Worker variable: `TURNSTILE_SITE_KEY`
+
+The site key is safe to include in the client bundle. Never put the secret key
+in `wrangler.jsonc`, a frontend environment variable, or source control.
+EchoSEO reads the public key from the running Worker, so changing the Worker
+variable does not require a separate frontend build-time variable.
+
 ## Verification
 
 After deploying, check `/sign-up` and `/sign-in` over HTTPS. For Google OAuth,

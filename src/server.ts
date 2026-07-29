@@ -30,6 +30,7 @@ import {
 } from "@/server/billing/autumn-webhook";
 import {
   FREE_SEO_CHECK_API_PATH,
+  FREE_SEO_CHECK_CONFIG_PATH,
   FREE_SEO_CHECK_CONFIRM_PATH,
   FREE_SEO_CHECK_DEEP_START_PATH,
   FREE_SEO_CHECK_REPORT_PATH,
@@ -37,6 +38,7 @@ import {
   FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
 } from "@/shared/free-seo-check";
 import { handleFreeSeoCheckRequest } from "@/server/services/seo-check/api";
+import { handleFreeSeoCheckPublicConfigRequest } from "@/server/services/seo-check/public-config";
 import { handleStartDeepCheckRequest } from "@/server/services/seo-check/deep-start";
 import { handleConfirmDeepCheckRequest } from "@/server/services/seo-check/deep-confirm";
 import { handleDeepReportRequest } from "@/server/services/seo-check/deep-report";
@@ -170,6 +172,10 @@ function fetch(
   // shared/free-seo-check.ts for why this can't be a createServerFn.
   if (pathname === FREE_SEO_CHECK_API_PATH) {
     return handleFreeSeoCheckRequest(publicRequest);
+  }
+
+  if (pathname === FREE_SEO_CHECK_CONFIG_PATH) {
+    return handleFreeSeoCheckPublicConfigRequest(publicRequest, env);
   }
 
   if (pathname === FREE_SEO_CHECK_DEEP_START_PATH) {
