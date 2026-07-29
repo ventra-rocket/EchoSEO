@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { buildPageReadRows } from "./page-read-rows";
+import { formatMeasurement } from "./format-measurement";
 
 const copy = CHECK_RESULT_COPY.en.pageRead;
+const fmt = (
+  m: NonNullable<ReturnType<typeof buildPageReadRows>[number]["measurement"]>,
+) => formatMeasurement(m, "en");
 
 const fullPage = {
   title: "Acme — Industrial fasteners since 1974",
@@ -15,9 +19,11 @@ describe("buildPageReadRows", () => {
   it("measures each text field by its own length", () => {
     const rows = buildPageReadRows(fullPage, copy);
     expect(rows[0].value).toBe(fullPage.title);
-    expect(rows[0].measure).toBe(copy.chars(fullPage.title.length));
-    expect(rows[1].measure).toBe(copy.chars(fullPage.metaDescription.length));
-    expect(rows[2].measure).toBe(copy.chars(fullPage.h1.length));
+    expect(fmt(rows[0].measurement!)).toBe(`${fullPage.title.length} chars`);
+    expect(fmt(rows[1].measurement!)).toBe(
+      `${fullPage.metaDescription.length} chars`,
+    );
+    expect(fmt(rows[2].measurement!)).toBe(`${fullPage.h1.length} chars`);
   });
 
   it("does not measure a word count", () => {
@@ -25,7 +31,7 @@ describe("buildPageReadRows", () => {
     // would state a second, wrong number about the same thing.
     const rows = buildPageReadRows(fullPage, copy);
     expect(rows[3].value).toBe("812");
-    expect(rows[3].measure).toBeNull();
+    expect(rows[3].measurement).toBeNull();
   });
 
   it("reports an absent value as absent, not as a zero-length one", () => {
@@ -38,7 +44,7 @@ describe("buildPageReadRows", () => {
     );
     for (const row of rows.slice(0, 3)) {
       expect(row.value).toBe("");
-      expect(row.measure).toBeNull();
+      expect(row.measurement).toBeNull();
     }
   });
 

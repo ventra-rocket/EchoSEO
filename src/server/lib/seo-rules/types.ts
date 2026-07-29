@@ -61,12 +61,36 @@ export interface RuleMeta {
 }
 
 /**
+ * What a check actually read on the page, beside its verdict.
+ *
+ * Stored language-neutral and formatted at the read boundary, the same way
+ * rule text is: a number and a kind, never a rendered string. That keeps one
+ * persisted report renderable in either language, and it is why "54" and
+ * "chars" are separate rather than a "54 chars" the server pre-baked.
+ *
+ * `text` is for values that are already literal — a status code, a robots
+ * directive — where there is nothing to translate.
+ */
+export type Measurement =
+  | { kind: "chars"; value: number }
+  | { kind: "count"; value: number }
+  /** e.g. 1 of 2 images missing alt text. */
+  | { kind: "ratio"; value: number; of: number }
+  | { kind: "text"; value: string };
+
+/**
  * A versioned catalog entry. `appliesWhen` is pure and side-effect-free —
  * no network calls, no dates, no randomness — so `evaluate()` stays
  * deterministic and reproducible.
  */
 export interface Rule<TInput> extends RuleMeta {
   appliesWhen: (input: TInput) => IssueStatus;
+  /**
+   * The value this check read, for display beside the verdict. Optional: a
+   * rule with nothing meaningful to show omits it rather than inventing a
+   * number. Pure, like `appliesWhen`.
+   */
+  measure?: (input: TInput) => Measurement | null;
 }
 
 /**
@@ -82,6 +106,8 @@ export interface OnPageSignals extends PageAnalysis {
 /** The evaluated result of one rule against a page. */
 export interface Issue extends Omit<RuleMeta, "locales"> {
   status: IssueStatus;
+  /** Absent when the rule has no meaningful value to show. */
+  measurement?: Measurement;
 }
 
 /**

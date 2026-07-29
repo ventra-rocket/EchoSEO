@@ -45,7 +45,10 @@ describe("the page-read panel has copy in every locale", () => {
       ]) {
         expect(value.trim()).not.toBe("");
       }
-      expect(copy.chars(54)).toContain("54");
+      const measurement = CHECK_RESULT_COPY[locale].measurement;
+      expect(measurement.chars(54)).toContain("54");
+      expect(measurement.count(3)).toContain("3");
+      expect(measurement.ratio(1, 2)).toContain("1");
     }
   });
 
@@ -53,8 +56,8 @@ describe("the page-read panel has copy in every locale", () => {
     expect(CHECK_RESULT_COPY.vi.pageRead.heading).not.toBe(
       CHECK_RESULT_COPY.en.pageRead.heading,
     );
-    expect(CHECK_RESULT_COPY.vi.pageRead.chars(54)).not.toBe(
-      CHECK_RESULT_COPY.en.pageRead.chars(54),
+    expect(CHECK_RESULT_COPY.vi.measurement.chars(54)).not.toBe(
+      CHECK_RESULT_COPY.en.measurement.chars(54),
     );
   });
 });

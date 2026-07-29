@@ -14,6 +14,10 @@ export const TECHNICAL_RULES: Array<Rule<OnPageSignals>> = [
     severity: "critical",
     label: "Served over HTTPS",
     appliesWhen: (page) => (page.url.startsWith("https:") ? "pass" : "fail"),
+    measure: (page) => ({
+      kind: "text",
+      value: page.url.startsWith("https:") ? "https" : "http",
+    }),
     problem:
       "The page is served over plain HTTP instead of HTTPS, which is a security risk and part of Google's page-experience assessment.",
     fixSteps: [
@@ -46,6 +50,7 @@ export const TECHNICAL_RULES: Array<Rule<OnPageSignals>> = [
       if (page.statusCode < 400) return "warn";
       return "fail";
     },
+    measure: (page) => ({ kind: "text", value: String(page.statusCode) }),
     problem:
       "The page returned an error or redirect status code instead of 200 OK, which can keep it out of the index entirely.",
     fixSteps: [
@@ -80,6 +85,10 @@ export const TECHNICAL_RULES: Array<Rule<OnPageSignals>> = [
         .includes("noindex");
       return blocksIndex ? "fail" : "pass";
     },
+    // The directive as the page declared it. No robots meta is not the same as
+    // an empty one, and the difference is what the reader needs to see.
+    measure: (page) =>
+      page.robotsMeta ? { kind: "text", value: page.robotsMeta } : null,
     problem:
       'The page has a <meta name="robots" content="noindex"> tag, which tells Google not to show it in search results at all.',
     fixSteps: [

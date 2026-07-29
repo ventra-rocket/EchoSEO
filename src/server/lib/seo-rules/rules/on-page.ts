@@ -29,6 +29,7 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
       if (len < 10 || len > 60) return "warn";
       return "pass";
     },
+    measure: (page) => ({ kind: "chars", value: page.title.length }),
     problem:
       "The page's <title> tag is missing, or too short/long to display well in search results.",
     fixSteps: [
@@ -65,6 +66,7 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
       if (len < 50 || len > 160) return "warn";
       return "pass";
     },
+    measure: (page) => ({ kind: "chars", value: page.metaDescription.length }),
     problem:
       "The page's meta description is missing, or too short/long to make a good search-result snippet.",
     fixSteps: [
@@ -96,6 +98,9 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     severity: "high",
     label: "Canonical link tag present",
     appliesWhen: (page) => (page.canonical ? "pass" : "fail"),
+    // The URL itself, not a length: which URL was declared is the finding.
+    measure: (page) =>
+      page.canonical ? { kind: "text", value: page.canonical } : null,
     problem:
       'The page has no rel="canonical" link, so Google must guess which URL is the authoritative version if duplicates exist.',
     fixSteps: [
@@ -130,6 +135,7 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
       if (count === 0) return "fail";
       return "warn";
     },
+    measure: (page) => ({ kind: "count", value: page.h1s.length }),
     // Google's own SEO starter guide says there's no ideal heading count and
     // heading order doesn't affect Search ranking — this check is a content-
     // structure/accessibility best practice, not a Google ranking claim.
@@ -162,6 +168,14 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     label: "Heading levels do not skip (e.g. H2 straight to H4)",
     appliesWhen: (page) =>
       hasHeadingLevelSkip(page.headingOrder) ? "warn" : "pass",
+    // The outline as written, so the skip is visible rather than asserted.
+    measure: (page) =>
+      page.headingOrder.length === 0
+        ? null
+        : {
+            kind: "text",
+            value: page.headingOrder.map((level) => `H${level}`).join(" › "),
+          },
     // Google's own SEO starter guide explicitly says heading order doesn't
     // affect Search ranking — this check is an accessibility best practice
     // (screen readers rely on the outline), not a Google ranking claim.
@@ -201,6 +215,16 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
       if (missingAlt === imagesWithSrc.length) return "fail";
       return "warn";
     },
+    // Counts the same population `appliesWhen` judges: images that have a src.
+    measure: (page) => {
+      const imagesWithSrc = page.images.filter((img) => img.src);
+      if (imagesWithSrc.length === 0) return null;
+      return {
+        kind: "ratio",
+        value: imagesWithSrc.filter((img) => img.alt === null).length,
+        of: imagesWithSrc.length,
+      };
+    },
     problem:
       "Some images are missing alt text, so Google (and screen readers) have no description of what they show.",
     fixSteps: [
@@ -234,6 +258,7 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
       if (page.wordCount >= 300) return "warn";
       return "fail";
     },
+    measure: (page) => ({ kind: "count", value: page.wordCount }),
     // Google has no published word-count minimum — this checks for thin
     // content as a proxy, not a documented Google threshold. See guideQuote.
     problem:

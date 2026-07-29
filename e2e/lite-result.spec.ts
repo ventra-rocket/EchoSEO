@@ -26,7 +26,53 @@ test.describe("the Lite result state", () => {
     // The fixture page has real failures, so every verdict must be reachable.
     await expect(page.getByText("fail", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("warn", { exact: true }).first()).toBeVisible();
+    // Passing checks are deliberately folded away, so this one has to be
+    // opened. Reachable, not visible by default — that is the design.
+    await page.getByText("6 checks passed").click();
     await expect(page.getByText("pass", { exact: true }).first()).toBeVisible();
+  });
+
+  test("leads with the worst finding and folds the passing checks away", async ({
+    page,
+  }) => {
+    await page.goto(FIXTURE);
+
+    // Severity order, not rule-definition order. The fixture's only failure
+    // must be the first row; in definition order it sat seventh.
+    const rows = page.locator("[data-signal-status]");
+    await expect(rows.first()).toHaveAttribute("data-signal-status", "fail");
+
+    // Its fix is already open — a reader who came for one answer should not
+    // have to guess which row holds it.
+    await expect(
+      page.getByText("The page has very little visible text content", {
+        exact: false,
+      }),
+    ).toBeVisible();
+
+    // Passing checks are folded behind one row, present but not crowding.
+    await expect(page.getByText("6 checks passed")).toBeVisible();
+  });
+
+  test("counts every verdict before the reader reads any of them", async ({
+    page,
+  }) => {
+    await page.goto(FIXTURE);
+    await expect(page.getByText("1 failing")).toBeVisible();
+    await expect(page.getByText("4 warnings")).toBeVisible();
+    await expect(page.getByText("6 passed")).toBeVisible();
+  });
+
+  test("puts the measured value on every check that has one", async ({
+    page,
+  }) => {
+    await page.goto(FIXTURE);
+    // What the page actually had, beside the verdict about it — the thing the
+    // landing's sample advertised and the real report never delivered.
+    await expect(page.getByText("12 chars").first()).toBeVisible();
+    await expect(page.getByText("1 of 2")).toBeVisible();
+    // The heading outline shows the skip rather than asserting it.
+    await expect(page.getByText("H1 › H2 › H4 › H2 › H1")).toBeVisible();
   });
 
   test("shows the visitor what was actually read from their page", async ({
@@ -37,13 +83,15 @@ test.describe("the Lite result state", () => {
     // The panel that closes the gap between what the sample advertises and
     // what a real report delivers. These are the fixture page's real values.
     await expect(page.getByText("What we read on your page")).toBeVisible();
+    // Scoped to the panel: the same measurement vocabulary now also renders on
+    // the signal rows, which is the point — one way of saying "12 chars".
+    const panel = page.locator("dl");
     await expect(
-      page.getByText("Pricing — Acme Industrial Fasteners"),
+      panel.getByText("Pricing — Acme Industrial Fasteners"),
     ).toBeVisible();
-    // The measured length beside the value — the thing the sample promised.
-    await expect(page.getByText("12 chars")).toBeVisible();
+    await expect(panel.getByText("12 chars")).toBeVisible();
     // Word count is a measurement already; it must not gain a second one.
-    await expect(page.getByText("268", { exact: true })).toBeVisible();
+    await expect(panel.getByText("268", { exact: true })).toBeVisible();
   });
 
   test("renders the result in Vietnamese when asked", async ({ page }) => {
@@ -51,7 +99,9 @@ test.describe("the Lite result state", () => {
     await expect(
       page.getByText("Những gì chúng tôi đọc được trên trang của bạn"),
     ).toBeVisible();
-    await expect(page.getByText("12 ký tự")).toBeVisible();
+    await expect(page.locator("dl").getByText("12 ký tự")).toBeVisible();
+    // The triage counts localize too, not just the panel.
+    await expect(page.getByText("1 lỗi")).toBeVisible();
   });
 
   test("has no horizontal overflow on a phone", async ({ page }) => {
