@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as FreeSeoCheckRouteImport } from './routes/free-seo-check'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -66,6 +68,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
+  id: '/terms-and-conditions',
+  path: '/terms-and-conditions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -79,6 +86,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FreeSeoCheckRoute = FreeSeoCheckRouteImport.update({
@@ -333,9 +345,11 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/free-seo-check': typeof FreeSeoCheckRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
@@ -382,9 +396,11 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/free-seo-check': typeof FreeSeoCheckRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/ai': typeof AppAiRoute
@@ -432,9 +448,11 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/free-seo-check': typeof FreeSeoCheckRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   '/_app/ai': typeof AppAiRoute
@@ -484,9 +502,11 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/free-seo-check'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/terms-and-conditions'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/ai'
@@ -533,9 +553,11 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/free-seo-check'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/terms-and-conditions'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/ai'
@@ -582,9 +604,11 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/forgot-password'
     | '/free-seo-check'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/terms-and-conditions'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
     | '/_app/ai'
@@ -636,9 +660,11 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   FreeSeoCheckRoute: typeof FreeSeoCheckRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
@@ -661,6 +687,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms-and-conditions': {
+      id: '/terms-and-conditions'
+      path: '/terms-and-conditions'
+      fullPath: '/terms-and-conditions'
+      preLoaderRoute: typeof TermsAndConditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -680,6 +713,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/free-seo-check': {
@@ -1162,9 +1202,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   FreeSeoCheckRoute: FreeSeoCheckRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsAndConditionsRoute: TermsAndConditionsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute:
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,

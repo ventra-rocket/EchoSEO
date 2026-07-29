@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LEGAL_PRIVACY_PATH, LEGAL_TERMS_PATH } from "@/shared/legal";
 
 /**
  * Raw Worker-level route (not a TanStack `createServerFn`) — every server
@@ -61,6 +62,12 @@ const PUBLIC_SSR_EXACT_PATHS: ReadonlySet<string> = new Set([
   FREE_SEO_CHECK_LANDING_PATH,
   FREE_SEO_CHECK_VI_LANDING_PATH,
   FREE_SEO_CHECK_CONFIRM_ROUTE,
+  // The legal pages are public for a different reason than the checker: they are
+  // linked from the sign-up form, so they must render for someone who has no
+  // account and no session. Their paths live in `shared/legal.ts` because this
+  // set is the app-wide public list, not a checker-only one.
+  LEGAL_TERMS_PATH,
+  LEGAL_PRIVACY_PATH,
 ]);
 
 export function isPublicSsrPath(pathname: string): boolean {

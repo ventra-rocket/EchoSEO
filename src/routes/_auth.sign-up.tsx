@@ -11,6 +11,7 @@ import { getFieldError, getFormError } from "@/client/lib/forms";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { authClient } from "@/lib/auth-client";
 import { getSignInSearch, getVerifyEmailSearch } from "@/lib/auth-redirect";
+import { LEGAL_PRIVACY_PATH, LEGAL_TERMS_PATH } from "@/shared/legal";
 import {
   HOSTED_PASSWORD_MAX_LENGTH,
   HOSTED_PASSWORD_MIN_LENGTH,
@@ -169,8 +170,11 @@ function SignUpPage() {
             <div className="space-y-4">
               <p className="text-sm leading-relaxed text-base-content/60">
                 By signing up, you agree to our{" "}
+                {/* Relative, never absolute: each deployment must link to the
+                    documents that actually govern it. An absolute URL here
+                    points a self-hoster's users at someone else's terms. */}
                 <a
-                  href="https://echoseo.ventrarocket.vn/terms-and-conditions"
+                  href={LEGAL_TERMS_PATH}
                   target="_blank"
                   rel="noreferrer"
                   className="text-base-content underline underline-offset-2 hover:text-base-content/80 transition-colors"
@@ -179,7 +183,7 @@ function SignUpPage() {
                 </a>{" "}
                 and{" "}
                 <a
-                  href="https://echoseo.ventrarocket.vn/privacy"
+                  href={LEGAL_PRIVACY_PATH}
                   target="_blank"
                   rel="noreferrer"
                   className="text-base-content underline underline-offset-2 hover:text-base-content/80 transition-colors"
