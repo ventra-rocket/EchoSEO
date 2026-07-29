@@ -1,0 +1,138 @@
+/**
+ * Shape of the per-locale check-result copy.
+ *
+ * Split out of `check-result-copy.ts` only because that file carries two full
+ * locales of prose and outgrew the repo's per-file line budget. The contract
+ * lives here; the words live there.
+ */
+import type { RuleCategory } from "@/server/lib/seo-rules/types";
+import type { SignalStatus } from "@/server/services/seo-check/types";
+
+export interface CheckResultCopy {
+  /** ScoreGauge — the ring under the overall score. */
+  gauge: {
+    outOf100: string;
+    gradeAria: (grade: string) => string;
+  };
+  /** Headline under the gauge, by score band (plus the zero-issue case). */
+  headline: {
+    none: string;
+    good: (issueCount: number) => string;
+    fair: (issueCount: number) => string;
+    needsWork: (issueCount: number) => string;
+  };
+  /**
+   * "What we read" — the raw values actually found on the page, with their
+   * measured lengths. This is the evidence behind the scores; without it the
+   * report states verdicts about a page it never shows the visitor.
+   */
+  pageRead: {
+    heading: string;
+    title: string;
+    metaDescription: string;
+    h1: string;
+    words: string;
+    /** Shown in place of a value the page does not have. */
+    missing: string;
+    /** e.g. "54 chars" — the unit the sample has always advertised. */
+    chars: (count: number) => string;
+  };
+  /** Card label per rule category. "Meta"/"Core Web Vitals" stay untranslated. */
+  categoryLabels: Record<RuleCategory, string>;
+  /** SignalRow chrome around the server-localized signal text. */
+  signal: {
+    statusBadge: Record<SignalStatus, string>;
+    howToFix: string;
+    /** Trailing space included — the guidance link follows immediately. */
+    guidancePrefix: string;
+    guidanceLinkText: string;
+    /** Trailing space included — the quoted (English) Google excerpt follows. */
+    guidanceReviewed: (date: string) => string;
+  };
+  /** Source line next to the "Core Web Vitals" heading (heading stays as-is). */
+  coreWebVitals: {
+    sourceField: string;
+    sourceLab: string;
+  };
+  /** Deep-report-only chrome (PSI cards, checks section, crawled pages). */
+  deepReport: {
+    psiLabels: Record<
+      "performance" | "seo" | "accessibility" | "bestPractices",
+      string
+    >;
+    checksHeading: string;
+    primaryPageSuffix: string;
+    otherPagesHeading: (count: number) => string;
+    noIssues: string;
+    issuesToFix: (count: number) => string;
+  };
+  /** The desktop page capture, shown on both the Lite result and Deep report. */
+  screenshot: {
+    label: string;
+    alt: (host: string) => string;
+    /** Shown in the frame when a capture could not be produced. */
+    unavailable: string;
+  };
+  /** The GEO / AI-search section — scored separately, framed as directional. */
+  geoSection: {
+    heading: string;
+    /** The honesty line: reinforces fundamentals, not a guarantee. */
+    disclaimer: string;
+    scoreLabel: string;
+    policyHeading: string;
+    botAllowed: string;
+    botBlocked: string;
+    googleExtendedLabel: string;
+    gptbotLabel: string;
+    llmsTxtLabel: string;
+    llmsTxtFound: string;
+    llmsTxtMissing: string;
+    /** Trails the llms.txt row — reminds it is not a Google standard. */
+    llmsTxtNote: string;
+  };
+  /** DeepTierPitch + the paused notice that stands in for the request form. */
+  deepPitch: {
+    unlockTitle: string;
+    unlockBody: (metricCount: number) => string;
+    pausedNotice: string;
+  };
+  /** DeepRequestForm — the email-gated Deep entry point. */
+  deepForm: {
+    /** API error code → message; falls back to `errorDefault`. */
+    errors: Record<string, string>;
+    errorDefault: string;
+    sentTitle: string;
+    /** Rendered as `{before} <email>{after}` around the mono email span. */
+    sentBodyBefore: string;
+    sentBodyAfter: string;
+    sentSpamHint: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    consentLabel: string;
+    unconfigured: string;
+    submitIdle: string;
+    submitLoading: string;
+  };
+  /** The `/r/{id}` page shell around the Deep report. */
+  reportPage: {
+    /** API error code → message; falls back to `errorDefault`. */
+    errors: Record<string, string>;
+    errorDefault: string;
+    loading: string;
+    stalledBody: string;
+    stalledRefresh: string;
+    pendingTitle: string;
+    pendingHint: string;
+    /** Fallback title for an unrecognized failure. */
+    failedTitle: string;
+    /** Specific server failure strings (kill-switch, quota) → localized text;
+     * an unrecognized message falls back to `failedTitle`. EN maps each to
+     * itself so the page reads exactly as before. */
+    failedMessages: Record<string, string>;
+    failedHint: string;
+    dedupedNotice: string;
+    ctaHeading: string;
+    ctaBody: string;
+    ctaLink: string;
+  };
+}

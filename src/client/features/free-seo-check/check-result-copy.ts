@@ -16,121 +16,7 @@
  * them. Do not reword EN here without updating those.
  */
 import type { Locale } from "@/client/i18n/config";
-import type { RuleCategory } from "@/server/lib/seo-rules/types";
-import type { SignalStatus } from "@/server/services/seo-check/types";
-
-interface CheckResultCopy {
-  /** ScoreGauge — the ring under the overall score. */
-  gauge: {
-    outOf100: string;
-    gradeAria: (grade: string) => string;
-  };
-  /** Headline under the gauge, by score band (plus the zero-issue case). */
-  headline: {
-    none: string;
-    good: (issueCount: number) => string;
-    fair: (issueCount: number) => string;
-    needsWork: (issueCount: number) => string;
-  };
-  /** Card label per rule category. "Meta"/"Core Web Vitals" stay untranslated. */
-  categoryLabels: Record<RuleCategory, string>;
-  /** SignalRow chrome around the server-localized signal text. */
-  signal: {
-    statusBadge: Record<SignalStatus, string>;
-    howToFix: string;
-    /** Trailing space included — the guidance link follows immediately. */
-    guidancePrefix: string;
-    guidanceLinkText: string;
-    /** Trailing space included — the quoted (English) Google excerpt follows. */
-    guidanceReviewed: (date: string) => string;
-  };
-  /** Source line next to the "Core Web Vitals" heading (heading stays as-is). */
-  coreWebVitals: {
-    sourceField: string;
-    sourceLab: string;
-  };
-  /** Deep-report-only chrome (PSI cards, checks section, crawled pages). */
-  deepReport: {
-    psiLabels: Record<
-      "performance" | "seo" | "accessibility" | "bestPractices",
-      string
-    >;
-    checksHeading: string;
-    primaryPageSuffix: string;
-    otherPagesHeading: (count: number) => string;
-    noIssues: string;
-    issuesToFix: (count: number) => string;
-  };
-  /** The desktop page capture, shown on both the Lite result and Deep report. */
-  screenshot: {
-    label: string;
-    alt: (host: string) => string;
-    /** Shown in the frame when a capture could not be produced. */
-    unavailable: string;
-  };
-  /** The GEO / AI-search section — scored separately, framed as directional. */
-  geoSection: {
-    heading: string;
-    /** The honesty line: reinforces fundamentals, not a guarantee. */
-    disclaimer: string;
-    scoreLabel: string;
-    policyHeading: string;
-    botAllowed: string;
-    botBlocked: string;
-    googleExtendedLabel: string;
-    gptbotLabel: string;
-    llmsTxtLabel: string;
-    llmsTxtFound: string;
-    llmsTxtMissing: string;
-    /** Trails the llms.txt row — reminds it is not a Google standard. */
-    llmsTxtNote: string;
-  };
-  /** DeepTierPitch + the paused notice that stands in for the request form. */
-  deepPitch: {
-    unlockTitle: string;
-    unlockBody: (metricCount: number) => string;
-    pausedNotice: string;
-  };
-  /** DeepRequestForm — the email-gated Deep entry point. */
-  deepForm: {
-    /** API error code → message; falls back to `errorDefault`. */
-    errors: Record<string, string>;
-    errorDefault: string;
-    sentTitle: string;
-    /** Rendered as `{before} <email>{after}` around the mono email span. */
-    sentBodyBefore: string;
-    sentBodyAfter: string;
-    sentSpamHint: string;
-    emailLabel: string;
-    emailPlaceholder: string;
-    consentLabel: string;
-    unconfigured: string;
-    submitIdle: string;
-    submitLoading: string;
-  };
-  /** The `/r/{id}` page shell around the Deep report. */
-  reportPage: {
-    /** API error code → message; falls back to `errorDefault`. */
-    errors: Record<string, string>;
-    errorDefault: string;
-    loading: string;
-    stalledBody: string;
-    stalledRefresh: string;
-    pendingTitle: string;
-    pendingHint: string;
-    /** Fallback title for an unrecognized failure. */
-    failedTitle: string;
-    /** Specific server failure strings (kill-switch, quota) → localized text;
-     * an unrecognized message falls back to `failedTitle`. EN maps each to
-     * itself so the page reads exactly as before. */
-    failedMessages: Record<string, string>;
-    failedHint: string;
-    dedupedNotice: string;
-    ctaHeading: string;
-    ctaBody: string;
-    ctaLink: string;
-  };
-}
+import type { CheckResultCopy } from "./check-result-copy-types";
 
 const EN: CheckResultCopy = {
   gauge: {
@@ -143,6 +29,15 @@ const EN: CheckResultCopy = {
     fair: (n) => `Fair — ${n} ${n === 1 ? "issue" : "issues"} to fix.`,
     needsWork: (n) =>
       `Needs work — ${n} ${n === 1 ? "issue" : "issues"} to fix.`,
+  },
+  pageRead: {
+    heading: "What we read on your page",
+    title: "Title",
+    metaDescription: "Meta description",
+    h1: "H1 heading",
+    words: "Words",
+    missing: "not found",
+    chars: (count: number) => `${count} chars`,
   },
   categoryLabels: {
     meta: "Meta",
@@ -286,6 +181,15 @@ const VI: CheckResultCopy = {
     good: (n) => `Tốt — còn ${n} lỗi cần sửa.`,
     fair: (n) => `Khá — còn ${n} lỗi cần sửa.`,
     needsWork: (n) => `Cần cải thiện — còn ${n} lỗi cần sửa.`,
+  },
+  pageRead: {
+    heading: "Những gì chúng tôi đọc được trên trang của bạn",
+    title: "Tiêu đề",
+    metaDescription: "Thẻ meta description",
+    h1: "Thẻ H1",
+    words: "Số từ",
+    missing: "không tìm thấy",
+    chars: (count: number) => `${count} ký tự`,
   },
   categoryLabels: {
     meta: "Meta",

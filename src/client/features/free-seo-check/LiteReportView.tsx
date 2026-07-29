@@ -3,6 +3,7 @@ import type { Locale } from "@/client/i18n/config";
 import { ScoreGauge } from "./ScoreGauge";
 import { CategoryScoreCards } from "./CategoryScoreCards";
 import { SignalRow } from "./SignalRow";
+import { PageReadPanel } from "./PageReadPanel";
 import { DeepRequestForm } from "./DeepRequestForm";
 import { DeepTierPausedNotice } from "./DeepTierPitch";
 import { scoreHeadline } from "./score-presentation";
@@ -37,6 +38,12 @@ export function LiteReportView({
           {report.finalUrl}
         </p>
       </div>
+
+      {/* Directly under the score: the evidence the score is drawn from, before
+          any picture of the page. A verdict the visitor cannot check against
+          what we actually read is the reason a real result felt thinner than
+          the sample that advertises these very numbers. */}
+      <PageReadPanel pageSummary={report.pageSummary} locale={locale} />
 
       <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
 
