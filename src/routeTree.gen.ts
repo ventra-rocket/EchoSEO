@@ -22,7 +22,9 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as ProjectRouteRouteImport } from './routes/_project/route'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as ViQuyenRiengTuRouteImport } from './routes/vi.quyen-rieng-tu'
 import { Route as ViKiemTraSeoRouteImport } from './routes/vi.kiem-tra-seo'
+import { Route as ViDieuKhoanRouteImport } from './routes/vi.dieu-khoan'
 import { Route as RIdRouteImport } from './routes/r.$id'
 import { Route as FreeSeoCheckConfirmRouteImport } from './routes/free-seo-check_.confirm'
 import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
@@ -124,9 +126,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ViQuyenRiengTuRoute = ViQuyenRiengTuRouteImport.update({
+  id: '/vi/quyen-rieng-tu',
+  path: '/vi/quyen-rieng-tu',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ViKiemTraSeoRoute = ViKiemTraSeoRouteImport.update({
   id: '/vi/kiem-tra-seo',
   path: '/vi/kiem-tra-seo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ViDieuKhoanRoute = ViDieuKhoanRouteImport.update({
+  id: '/vi/dieu-khoan',
+  path: '/vi/dieu-khoan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RIdRoute = RIdRouteImport.update({
@@ -365,7 +377,9 @@ export interface FileRoutesByFullPath {
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
+  '/vi/dieu-khoan': typeof ViDieuKhoanRoute
   '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
+  '/vi/quyen-rieng-tu': typeof ViQuyenRiengTuRoute
   '/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
   '/onboarding/chat': typeof AuthenticatedOnboardingChatRoute
@@ -416,7 +430,9 @@ export interface FileRoutesByTo {
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
+  '/vi/dieu-khoan': typeof ViDieuKhoanRoute
   '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
+  '/vi/quyen-rieng-tu': typeof ViQuyenRiengTuRoute
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
   '/onboarding/chat': typeof AuthenticatedOnboardingChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -468,7 +484,9 @@ export interface FileRoutesById {
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/free-seo-check_/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
+  '/vi/dieu-khoan': typeof ViDieuKhoanRoute
   '/vi/kiem-tra-seo': typeof ViKiemTraSeoRoute
+  '/vi/quyen-rieng-tu': typeof ViQuyenRiengTuRoute
   '/_app/': typeof AppIndexRoute
   '/_project/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
   '/_app/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
@@ -522,7 +540,9 @@ export interface FileRouteTypes {
     | '/accept-invitation/$id'
     | '/free-seo-check/confirm'
     | '/r/$id'
+    | '/vi/dieu-khoan'
     | '/vi/kiem-tra-seo'
+    | '/vi/quyen-rieng-tu'
     | '/p/$projectId'
     | '/help/dataforseo-api-key'
     | '/onboarding/chat'
@@ -573,7 +593,9 @@ export interface FileRouteTypes {
     | '/accept-invitation/$id'
     | '/free-seo-check/confirm'
     | '/r/$id'
+    | '/vi/dieu-khoan'
     | '/vi/kiem-tra-seo'
+    | '/vi/quyen-rieng-tu'
     | '/help/dataforseo-api-key'
     | '/onboarding/chat'
     | '/api/auth/$'
@@ -624,7 +646,9 @@ export interface FileRouteTypes {
     | '/accept-invitation/$id'
     | '/free-seo-check_/confirm'
     | '/r/$id'
+    | '/vi/dieu-khoan'
     | '/vi/kiem-tra-seo'
+    | '/vi/quyen-rieng-tu'
     | '/_app/'
     | '/_project/p/$projectId'
     | '/_app/help/dataforseo-api-key'
@@ -670,7 +694,9 @@ export interface RootRouteChildren {
   AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
   FreeSeoCheckConfirmRoute: typeof FreeSeoCheckConfirmRoute
   RIdRoute: typeof RIdRoute
+  ViDieuKhoanRoute: typeof ViDieuKhoanRoute
   ViKiemTraSeoRoute: typeof ViKiemTraSeoRoute
+  ViQuyenRiengTuRoute: typeof ViQuyenRiengTuRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAutumnSplatRoute: typeof ApiAutumnSplatRoute
   ApiAuditExportsDownloadRoute: typeof ApiAuditExportsDownloadRoute
@@ -771,11 +797,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/vi/quyen-rieng-tu': {
+      id: '/vi/quyen-rieng-tu'
+      path: '/vi/quyen-rieng-tu'
+      fullPath: '/vi/quyen-rieng-tu'
+      preLoaderRoute: typeof ViQuyenRiengTuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/vi/kiem-tra-seo': {
       id: '/vi/kiem-tra-seo'
       path: '/vi/kiem-tra-seo'
       fullPath: '/vi/kiem-tra-seo'
       preLoaderRoute: typeof ViKiemTraSeoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vi/dieu-khoan': {
+      id: '/vi/dieu-khoan'
+      path: '/vi/dieu-khoan'
+      fullPath: '/vi/dieu-khoan'
+      preLoaderRoute: typeof ViDieuKhoanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$id': {
@@ -1213,7 +1253,9 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptInvitationIdRoute: AcceptInvitationIdRoute,
   FreeSeoCheckConfirmRoute: FreeSeoCheckConfirmRoute,
   RIdRoute: RIdRoute,
+  ViDieuKhoanRoute: ViDieuKhoanRoute,
   ViKiemTraSeoRoute: ViKiemTraSeoRoute,
+  ViQuyenRiengTuRoute: ViQuyenRiengTuRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAutumnSplatRoute: ApiAutumnSplatRoute,
   ApiAuditExportsDownloadRoute: ApiAuditExportsDownloadRoute,

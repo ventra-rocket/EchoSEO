@@ -110,6 +110,42 @@ test.describe("public routes server-render their body", () => {
     const privacyHtml = await privacy.text();
     expect(privacyHtml).toContain("How long we keep it");
     expect(privacyHtml).toContain('rel="canonical"');
+
+    // Each English document points at its Vietnamese translation, so the pair is
+    // reciprocal — the half Google needs to treat them as one page.
+    const termsViAlt =
+      termsHtml.match(/<link[^>]*hreflang="vi"[^>]*>/)?.[0] ?? "";
+    expect(termsViAlt).toContain("/vi/dieu-khoan");
+    const privacyViAlt =
+      privacyHtml.match(/<link[^>]*hreflang="vi"[^>]*>/)?.[0] ?? "";
+    expect(privacyViAlt).toContain("/vi/quyen-rieng-tu");
+  });
+
+  test("the Vietnamese legal pages server-render in Vietnamese with hreflang", async ({
+    request,
+  }) => {
+    const terms = await request.get("/vi/dieu-khoan");
+    expect(terms.status()).toBe(200);
+    const termsHtml = await terms.text();
+    // Vietnamese body copy, server-rendered — not the English document.
+    expect(termsHtml).toContain("Cập nhật lần cuối");
+    expect(termsHtml).toContain('lang="vi"');
+    const termsCanonical =
+      termsHtml.match(/<link[^>]*rel="canonical"[^>]*>/)?.[0] ?? "";
+    expect(termsCanonical).toContain("/vi/dieu-khoan");
+    // Reciprocal hreflang back to English, plus x-default.
+    const termsEnAlt =
+      termsHtml.match(/<link[^>]*hreflang="en"[^>]*>/)?.[0] ?? "";
+    expect(termsEnAlt).toContain("/terms-and-conditions");
+    expect(termsHtml).toContain('hreflang="x-default"');
+
+    const privacy = await request.get("/vi/quyen-rieng-tu");
+    expect(privacy.status()).toBe(200);
+    const privacyHtml = await privacy.text();
+    expect(privacyHtml).toContain("Cập nhật lần cuối");
+    const privacyCanonical =
+      privacyHtml.match(/<link[^>]*rel="canonical"[^>]*>/)?.[0] ?? "";
+    expect(privacyCanonical).toContain("/vi/quyen-rieng-tu");
   });
 
   test("sitemap.xml lists the landing and excludes report pages", async ({
@@ -122,9 +158,12 @@ test.describe("public routes server-render their body", () => {
     expect(xml).toContain("/free-seo-check");
     // Both language landings are listed.
     expect(xml).toContain("/vi/kiem-tra-seo");
-    // The legal pages are public and indexable, so they belong in the sitemap.
+    // The legal pages are public and indexable, so they belong in the sitemap —
+    // both languages of each, the same as the landings.
     expect(xml).toContain("/terms-and-conditions");
     expect(xml).toContain("/privacy");
+    expect(xml).toContain("/vi/dieu-khoan");
+    expect(xml).toContain("/vi/quyen-rieng-tu");
     // Bearer report links must never be advertised.
     expect(xml).not.toContain("/r/");
   });

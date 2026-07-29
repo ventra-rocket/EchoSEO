@@ -7,7 +7,12 @@ import {
   FREE_SEO_CHECK_VI_LANDING_PATH,
   isPublicSsrPath,
 } from "./free-seo-check";
-import { LEGAL_PRIVACY_PATH, LEGAL_TERMS_PATH } from "./legal";
+import {
+  LEGAL_PRIVACY_PATH,
+  LEGAL_PRIVACY_PATH_VI,
+  LEGAL_TERMS_PATH,
+  LEGAL_TERMS_PATH_VI,
+} from "./legal";
 
 describe("isPublicSsrPath", () => {
   it("matches both language landings and the double-opt-in confirm page", () => {
@@ -16,11 +21,14 @@ describe("isPublicSsrPath", () => {
     expect(isPublicSsrPath(FREE_SEO_CHECK_CONFIRM_ROUTE)).toBe(true);
   });
 
-  it("matches the legal pages the sign-up form links to", () => {
+  it("matches the legal pages in both languages", () => {
     // These are reachable by someone with no account and no session, so they
-    // must render server-side rather than behind the authenticated island.
+    // must render server-side rather than behind the authenticated island. The
+    // Vietnamese URLs are separate hreflang targets and need the same treatment.
     expect(isPublicSsrPath(LEGAL_TERMS_PATH)).toBe(true);
     expect(isPublicSsrPath(LEGAL_PRIVACY_PATH)).toBe(true);
+    expect(isPublicSsrPath(LEGAL_TERMS_PATH_VI)).toBe(true);
+    expect(isPublicSsrPath(LEGAL_PRIVACY_PATH_VI)).toBe(true);
   });
 
   it("matches any report page under the bearer-link prefix", () => {
@@ -81,6 +89,8 @@ describe("public SSR surface stays free of request-shared singletons", () => {
     "src/routes/r.$id.tsx",
     "src/routes/terms-and-conditions.tsx",
     "src/routes/privacy.tsx",
+    "src/routes/vi.dieu-khoan.tsx",
+    "src/routes/vi.quyen-rieng-tu.tsx",
     ...readdirSync(join(REPO_ROOT, "src/client/features/free-seo-check"), {
       recursive: true,
     })
