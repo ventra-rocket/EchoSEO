@@ -1,6 +1,12 @@
 {
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["web/**/*"],
+  "//": "Typecheck the application's own sources, not everything in the working tree. A repo-wide '**/*' glob pulls in whatever a contributor happens to have on disk — vendored examples, agent tooling, scratch directories — and their errors fail the build for reasons unrelated to this project.",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "e2e/**/*.ts",
+    "scripts/**/*.ts",
+    "*.ts"
+  ],
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,

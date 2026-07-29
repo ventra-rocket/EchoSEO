@@ -94,6 +94,24 @@ test.describe("public routes server-render their body", () => {
     expect(html).toContain('"@type":"FAQPage"');
   });
 
+  test("the legal pages ship their body in the initial HTML", async ({
+    request,
+  }) => {
+    // Linked from the sign-up form, so they must be readable with no account and
+    // no JavaScript. Body copy, not the <title>: the head SSRs either way.
+    const terms = await request.get("/terms-and-conditions");
+    expect(terms.status()).toBe(200);
+    const termsHtml = await terms.text();
+    expect(termsHtml).toContain("Acceptable use");
+    expect(termsHtml).toContain('rel="canonical"');
+
+    const privacy = await request.get("/privacy");
+    expect(privacy.status()).toBe(200);
+    const privacyHtml = await privacy.text();
+    expect(privacyHtml).toContain("How long we keep it");
+    expect(privacyHtml).toContain('rel="canonical"');
+  });
+
   test("sitemap.xml lists the landing and excludes report pages", async ({
     request,
   }) => {
@@ -104,6 +122,9 @@ test.describe("public routes server-render their body", () => {
     expect(xml).toContain("/free-seo-check");
     // Both language landings are listed.
     expect(xml).toContain("/vi/kiem-tra-seo");
+    // The legal pages are public and indexable, so they belong in the sitemap.
+    expect(xml).toContain("/terms-and-conditions");
+    expect(xml).toContain("/privacy");
     // Bearer report links must never be advertised.
     expect(xml).not.toContain("/r/");
   });

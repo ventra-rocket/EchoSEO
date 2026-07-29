@@ -9,3 +9,21 @@ drizzle/
 planning/
 worker-configuration.d.ts
 web/
+
+# Agent-runner working directory. Only the product's own skill definitions are
+# formatted here; a skill directory's scripts and references are not this
+# project's files to format.
+#
+# The product skills are listed one by one rather than matched with
+# `!.agents/skills/*/SKILL.md` because a locally installed agent runner puts its
+# own skills in this same directory, and those are not formatted to our style.
+# ADD A LINE HERE WHEN YOU ADD A PRODUCT SKILL, or it goes unchecked. Once no
+# foreign skills share the directory, collapse this back to the wildcard.
+.agents/skills/*/*
+!.agents/skills/competitive-landscape/SKILL.md
+!.agents/skills/competitor-analysis/SKILL.md
+!.agents/skills/keyword-clustering/SKILL.md
+!.agents/skills/keyword-research/SKILL.md
+!.agents/skills/link-prospecting/SKILL.md
+!.agents/skills/seo-coach/SKILL.md
+!.agents/skills/seo-project-setup/SKILL.md
