@@ -84,6 +84,8 @@ export interface LandingCopy {
   urlPlaceholder: string;
   submitIdle: string;
   submitLoading: string;
+  /** Shown when the visitor submitted before the bot check finished. */
+  submitVerifying: string;
   turnstileUnconfigured: string;
   turnstileLoadError: string;
   /** API error code → message; falls back to `errorDefault`. */
@@ -156,6 +158,7 @@ const EN: LandingCopy = {
   urlPlaceholder: "example.com",
   submitIdle: "Check my site",
   submitLoading: "Checking…",
+  submitVerifying: "Starting your check…",
   turnstileUnconfigured: "Turnstile is not configured for this deployment yet.",
   turnstileLoadError: "Couldn't load verification — please refresh the page.",
   errors: {
@@ -306,6 +309,7 @@ const VI: LandingCopy = {
   urlPlaceholder: "example.com",
   submitIdle: "Kiểm tra trang của tôi",
   submitLoading: "Đang kiểm tra…",
+  submitVerifying: "Đang bắt đầu kiểm tra…",
   turnstileUnconfigured:
     "Xác minh Turnstile chưa được cấu hình cho bản triển khai này.",
   turnstileLoadError: "Không tải được phần xác minh — vui lòng tải lại trang.",

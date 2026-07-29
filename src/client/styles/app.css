@@ -235,13 +235,18 @@ select {
   padding-bottom: 0;
 }
 
-/* Touch device optimizations */
+/* Touch device optimizations.
+   `pinch-zoom` is listed explicitly on both elements. Without it the browser
+   blocks zoom entirely, which fails WCAG 1.4.4 — and it fails hardest on the
+   public checker, where the report's machine ids and measured values are the
+   smallest text on the page and are exactly what someone would zoom in to read.
+   Panning stays constrained as before; only zoom is given back. */
 @media (pointer: coarse) {
   html {
-    touch-action: none;
+    touch-action: pinch-zoom;
   }
   body {
-    touch-action: pan-x pan-y;
+    touch-action: pan-x pan-y pinch-zoom;
   }
 }
 

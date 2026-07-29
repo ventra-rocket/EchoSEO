@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Languages } from "lucide-react";
 import {
   FREE_SEO_CHECK_API_PATH,
@@ -62,24 +62,28 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   // burns it. Without the remount the retry button stays disabled until
   // Turnstile self-refreshes, and the visitor's obvious next move is dead.
   const [challengeAttempt, setChallengeAttempt] = useState(0);
+  /** A submit made before the bot check produced a token — held, not dropped. */
+  const [submitQueued, setSubmitQueued] = useState(false);
 
   function failWith(message: string) {
     setErrorMessage(message);
     setStatus("error");
     setTurnstileToken(null);
+    setSubmitQueued(false);
     setChallengeAttempt((attempt) => attempt + 1);
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!turnstileToken) return;
-
+  async function runCheck(token: string) {
     setStatus("loading");
     setErrorMessage(null);
     setResult(null);
 
     try {
-      const payload: FreeSeoCheckRequest = { url, turnstileToken, locale };
+      const payload: FreeSeoCheckRequest = {
+        url,
+        turnstileToken: token,
+        locale,
+      };
       const response = await fetch(FREE_SEO_CHECK_API_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,6 +104,28 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
       failWith(copy.errorDefault);
     }
   }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (status === "loading" || submitQueued) return;
+    // No token yet means the bot check has not finished, not that the visitor
+    // did anything wrong. Hold the intent and run it the moment the token
+    // lands, rather than dropping the click and leaving the page inert.
+    if (!turnstileToken) {
+      setSubmitQueued(true);
+      return;
+    }
+    void runCheck(turnstileToken);
+  }
+
+  useEffect(() => {
+    if (!submitQueued || !turnstileToken) return;
+    setSubmitQueued(false);
+    void runCheck(turnstileToken);
+    // `runCheck` is redefined every render; depending on it would re-fire this.
+    // The queue is keyed by the two values that actually gate the request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitQueued, turnstileToken]);
 
   return (
     <div className="fsc-root h-full overflow-auto bg-base-200">
@@ -183,18 +209,24 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
               </div>
             )}
 
+            {/* Never `disabled`. A grey dead button is the page's only action
+                at first paint, and when the challenge fails to render it stays
+                dead with nothing said. `aria-disabled` announces the busy state
+                without blocking the click that queues the check. */}
             <button
               type="submit"
               className="btn btn-primary w-full"
-              disabled={!turnstileToken || status === "loading"}
+              aria-disabled={status === "loading" || submitQueued}
             >
-              {status === "loading" ? (
+              {status === "loading" || submitQueued ? (
                 <>
                   <span
                     className="loading loading-spinner loading-sm"
                     aria-hidden="true"
                   />
-                  {copy.submitLoading}
+                  {status === "loading"
+                    ? copy.submitLoading
+                    : copy.submitVerifying}
                 </>
               ) : (
                 copy.submitIdle

@@ -59,7 +59,11 @@ export function ScanLog({ url, locale }: { url: string; locale: Locale }) {
           <span className="fsc-console-gutter select-none" aria-hidden="true">
             ›
           </span>
-          <span>
+          {/* `min-w-0` lets the flex child shrink below its content width and
+              `break-all` wraps inside the URL, which has no spaces to break on.
+              Without both, a long address widens the console past the viewport
+              and the page scrolls sideways. */}
+          <span className="min-w-0 break-all">
             {line}
             {index === visible - 1 ? (
               <span className="fsc-caret ml-1" aria-hidden="true">

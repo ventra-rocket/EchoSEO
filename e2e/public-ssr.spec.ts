@@ -24,6 +24,23 @@ test.describe("public routes server-render their body", () => {
     expect(html).toContain('placeholder="example.com"');
   });
 
+  test("the primary call to action is never server-rendered disabled", async ({
+    request,
+  }) => {
+    // The page's only action used to paint as a dead grey button and stay dead
+    // until Turnstile cleared — or forever, when the widget never rendered at
+    // all. A submit that cannot be pressed at first paint reads as broken.
+    const html = await (await request.get("/free-seo-check")).text();
+    const submit = html.match(/<button[^>]*type="submit"[^>]*>/)?.[0] ?? "";
+    expect(submit).not.toBe("");
+    // The real `disabled` attribute only — `aria-disabled` is the fix, and a
+    // bare substring match would flag it as the bug it replaced.
+    expect(submit).not.toMatch(/\sdisabled[\s=>]/);
+    // …and the busy state is still announced, so the swap did not cost
+    // assistive tech the information the disabled attribute used to carry.
+    expect(submit).toContain("aria-disabled");
+  });
+
   test("the double-opt-in confirm page ships its body in the initial HTML", async ({
     request,
   }) => {
