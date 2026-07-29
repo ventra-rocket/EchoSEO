@@ -117,6 +117,10 @@ use Cloudflare Access.
 
 Google Search Console is optional. Add `GOOGLE_CLIENT_ID` and
 `GOOGLE_CLIENT_SECRET` only when you are ready to offer that integration.
+To offer Google sign-in, also set the public Worker variable
+`GOOGLE_AUTH_ENABLED=true` and register
+`https://YOUR_HOSTNAME/api/auth/callback/google` as the Google OAuth redirect
+URI. Keep both Google credential values as Workers secrets.
 
 ## Connect the MCP server through Cloudflare Access
 

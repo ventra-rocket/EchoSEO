@@ -23,6 +23,9 @@
     // Reuse the verified EchoSEO sender for account verification, password
     // reset, and workspace invitations. The Resend API key stays a secret.
     "AUTH_EMAIL_FROM": "EchoSEO <reports@mail.echoseo.ventrarocket.vn>",
+    // Browser-visible feature flag only. OAuth credentials remain encrypted
+    // Worker secrets, so self-hosters don't see an unusable Google button.
+    "GOOGLE_AUTH_ENABLED": "true",
   },
   // EchoSEO deploys to its own zone (ventrarocket.vn) as a custom domain.
   // workers_dev is disabled so deploys don't require a workers.dev subdomain.

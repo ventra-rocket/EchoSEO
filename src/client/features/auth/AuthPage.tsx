@@ -17,11 +17,14 @@ export function useAuthPageState(redirect: string | undefined) {
       ? getOAuthSignedQuery(window.location.search)
       : null;
   const isHostedMode = isHostedClientAuthMode();
+  const isGoogleAuthEnabled =
+    isHostedMode && import.meta.env.GOOGLE_AUTH_ENABLED === "true";
 
   return {
     redirectTo,
     oauthQuery,
     isHostedMode,
+    isGoogleAuthEnabled,
   };
 }
 

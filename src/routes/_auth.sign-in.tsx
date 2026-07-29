@@ -26,9 +26,8 @@ export const Route = createFileRoute("/_auth/sign-in")({
 function SignInPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { redirectTo, oauthQuery, isHostedMode } = useAuthPageState(
-    search.redirect,
-  );
+  const { redirectTo, oauthQuery, isHostedMode, isGoogleAuthEnabled } =
+    useAuthPageState(search.redirect);
   const authCallbackURL = redirectTo;
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [isStartingGoogle, setIsStartingGoogle] = useState(false);
@@ -155,6 +154,7 @@ function SignInPage() {
         <>
           <AuthMethodChooser
             googleLabel="Continue with Google"
+            showGoogle={isGoogleAuthEnabled}
             disabled={!isHostedMode}
             isBusy={isStartingGoogle}
             onContinueWithGoogle={() => {
