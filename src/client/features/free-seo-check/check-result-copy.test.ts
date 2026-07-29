@@ -3,6 +3,7 @@ import {
   DEEP_DISABLED_MESSAGE,
   DEEP_QUOTA_BLOCKED_MESSAGE,
 } from "@/server/services/seo-check/deep-failure-messages";
+import { SUPPORTED_LOCALES } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 
 /**
@@ -26,4 +27,34 @@ describe("report-page failed-message mapping", () => {
       expect(vi[message]).not.toBe(message);
     },
   );
+});
+
+describe("the page-read panel has copy in every locale", () => {
+  it("carries a non-empty string for each field, in both languages", () => {
+    // The panel reports the values found on the visitor's own page. A missing
+    // label there would leave a bare value with nothing saying what it is.
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale].pageRead;
+      for (const value of [
+        copy.heading,
+        copy.title,
+        copy.metaDescription,
+        copy.h1,
+        copy.words,
+        copy.missing,
+      ]) {
+        expect(value.trim()).not.toBe("");
+      }
+      expect(copy.chars(54)).toContain("54");
+    }
+  });
+
+  it("is translated rather than copied from English", () => {
+    expect(CHECK_RESULT_COPY.vi.pageRead.heading).not.toBe(
+      CHECK_RESULT_COPY.en.pageRead.heading,
+    );
+    expect(CHECK_RESULT_COPY.vi.pageRead.chars(54)).not.toBe(
+      CHECK_RESULT_COPY.en.pageRead.chars(54),
+    );
+  });
 });

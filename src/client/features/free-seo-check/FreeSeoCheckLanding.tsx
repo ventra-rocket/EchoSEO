@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Languages } from "lucide-react";
 import {
   FREE_SEO_CHECK_API_PATH,
@@ -7,6 +7,13 @@ import {
   type FreeSeoCheckRequest,
 } from "@/shared/free-seo-check";
 import type { Locale } from "@/client/i18n/config";
+import {
+  LEGAL_PRIVACY_PATH_BY_LOCALE,
+  LEGAL_TERMS_PATH_BY_LOCALE,
+} from "@/shared/legal";
+// One source for what the legal documents are called, shared with the pages
+// themselves so the footer and the page headings cannot drift apart.
+import { LEGAL_CHROME_COPY } from "@/client/features/legal/legal-chrome-copy";
 import type { LiteReport } from "@/server/services/seo-check/types";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { TurnstileWidget } from "./TurnstileWidget";
@@ -43,6 +50,10 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   // language change swaps URL, <head>, and hreflang identity, so a real
   // navigation is the correct (and simplest) behavior.
   const otherLocale: Locale = locale === "en" ? "vi" : "en";
+  const landingPath =
+    locale === "vi"
+      ? FREE_SEO_CHECK_VI_LANDING_PATH
+      : FREE_SEO_CHECK_LANDING_PATH;
   const otherLandingPath =
     otherLocale === "vi"
       ? FREE_SEO_CHECK_VI_LANDING_PATH
@@ -62,24 +73,28 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   // burns it. Without the remount the retry button stays disabled until
   // Turnstile self-refreshes, and the visitor's obvious next move is dead.
   const [challengeAttempt, setChallengeAttempt] = useState(0);
+  /** A submit made before the bot check produced a token — held, not dropped. */
+  const [submitQueued, setSubmitQueued] = useState(false);
 
   function failWith(message: string) {
     setErrorMessage(message);
     setStatus("error");
     setTurnstileToken(null);
+    setSubmitQueued(false);
     setChallengeAttempt((attempt) => attempt + 1);
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!turnstileToken) return;
-
+  async function runCheck(token: string) {
     setStatus("loading");
     setErrorMessage(null);
     setResult(null);
 
     try {
-      const payload: FreeSeoCheckRequest = { url, turnstileToken, locale };
+      const payload: FreeSeoCheckRequest = {
+        url,
+        turnstileToken: token,
+        locale,
+      };
       const response = await fetch(FREE_SEO_CHECK_API_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,11 +116,39 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     }
   }
 
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (status === "loading" || submitQueued) return;
+    // No token yet means the bot check has not finished, not that the visitor
+    // did anything wrong. Hold the intent and run it the moment the token
+    // lands, rather than dropping the click and leaving the page inert.
+    if (!turnstileToken) {
+      setSubmitQueued(true);
+      return;
+    }
+    void runCheck(turnstileToken);
+  }
+
+  useEffect(() => {
+    if (!submitQueued || !turnstileToken) return;
+    setSubmitQueued(false);
+    void runCheck(turnstileToken);
+    // `runCheck` is redefined every render; depending on it would re-fire this.
+    // The queue is keyed by the two values that actually gate the request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitQueued, turnstileToken]);
+
   return (
     <div className="fsc-root h-full overflow-auto bg-base-200">
       <header className="border-b border-base-300 bg-base-100">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <EchoSeoLogo variant="lockup" className="text-base" />
+          {/* The mark is the expected way home. It was previously inert, which
+              is one of the strongest "unfinished scaffold" tells a page can
+              give. This landing IS the public home — `/` is the authenticated
+              app and would put a stranger at a sign-in wall. */}
+          <a href={landingPath} aria-label={copy.footerHomeAria}>
+            <EchoSeoLogo variant="lockup" className="text-base" />
+          </a>
           <a
             href={otherLandingPath}
             hrefLang={otherLocale}
@@ -183,18 +226,24 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
               </div>
             )}
 
+            {/* Never `disabled`. A grey dead button is the page's only action
+                at first paint, and when the challenge fails to render it stays
+                dead with nothing said. `aria-disabled` announces the busy state
+                without blocking the click that queues the check. */}
             <button
               type="submit"
               className="btn btn-primary w-full"
-              disabled={!turnstileToken || status === "loading"}
+              aria-disabled={status === "loading" || submitQueued}
             >
-              {status === "loading" ? (
+              {status === "loading" || submitQueued ? (
                 <>
                   <span
                     className="loading loading-spinner loading-sm"
                     aria-hidden="true"
                   />
-                  {copy.submitLoading}
+                  {status === "loading"
+                    ? copy.submitLoading
+                    : copy.submitVerifying}
                 </>
               ) : (
                 copy.submitIdle
@@ -241,6 +290,32 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           <LandingContent copy={copy} />
         </div>
       </main>
+
+      {/* The page had exactly one link on it — the language switch. No footer,
+          no legal links, and no statement of what EchoSEO is beyond this single
+          tool. A visitor who liked the checker had nowhere to go, which is an
+          expensive thing for the surface the whole distribution strategy points
+          at. No repository link yet: the repo is private, and a link that 404s
+          would cost more credibility than the missing link does. */}
+      <footer className="border-t border-base-300 bg-base-100">
+        <div className="mx-auto max-w-2xl space-y-3 px-4 py-8 text-sm text-base-content/60">
+          <p className="leading-relaxed">{copy.footerProductLine}</p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1">
+            <a
+              href={LEGAL_TERMS_PATH_BY_LOCALE[locale]}
+              className="underline underline-offset-2 hover:text-base-content"
+            >
+              {LEGAL_CHROME_COPY[locale].termsLinkLabel}
+            </a>
+            <a
+              href={LEGAL_PRIVACY_PATH_BY_LOCALE[locale]}
+              className="underline underline-offset-2 hover:text-base-content"
+            >
+              {LEGAL_CHROME_COPY[locale].privacyLinkLabel}
+            </a>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

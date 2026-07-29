@@ -73,7 +73,7 @@ export function LandingContent({ copy }: { copy: LandingCopy }) {
               <summary className="fsc-summary flex cursor-pointer items-center justify-between gap-3 rounded-box px-4 py-3 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                 {faq.question}
                 <ChevronRight
-                  className="size-4 shrink-0 text-base-content/40 transition-transform group-open:rotate-90"
+                  className="size-4 shrink-0 text-base-content/60 transition-transform group-open:rotate-90"
                   aria-hidden="true"
                 />
               </summary>

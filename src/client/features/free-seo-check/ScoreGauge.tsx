@@ -65,7 +65,7 @@ export function ScoreGauge({
         >
           {Math.round(shown)}
         </span>
-        <span className="text-[0.7rem] text-base-content/50">
+        <span className="text-[0.7rem] text-base-content/60">
           {copy.outOf100}
         </span>
       </div>

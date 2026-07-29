@@ -55,7 +55,7 @@ export function SampleReportPreview({ copy }: { copy: LandingCopy }) {
           <span className="badge badge-accent badge-outline shrink-0 font-mono text-xs uppercase tracking-wider">
             {sample.label}
           </span>
-          <span className="truncate font-mono text-xs text-base-content/40">
+          <span className="truncate font-mono text-xs text-base-content/60">
             {copy.urlPlaceholder}
           </span>
         </div>
@@ -95,7 +95,7 @@ export function SampleReportPreview({ copy }: { copy: LandingCopy }) {
                 >
                   {SAMPLE_SCORE}
                 </span>
-                <span className="font-mono text-[0.65rem] text-base-content/50">
+                <span className="font-mono text-[0.65rem] text-base-content/60">
                   /100
                 </span>
               </div>
@@ -107,7 +107,7 @@ export function SampleReportPreview({ copy }: { copy: LandingCopy }) {
             </div>
             {/* Capped to the gauge's width so a long caption wraps instead of
                 widening the column and squeezing the signal rows. */}
-            <p className="max-w-28 text-center font-mono text-[0.7rem] leading-snug text-base-content/50">
+            <p className="max-w-28 text-center font-mono text-[0.7rem] leading-snug text-base-content/60">
               {sample.scoreCaption}
             </p>
           </div>
@@ -130,7 +130,7 @@ export function SampleReportPreview({ copy }: { copy: LandingCopy }) {
                     </span>
                     {/* Wraps rather than truncates: the measured value is the
                         point of the row, and the copy is bounded sample text. */}
-                    <span className="block font-mono text-xs text-base-content/40">
+                    <span className="block font-mono text-xs text-base-content/60">
                       {row.id} · {row.detail}
                     </span>
                   </div>
@@ -145,7 +145,7 @@ export function SampleReportPreview({ copy }: { copy: LandingCopy }) {
           </ul>
         </div>
 
-        <p className="border-t border-base-300 px-4 py-2.5 text-center font-mono text-xs text-base-content/50">
+        <p className="border-t border-base-300 px-4 py-2.5 text-center font-mono text-xs text-base-content/60">
           {sample.footnote}
         </p>
       </div>

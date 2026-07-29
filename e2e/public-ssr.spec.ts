@@ -24,6 +24,44 @@ test.describe("public routes server-render their body", () => {
     expect(html).toContain('placeholder="example.com"');
   });
 
+  test("the primary call to action is never server-rendered disabled", async ({
+    request,
+  }) => {
+    // The page's only action used to paint as a dead grey button and stay dead
+    // until Turnstile cleared — or forever, when the widget never rendered at
+    // all. A submit that cannot be pressed at first paint reads as broken.
+    const html = await (await request.get("/free-seo-check")).text();
+    const submit = html.match(/<button[^>]*type="submit"[^>]*>/)?.[0] ?? "";
+    expect(submit).not.toBe("");
+    // The real `disabled` attribute only — `aria-disabled` is the fix, and a
+    // bare substring match would flag it as the bug it replaced.
+    expect(submit).not.toMatch(/\sdisabled[\s=>]/);
+    // …and the busy state is still announced, so the swap did not cost
+    // assistive tech the information the disabled attribute used to carry.
+    expect(submit).toContain("aria-disabled");
+  });
+
+  test("the landing is not a dead end and unfurls as a card", async ({
+    request,
+  }) => {
+    // The page used to contain exactly one link — the language switch. No
+    // footer, no legal links, an inert logo, and no share image. For the
+    // surface the distribution strategy points at, a visitor who liked the
+    // tool had nowhere to go and a shared link unfurled as a grey stub.
+    const html = await (await request.get("/free-seo-check")).text();
+    expect(html).toContain('href="/terms-and-conditions"');
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain("<footer");
+    expect(html).toContain('property="og:image"');
+    expect(html).toContain('content="summary_large_image"');
+
+    // The Vietnamese landing points at the Vietnamese documents, not the
+    // English ones — the reader should not change language by clicking Terms.
+    const vi = await (await request.get("/vi/kiem-tra-seo")).text();
+    expect(vi).toContain('href="/vi/dieu-khoan"');
+    expect(vi).toContain('href="/vi/quyen-rieng-tu"');
+  });
+
   test("the double-opt-in confirm page ships its body in the initial HTML", async ({
     request,
   }) => {

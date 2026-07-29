@@ -45,7 +45,7 @@ export function SiteScreenshot({
           <span className="size-2.5 rounded-full bg-base-300" />
           <span className="size-2.5 rounded-full bg-base-300" />
         </span>
-        <span className="mx-auto max-w-[75%] truncate rounded-full bg-base-100 px-3 py-0.5 font-mono text-xs text-base-content/50">
+        <span className="mx-auto max-w-[75%] truncate rounded-full bg-base-100 px-3 py-0.5 font-mono text-xs text-base-content/60">
           {host}
         </span>
       </div>
@@ -58,7 +58,7 @@ export function SiteScreenshot({
           />
         ) : null}
         {status === "failed" ? (
-          <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-base-content/40">
+          <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-base-content/60">
             {copy.unavailable}
           </div>
         ) : (
@@ -77,7 +77,7 @@ export function SiteScreenshot({
         )}
       </div>
 
-      <figcaption className="border-t border-base-300 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-base-content/50">
+      <figcaption className="border-t border-base-300 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-base-content/60">
         {copy.label}
       </figcaption>
     </figure>

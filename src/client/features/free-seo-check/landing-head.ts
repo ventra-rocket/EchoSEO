@@ -24,6 +24,20 @@ const OG_LOCALE: Record<Locale, string> = {
   vi: "vi_VN",
 };
 
+/**
+ * The share card. One image serves both locales: it carries the mark, the
+ * product name, and the English claim — regenerate it per locale only if the
+ * Vietnamese share surface becomes worth its own artwork. The source that
+ * produced it is kept at `docs/og-free-seo-check.source.html` so the card can
+ * be rebuilt rather than redrawn.
+ */
+const OG_IMAGE_PATH = "/og-free-seo-check.png";
+
+const OG_IMAGE_ALT: Record<Locale, string> = {
+  en: "EchoSEO Free SEO Checker — every fix cited to Google's own documentation.",
+  vi: "EchoSEO — công cụ kiểm tra SEO, mỗi cách sửa đều dẫn nguồn tài liệu chính thức của Google.",
+};
+
 function alternateLinks() {
   const perLocale = Object.entries(LANDING_PATH_BY_LOCALE).map(
     ([lang, path]) => ({
@@ -60,7 +74,16 @@ export function buildLandingHead(locale: Locale) {
       { property: "og:description", content: copy.metaDescription },
       { property: "og:url", content: canonical },
       { property: "og:locale", content: OG_LOCALE[locale] },
-      { name: "twitter:card", content: "summary" },
+      // Without an image every share on X, LinkedIn, Slack, or Discord unfurls
+      // as a grey text stub — a pure loss for the page the whole distribution
+      // strategy points at. Served from `public/` rather than the Vite pipeline
+      // so the URL stays stable across builds and cached unfurls keep working.
+      { property: "og:image", content: publicUrl(OG_IMAGE_PATH) },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: OG_IMAGE_ALT[locale] },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: publicUrl(OG_IMAGE_PATH) },
       { name: "twitter:title", content: copy.metaTitle },
       { name: "twitter:description", content: copy.metaDescription },
     ],
