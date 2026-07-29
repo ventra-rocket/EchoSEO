@@ -19,14 +19,14 @@ export function GeoSection({ geo, locale }: { geo: GeoData; locale: Locale }) {
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium">{copy.heading}</h2>
         <span className="shrink-0 font-mono text-sm font-bold tabular-nums">
-          <span className="text-xs font-normal text-base-content/50">
+          <span className="text-xs font-normal text-base-content/60">
             {copy.scoreLabel}{" "}
           </span>
           {geo.score}
         </span>
       </div>
 
-      <p className="text-xs leading-relaxed text-base-content/50">
+      <p className="text-xs leading-relaxed text-base-content/60">
         {copy.disclaimer}
       </p>
 
@@ -37,7 +37,7 @@ export function GeoSection({ geo, locale }: { geo: GeoData; locale: Locale }) {
       </div>
 
       <div className="space-y-1.5 border-t border-base-300 pt-3 font-mono text-xs text-base-content/60">
-        <p className="uppercase tracking-widest text-base-content/40">
+        <p className="uppercase tracking-widest text-base-content/60">
           {copy.policyHeading}
         </p>
         <p>
@@ -51,7 +51,7 @@ export function GeoSection({ geo, locale }: { geo: GeoData; locale: Locale }) {
         <p>
           {copy.llmsTxtLabel}:{" "}
           {geo.llmsTxt ? copy.llmsTxtFound : copy.llmsTxtMissing}{" "}
-          <span className="text-base-content/40">({copy.llmsTxtNote})</span>
+          <span className="text-base-content/60">({copy.llmsTxtNote})</span>
         </p>
       </div>
     </section>

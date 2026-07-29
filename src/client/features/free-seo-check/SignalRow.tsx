@@ -46,7 +46,7 @@ export function SignalRow({
           <div className="truncate text-sm font-medium" title={signal.label}>
             {signal.label}
           </div>
-          <code className="font-mono text-xs text-base-content/40">
+          <code className="font-mono text-xs text-base-content/60">
             {signal.id}
           </code>
         </div>
@@ -84,7 +84,7 @@ export function SignalRow({
             {/* Only the chrome is localized — `guideQuote` is Google's
                 verbatim English text, and the VI copy names Google as the
                 source so the quote reads as citation, not our prose. */}
-            <p className="text-xs text-base-content/50">
+            <p className="text-xs text-base-content/60">
               {copy.guidancePrefix}
               <a
                 href={signal.googleSourceUrl}

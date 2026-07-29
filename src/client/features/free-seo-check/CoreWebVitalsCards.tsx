@@ -69,7 +69,7 @@ export function CoreWebVitalsCards({
       <div className="flex items-baseline justify-between gap-2">
         {/* "Core Web Vitals" is the Google product term in every locale. */}
         <h2 className="text-sm font-medium">Core Web Vitals</h2>
-        <span className="text-xs text-base-content/50">
+        <span className="text-xs text-base-content/60">
           {source === "field" ? copy.sourceField : copy.sourceLab}
         </span>
       </div>

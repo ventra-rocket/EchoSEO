@@ -48,11 +48,19 @@ export const STATUS_TEXT: Record<SignalStatus, string> = {
   fail: "text-error",
 };
 
-/** daisyUI badge class per signal status. */
+/**
+ * Verdict chip class per signal status.
+ *
+ * Not daisyUI's solid `badge-success|warning|error`: those put white text on
+ * the theme's mid-tone hues, which measures under WCAG AA on the light theme —
+ * on the badge that states the finding. The `fsc-verdict-*` classes in app.css
+ * are the tinted tag-chip treatment the rest of the app already uses for
+ * exactly this problem.
+ */
 export const STATUS_BADGE: Record<SignalStatus, string> = {
-  pass: "badge-success",
-  warn: "badge-warning",
-  fail: "badge-error",
+  pass: "fsc-verdict-pass",
+  warn: "fsc-verdict-warn",
+  fail: "fsc-verdict-fail",
 };
 
 /** Short human summary shown under the gauge, in the visitor's language. */

@@ -33,7 +33,7 @@ export function LiteReportView({
         <p className="mt-3 text-sm font-medium">
           {scoreHeadline(report.overallScore, issueCount, locale)}
         </p>
-        <p className="mt-1 break-all font-mono text-xs text-base-content/40">
+        <p className="mt-1 break-all font-mono text-xs text-base-content/60">
           {report.finalUrl}
         </p>
       </div>

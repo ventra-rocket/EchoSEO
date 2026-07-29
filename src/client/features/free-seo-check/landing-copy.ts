@@ -86,6 +86,9 @@ export interface LandingCopy {
   submitLoading: string;
   /** Shown when the visitor submitted before the bot check finished. */
   submitVerifying: string;
+  /** Footer: one line saying what EchoSEO is, beyond this single tool. */
+  footerProductLine: string;
+  footerHomeAria: string;
   turnstileUnconfigured: string;
   turnstileLoadError: string;
   /** API error code → message; falls back to `errorDefault`. */
@@ -106,10 +109,14 @@ const EN: LandingCopy = {
     "Check any page's on-page SEO instantly and free — title, meta, headings, and technical basics, no signup required.",
   heroEyebrow: "Measured. Diagnosed. Proven.",
   heroHeading: "Free SEO Checker",
-  heroSubtitleBefore: "Instant ",
-  heroSubtitleAccent: "on-page SEO check",
-  heroSubtitleAfter:
-    " — title, meta, headings, and technical basics. No signup required.",
+  // The differentiator leads. "Instant on-page SEO check" is the promise every
+  // free checker makes; citing each fix to Google's own docs is the one thing
+  // this tool does that the others do not, so it holds the accent position
+  // rather than sitting third in a row of 12px chips.
+  heroSubtitleBefore:
+    "Instant on-page SEO check — every issue comes with a fix ",
+  heroSubtitleAccent: "cited to Google's own documentation",
+  heroSubtitleAfter: ", not a guess. No signup.",
   languageSwitchLabel: "Tiếng Việt",
   languageSwitchAria: "Xem trang này bằng tiếng Việt",
   // Each claim is checkable: the Lite rule set scores 12 signals (8 on-page +
@@ -159,6 +166,9 @@ const EN: LandingCopy = {
   submitIdle: "Check my site",
   submitLoading: "Checking…",
   submitVerifying: "Starting your check…",
+  footerProductLine:
+    "EchoSEO is an open, agent-native SEO platform. This checker is its free tier — self-hostable, and it never sells your data.",
+  footerHomeAria: "EchoSEO — Free SEO Checker",
   turnstileUnconfigured: "Turnstile is not configured for this deployment yet.",
   turnstileLoadError: "Couldn't load verification — please refresh the page.",
   errors: {
@@ -258,10 +268,10 @@ const VI: LandingCopy = {
     "Kiểm tra SEO on-page cho bất kỳ trang nào, ngay lập tức và miễn phí — tiêu đề, thẻ meta, heading và các yếu tố kỹ thuật, không cần đăng ký.",
   heroEyebrow: "Đo lường. Chẩn đoán. Chứng minh.",
   heroHeading: "Kiểm tra SEO miễn phí",
-  heroSubtitleBefore: "Kiểm tra ",
-  heroSubtitleAccent: "SEO on-page",
-  heroSubtitleAfter:
-    " tức thì — tiêu đề, thẻ meta, heading và các yếu tố kỹ thuật cơ bản. Không cần đăng ký.",
+  heroSubtitleBefore:
+    "Kiểm tra SEO on-page tức thì — mỗi lỗi đều kèm cách sửa, ",
+  heroSubtitleAccent: "dẫn nguồn tài liệu chính thức của Google",
+  heroSubtitleAfter: ", không phỏng đoán. Không cần đăng ký.",
   languageSwitchLabel: "English",
   languageSwitchAria: "View this page in English",
   trustSignals: [
@@ -310,6 +320,9 @@ const VI: LandingCopy = {
   submitIdle: "Kiểm tra trang của tôi",
   submitLoading: "Đang kiểm tra…",
   submitVerifying: "Đang bắt đầu kiểm tra…",
+  footerProductLine:
+    "EchoSEO là nền tảng SEO mã nguồn mở, thiết kế cho AI agent. Công cụ kiểm tra này là bậc dùng thử — bạn có thể tự triển khai, và chúng tôi không bán dữ liệu của bạn.",
+  footerHomeAria: "EchoSEO — Công cụ kiểm tra SEO",
   turnstileUnconfigured:
     "Xác minh Turnstile chưa được cấu hình cho bản triển khai này.",
   turnstileLoadError: "Không tải được phần xác minh — vui lòng tải lại trang.",

@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { ArrowRight, MailCheck } from "lucide-react";
 import { FREE_SEO_CHECK_DEEP_START_PATH } from "@/shared/free-seo-check";
 import type { Locale } from "@/client/i18n/config";
+import { LEGAL_PRIVACY_PATH_BY_LOCALE } from "@/shared/legal";
+import { LEGAL_CHROME_COPY } from "@/client/features/legal/legal-chrome-copy";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { TurnstileWidget } from "./TurnstileWidget";
 import { DeepTierPitch } from "./DeepTierPitch";
@@ -104,7 +106,7 @@ export function DeepRequestForm({
                 and this mail can land in spam. Nothing runs until the link is
                 clicked, so someone who never finds it waits forever for a report
                 that was never started — saying so costs a line and saves them. */}
-            <p className="mt-2 text-base-content/50">{copy.sentSpamHint}</p>
+            <p className="mt-2 text-base-content/60">{copy.sentSpamHint}</p>
           </div>
         </div>
       </div>
@@ -133,14 +135,29 @@ export function DeepRequestForm({
           />
         </label>
 
+        {/* `checkbox-sm`, not `-xs`: this is a consent control at 16px, under
+            the 24px target size WCAG 2.2 asks for, and it gates a form that
+            collects an email address. */}
         <label className="flex cursor-pointer items-start gap-2 text-xs text-base-content/70">
           <input
             type="checkbox"
             checked={consent}
             onChange={(event) => setConsent(event.target.checked)}
-            className="checkbox checkbox-xs mt-0.5"
+            className="checkbox checkbox-sm mt-0.5"
           />
-          <span>{copy.consentLabel}</span>
+          <span>
+            {copy.consentLabel}{" "}
+            {/* Asking for an email beside a consent box, with no way to read
+                what happens to it, is the wrong place to make someone hunt. */}
+            <a
+              href={LEGAL_PRIVACY_PATH_BY_LOCALE[locale]}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-base-content"
+            >
+              {LEGAL_CHROME_COPY[locale].privacyLinkLabel}
+            </a>
+          </span>
         </label>
 
         {siteKey ? (
@@ -156,7 +173,7 @@ export function DeepRequestForm({
             }}
           />
         ) : siteKey === null ? (
-          <p className="text-xs text-base-content/50">{copy.unconfigured}</p>
+          <p className="text-xs text-base-content/60">{copy.unconfigured}</p>
         ) : (
           <div className="flex justify-center" role="status">
             <span className="loading loading-spinner loading-sm" />

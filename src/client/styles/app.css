@@ -438,6 +438,34 @@ html[data-theme="openseo-dark"] .alert-error {
    All rules here are prefixed .fsc-* and applied only under .fsc-root, so the
    authenticated dashboard is untouched. */
 
+/* Verdict chips for the checker's pass/warn/fail badges.
+   daisyUI's solid `badge-success|warning|error` put white on the theme's
+   mid-tone hues, which measures 3.59–4.35:1 on the light theme — under AA for
+   the small text these badges always carry. This follows the tag-chip pattern
+   above instead: a tinted wash of the same hue with a dark text shade, which
+   passes comfortably in both themes and reads calmer beside dense rows. */
+.fsc-verdict-pass {
+  background-color: color-mix(in oklab, #0f9a6a 16%, transparent);
+  color: #065f46;
+}
+.fsc-verdict-warn {
+  background-color: color-mix(in oklab, #b06a0e 18%, transparent);
+  color: #7c4a03;
+}
+.fsc-verdict-fail {
+  background-color: color-mix(in oklab, #d64550 16%, transparent);
+  color: #9f1239;
+}
+html[data-theme="openseo-dark"] .fsc-verdict-pass {
+  color: #6ee7b7;
+}
+html[data-theme="openseo-dark"] .fsc-verdict-warn {
+  color: #fcd34d;
+}
+html[data-theme="openseo-dark"] .fsc-verdict-fail {
+  color: #fda4af;
+}
+
 /* Gauge track (the unfilled part of the ring) — subtle in both themes. */
 .fsc-gauge-track {
   stroke: color-mix(in oklab, var(--color-base-content) 12%, transparent);

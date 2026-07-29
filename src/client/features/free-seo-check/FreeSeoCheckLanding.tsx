@@ -7,6 +7,13 @@ import {
   type FreeSeoCheckRequest,
 } from "@/shared/free-seo-check";
 import type { Locale } from "@/client/i18n/config";
+import {
+  LEGAL_PRIVACY_PATH_BY_LOCALE,
+  LEGAL_TERMS_PATH_BY_LOCALE,
+} from "@/shared/legal";
+// One source for what the legal documents are called, shared with the pages
+// themselves so the footer and the page headings cannot drift apart.
+import { LEGAL_CHROME_COPY } from "@/client/features/legal/legal-chrome-copy";
 import type { LiteReport } from "@/server/services/seo-check/types";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { TurnstileWidget } from "./TurnstileWidget";
@@ -43,6 +50,10 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   // language change swaps URL, <head>, and hreflang identity, so a real
   // navigation is the correct (and simplest) behavior.
   const otherLocale: Locale = locale === "en" ? "vi" : "en";
+  const landingPath =
+    locale === "vi"
+      ? FREE_SEO_CHECK_VI_LANDING_PATH
+      : FREE_SEO_CHECK_LANDING_PATH;
   const otherLandingPath =
     otherLocale === "vi"
       ? FREE_SEO_CHECK_VI_LANDING_PATH
@@ -131,7 +142,13 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     <div className="fsc-root h-full overflow-auto bg-base-200">
       <header className="border-b border-base-300 bg-base-100">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <EchoSeoLogo variant="lockup" className="text-base" />
+          {/* The mark is the expected way home. It was previously inert, which
+              is one of the strongest "unfinished scaffold" tells a page can
+              give. This landing IS the public home — `/` is the authenticated
+              app and would put a stranger at a sign-in wall. */}
+          <a href={landingPath} aria-label={copy.footerHomeAria}>
+            <EchoSeoLogo variant="lockup" className="text-base" />
+          </a>
           <a
             href={otherLandingPath}
             hrefLang={otherLocale}
@@ -273,6 +290,32 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           <LandingContent copy={copy} />
         </div>
       </main>
+
+      {/* The page had exactly one link on it — the language switch. No footer,
+          no legal links, and no statement of what EchoSEO is beyond this single
+          tool. A visitor who liked the checker had nowhere to go, which is an
+          expensive thing for the surface the whole distribution strategy points
+          at. No repository link yet: the repo is private, and a link that 404s
+          would cost more credibility than the missing link does. */}
+      <footer className="border-t border-base-300 bg-base-100">
+        <div className="mx-auto max-w-2xl space-y-3 px-4 py-8 text-sm text-base-content/60">
+          <p className="leading-relaxed">{copy.footerProductLine}</p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1">
+            <a
+              href={LEGAL_TERMS_PATH_BY_LOCALE[locale]}
+              className="underline underline-offset-2 hover:text-base-content"
+            >
+              {LEGAL_CHROME_COPY[locale].termsLinkLabel}
+            </a>
+            <a
+              href={LEGAL_PRIVACY_PATH_BY_LOCALE[locale]}
+              className="underline underline-offset-2 hover:text-base-content"
+            >
+              {LEGAL_CHROME_COPY[locale].privacyLinkLabel}
+            </a>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

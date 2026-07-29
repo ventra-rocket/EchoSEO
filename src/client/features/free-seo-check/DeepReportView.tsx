@@ -74,7 +74,7 @@ export function DeepReportView({
         <p className="mt-3 text-sm font-medium">
           {scoreHeadline(report.overallScore, issueCount, locale)}
         </p>
-        <p className="mt-1 break-all font-mono text-xs text-base-content/40">
+        <p className="mt-1 break-all font-mono text-xs text-base-content/60">
           {report.finalUrl}
         </p>
       </div>
@@ -128,7 +128,7 @@ export function DeepReportView({
                   <span className="min-w-0 flex-1 truncate font-mono text-xs text-base-content/60">
                     {page.url}
                   </span>
-                  <span className="shrink-0 text-xs text-base-content/50">
+                  <span className="shrink-0 text-xs text-base-content/60">
                     {pageIssues === 0
                       ? copy.noIssues
                       : copy.issuesToFix(pageIssues)}

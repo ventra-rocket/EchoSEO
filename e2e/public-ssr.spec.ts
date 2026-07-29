@@ -41,6 +41,27 @@ test.describe("public routes server-render their body", () => {
     expect(submit).toContain("aria-disabled");
   });
 
+  test("the landing is not a dead end and unfurls as a card", async ({
+    request,
+  }) => {
+    // The page used to contain exactly one link — the language switch. No
+    // footer, no legal links, an inert logo, and no share image. For the
+    // surface the distribution strategy points at, a visitor who liked the
+    // tool had nowhere to go and a shared link unfurled as a grey stub.
+    const html = await (await request.get("/free-seo-check")).text();
+    expect(html).toContain('href="/terms-and-conditions"');
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain("<footer");
+    expect(html).toContain('property="og:image"');
+    expect(html).toContain('content="summary_large_image"');
+
+    // The Vietnamese landing points at the Vietnamese documents, not the
+    // English ones — the reader should not change language by clicking Terms.
+    const vi = await (await request.get("/vi/kiem-tra-seo")).text();
+    expect(vi).toContain('href="/vi/dieu-khoan"');
+    expect(vi).toContain('href="/vi/quyen-rieng-tu"');
+  });
+
   test("the double-opt-in confirm page ships its body in the initial HTML", async ({
     request,
   }) => {
