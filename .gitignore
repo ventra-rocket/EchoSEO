@@ -59,3 +59,13 @@ docs/screenshots/
 # Local agent-runner metadata. Product skills under `.agents/skills/` are source
 # artifacts and must remain addable when EchoSEO ships a new workflow.
 /.agents/AGENTS.md
+
+# --- AgentKit project plugin (personal, not committed) ---
+.agentkit/
+.claude-plugin/
+ak-engineer/
+
+# Local agent-runner drops land inside .agents/skills/. The product's own skills
+# are the SKILL.md files; everything else under a skill directory is local.
+.agents/skills/*/*
+!.agents/skills/*/SKILL.md

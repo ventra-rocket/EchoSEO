@@ -21,6 +21,9 @@
     "!src/routeTree.gen.ts",
     "!web/**",
     "!.claude/**",
+    // Agent-runner working directory. The product ships the SKILL.md files here;
+    // the scripts and references beside them are not part of the app's graph.
+    "!.agents/**",
   ],
   "ignore": ["drizzle-prod.config.ts"],
   // Disable Drizzle plugin - it tries to load drizzle.config.ts which imports cloudflare:workers
