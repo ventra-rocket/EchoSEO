@@ -61,6 +61,24 @@ export async function runLiteCheck(inputUrl: string): Promise<LiteReport> {
     responseTimeMs,
   );
 
+  return buildLiteReport(page, inputUrl, new Date().toISOString());
+}
+
+/**
+ * Scores an already-parsed page into the report the client renders.
+ *
+ * Split out of `runLiteCheck` so the result UI can be exercised without a
+ * network fetch and without solving a Turnstile challenge. Anything rendering a
+ * fixture goes through this exact function, so a fixture cannot drift from what
+ * a real check produces — which is the only thing that makes it worth testing
+ * against. `fetchedAt` is a parameter rather than read from the clock so a
+ * fixture is byte-stable across runs.
+ */
+export function buildLiteReport(
+  page: ParsedPage,
+  inputUrl: string,
+  fetchedAt: string,
+): LiteReport {
   const issues = evaluateLiteSignals(page);
   const signals = issues.map(toSignal);
   const categoryScores: CategoryScore[] = scoreIssues(
@@ -77,9 +95,9 @@ export async function runLiteCheck(inputUrl: string): Promise<LiteReport> {
 
   return {
     requestedUrl: inputUrl,
-    finalUrl,
-    statusCode: response.status,
-    fetchedAt: new Date().toISOString(),
+    finalUrl: page.url,
+    statusCode: page.statusCode,
+    fetchedAt,
     overallScore,
     categoryScores,
     signals,

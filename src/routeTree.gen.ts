@@ -27,6 +27,7 @@ import { Route as ViKiemTraSeoRouteImport } from './routes/vi.kiem-tra-seo'
 import { Route as ViDieuKhoanRouteImport } from './routes/vi.dieu-khoan'
 import { Route as RIdRouteImport } from './routes/r.$id'
 import { Route as FreeSeoCheckConfirmRouteImport } from './routes/free-seo-check_.confirm'
+import { Route as DevFixturesLiteReportRouteImport } from './routes/dev-fixtures.lite-report'
 import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
 import { Route as AuthenticatedSubscribeRouteImport } from './routes/_authenticated.subscribe'
 import { Route as AuthenticatedOauthConsentRouteImport } from './routes/_authenticated.oauth-consent'
@@ -149,6 +150,11 @@ const RIdRoute = RIdRouteImport.update({
 const FreeSeoCheckConfirmRoute = FreeSeoCheckConfirmRouteImport.update({
   id: '/free-seo-check_/confirm',
   path: '/free-seo-check/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevFixturesLiteReportRoute = DevFixturesLiteReportRouteImport.update({
+  id: '/dev-fixtures/lite-report',
+  path: '/dev-fixtures/lite-report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInvitationIdRoute = AcceptInvitationIdRouteImport.update({
@@ -375,6 +381,7 @@ export interface FileRoutesByFullPath {
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
+  '/dev-fixtures/lite-report': typeof DevFixturesLiteReportRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
   '/vi/dieu-khoan': typeof ViDieuKhoanRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
+  '/dev-fixtures/lite-report': typeof DevFixturesLiteReportRoute
   '/free-seo-check/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
   '/vi/dieu-khoan': typeof ViDieuKhoanRoute
@@ -482,6 +490,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/_authenticated/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
+  '/dev-fixtures/lite-report': typeof DevFixturesLiteReportRoute
   '/free-seo-check_/confirm': typeof FreeSeoCheckConfirmRoute
   '/r/$id': typeof RIdRoute
   '/vi/dieu-khoan': typeof ViDieuKhoanRoute
@@ -538,6 +547,7 @@ export interface FileRouteTypes {
     | '/oauth-consent'
     | '/subscribe'
     | '/accept-invitation/$id'
+    | '/dev-fixtures/lite-report'
     | '/free-seo-check/confirm'
     | '/r/$id'
     | '/vi/dieu-khoan'
@@ -591,6 +601,7 @@ export interface FileRouteTypes {
     | '/oauth-consent'
     | '/subscribe'
     | '/accept-invitation/$id'
+    | '/dev-fixtures/lite-report'
     | '/free-seo-check/confirm'
     | '/r/$id'
     | '/vi/dieu-khoan'
@@ -644,6 +655,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth-consent'
     | '/_authenticated/subscribe'
     | '/accept-invitation/$id'
+    | '/dev-fixtures/lite-report'
     | '/free-seo-check_/confirm'
     | '/r/$id'
     | '/vi/dieu-khoan'
@@ -692,6 +704,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
+  DevFixturesLiteReportRoute: typeof DevFixturesLiteReportRoute
   FreeSeoCheckConfirmRoute: typeof FreeSeoCheckConfirmRoute
   RIdRoute: typeof RIdRoute
   ViDieuKhoanRoute: typeof ViDieuKhoanRoute
@@ -830,6 +843,13 @@ declare module '@tanstack/react-router' {
       path: '/free-seo-check/confirm'
       fullPath: '/free-seo-check/confirm'
       preLoaderRoute: typeof FreeSeoCheckConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev-fixtures/lite-report': {
+      id: '/dev-fixtures/lite-report'
+      path: '/dev-fixtures/lite-report'
+      fullPath: '/dev-fixtures/lite-report'
+      preLoaderRoute: typeof DevFixturesLiteReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-invitation/$id': {
@@ -1251,6 +1271,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute:
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,
   AcceptInvitationIdRoute: AcceptInvitationIdRoute,
+  DevFixturesLiteReportRoute: DevFixturesLiteReportRoute,
   FreeSeoCheckConfirmRoute: FreeSeoCheckConfirmRoute,
   RIdRoute: RIdRoute,
   ViDieuKhoanRoute: ViDieuKhoanRoute,
