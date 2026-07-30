@@ -144,3 +144,55 @@ test.describe("the Lite result state", () => {
     }
   });
 });
+
+test.describe("the shareable Deep report", () => {
+  // Never renderable under test before: a real one needs a solved challenge, a
+  // confirmed email, and a Workflow run. Built through the real
+  // `buildDeepReport`, so these are production's own numbers.
+  const DEEP = "/dev-fixtures/lite-report?tier=deep";
+
+  test("leads with the worst finding and folds the passing checks", async ({
+    page,
+  }) => {
+    await page.goto(DEEP);
+    const rows = page.locator("[data-signal-status]");
+    await expect(rows.first()).not.toHaveAttribute(
+      "data-signal-status",
+      "pass",
+    );
+    await expect(page.getByText(/checks? passed$/)).toBeVisible();
+  });
+
+  test("carries the measured value on its on-page checks", async ({ page }) => {
+    await page.goto(DEEP);
+    // The same measurements the Lite result gained, on the report that gets
+    // forwarded to whoever has to act on it.
+    await expect(page.getByText("12 chars").first()).toBeVisible();
+  });
+
+  test("keeps the Core Web Vitals in their own cards, stated once", async ({
+    page,
+  }) => {
+    await page.goto(DEEP);
+    // The metrics belong to the dedicated card row, which picks a unit per
+    // metric. Repeating them beside the rule ids would state the same numbers
+    // twice on one page, in two formats.
+    await expect(page.getByText("3.2s")).toHaveCount(1);
+    await expect(page.getByText("140ms")).toHaveCount(1);
+    await expect(page.getByText("0.18")).toHaveCount(1);
+  });
+
+  test("puts the page capture after the findings, not above them", async ({
+    page,
+  }) => {
+    await page.goto(DEEP);
+    const captureTop = await page
+      .getByText("WHAT WE LOADED")
+      .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    const firstRowTop = await page
+      .locator("[data-signal-status]")
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    expect(captureTop).toBeGreaterThan(firstRowTop);
+  });
+});

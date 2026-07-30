@@ -7,6 +7,7 @@ import { CoreWebVitalsCards } from "./CoreWebVitalsCards";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { GeoSection } from "./GeoSection";
 import { SignalRow } from "./SignalRow";
+import { triageSignals } from "./triage";
 import { scoreHeadline } from "./score-presentation";
 
 const PSI_KEYS: (keyof DeepReport["psiScores"])[] = [
@@ -63,9 +64,12 @@ export function DeepReportView({
   locale: Locale;
 }) {
   const copy = CHECK_RESULT_COPY[locale].deepReport;
-  const issueCount = report.signals.filter(
-    (signal) => signal.status !== "pass",
-  ).length;
+  const triageCopy = CHECK_RESULT_COPY[locale].triage;
+  // Same ordering the Lite result uses: worst first, top finding open, passing
+  // checks folded. A shared report is the artifact someone forwards to whoever
+  // has to act on it, so burying the failures costs more here, not less.
+  const primary = triageSignals(report.signals);
+  const issueCount = primary.actionable.length;
 
   return (
     <div className="space-y-6">
@@ -78,8 +82,6 @@ export function DeepReportView({
           {report.finalUrl}
         </p>
       </div>
-
-      <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
 
       <CategoryScoreCards
         categoryScores={report.categoryScores}
@@ -102,11 +104,42 @@ export function DeepReportView({
           {report.crawl.pagesCrawled > 1 ? copy.primaryPageSuffix : ""}
         </h2>
         <div className="space-y-2">
-          {report.signals.map((signal) => (
-            <SignalRow key={signal.id} signal={signal} locale={locale} />
-          ))}
+          {primary.actionable.length === 0 ? (
+            <p className="rounded-box border border-base-300 bg-base-100 px-4 py-3 text-sm text-base-content/70">
+              {triageCopy.allClear}
+            </p>
+          ) : (
+            primary.actionable.map((signal, index) => (
+              <SignalRow
+                key={signal.id}
+                signal={signal}
+                locale={locale}
+                defaultOpen={index === 0}
+              />
+            ))
+          )}
+
+          {primary.passed.length > 0 ? (
+            <details className="group rounded-box border border-base-300 bg-base-100">
+              <summary className="fsc-summary cursor-pointer px-4 py-3 text-sm text-base-content/70">
+                {triageCopy.passedToggle(primary.passed.length)}
+              </summary>
+              <div className="space-y-2 px-2 pb-2">
+                {primary.passed.map((signal) => (
+                  <SignalRow key={signal.id} signal={signal} locale={locale} />
+                ))}
+              </div>
+            </details>
+          ) : null}
         </div>
       </section>
+
+      {/* Demoted out of slot #2, as on the Lite result. It loads from a live
+          capture service and spends ten to thirty seconds as an empty frame;
+          directly under the score it pushed the metrics and every finding below
+          the fold — and this is the report someone forwards to whoever has to
+          act on it. */}
+      <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
 
       {report.geo ? <GeoSection geo={report.geo} locale={locale} /> : null}
 
