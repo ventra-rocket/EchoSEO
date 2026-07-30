@@ -7,20 +7,27 @@
  * telling the reader where to look. Severity order is the fix, and the counts
  * are what let a reader see the shape of the result before reading any of it.
  */
-import type { Signal } from "@/server/services/seo-check/types";
+import type { IssueStatus } from "@/server/lib/seo-rules/types";
 
 /** Worst first. Ties keep the catalog's own order, which groups by category. */
 const STATUS_RANK = { fail: 0, warn: 1, pass: 2 } as const;
 
-interface TriagedSignals {
+interface TriagedSignals<T> {
   /** Everything that needs attention, worst first. */
-  actionable: Signal[];
+  actionable: T[];
   /** Passing checks, kept out of the way but never hidden. */
-  passed: Signal[];
+  passed: T[];
   counts: { fail: number; warn: number; pass: number };
 }
 
-export function triageSignals(signals: readonly Signal[]): TriagedSignals {
+/**
+ * Generic over the signal shape: the Lite and Deep reports carry different
+ * category unions but the same three verdicts, and both surfaces owe the reader
+ * the same ordering. Only `status` is read here.
+ */
+export function triageSignals<T extends { status: IssueStatus }>(
+  signals: readonly T[],
+): TriagedSignals<T> {
   const counts = { fail: 0, warn: 0, pass: 0 };
   for (const signal of signals) counts[signal.status] += 1;
 
