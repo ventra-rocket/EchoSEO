@@ -58,6 +58,13 @@ export const GEO_RULES: Array<Rule<GeoSignals>> = [
     label: "Eligible to be indexed",
     appliesWhen: (geo) =>
       robotsHas(geo.robotsMeta, "noindex") ? "fail" : "pass",
+    // The directive as the page declared it. This section otherwise never
+    // shows it, so a reader seeing "not eligible" has no way to learn why
+    // without scrolling to the technical checks. Measured on this rule only:
+    // the snippet rule below reads the same single string, and stating it
+    // twice in one section would repeat a fact rather than add one.
+    measure: (geo) =>
+      geo.robotsMeta ? { kind: "text", value: geo.robotsMeta } : null,
     problem:
       "A noindex robots directive keeps this page out of Google's index, and only indexed pages can appear in AI features.",
     fixSteps: [
@@ -150,6 +157,13 @@ export const GEO_RULES: Array<Rule<GeoSignals>> = [
     // not required for AI — the quote itself tells the reader so. Present earns
     // a pass because it still helps Search understand the page.
     appliesWhen: (geo) => (geo.schemaTypes.length > 0 ? "pass" : "warn"),
+    // The types found, not how many: "Article, FAQPage" tells the reader what
+    // Google will actually see on the page, which "pass" alone does not. Absent
+    // when there are none — the warn verdict already says that.
+    measure: (geo) =>
+      geo.schemaTypes.length > 0
+        ? { kind: "text", value: geo.schemaTypes.join(", ") }
+        : null,
     problem:
       "This page has no JSON-LD structured data. It isn't required for AI features, but it helps Google understand your content.",
     fixSteps: [

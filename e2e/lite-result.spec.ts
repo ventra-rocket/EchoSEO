@@ -196,3 +196,52 @@ test.describe("the shareable Deep report", () => {
     expect(captureTop).toBeGreaterThan(firstRowTop);
   });
 });
+
+test.describe("the AI Search section", () => {
+  const DEEP = "/dev-fixtures/lite-report?tier=deep";
+
+  test("shows the robots directive and the schema types it found", async ({
+    page,
+  }) => {
+    await page.goto(DEEP);
+    // Neither was displayed anywhere in this section before, so a reader had no
+    // way to learn *why* a verdict landed without leaving it.
+    await expect(page.getByText("index, follow, max-snippet:0")).toHaveCount(1);
+    await expect(page.getByText("Organization, FAQPage")).toBeVisible();
+  });
+
+  test("states the robots directive once, not on every rule that reads it", async ({
+    page,
+  }) => {
+    await page.goto(DEEP);
+    // Three GEO rules read the same single string. Exactly one renders it as a
+    // MEASUREMENT; the snippet rule names the directives in its problem and fix
+    // prose instead, which is where naming them belongs. Targeting the
+    // measurement element rather than any text is what makes this precise —
+    // a bare text count sees the prose too and says nothing.
+    const section = page.locator("section", {
+      has: page.getByText("AI Search readiness"),
+    });
+    const measured = section.locator("[data-measurement]");
+    await expect(measured).toHaveCount(2);
+    await expect(measured.filter({ hasText: "max-snippet:0" })).toHaveCount(1);
+  });
+
+  test("keeps its eligibility order rather than sorting by severity", async ({
+    page,
+  }) => {
+    await page.goto(DEEP);
+    // Unlike the findings list, this sequence is the argument: crawlable →
+    // indexable → snippet-eligible → answerable → schema. Sorting the warning
+    // to the top would break a funnel that reads as one.
+    const section = page.locator("section", {
+      has: page.getByText("AI Search readiness"),
+    });
+    const ids = await section.locator("code").allInnerTexts();
+    expect(ids.slice(0, 3)).toEqual([
+      "geo-crawlable",
+      "geo-indexable",
+      "geo-snippet-eligible",
+    ]);
+  });
+});
