@@ -2,6 +2,7 @@ import type { LiteReport } from "@/server/services/seo-check/types";
 import type { Locale } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { buildPageReadRows } from "./page-read-rows";
+import { formatMeasurement } from "./format-measurement";
 
 /**
  * The values actually found on the scanned page, with their measured lengths.
@@ -48,9 +49,9 @@ export function PageReadPanel({
                   {copy.missing}
                 </span>
               )}
-              {row.measure ? (
+              {row.measurement ? (
                 <span className="shrink-0 font-mono text-xs text-base-content/60">
-                  {row.measure}
+                  {formatMeasurement(row.measurement, locale)}
                 </span>
               ) : null}
             </dd>

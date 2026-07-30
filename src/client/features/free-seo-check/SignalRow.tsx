@@ -10,6 +10,7 @@ import type { DeepSignal } from "@/server/services/seo-check/deep-types";
 import type { Locale } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { STATUS_BADGE, STATUS_TEXT } from "./score-presentation";
+import { formatMeasurement } from "./format-measurement";
 
 const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
   pass: CheckCircle2,
@@ -28,15 +29,23 @@ const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
 export function SignalRow({
   signal,
   locale,
+  defaultOpen = false,
 }: {
   signal: Signal | DeepSignal;
   locale: Locale;
+  /** Opens this row's fix on first paint — used for the worst finding. */
+  defaultOpen?: boolean;
 }) {
   const copy = CHECK_RESULT_COPY[locale].signal;
   const Icon = STATUS_ICON[signal.status];
 
   return (
-    <div className="rounded-box border border-base-300 bg-base-100 px-4 py-3">
+    // The status is on the element so a test can assert ORDER, not just
+    // presence — "the failure is first" is the whole point of the sort.
+    <div
+      data-signal-status={signal.status}
+      className="rounded-box border border-base-300 bg-base-100 px-4 py-3"
+    >
       <div className="flex items-center gap-3">
         <Icon
           className={`size-4 shrink-0 ${STATUS_TEXT[signal.status]}`}
@@ -46,9 +55,18 @@ export function SignalRow({
           <div className="truncate text-sm font-medium" title={signal.label}>
             {signal.label}
           </div>
-          <code className="font-mono text-xs text-base-content/60">
-            {signal.id}
-          </code>
+          {/* The measured value sits beside the machine id, which is what
+              makes a row scannable: the verdict says "warn", this says what
+              the page actually had. Absent on a rule with nothing to report,
+              and on any report persisted before measurements existed. */}
+          <div className="flex flex-wrap items-baseline gap-x-2 font-mono text-xs text-base-content/60">
+            <code>{signal.id}</code>
+            {signal.measurement ? (
+              <span className="text-base-content/80">
+                {formatMeasurement(signal.measurement, locale)}
+              </span>
+            ) : null}
+          </div>
         </div>
         <span className={`badge badge-sm ${STATUS_BADGE[signal.status]}`}>
           {copy.statusBadge[signal.status]}
@@ -56,7 +74,7 @@ export function SignalRow({
       </div>
 
       {signal.status !== "pass" ? (
-        <details className="group mt-2">
+        <details className="group mt-2" open={defaultOpen}>
           <summary className="fsc-summary flex cursor-pointer items-center gap-1 py-1 text-sm text-base-content/60">
             <ChevronRight
               className="size-3.5 transition-transform group-open:rotate-90"

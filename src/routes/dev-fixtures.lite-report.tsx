@@ -52,7 +52,7 @@ function FixturePage() {
     // this page — Playwright's `fullPage` screenshots the document, which here
     // is one viewport tall, so a capture must target this container instead.
     <div className="h-full overflow-auto bg-base-200">
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-8">
         <LiteReportView
           report={LITE_REPORT_FIXTURE}
           deepAvailable

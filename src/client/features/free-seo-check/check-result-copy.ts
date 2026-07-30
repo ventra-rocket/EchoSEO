@@ -37,7 +37,19 @@ const EN: CheckResultCopy = {
     h1: "H1 heading",
     words: "Words",
     missing: "not found",
-    chars: (count: number) => `${count} chars`,
+  },
+  measurement: {
+    chars: (count) => `${count} chars`,
+    count: (value) => `${value}`,
+    ratio: (value, of) => `${value} of ${of}`,
+  },
+  triage: {
+    failing: (n) => `${n} failing`,
+    warnings: (n) => `${n} ${n === 1 ? "warning" : "warnings"}`,
+    passed: (n) => `${n} passed`,
+    passedToggle: (n) => `${n} ${n === 1 ? "check" : "checks"} passed`,
+    allClear: "Every check passed — nothing to fix.",
+    checksHeading: "What needs attention",
   },
   categoryLabels: {
     meta: "Meta",
@@ -189,7 +201,19 @@ const VI: CheckResultCopy = {
     h1: "Thẻ H1",
     words: "Số từ",
     missing: "không tìm thấy",
-    chars: (count: number) => `${count} ký tự`,
+  },
+  measurement: {
+    chars: (count) => `${count} ký tự`,
+    count: (value) => `${value}`,
+    ratio: (value, of) => `${value}/${of}`,
+  },
+  triage: {
+    failing: (n) => `${n} lỗi`,
+    warnings: (n) => `${n} cảnh báo`,
+    passed: (n) => `${n} đạt`,
+    passedToggle: (n) => `${n} mục kiểm tra đã đạt`,
+    allClear: "Mọi mục kiểm tra đều đạt — không có gì cần sửa.",
+    checksHeading: "Những mục cần xử lý",
   },
   categoryLabels: {
     meta: "Meta",

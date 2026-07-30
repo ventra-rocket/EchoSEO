@@ -270,13 +270,6 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           ) : null}
 
           {status === "loading" ? <ScanLog url={url} locale={locale} /> : null}
-          {status === "done" && result ? (
-            <LiteReportView
-              report={result.report}
-              deepAvailable={result.deepAvailable}
-              locale={locale}
-            />
-          ) : null}
 
           {/* Once a real report is on screen the sample has done its job —
               showing two look-alike reports would invite confusion. */}
@@ -289,6 +282,20 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
 
           <LandingContent copy={copy} />
         </div>
+
+        {/* The result breaks out of the prose column. A findings list wants a
+            table's width and a score rail beside it; 672px can carry neither,
+            which is why the report read as a phone view on a desktop. The
+            hero, sample, and editorial stay at reading width above. */}
+        {status === "done" && result ? (
+          <div className="mx-auto max-w-5xl px-4 pb-14">
+            <LiteReportView
+              report={result.report}
+              deepAvailable={result.deepAvailable}
+              locale={locale}
+            />
+          </div>
+        ) : null}
       </main>
 
       {/* The page had exactly one link on it — the language switch. No footer,

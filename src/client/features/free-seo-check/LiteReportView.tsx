@@ -6,12 +6,28 @@ import { SignalRow } from "./SignalRow";
 import { PageReadPanel } from "./PageReadPanel";
 import { DeepRequestForm } from "./DeepRequestForm";
 import { DeepTierPausedNotice } from "./DeepTierPitch";
-import { scoreHeadline } from "./score-presentation";
+import { scoreHeadline, STATUS_BADGE } from "./score-presentation";
 import { SiteScreenshot } from "./SiteScreenshot";
+import { CHECK_RESULT_COPY } from "./check-result-copy";
+import { triageSignals } from "./triage";
 
 /**
- * Composes the full Lite report: score hero, category cards, signals, and the
- * Deep tier's email-gated entry point.
+ * The Lite result.
+ *
+ * Ordered by what the reader needs, not by how the rule catalogs happen to be
+ * concatenated. Previously every check rendered in definition order at equal
+ * visual weight, so a failure could sit ninth under eight green rows; the page
+ * capture occupied the slot directly under the score while loading an empty
+ * frame; and the one place a visitor could act — the deep-check form — sat at
+ * maximum scroll depth.
+ *
+ * Now: score and triage first, then the evidence, then what needs attention
+ * worst-first with the top finding already open, then passing checks folded
+ * away, and only then the supporting material.
+ *
+ * At `lg` the score and its counts become a sticky rail beside the checks. A
+ * single 672px column cannot carry a scannable table of findings, and the
+ * findings are the product.
  */
 export function LiteReportView({
   report,
@@ -23,55 +39,105 @@ export function LiteReportView({
   deepAvailable: boolean;
   locale: Locale;
 }) {
-  const issueCount = report.signals.filter(
-    (signal) => signal.status !== "pass",
-  ).length;
+  const copy = CHECK_RESULT_COPY[locale];
+  const { actionable, passed, counts } = triageSignals(report.signals);
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-box border border-base-300 bg-base-100 p-6 text-center">
-        <ScoreGauge score={report.overallScore} locale={locale} />
-        <p className="mt-3 text-sm font-medium">
-          {scoreHeadline(report.overallScore, issueCount, locale)}
-        </p>
-        <p className="mt-1 break-all font-mono text-xs text-base-content/60">
-          {report.finalUrl}
-        </p>
-      </div>
+    <div className="space-y-6 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
+      <div className="space-y-4 lg:sticky lg:top-6">
+        <div className="rounded-box border border-base-300 bg-base-100 p-6 text-center">
+          <ScoreGauge score={report.overallScore} locale={locale} />
+          <p className="mt-3 text-sm font-medium">
+            {scoreHeadline(report.overallScore, actionable.length, locale)}
+          </p>
+          <p className="mt-1 break-all font-mono text-xs text-base-content/60">
+            {report.finalUrl}
+          </p>
 
-      {/* Directly under the score: the evidence the score is drawn from, before
-          any picture of the page. A verdict the visitor cannot check against
-          what we actually read is the reason a real result felt thinner than
-          the sample that advertises these very numbers. */}
-      <PageReadPanel pageSummary={report.pageSummary} locale={locale} />
+          {/* The shape of the result before any of it is read. */}
+          <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+            {counts.fail > 0 ? (
+              <span className={`badge badge-sm ${STATUS_BADGE.fail}`}>
+                {copy.triage.failing(counts.fail)}
+              </span>
+            ) : null}
+            {counts.warn > 0 ? (
+              <span className={`badge badge-sm ${STATUS_BADGE.warn}`}>
+                {copy.triage.warnings(counts.warn)}
+              </span>
+            ) : null}
+            <span className={`badge badge-sm ${STATUS_BADGE.pass}`}>
+              {copy.triage.passed(counts.pass)}
+            </span>
+          </div>
+        </div>
 
-      <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
-
-      <CategoryScoreCards
-        categoryScores={report.categoryScores}
-        locale={locale}
-      />
-
-      <div className="space-y-2">
-        {report.signals.map((signal) => (
-          <SignalRow key={signal.id} signal={signal} locale={locale} />
-        ))}
-      </div>
-
-      {deepAvailable ? (
-        // Deep-check the URL the report actually landed on, not the raw input —
-        // it's what the visitor is looking at, redirects and all.
-        <DeepRequestForm
-          url={report.finalUrl}
-          metricCount={report.deepTeaser.coreWebVitalsMetricCount}
+        <CategoryScoreCards
+          categoryScores={report.categoryScores}
           locale={locale}
         />
-      ) : (
-        <DeepTierPausedNotice
-          metricCount={report.deepTeaser.coreWebVitalsMetricCount}
-          locale={locale}
-        />
-      )}
+      </div>
+
+      <div className="space-y-6">
+        <PageReadPanel pageSummary={report.pageSummary} locale={locale} />
+
+        <section className="space-y-2">
+          <h3 className="text-sm font-medium">{copy.triage.checksHeading}</h3>
+
+          {actionable.length === 0 ? (
+            <p className="rounded-box border border-base-300 bg-base-100 px-4 py-3 text-sm text-base-content/70">
+              {copy.triage.allClear}
+            </p>
+          ) : (
+            actionable.map((signal, index) => (
+              <SignalRow
+                key={signal.id}
+                signal={signal}
+                locale={locale}
+                // The worst finding opens itself. A reader who came for one
+                // answer should not have to guess which row holds it.
+                defaultOpen={index === 0}
+              />
+            ))
+          )}
+
+          {/* Folded, never dropped: "what did you check?" is a fair question,
+              and a tool that hides its passing checks invites the suspicion
+              that it did not run them. */}
+          {passed.length > 0 ? (
+            <details className="group rounded-box border border-base-300 bg-base-100">
+              <summary className="fsc-summary cursor-pointer px-4 py-3 text-sm text-base-content/70">
+                {copy.triage.passedToggle(passed.length)}
+              </summary>
+              <div className="space-y-2 px-2 pb-2">
+                {passed.map((signal) => (
+                  <SignalRow key={signal.id} signal={signal} locale={locale} />
+                ))}
+              </div>
+            </details>
+          ) : null}
+        </section>
+
+        {/* Demoted out of slot #2. It loads from a live capture service and
+            spends ten to thirty seconds as an empty frame; sitting directly
+            under the score, it pushed every finding below the fold. */}
+        <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
+
+        {deepAvailable ? (
+          // Deep-check the URL the report actually landed on, not the raw input —
+          // it's what the visitor is looking at, redirects and all.
+          <DeepRequestForm
+            url={report.finalUrl}
+            metricCount={report.deepTeaser.coreWebVitalsMetricCount}
+            locale={locale}
+          />
+        ) : (
+          <DeepTierPausedNotice
+            metricCount={report.deepTeaser.coreWebVitalsMetricCount}
+            locale={locale}
+          />
+        )}
+      </div>
     </div>
   );
 }

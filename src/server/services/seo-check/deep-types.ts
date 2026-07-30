@@ -12,6 +12,7 @@ import {
   RULE_CATEGORIES,
   SEVERITIES,
 } from "@/server/lib/seo-rules/types";
+import { measurementSchema } from "./types";
 
 const deepSignalSchema = z.object({
   id: z.string(),
@@ -24,6 +25,14 @@ const deepSignalSchema = z.object({
   googleSourceUrl: z.string(),
   guideQuote: z.string(),
   lastReviewedDate: z.string(),
+  /**
+   * Optional for the same reason it is on the Lite signal: Deep reports are
+   * persisted to R2 and re-validated on every `/r/{id}` read, and a required
+   * field would fail reports written before measurements existed — breaking
+   * links already sitting in someone's inbox. `toDeepSignal` spreads the whole
+   * issue, so without this key zod would silently strip the measurement.
+   */
+  measurement: measurementSchema.optional(),
 });
 export type DeepSignal = z.infer<typeof deepSignalSchema>;
 

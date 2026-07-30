@@ -145,5 +145,6 @@ function toSignal(issue: Issue): Signal {
     googleSourceUrl: issue.googleSourceUrl,
     guideQuote: issue.guideQuote,
     lastReviewedDate: issue.lastReviewedDate,
+    ...(issue.measurement ? { measurement: issue.measurement } : {}),
   };
 }

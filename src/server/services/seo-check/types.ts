@@ -20,6 +20,18 @@ export type SignalStatus = (typeof SIGNAL_STATUSES)[number];
  * One deterministic on-page check result, enriched by the seo-rules engine
  * (Phase 2) with a Google-cited fix.
  */
+/**
+ * Mirrors `Measurement` in the rules lib. Declared here as a zod schema
+ * because this is the wire/persistence boundary: reports are validated on read
+ * from KV and R2, so the shape has to be checkable, not just typed.
+ */
+export const measurementSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("chars"), value: z.number() }),
+  z.object({ kind: z.literal("count"), value: z.number() }),
+  z.object({ kind: z.literal("ratio"), value: z.number(), of: z.number() }),
+  z.object({ kind: z.literal("text"), value: z.string() }),
+]);
+
 const signalSchema = z.object({
   id: z.string(),
   category: z.enum(SIGNAL_CATEGORIES),
@@ -31,6 +43,14 @@ const signalSchema = z.object({
   googleSourceUrl: z.string(),
   guideQuote: z.string(),
   lastReviewedDate: z.string(),
+  /**
+   * OPTIONAL, and it must stay that way. Reports persisted to R2 before
+   * measurements existed are re-validated on every read of `/r/{id}`; making
+   * this required would fail that validation and silently break links already
+   * sitting in someone's inbox. The KV path would merely re-run the check, but
+   * a Deep report has no second chance.
+   */
+  measurement: measurementSchema.optional(),
 });
 export type Signal = z.infer<typeof signalSchema>;
 

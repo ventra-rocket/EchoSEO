@@ -34,8 +34,30 @@ export interface CheckResultCopy {
     words: string;
     /** Shown in place of a value the page does not have. */
     missing: string;
-    /** e.g. "54 chars" — the unit the sample has always advertised. */
+  };
+  /**
+   * Renders a `Measurement` — the value a check read. One vocabulary for the
+   * whole result, so the page-read panel and the signal rows cannot end up
+   * saying "54 chars" two different ways.
+   */
+  measurement: {
     chars: (count: number) => string;
+    count: (value: number) => string;
+    ratio: (value: number, of: number) => string;
+  };
+  /**
+   * The triage strip above the checks: how many of each verdict, and the row
+   * that keeps passing checks reachable without letting them crowd the page.
+   */
+  triage: {
+    failing: (count: number) => string;
+    warnings: (count: number) => string;
+    passed: (count: number) => string;
+    /** The collapsed row's label. */
+    passedToggle: (count: number) => string;
+    /** Shown instead of the checks list when nothing needs attention. */
+    allClear: string;
+    checksHeading: string;
   };
   /** Card label per rule category. "Meta"/"Core Web Vitals" stay untranslated. */
   categoryLabels: Record<RuleCategory, string>;
