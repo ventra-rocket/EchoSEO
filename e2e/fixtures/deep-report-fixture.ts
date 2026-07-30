@@ -1,5 +1,6 @@
 import { makeGoodPage } from "@/server/lib/seo-rules/__tests__/on-page-signals-fixture";
 import type { PsiResult } from "@/server/lib/psi/pagespeed";
+import type { GeoSignals } from "@/server/lib/seo-rules";
 import { buildDeepReport } from "@/server/services/seo-check/deep";
 
 /**
@@ -36,6 +37,21 @@ const PSI: PsiResult = {
   },
 };
 
+/**
+ * A page that is crawlable and answerable but declares a snippet limit and
+ * carries schema — so the AI-search section exercises both of its measured
+ * rules: the robots directive it would otherwise never show, and the schema
+ * types found on the page.
+ */
+const GEO: GeoSignals = {
+  botAccess: { googlebot: true, googleExtended: false, gptbot: false },
+  schemaTypes: ["Organization", "FAQPage"],
+  hasSingleH1: true,
+  hasHeadingHierarchy: true,
+  robotsMeta: "index, follow, max-snippet:0",
+  llmsTxtFound: false,
+};
+
 export const DEEP_REPORT_FIXTURE = buildDeepReport({
   requestedUrl: PRIMARY,
   crawl: {
@@ -50,5 +66,5 @@ export const DEEP_REPORT_FIXTURE = buildDeepReport({
     })),
   },
   psi: PSI,
-  geo: null,
+  geo: GEO,
 });

@@ -62,7 +62,7 @@ export function SignalRow({
           <div className="flex flex-wrap items-baseline gap-x-2 font-mono text-xs text-base-content/60">
             <code>{signal.id}</code>
             {signal.measurement ? (
-              <span className="text-base-content/80">
+              <span data-measurement className="text-base-content/80">
                 {formatMeasurement(signal.measurement, locale)}
               </span>
             ) : null}
