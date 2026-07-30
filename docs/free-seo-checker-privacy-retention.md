@@ -1,8 +1,19 @@
 # Free SEO Checker — Privacy & Retention
 
-**Version:** 1.0 · **Date:** 2026-07-15 · **Status:** Implemented (retention cron live)
-**Scope:** the public, anonymous Free SEO Checker only (`/free-seo-check`, `/r/{id}`).
-Authenticated workspace audits are out of scope and keep their own rules.
+**Version:** 1.1 · **Date:** 2026-07-30 · **Status:** Implemented (retention cron live)
+**Scope:** the public, anonymous Free SEO Checker only (`/free-seo-check`,
+`/vi/kiem-tra-seo`, `/r/{id}`). Authenticated workspace audits are out of scope
+and keep their own rules; the hosted service's own terms are at `/privacy`.
+
+**What 1.1 corrects,** all verified against the running deployment's configured
+secrets rather than against intent:
+
+- **PostHog.** The service moved from `cloudflare_access` to `hosted` auth after
+  1.0 was written — precisely the condition the PostHog row said to re-check.
+  The auth-mode gate is now open; only a missing key stops the capture.
+- **Resend.** Was marked pending; it is live.
+- **The page screenshot was not disclosed at all.** 1.0 documented the report
+  payload but not the image stored beside it. Added to both tables.
 
 ## What we collect, and why
 
@@ -12,10 +23,15 @@ Authenticated workspace audits are out of scope and keep their own rules.
 | The URL you asked us to check                        | D1 `leads.url`, `seo_reports.url`, and inside the R2 report payload | It is the subject of the report.                                                                                           |
 | Report contents (scores, signals, crawled page list) | R2 `deep-reports/{id}.json`                                         | The report itself.                                                                                                         |
 | Consent timestamp                                    | D1 `leads.consent_confirmed_at`                                     | Evidence of the double opt-in.                                                                                             |
+| A screenshot of the checked page                     | R2 `site-screenshots/{domain}`                                      | Shown on the result and the report as evidence of what we loaded. Keyed by hostname, not by report id or email.            |
 | IP address                                           | Never stored                                                        | Used only in-memory for rate limiting (Durable Object counters keyed by IP, which self-expire); never written to D1 or R2. |
 
 The Lite check stores **no personal data at all** — it is anonymous, needs no
-email, and its per-domain cache is keyed by hostname.
+email, and its per-domain cache is keyed by hostname. The same is true of the
+screenshot: it is an image of a public page, filed under that page's hostname,
+with nothing tying it to whoever asked for it. It is listed here anyway, because
+it is a stored artifact derived from a URL someone gave us, and this document is
+worth nothing if it omits things on the grounds that they are probably fine.
 
 **A checked URL can itself be personal data.** A staging, unlisted, or internal
 URL reveals something about the person who submitted it. We therefore treat the
@@ -34,8 +50,12 @@ stops the form being used to send unwanted mail to someone else's address.
 | ------------------------------------------ | ---------------------------------------------------------- | -------------------------------------------------------- |
 | Confirmed lead + its reports + R2 payloads | **30 days**                                                | When the report **finished** (`seo_reports.finished_at`) |
 | Lead that never confirmed                  | **7 days** after the confirm link expires (links last 24h) | `leads.confirm_token_expires_at`                         |
+| Screenshot of a checked page               | **7 days**                                                 | When the capture was stored                              |
 
-Both are deleted by a daily sweep at 03:00 UTC (`services/seo-check/retention.ts`).
+All three are deleted by a daily sweep at 03:00 UTC
+(`services/seo-check/retention.ts`). The screenshot expires on its own clock
+because it belongs to a hostname rather than to a lead: deleting someone's lead
+cannot delete it, since another visitor may have checked the same site.
 
 Two details that matter:
 
@@ -88,18 +108,32 @@ Email **ventrarocket.work@gmail.com** to:
 - **Delete** it immediately, ahead of the retention window;
 - **Withdraw consent**.
 
-Erasure covers D1 (lead + reports) and R2 (report payloads) — the two places
-anything personal is written. We action deletion requests manually today; the
-volume does not yet justify automation.
+Erasure covers D1 (lead + reports) and R2 (report payloads) — every place
+something is written that is tied to you.
+
+It does **not** remove the page screenshot, and cannot: that object is filed
+under the checked site's hostname with nothing recording who requested it, so
+another visitor may have caused the same capture. It is an image of a public page
+and it self-deletes after 7 days. Ask and we will delete it early.
+
+We action deletion requests manually today; the volume does not yet justify
+automation.
 
 ## Sub-processors
 
-| Who                       | What they see                           | Why                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare                | Everything (D1, R2, Workers, Turnstile) | Hosting.                                                                                                                                                                                                                                                                                                                                    |
-| Google PageSpeed Insights | The checked URL only — never the email  | Lighthouse + Core Web Vitals data.                                                                                                                                                                                                                                                                                                          |
-| PostHog                   | Nothing, on this deployment             | Both server- and client-side capture are gated to hosted auth mode; this deployment runs `cloudflare_access`, so no checker traffic reaches PostHog at all. If hosted mode were ever switched on, this row must be re-checked before relying on it — error captures include the request path, and a report link is path-shaped (`/r/{id}`). |
-| Resend                    | Email address + report link             | Delivering the report. _(Pending — email is not yet enabled.)_                                                                                                                                                                                                                                                                              |
+| Who                       | What they see                           | Why                                                                                                                                                                                                                                                                                                                            |
+| ------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cloudflare                | Everything (D1, R2, Workers, Turnstile) | Hosting.                                                                                                                                                                                                                                                                                                                       |
+| Google PageSpeed Insights | The checked URL only — never the email  | Lighthouse + Core Web Vitals data.                                                                                                                                                                                                                                                                                             |
+| PostHog                   | Nothing, on this deployment             | Capture on both the client and the server needs two things: hosted auth mode, and a configured key. **This deployment now runs `hosted`, so the auth-mode gate is open** — the only reason nothing reaches PostHog is that no `POSTHOG_PUBLIC_KEY`/`POSTHOG_HOST` is set on the Worker. See the note below before setting one. |
+| Resend                    | Email address + report link             | Delivering the report, and account mail for the signed-in product. Live.                                                                                                                                                                                                                                                       |
+
+**Before adding a PostHog key.** Error captures include the request path, and a
+report link is path-shaped (`/r/{id}`) — that id is a bearer capability, so
+sending those paths would hand a third party the ability to read any report they
+appear in. The paths have to be stripped or redacted first. This used to be a
+hypothetical guarded by the auth mode; it is now the only thing standing between
+a configured key and that leak.
 
 ## Known gaps
 
