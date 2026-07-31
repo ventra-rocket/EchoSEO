@@ -116,7 +116,10 @@ const EN: CheckResultCopy = {
       VALIDATION_ERROR:
         "Use a real email address — disposable inboxes aren't accepted.",
       CRAWL_TARGET_BLOCKED: "That URL can't be checked.",
-      FORBIDDEN: "Verification failed — please retry the checkbox above.",
+      // Same reasoning as the landing's copy: this form's failure path renews
+      // the challenge too, so by the time anyone reads this there is nothing to
+      // retry but the submit itself.
+      FORBIDDEN: "Verification didn't go through — we've reset it, try again.",
       RATE_LIMITED:
         "You've hit the free-check limit for now — try again later.",
       UPSTREAM_UNAVAILABLE:
@@ -285,7 +288,8 @@ const VI: CheckResultCopy = {
         "Hãy dùng địa chỉ email thật — hộp thư dùng một lần không được chấp " +
         "nhận.",
       CRAWL_TARGET_BLOCKED: "Không thể kiểm tra URL này.",
-      FORBIDDEN: "Xác minh thất bại — vui lòng thử lại ô xác minh ở trên.",
+      FORBIDDEN:
+        "Xác minh chưa thành công — chúng tôi đã đặt lại, vui lòng thử lại.",
       RATE_LIMITED:
         "Bạn đã dùng hết lượt kiểm tra miễn phí lúc này — vui lòng thử lại sau.",
       UPSTREAM_UNAVAILABLE:
