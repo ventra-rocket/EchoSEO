@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as TurnstileModule from "./turnstile";
 import { AppError } from "@/server/lib/errors";
 
 // Typed arg shapes so the mocks' `.mock.calls` are typed (not `any`) — this
@@ -62,7 +63,8 @@ vi.mock("cloudflare:workers", () => ({
 vi.mock("./deep-check-config", () => ({
   isDeepCheckDisabled: isDeepCheckDisabledMock,
 }));
-vi.mock("./turnstile", () => ({
+vi.mock("./turnstile", async (importOriginal) => ({
+  ...(await importOriginal<typeof TurnstileModule>()),
   verifyTurnstileToken: verifyTurnstileTokenMock,
 }));
 vi.mock("./rate-limit-do", () => ({

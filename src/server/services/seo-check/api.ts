@@ -13,7 +13,7 @@ import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
 import { localizeRuleText } from "@/server/lib/seo-rules";
 import { freeSeoCheckRequestSchema } from "@/shared/free-seo-check";
-import { verifyTurnstileToken } from "./turnstile";
+import { formatTurnstileErrorCodes, verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { getCachedLiteReport, putCachedLiteReport } from "./cache";
 import { recordCheckMetric } from "./metrics";
@@ -57,7 +57,13 @@ export async function handleFreeSeoCheckRequest(
       turnstileSecret,
       ip,
     );
-    if (!turnstile.success) throw new AppError("FORBIDDEN");
+    if (!turnstile.success) {
+      recordCheckMetric("turnstile_reject", {
+        surface: "lite",
+        codes: formatTurnstileErrorCodes(turnstile.errorCodes),
+      });
+      throw new AppError("FORBIDDEN");
+    }
 
     const rateLimit = await checkIpRateLimit(env.RATE_LIMIT_DO, ip);
     if (!rateLimit.allowed) throw new AppError("RATE_LIMITED");

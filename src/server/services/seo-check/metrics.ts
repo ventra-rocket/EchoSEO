@@ -26,7 +26,11 @@ type CheckMetricEvent =
   | "deep_confirm"
   | "deep_done"
   | "deep_failed"
-  | "psi_call";
+  | "psi_call"
+  // A visitor turned away at the bot gate, carrying the reason siteverify gave.
+  // It is a funnel step like the rest — the one that fires before any of the
+  // others can — and it is the only place the reason is ever recorded.
+  | "turnstile_reject";
 
 export function recordCheckMetric(
   event: CheckMetricEvent,
