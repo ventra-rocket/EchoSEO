@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as TurnstileModule from "./turnstile";
 import { AppError } from "@/server/lib/errors";
 
 const {
@@ -27,7 +28,10 @@ vi.mock("cloudflare:workers", () => ({
   env: { RATE_LIMIT_DO: {} },
   waitUntil: (promise: Promise<unknown>) => promise,
 }));
-vi.mock("./turnstile", () => ({
+// Only the network call is stubbed. `formatTurnstileErrorCodes` stays real so
+// the rejection metric is asserted against what production would actually emit.
+vi.mock("./turnstile", async (importOriginal) => ({
+  ...(await importOriginal<typeof TurnstileModule>()),
   verifyTurnstileToken: verifyTurnstileTokenMock,
 }));
 vi.mock("./rate-limit-do", () => ({
@@ -123,6 +127,27 @@ describe("handleFreeSeoCheckRequest", () => {
     expect(await response.json()).toEqual({ error: "FORBIDDEN" });
     expect(checkIpRateLimitMock).not.toHaveBeenCalled();
     expect(getCachedLiteReportMock).not.toHaveBeenCalled();
+  });
+
+  it("records why Turnstile rejected the visitor, not just that it did", async () => {
+    // The response body is the same 403 for every reason siteverify can give,
+    // so the log line is the operator's only way to tell a secret that belongs
+    // to the wrong widget from a token the visitor left past its five-minute
+    // life. A production failure went undiagnosable for want of this.
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    verifyTurnstileTokenMock.mockResolvedValue({
+      success: false,
+      errorCodes: ["invalid-input-secret"],
+    });
+
+    await handleFreeSeoCheckRequest(
+      makeRequest({ url: "example.test", turnstileToken: "bad" }),
+    );
+
+    expect(log).toHaveBeenCalledWith(
+      "[metric] event=turnstile_reject surface=lite codes=invalid-input-secret",
+    );
+    log.mockRestore();
   });
 
   it("checks the rate limit before touching SSRF validation or the cache", async () => {

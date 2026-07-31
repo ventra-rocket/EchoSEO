@@ -11,6 +11,7 @@
  * only end-to-end exercise of its `onConflictDoNothing().returning()` insert.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as TurnstileModule from "./turnstile";
 import { makeGoodPage } from "@/server/lib/seo-rules/__tests__/on-page-signals-fixture";
 import {
   createFreeCheckTestDb,
@@ -72,7 +73,8 @@ vi.mock("cloudflare:workflows", () => ({
   NonRetryableError: class extends Error {},
 }));
 
-vi.mock("./turnstile", () => ({
+vi.mock("./turnstile", async (importOriginal) => ({
+  ...(await importOriginal<typeof TurnstileModule>()),
   verifyTurnstileToken: () => Promise.resolve({ success: true }),
 }));
 vi.mock("./rate-limit-do", () => ({

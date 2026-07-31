@@ -13,6 +13,26 @@ interface TurnstileVerifyResult {
   errorCodes: string[];
 }
 
+/**
+ * Renders siteverify's error codes for a metric line.
+ *
+ * Callers only ever act on the boolean, so without this the seven reasons
+ * siteverify can say no all reach the operator as one indistinguishable 403 —
+ * a secret that belongs to the wrong widget looks exactly like a token the
+ * visitor left sitting past its five-minute life. That ambiguity cost a real
+ * production diagnosis.
+ *
+ * Sanitized because the metric encoder joins bare `k=v` with no escaping and
+ * these strings arrive from an external API, not from us.
+ */
+export function formatTurnstileErrorCodes(codes: string[]): string {
+  const safe = codes
+    .slice(0, 5)
+    .map((code) => code.replace(/[^a-z0-9-]/gi, ""))
+    .filter(Boolean);
+  return safe.length > 0 ? safe.join(",") : "none";
+}
+
 interface SiteverifyResponseBody {
   success?: boolean;
   "error-codes"?: string[];

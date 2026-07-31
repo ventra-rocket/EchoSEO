@@ -18,7 +18,7 @@ import {
   startDeepCheckRequestSchema,
 } from "@/shared/free-seo-check";
 import { isDeepCheckDisabled } from "./deep-check-config";
-import { verifyTurnstileToken } from "./turnstile";
+import { formatTurnstileErrorCodes, verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { createLeadWithReport } from "./leads-repository";
 import { recordCheckMetric } from "./metrics";
@@ -115,7 +115,13 @@ export async function handleStartDeepCheckRequest(
       turnstileSecret,
       ip,
     );
-    if (!turnstile.success) throw new AppError("FORBIDDEN");
+    if (!turnstile.success) {
+      recordCheckMetric("turnstile_reject", {
+        surface: "deep",
+        codes: formatTurnstileErrorCodes(turnstile.errorCodes),
+      });
+      throw new AppError("FORBIDDEN");
+    }
 
     const rateLimit = await checkIpRateLimit(env.RATE_LIMIT_DO, ip);
     if (!rateLimit.allowed) throw new AppError("RATE_LIMITED");
