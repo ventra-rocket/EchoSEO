@@ -76,12 +76,27 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   /** A submit made before the bot check produced a token — held, not dropped. */
   const [submitQueued, setSubmitQueued] = useState(false);
 
+  /**
+   * A Turnstile token is single use, so it is spent once a check comes back —
+   * whether the check succeeded or failed. Both outcomes have to renew it.
+   *
+   * Only the failure path used to. A visitor whose first check WORKED kept the
+   * spent token in state, so their second check replayed it: siteverify
+   * answered `timeout-or-duplicate`, the page said "Verification failed —
+   * please retry the checkbox above", and the checkbox beside it read
+   * "Success!". Nothing about that is retryable by the visitor, and the first
+   * check working is what made the second one fail.
+   */
+  function renewChallenge() {
+    setTurnstileToken(null);
+    setChallengeAttempt((attempt) => attempt + 1);
+  }
+
   function failWith(message: string) {
     setErrorMessage(message);
     setStatus("error");
-    setTurnstileToken(null);
     setSubmitQueued(false);
-    setChallengeAttempt((attempt) => attempt + 1);
+    renewChallenge();
   }
 
   async function runCheck(token: string) {
@@ -111,6 +126,7 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
 
       setResult(body);
       setStatus("done");
+      renewChallenge();
     } catch {
       failWith(copy.errorDefault);
     }
