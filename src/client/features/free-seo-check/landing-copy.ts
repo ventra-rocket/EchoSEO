@@ -174,7 +174,12 @@ const EN: LandingCopy = {
   errors: {
     VALIDATION_ERROR: "Enter a valid URL to check.",
     CRAWL_TARGET_BLOCKED: "That URL can't be checked.",
-    FORBIDDEN: "Verification failed — please retry the checkbox above.",
+    // Says "we've reset it" because that is literally what happened: every
+    // failure path renews the challenge before this message renders. The old
+    // wording asked the visitor to "retry the checkbox above" — there is no
+    // checkbox to retry, the widget solves itself, and it was sitting there
+    // reading "Success!" while this told them verification had failed.
+    FORBIDDEN: "Verification didn't go through — we've reset it, try again.",
     RATE_LIMITED: "You've hit the free-check limit for now — try again later.",
     UPSTREAM_UNAVAILABLE:
       "We couldn't reach that site. Check the URL and try again.",
@@ -329,7 +334,8 @@ const VI: LandingCopy = {
   errors: {
     VALIDATION_ERROR: "Nhập một URL hợp lệ để kiểm tra.",
     CRAWL_TARGET_BLOCKED: "Không thể kiểm tra URL này.",
-    FORBIDDEN: "Xác minh thất bại — vui lòng thử lại ô xác minh ở trên.",
+    FORBIDDEN:
+      "Xác minh chưa thành công — chúng tôi đã đặt lại, vui lòng thử lại.",
     RATE_LIMITED:
       "Bạn đã dùng hết lượt kiểm tra miễn phí lúc này — vui lòng thử lại sau.",
     UPSTREAM_UNAVAILABLE:
