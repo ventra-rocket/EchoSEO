@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+// Import direction is load-bearing: this server test may import the client's
+// React-free schema module, but a client test importing this store would
+// break on the `cloudflare:workers` alias.
+import { parseFilmstripBundle } from "@/client/features/free-seo-check/filmstrip-bundle";
 
 const { r2GetMock, r2PutMock, r2ListMock, r2DeleteMock } = vi.hoisted(() => ({
   r2GetMock: vi.fn(),
@@ -96,6 +100,19 @@ describe("site filmstrip store", () => {
     expect(bundle.frames).toEqual(FRAMES);
     // capturedAt must round-trip as a real timestamp, not "Invalid Date".
     expect(Number.isNaN(Date.parse(bundle.capturedAt))).toBe(false);
+  });
+
+  it("writes a payload the client's independent schema accepts", async () => {
+    // The client deliberately owns its own zod schema (it cannot import this
+    // module), so nothing structural ties the two shapes together. This is the
+    // contract: the exact bytes put into R2 — served verbatim by the filmstrip
+    // endpoint — must parse into renderable frames on the other side.
+    await putSiteFilmstrip("kello.test", "mobile", FRAMES);
+    const stored: unknown = r2PutMock.mock.calls[0]?.[1];
+    const frames = parseFilmstripBundle(
+      typeof stored === "string" ? (JSON.parse(stored) as unknown) : null,
+    );
+    expect(frames).toEqual(FRAMES);
   });
 });
 
