@@ -211,6 +211,18 @@ const EN: CheckResultCopy = {
     copied: "Link copied",
     copyFailed: "Couldn't copy — copy the URL from the address bar instead.",
   },
+  strategyTabs: {
+    ariaLabel: "Device type",
+    mobileTab: "Mobile",
+    desktopTab: "Desktop",
+    desktopComparativeNote:
+      "For comparison only — scores use mobile data, matching Google's " +
+      "mobile-first indexing.",
+    desktopNotCaptured:
+      "Desktop metrics weren't captured for this report — newer checks " +
+      "include them.",
+    noStrategyData: "No lab data was captured for this device type.",
+  },
 };
 
 const VI: CheckResultCopy = {
@@ -404,6 +416,18 @@ const VI: CheckResultCopy = {
     copyButton: "Sao chép liên kết",
     copied: "Đã sao chép liên kết",
     copyFailed: "Không sao chép được — hãy tự sao chép URL trên thanh địa chỉ.",
+  },
+  strategyTabs: {
+    ariaLabel: "Loại thiết bị",
+    mobileTab: "Di động",
+    desktopTab: "Máy tính",
+    desktopComparativeNote:
+      "Chỉ để so sánh — điểm số dùng dữ liệu di động, đúng theo cách Google " +
+      "lập chỉ mục ưu tiên thiết bị di động.",
+    desktopNotCaptured:
+      "Báo cáo này chưa đo số liệu trên máy tính — các lần kiểm tra mới hơn " +
+      "sẽ có số liệu này.",
+    noStrategyData: "Chưa có số liệu lab cho loại thiết bị này.",
   },
 };
 
