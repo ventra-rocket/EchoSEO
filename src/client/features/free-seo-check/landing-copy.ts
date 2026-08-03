@@ -150,12 +150,15 @@ const EN: LandingCopy = {
   languageSwitchLabel: "Tiếng Việt",
   languageSwitchAria: "Xem trang này bằng tiếng Việt",
   // Each claim is checkable: the Lite rule set scores 12 signals (8 on-page +
-  // 4 technical), every fix cites a Google doc, and Deep measures 4 CWV metrics.
+  // 4 technical), every fix cites a Google doc, and Deep crawls internal
+  // pages. CWV/Lighthouse are deliberately NOT the Deep chip anymore — the
+  // free result shows them (homepage, lab), so the crawl is Deep's honest
+  // headline.
   trustSignals: [
     "12 signals scored",
     "free — no signup",
     "every fix cites Google's docs",
-    "deep check adds 4 Core Web Vitals",
+    "deep check adds a multi-page crawl",
   ],
   samplePreview: {
     label: "Sample report",
@@ -259,9 +262,10 @@ const EN: LandingCopy = {
     {
       title: "Free deep check by email",
       body:
-        "Ask for the deep check and we run Core Web Vitals through Google " +
-        "PageSpeed Insights and crawl several of your internal pages, then email " +
-        "you a shareable report when it is done. Also free — the email just lets " +
+        "Ask for the deep check and we crawl several of your internal pages, " +
+        "list the concrete issues on each, score AI-search readiness, and " +
+        "measure Core Web Vitals on the exact URL you checked — then email you " +
+        "a shareable report when it is done. Also free — the email just lets " +
         "us reach you when the crawl finishes.",
     },
   ],
@@ -272,8 +276,9 @@ const EN: LandingCopy = {
       question: "Is the SEO check really free?",
       answer:
         "Yes. The instant on-page check is free with no signup. The deeper check — " +
-        "Core Web Vitals plus a multi-page crawl — is free too; it only asks for an " +
-        "email so we can send the report once the crawl finishes.",
+        "a multi-page crawl that lists concrete issues, plus an AI-search readiness " +
+        "score — is free too; it only asks for an email so we can send the report " +
+        "once the crawl finishes.",
     },
     {
       question: "Do I need to sign up or install anything?",
@@ -284,16 +289,18 @@ const EN: LandingCopy = {
       question: "How is this different from PageSpeed Insights?",
       answer:
         "PageSpeed scores loading performance. This checks on-page SEO — titles, " +
-        "headings, indexability — and, in the deep check, pulls Core Web Vitals from " +
-        "PageSpeed too, then explains how to fix what it finds with a link to Google's " +
-        "own documentation for each issue.",
+        "headings, indexability — and shows your homepage's Lighthouse scores and " +
+        "lab Core Web Vitals alongside, then explains how to fix what it finds " +
+        "with a link to Google's own documentation for each issue.",
     },
     {
       question: "What does the deep check add?",
       answer:
-        "Core Web Vitals (LCP, INP, CLS) plus TTFB, measured through Google " +
-        "PageSpeed Insights, plus a crawl of several of your internal pages. It " +
-        "runs in the background and arrives in your inbox as a shareable report.",
+        "A crawl of several of your internal pages with the concrete issues on " +
+        "each, an AI-search readiness score, and Core Web Vitals for the exact " +
+        "URL you checked — real Chrome user data where Google has it, not just " +
+        "the homepage lab run. It runs in the background and arrives in your " +
+        "inbox as a shareable report.",
     },
     {
       question: "Is my report private?",
@@ -320,7 +327,7 @@ const VI: LandingCopy = {
     "chấm điểm 12 tín hiệu",
     "miễn phí — không cần đăng ký",
     "mỗi cách sửa đều kèm tài liệu Google",
-    "bản chuyên sâu thêm 4 chỉ số Core Web Vitals",
+    "bản chuyên sâu quét thêm nhiều trang",
   ],
   samplePreview: {
     label: "Báo cáo mẫu",
@@ -424,10 +431,11 @@ const VI: LandingCopy = {
     {
       title: "Kiểm tra chuyên sâu miễn phí qua email",
       body:
-        "Yêu cầu bản kiểm tra chuyên sâu, chúng tôi sẽ đo Core Web Vitals qua " +
-        "Google PageSpeed Insights và quét vài trang nội bộ của bạn, rồi gửi email " +
-        "một báo cáo có thể chia sẻ khi hoàn tất. Cũng miễn phí — email chỉ để chúng " +
-        "tôi báo bạn khi quét xong.",
+        "Yêu cầu bản kiểm tra chuyên sâu, chúng tôi sẽ quét vài trang nội bộ " +
+        "của bạn, liệt kê lỗi cụ thể trên từng trang, chấm mức sẵn sàng cho AI " +
+        "Search và đo Core Web Vitals cho đúng URL bạn kiểm tra — rồi gửi email " +
+        "một báo cáo có thể chia sẻ khi hoàn tất. Cũng miễn phí — email chỉ để " +
+        "chúng tôi báo bạn khi quét xong.",
     },
   ],
   faqEyebrow: "Hỏi đáp",
@@ -437,8 +445,8 @@ const VI: LandingCopy = {
       question: "Kiểm tra SEO này có thực sự miễn phí không?",
       answer:
         "Có. Bản kiểm tra on-page tức thì miễn phí và không cần đăng ký. Bản chuyên " +
-        "sâu — gồm Core Web Vitals và quét nhiều trang — cũng miễn phí; chỉ cần email " +
-        "để chúng tôi gửi báo cáo khi quét xong.",
+        "sâu — quét nhiều trang kèm lỗi cụ thể, cùng điểm sẵn sàng cho AI Search — " +
+        "cũng miễn phí; chỉ cần email để chúng tôi gửi báo cáo khi quét xong.",
     },
     {
       question: "Tôi có cần đăng ký hay cài đặt gì không?",
@@ -449,16 +457,17 @@ const VI: LandingCopy = {
       question: "Công cụ này khác PageSpeed Insights ở điểm nào?",
       answer:
         "PageSpeed chấm điểm tốc độ tải. Công cụ này kiểm tra SEO on-page — tiêu đề, " +
-        "heading, khả năng lập chỉ mục — và ở bản chuyên sâu cũng lấy Core Web Vitals " +
-        "từ PageSpeed, rồi giải thích cách sửa từng lỗi kèm liên kết tới tài liệu chính " +
-        "thức của Google.",
+        "heading, khả năng lập chỉ mục — và hiển thị kèm điểm Lighthouse cùng chỉ số " +
+        "Core Web Vitals đo lab của trang chủ, rồi giải thích cách sửa từng lỗi kèm " +
+        "liên kết tới tài liệu chính thức của Google.",
     },
     {
       question: "Bản kiểm tra chuyên sâu có thêm gì?",
       answer:
-        "Core Web Vitals (LCP, INP, CLS) cùng TTFB, đo qua Google PageSpeed Insights, " +
-        "và quét vài trang nội bộ của bạn. Nó chạy nền và gửi tới hộp thư của bạn dưới " +
-        "dạng báo cáo có thể chia sẻ.",
+        "Lượt quét vài trang nội bộ kèm lỗi cụ thể trên từng trang, điểm sẵn sàng " +
+        "cho AI Search, và Core Web Vitals cho đúng URL bạn kiểm tra — dữ liệu " +
+        "người dùng Chrome thực khi Google có, không chỉ bản đo lab trên trang chủ. " +
+        "Nó chạy nền và gửi tới hộp thư của bạn dưới dạng báo cáo có thể chia sẻ.",
     },
     {
       question: "Báo cáo của tôi có riêng tư không?",
