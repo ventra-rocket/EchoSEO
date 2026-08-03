@@ -74,7 +74,7 @@ function ScoreGauge({ label, score }: { label: string; score: number | null }) {
             r={radius}
             fill="none"
             strokeWidth="4"
-            className="stroke-base-300/60"
+            className="stroke-base-300"
           />
           {score != null ? (
             <circle

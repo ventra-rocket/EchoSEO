@@ -112,7 +112,7 @@ export function LighthouseIssuesToolbar({
   const categoryLabelLower = selectedCategoryLabel.toLowerCase();
 
   return (
-    <div className="sticky top-0 z-[2] -mx-2 px-2 py-2 bg-base-100/95 backdrop-blur-sm border-b border-base-300/60">
+    <div className="sticky top-0 z-[2] -mx-2 px-2 py-2 bg-base-100/95 backdrop-blur-sm border-b border-base-300">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <CategoryTabs
           category={category}
@@ -350,7 +350,7 @@ export function LighthouseIssueList({
           <th className="font-medium text-right">Score</th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-base-300/60">
+      <tbody className="divide-y divide-base-300">
         {issues.map((issue, issueIndex) => (
           <LighthouseIssueRow
             key={`${issue.category}-${issue.auditKey}-${issueIndex}`}
