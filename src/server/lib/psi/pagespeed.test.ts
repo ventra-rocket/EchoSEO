@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  extractFilmstrip,
   extractScreenshot,
   fetchPageSpeed,
   PsiRequestError,
@@ -131,6 +132,113 @@ describe("extractScreenshot", () => {
     ["a bare base64 string with no data URI wrapper", withScreenshot("aGk=")],
   ])("returns null for %s", (_label, payload) => {
     expect(extractScreenshot(payload)).toBeNull();
+  });
+});
+
+function withFilmstrip(items: unknown[]) {
+  return {
+    lighthouseResult: {
+      audits: { "screenshot-thumbnails": { details: { items } } },
+    },
+  };
+}
+
+function frame(timing: number, data = "data:image/jpeg;base64,aGk=") {
+  return { timing, timestamp: 1_000_000 + timing, data };
+}
+
+describe("extractFilmstrip", () => {
+  it("keeps valid frames as data URIs with their timing, ordered by timing", () => {
+    const frames = extractFilmstrip(
+      // Shuffled on purpose — the output must be chronological regardless.
+      withFilmstrip([frame(750), frame(375), frame(1125)]),
+    );
+
+    expect(frames).toEqual([
+      { data: "data:image/jpeg;base64,aGk=", timingMs: 375 },
+      { data: "data:image/jpeg;base64,aGk=", timingMs: 750 },
+      { data: "data:image/jpeg;base64,aGk=", timingMs: 1125 },
+    ]);
+  });
+
+  it("accepts every allowlisted image type", () => {
+    const frames = extractFilmstrip(
+      withFilmstrip([
+        frame(1, "data:image/webp;base64,aGk="),
+        frame(2, "data:image/jpeg;base64,aGk="),
+        frame(3, "data:image/png;base64,aGk="),
+      ]),
+    );
+    expect(frames).toHaveLength(3);
+  });
+
+  // The filmstrip is corroborating evidence riding along on a render spent for
+  // the capture — absence or garbage must yield null, never a throw.
+  it.each([
+    ["a non-object payload", "nope"],
+    ["no lighthouse result", {}],
+    ["no audits", { lighthouseResult: {} }],
+    ["no screenshot-thumbnails audit", { lighthouseResult: { audits: {} } }],
+    [
+      "no details items",
+      { lighthouseResult: { audits: { "screenshot-thumbnails": {} } } },
+    ],
+    ["an empty items array", withFilmstrip([])],
+  ])("returns null for %s", (_label, payload) => {
+    expect(extractFilmstrip(payload)).toBeNull();
+  });
+
+  it("drops malformed frames and keeps the valid ones", () => {
+    const frames = extractFilmstrip(
+      withFilmstrip([
+        "junk",
+        { timing: 100 }, // no data
+        { data: 42, timing: 200 }, // data is not a string
+        { data: "aGk=", timing: 300 }, // bare base64, no data-URI wrapper
+        { data: "data:text/plain;base64,aGk=", timing: 400 }, // not an image
+        frame(500),
+      ]),
+    );
+
+    expect(frames).toEqual([
+      { data: "data:image/jpeg;base64,aGk=", timingMs: 500 },
+    ]);
+  });
+
+  // SVG can carry script; it is refused everywhere the allowlist applies, in
+  // the filmstrip exactly as in extractScreenshot.
+  it("refuses an SVG frame and returns null when nothing else survives", () => {
+    const svgOnly = withFilmstrip([
+      frame(100, "data:image/svg+xml;base64,aGk="),
+    ]);
+    expect(extractFilmstrip(svgOnly)).toBeNull();
+
+    const mixed = extractFilmstrip(
+      withFilmstrip([frame(100, "data:image/svg+xml;base64,aGk="), frame(200)]),
+    );
+    expect(mixed).toEqual([
+      { data: "data:image/jpeg;base64,aGk=", timingMs: 200 },
+    ]);
+  });
+
+  it("drops an oversize frame rather than failing the strip", () => {
+    const oversize = `data:image/jpeg;base64,${"A".repeat(30_000)}`;
+    const frames = extractFilmstrip(
+      withFilmstrip([frame(100, oversize), frame(200)]),
+    );
+
+    expect(frames).toEqual([
+      { data: "data:image/jpeg;base64,aGk=", timingMs: 200 },
+    ]);
+  });
+
+  it("caps the strip at 10 frames, dropping the overflow", () => {
+    const items = Array.from({ length: 14 }, (_, i) => frame((i + 1) * 100));
+    const frames = extractFilmstrip(withFilmstrip(items));
+
+    expect(frames).toHaveLength(10);
+    expect(frames![0].timingMs).toBe(100);
+    expect(frames![9].timingMs).toBe(1000);
   });
 });
 

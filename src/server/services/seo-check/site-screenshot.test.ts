@@ -7,8 +7,11 @@ const {
   getScreenshotDailyCeilingMock,
   getSiteScreenshotMock,
   putSiteScreenshotMock,
+  getSiteFilmstripMock,
+  putSiteFilmstripMock,
   fetchPageSpeedMock,
   extractScreenshotMock,
+  extractFilmstripMock,
   getRequiredEnvValueMock,
   captureServerErrorMock,
 } = vi.hoisted(() => ({
@@ -18,8 +21,11 @@ const {
   getScreenshotDailyCeilingMock: vi.fn(),
   getSiteScreenshotMock: vi.fn(),
   putSiteScreenshotMock: vi.fn(),
+  getSiteFilmstripMock: vi.fn(),
+  putSiteFilmstripMock: vi.fn(),
   fetchPageSpeedMock: vi.fn(),
   extractScreenshotMock: vi.fn(),
+  extractFilmstripMock: vi.fn(),
   getRequiredEnvValueMock: vi.fn(),
   captureServerErrorMock: vi.fn(),
 }));
@@ -40,6 +46,7 @@ vi.mock("@/server/lib/audit/url-policy", () => ({
 vi.mock("@/server/lib/psi/pagespeed", () => ({
   fetchPageSpeed: fetchPageSpeedMock,
   extractScreenshot: extractScreenshotMock,
+  extractFilmstrip: extractFilmstripMock,
 }));
 vi.mock("./rate-limit-do", () => ({ checkIpRateLimit: checkIpRateLimitMock }));
 vi.mock("./deep-check-config", () => ({
@@ -49,23 +56,45 @@ vi.mock("./deep-check-config", () => ({
 vi.mock("./site-screenshot-store", () => ({
   getSiteScreenshot: getSiteScreenshotMock,
   putSiteScreenshot: putSiteScreenshotMock,
+  getSiteFilmstrip: getSiteFilmstripMock,
+  putSiteFilmstrip: putSiteFilmstripMock,
 }));
 
-const { handleSiteScreenshotRequest } = await import("./site-screenshot");
+const { handleSiteScreenshotRequest, handleSiteFilmstripRequest } =
+  await import("./site-screenshot");
 
 const PAGE_URL = "https://kello.test/";
 
-function makeRequest(url = PAGE_URL, method = "GET"): Request {
+function makeRequest(
+  url = PAGE_URL,
+  method = "GET",
+  strategy?: string,
+): Request {
+  const query = new URLSearchParams({ url });
+  if (strategy !== undefined) query.set("strategy", strategy);
   return new Request(
-    `https://echoseo.test/api/free-seo-check/site-screenshot?url=${encodeURIComponent(url)}`,
+    `https://echoseo.test/api/free-seo-check/site-screenshot?${query}`,
     { method, headers: { "cf-connecting-ip": "203.0.113.7" } },
   );
 }
 
-function cachedObject(uploaded: Date) {
+function makeFilmstripRequest(
+  url = PAGE_URL,
+  method = "GET",
+  strategy?: string,
+): Request {
+  const query = new URLSearchParams({ url });
+  if (strategy !== undefined) query.set("strategy", strategy);
+  return new Request(
+    `https://echoseo.test/api/free-seo-check/site-filmstrip?${query}`,
+    { method, headers: { "cf-connecting-ip": "203.0.113.7" } },
+  );
+}
+
+function cachedObject(uploaded: Date, contentType = "image/webp") {
   return {
     body: new Response("bytes").body,
-    httpMetadata: { contentType: "image/webp" },
+    httpMetadata: { contentType },
     uploaded,
   };
 }
@@ -77,17 +106,25 @@ const FRESH_SHOT = {
   height: 900,
 };
 
+const FRESH_FRAMES = [
+  { data: "data:image/jpeg;base64,aGk=", timingMs: 375 },
+  { data: "data:image/jpeg;base64,aGk=", timingMs: 750 },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
   normalizeUrlMock.mockImplementation(async (u: string) => u);
   checkIpRateLimitMock.mockResolvedValue({ allowed: true });
   isScreenshotDisabledMock.mockResolvedValue(false);
-  getScreenshotDailyCeilingMock.mockResolvedValue(300);
+  getScreenshotDailyCeilingMock.mockResolvedValue(600);
   getSiteScreenshotMock.mockResolvedValue(null);
   putSiteScreenshotMock.mockResolvedValue(undefined);
+  getSiteFilmstripMock.mockResolvedValue(null);
+  putSiteFilmstripMock.mockResolvedValue(undefined);
   getRequiredEnvValueMock.mockResolvedValue("psi-key");
   fetchPageSpeedMock.mockResolvedValue({ raw: true });
   extractScreenshotMock.mockReturnValue(FRESH_SHOT);
+  extractFilmstripMock.mockReturnValue(FRESH_FRAMES);
 });
 
 describe("handleSiteScreenshotRequest", () => {
@@ -103,7 +140,7 @@ describe("handleSiteScreenshotRequest", () => {
     expect(checkIpRateLimitMock).toHaveBeenCalledTimes(1);
   });
 
-  it("renders desktop, stores, and serves on a cache miss", async () => {
+  it("renders desktop by default, stores, and serves on a cache miss", async () => {
     const response = await handleSiteScreenshotRequest(makeRequest());
 
     expect(response.status).toBe(200);
@@ -113,9 +150,92 @@ describe("handleSiteScreenshotRequest", () => {
       "desktop",
       expect.any(AbortSignal),
     );
+    expect(getSiteScreenshotMock).toHaveBeenCalledWith("kello.test", "desktop");
     expect(putSiteScreenshotMock).toHaveBeenCalledWith(
       "kello.test",
+      "desktop",
       FRESH_SHOT,
+    );
+  });
+
+  it("renders and keys by mobile when ?strategy=mobile", async () => {
+    const response = await handleSiteScreenshotRequest(
+      makeRequest(PAGE_URL, "GET", "mobile"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchPageSpeedMock).toHaveBeenCalledWith(
+      PAGE_URL,
+      "psi-key",
+      "mobile",
+      expect.any(AbortSignal),
+    );
+    expect(getSiteScreenshotMock).toHaveBeenCalledWith("kello.test", "mobile");
+    expect(putSiteScreenshotMock).toHaveBeenCalledWith(
+      "kello.test",
+      "mobile",
+      FRESH_SHOT,
+    );
+  });
+
+  // Junk must 400 rather than silently fall back to desktop: a client bug that
+  // sent `strategy=Mobile` would otherwise mis-key the shared cache unnoticed.
+  it("400s on a junk strategy without rendering or reading R2", async () => {
+    const response = await handleSiteScreenshotRequest(
+      makeRequest(PAGE_URL, "GET", "tablet"),
+    );
+
+    expect(response.status).toBe(400);
+    expect(fetchPageSpeedMock).not.toHaveBeenCalled();
+    expect(getSiteScreenshotMock).not.toHaveBeenCalled();
+  });
+
+  it("stores BOTH artifacts from the one render", async () => {
+    await handleSiteScreenshotRequest(makeRequest(PAGE_URL, "GET", "mobile"));
+
+    expect(fetchPageSpeedMock).toHaveBeenCalledTimes(1);
+    expect(putSiteScreenshotMock).toHaveBeenCalledWith(
+      "kello.test",
+      "mobile",
+      FRESH_SHOT,
+    );
+    expect(putSiteFilmstripMock).toHaveBeenCalledWith(
+      "kello.test",
+      "mobile",
+      FRESH_FRAMES,
+    );
+  });
+
+  it("skips the filmstrip store when PSI provides no filmstrip", async () => {
+    extractFilmstripMock.mockReturnValue(null);
+
+    const response = await handleSiteScreenshotRequest(makeRequest());
+
+    expect(response.status).toBe(200);
+    expect(putSiteFilmstripMock).not.toHaveBeenCalled();
+  });
+
+  it("still serves the capture when the filmstrip store fails", async () => {
+    putSiteFilmstripMock.mockRejectedValue(new Error("r2 down"));
+
+    const response = await handleSiteScreenshotRequest(makeRequest());
+
+    expect(response.status).toBe(200);
+  });
+
+  // The render slot was spent either way; keeping the filmstrip preserves what
+  // the spend bought even when the capture itself is missing.
+  it("stores the filmstrip even when PSI omits the capture", async () => {
+    extractScreenshotMock.mockReturnValue(null);
+
+    const response = await handleSiteScreenshotRequest(makeRequest());
+
+    expect(response.status).toBe(404);
+    expect(putSiteScreenshotMock).not.toHaveBeenCalled();
+    expect(putSiteFilmstripMock).toHaveBeenCalledWith(
+      "kello.test",
+      "desktop",
+      FRESH_FRAMES,
     );
   });
 
@@ -209,7 +329,7 @@ describe("handleSiteScreenshotRequest", () => {
     expect(checkIpRateLimitMock).toHaveBeenCalledWith(
       {},
       "screenshot-render-global",
-      expect.objectContaining({ limit: 300 }),
+      expect.objectContaining({ limit: 600 }),
     );
   });
 
@@ -227,12 +347,14 @@ describe("handleSiteScreenshotRequest", () => {
 
   it("404s and stores nothing when no capture and no cache", async () => {
     extractScreenshotMock.mockReturnValue(null);
+    extractFilmstripMock.mockReturnValue(null);
 
     const response = await handleSiteScreenshotRequest(makeRequest());
 
     // A missing thumbnail is a 404 (non-reported), not a 5xx server fault.
     expect(response.status).toBe(404);
     expect(putSiteScreenshotMock).not.toHaveBeenCalled();
+    expect(putSiteFilmstripMock).not.toHaveBeenCalled();
   });
 
   // The ceiling protects cost, so when it is hit but a (stale) capture exists,
@@ -254,6 +376,109 @@ describe("handleSiteScreenshotRequest", () => {
   it("rejects a non-GET method", async () => {
     const response = await handleSiteScreenshotRequest(
       makeRequest(PAGE_URL, "POST"),
+    );
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("GET");
+  });
+});
+
+function storedBundle() {
+  return {
+    body: new Response('{"version":1,"frames":[],"capturedAt":"x"}').body,
+    httpMetadata: { contentType: "application/json" },
+    uploaded: new Date(),
+  };
+}
+
+describe("handleSiteFilmstripRequest", () => {
+  it("serves the stored bundle with the shared evidence headers", async () => {
+    getSiteFilmstripMock.mockResolvedValue(storedBundle());
+
+    const response = await handleSiteFilmstripRequest(makeFilmstripRequest());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/json");
+    expect(response.headers.get("Cache-Control")).toContain("public");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(getSiteFilmstripMock).toHaveBeenCalledWith("kello.test", "desktop");
+  });
+
+  it("reads the strategy the caller asked for", async () => {
+    getSiteFilmstripMock.mockResolvedValue(storedBundle());
+
+    await handleSiteFilmstripRequest(
+      makeFilmstripRequest(PAGE_URL, "GET", "mobile"),
+    );
+
+    expect(getSiteFilmstripMock).toHaveBeenCalledWith("kello.test", "mobile");
+  });
+
+  // Load-bearing: the client pre-warm fires concurrent GETs, and this module
+  // has no single-flight — a filmstrip path that could render would
+  // double-render every strategy. Absence must be a plain 404, never a spend.
+  it("404s when no bundle exists and NEVER renders or spends the ceiling", async () => {
+    const response = await handleSiteFilmstripRequest(makeFilmstripRequest());
+
+    expect(response.status).toBe(404);
+    expect(fetchPageSpeedMock).not.toHaveBeenCalled();
+    expect(isScreenshotDisabledMock).not.toHaveBeenCalled();
+    expect(getScreenshotDailyCeilingMock).not.toHaveBeenCalled();
+    expect(putSiteFilmstripMock).not.toHaveBeenCalled();
+    // Only the per-IP READ budget is consulted — never the render allowance.
+    expect(checkIpRateLimitMock).toHaveBeenCalledTimes(1);
+    expect(checkIpRateLimitMock).toHaveBeenCalledWith(
+      {},
+      "screenshot:203.0.113.7",
+      expect.objectContaining({ limit: 60 }),
+    );
+  });
+
+  it("serves a stale bundle rather than rendering a fresh one", async () => {
+    getSiteFilmstripMock.mockResolvedValue({
+      ...storedBundle(),
+      uploaded: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    });
+
+    const response = await handleSiteFilmstripRequest(makeFilmstripRequest());
+
+    expect(response.status).toBe(200);
+    expect(fetchPageSpeedMock).not.toHaveBeenCalled();
+  });
+
+  it("shares the capture endpoint's per-IP read budget", async () => {
+    checkIpRateLimitMock.mockResolvedValue({ allowed: false });
+
+    const response = await handleSiteFilmstripRequest(makeFilmstripRequest());
+
+    expect(response.status).toBe(429);
+    expect(getSiteFilmstripMock).not.toHaveBeenCalled();
+  });
+
+  it("400s on a junk strategy", async () => {
+    const response = await handleSiteFilmstripRequest(
+      makeFilmstripRequest(PAGE_URL, "GET", "print"),
+    );
+
+    expect(response.status).toBe(400);
+    expect(getSiteFilmstripMock).not.toHaveBeenCalled();
+  });
+
+  it("validates the target URL through the SSRF policy", async () => {
+    normalizeUrlMock.mockRejectedValue(new Error("CRAWL_TARGET_BLOCKED"));
+
+    const response = await handleSiteFilmstripRequest(
+      makeFilmstripRequest("http://169.254.169.254/"),
+    );
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(getSiteFilmstripMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-GET method", async () => {
+    const response = await handleSiteFilmstripRequest(
+      makeFilmstripRequest(PAGE_URL, "POST"),
     );
 
     expect(response.status).toBe(405);

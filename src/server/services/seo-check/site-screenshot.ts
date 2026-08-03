@@ -1,7 +1,8 @@
 /**
- * Raw HTTP handler serving a desktop page capture for a URL — the trust signal
+ * Raw HTTP handlers serving the visual evidence for a URL — the trust signal
  * ("we really loaded your site") shown on both the anonymous Lite result and
- * the shared Deep report.
+ * the shared Deep report: a full-page capture per strategy (mobile/desktop)
+ * plus the loading filmstrip that rode along in the same PSI response.
  *
  * Wired directly into server.ts's fetch() under `/api/free-seo-check/*`, which
  * is already on the Cloudflare Access bypass, so it needs no new bypass
@@ -10,21 +11,33 @@
  * The capture is the only part of the anonymous Lite tier that spends a PSI
  * call, so it carries its own guards: SSRF validation of the target, a per-IP
  * read limit, a global daily render ceiling protecting the shared PSI quota, a
- * kill-switch, and a 24h per-domain R2 cache so a repeat check renders nothing.
- * A stale cached capture is served in preference to failing when a render is
- * refused or errors.
+ * kill-switch, and a 24h per-(domain, strategy) R2 cache so a repeat check
+ * renders nothing. A stale cached capture is served in preference to failing
+ * when a render is refused or errors.
  */
 import { env } from "cloudflare:workers";
+import { z } from "zod";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
-import { fetchPageSpeed, extractScreenshot } from "@/server/lib/psi/pagespeed";
+import {
+  fetchPageSpeed,
+  extractScreenshot,
+  extractFilmstrip,
+  type PsiFilmstripFrame,
+  type PsiStrategy,
+} from "@/server/lib/psi/pagespeed";
 import { AppError } from "@/server/lib/errors";
 import { checkIpRateLimit } from "./rate-limit-do";
 import {
   isScreenshotDisabled,
   getScreenshotDailyCeiling,
 } from "./deep-check-config";
-import { getSiteScreenshot, putSiteScreenshot } from "./site-screenshot-store";
+import {
+  getSiteScreenshot,
+  putSiteScreenshot,
+  getSiteFilmstrip,
+  putSiteFilmstrip,
+} from "./site-screenshot-store";
 import { recordCheckMetric } from "./metrics";
 import { clientIp, errorResponse } from "./http-response";
 
@@ -34,7 +47,7 @@ const CACHE_MAX_AGE_MS = CACHE_MAX_AGE_SECONDS * 1000;
 
 /** A read costs a DoH-backed SSRF check, a DO round-trip, and an R2 get, but no
  * PSI call on a cache hit — cheap enough that this ceiling is generous and only
- * there to blunt scripted scraping. */
+ * there to blunt scripted scraping. Shared by the capture and filmstrip reads. */
 const READ_RATE_LIMIT = { limit: 60, windowMs: 10 * 60 * 1000 };
 
 /** The window the global render ceiling is counted over. */
@@ -44,18 +57,40 @@ const RENDER_WINDOW_MS = 24 * 60 * 60 * 1000;
  * request open, and let the client retry. */
 const PSI_TIMEOUT_MS = 28_000;
 
+const strategySchema = z.enum(["mobile", "desktop"]);
+
+/**
+ * `?strategy=` is optional and defaults to desktop so `<img>` URLs minted
+ * before the mobile tab existed keep resolving; junk is a 400 rather than a
+ * silent desktop so a client bug cannot quietly mis-key the shared cache.
+ */
+function parseStrategy(requestUrl: URL): PsiStrategy {
+  const raw = requestUrl.searchParams.get("strategy");
+  if (raw === null) return "desktop";
+  const parsed = strategySchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "strategy must be mobile or desktop",
+    );
+  }
+  return parsed.data;
+}
+
+function evidenceHeaders(contentType: string): HeadersInit {
+  return {
+    "Content-Type": contentType,
+    // Public homepage evidence — the visitor's browser may hold it for a day so
+    // a re-view never re-requests. (Worker responses are not CDN-cached from
+    // this header alone; this is browser caching only.)
+    "Cache-Control": `public, max-age=${CACHE_MAX_AGE_SECONDS}`,
+    "X-Content-Type-Options": "nosniff",
+    "X-Robots-Tag": "noindex",
+  };
+}
+
 function imageResponse(contentType: string, body: BodyInit): Response {
-  return new Response(body, {
-    headers: {
-      "Content-Type": contentType,
-      // A public homepage thumbnail — the visitor's browser may hold it for a
-      // day so a re-view never re-requests. (Worker responses are not CDN-cached
-      // from this header alone; this is browser caching only.)
-      "Cache-Control": `public, max-age=${CACHE_MAX_AGE_SECONDS}`,
-      "X-Content-Type-Options": "nosniff",
-      "X-Robots-Tag": "noindex",
-    },
-  });
+  return new Response(body, { headers: evidenceHeaders(contentType) });
 }
 
 function isFresh(object: R2ObjectBody): boolean {
@@ -73,15 +108,18 @@ export async function handleSiteScreenshotRequest(
   }
 
   try {
-    const rawUrl = new URL(request.url).searchParams.get("url") ?? "";
+    const requestUrl = new URL(request.url);
+    const rawUrl = requestUrl.searchParams.get("url") ?? "";
+    const strategy = parseStrategy(requestUrl);
     // SSRF gate — the target is attacker-controlled just like the Lite check's.
     const normalizedUrl = await normalizeAndValidateStartUrl(rawUrl);
     const domain = new URL(normalizedUrl).hostname.toLowerCase();
     // Capture the ORIGIN ROOT, never the caller's path/query. The cache is keyed
-    // by domain, so a per-path capture would let the first (unauthenticated)
-    // caller pin a domain's shared capture to any page on it — e.g. a reflected
-    // `?q=…` — that every later visitor then sees labelled "what we loaded".
-    // Rendering the homepage keeps the key and the image consistent.
+    // by (domain, strategy), so a per-path capture would let the first
+    // (unauthenticated) caller pin a domain's shared capture to any page on it
+    // — e.g. a reflected `?q=…` — that every later visitor then sees labelled
+    // "what we loaded". Rendering the homepage keeps the key and the image
+    // consistent.
     const captureUrl = `${new URL(normalizedUrl).origin}/`;
 
     const rateLimit = await checkIpRateLimit(
@@ -91,7 +129,7 @@ export async function handleSiteScreenshotRequest(
     );
     if (!rateLimit.allowed) throw new AppError("RATE_LIMITED");
 
-    const cached = await getSiteScreenshot(domain);
+    const cached = await getSiteScreenshot(domain, strategy);
     if (cached && isFresh(cached)) {
       return imageResponse(
         cached.httpMetadata?.contentType ?? "image/webp",
@@ -118,15 +156,75 @@ export async function handleSiteScreenshotRequest(
       throw new AppError("RATE_LIMITED", "Daily capture limit reached");
     }
 
-    const shot = await renderScreenshot(captureUrl);
+    const rendered = await renderScreenshot(captureUrl, strategy);
+    // One spent render slot yields BOTH artifacts. The filmstrip is stored even
+    // when the capture is missing — the quota was spent either way — and always
+    // best-effort: it must never fail a response the capture alone would serve.
+    if (rendered) await storeFilmstrip(domain, strategy, rendered.filmstrip);
+
+    const shot = rendered?.screenshot ?? null;
     if (!shot) {
       // PSI omitted the capture or timed out. Stale is better than nothing.
       if (cached) return imageResponse(cachedType(cached), cached.body);
       throw new AppError("NOT_FOUND", "No capture available");
     }
 
-    await putSiteScreenshot(domain, shot);
+    await putSiteScreenshot(domain, strategy, shot);
     return imageResponse(shot.contentType, shot.bytes);
+  } catch (error) {
+    return errorResponse(error, request);
+  }
+}
+
+/**
+ * READ-ONLY companion to the capture endpoint: serves the filmstrip bundle the
+ * last render stored for (domain, strategy), or 404s. It NEVER calls PSI and
+ * never touches the kill-switch or the render ceiling, whatever the cache
+ * state: the client pre-warm fires concurrent GETs, and with no single-flight
+ * in this module a render-capable filmstrip path would double-render every
+ * strategy and double the plan's quota math. Only handleSiteScreenshotRequest
+ * renders, and that one render stores both artifacts.
+ */
+export async function handleSiteFilmstripRequest(
+  request: Request,
+): Promise<Response> {
+  if (request.method !== "GET") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { Allow: "GET" },
+    });
+  }
+
+  try {
+    const requestUrl = new URL(request.url);
+    const rawUrl = requestUrl.searchParams.get("url") ?? "";
+    const strategy = parseStrategy(requestUrl);
+    // Same normalization as the write path so read keys always match written
+    // keys, and junk input cannot probe arbitrary R2 key shapes.
+    const normalizedUrl = await normalizeAndValidateStartUrl(rawUrl);
+    const domain = new URL(normalizedUrl).hostname.toLowerCase();
+
+    const rateLimit = await checkIpRateLimit(
+      env.RATE_LIMIT_DO,
+      `screenshot:${clientIp(request)}`,
+      READ_RATE_LIMIT,
+    );
+    if (!rateLimit.allowed) throw new AppError("RATE_LIMITED");
+
+    // Served regardless of age — a stale filmstrip beats an empty row, exactly
+    // like the stale-capture rule above. Freshness is the render path's job.
+    const bundle = await getSiteFilmstrip(domain, strategy);
+    if (!bundle) {
+      // Absence is the normal cold state (nothing has rendered this strategy
+      // yet), not a server fault — 404, non-reported, and NO render fallback.
+      throw new AppError("NOT_FOUND", "No filmstrip available");
+    }
+
+    return new Response(bundle.body, {
+      headers: evidenceHeaders(
+        bundle.httpMetadata?.contentType ?? "application/json",
+      ),
+    });
   } catch (error) {
     return errorResponse(error, request);
   }
@@ -136,21 +234,51 @@ function cachedType(object: R2ObjectBody): string {
   return object.httpMetadata?.contentType ?? "image/webp";
 }
 
-async function renderScreenshot(url: string) {
+interface RenderedArtifacts {
+  screenshot: ReturnType<typeof extractScreenshot>;
+  filmstrip: PsiFilmstripFrame[] | null;
+}
+
+async function renderScreenshot(
+  url: string,
+  strategy: PsiStrategy,
+): Promise<RenderedArtifacts | null> {
   const apiKey = await getRequiredEnvValue("GOOGLE_PSI_API_KEY");
   try {
-    recordCheckMetric("psi_call", { kind: "screenshot" });
+    recordCheckMetric("psi_call", { kind: "screenshot", strategy });
     const raw = await fetchPageSpeed(
       url,
       apiKey,
-      // Desktop, not mobile: the wide 1350px capture reads as a real site, where
-      // the mobile 412px one looks like a phone screenshot cropped to a strip.
-      "desktop",
+      strategy,
       AbortSignal.timeout(PSI_TIMEOUT_MS),
     );
-    return extractScreenshot(raw);
+    return {
+      screenshot: extractScreenshot(raw),
+      filmstrip: extractFilmstrip(raw),
+    };
   } catch (error) {
-    console.error(`site-screenshot: PSI render failed for ${url}`, error);
+    console.error(
+      `site-screenshot: PSI render failed for ${url} (${strategy})`,
+      error,
+    );
     return null;
+  }
+}
+
+/** Best-effort: the filmstrip rides along on a render already spent for the
+ * capture, so failing to extract or store it must never fail the response. */
+async function storeFilmstrip(
+  domain: string,
+  strategy: PsiStrategy,
+  frames: PsiFilmstripFrame[] | null,
+): Promise<void> {
+  if (!frames) return;
+  try {
+    await putSiteFilmstrip(domain, strategy, frames);
+  } catch (error) {
+    console.error(
+      `site-screenshot: filmstrip store failed for ${domain} (${strategy})`,
+      error,
+    );
   }
 }
