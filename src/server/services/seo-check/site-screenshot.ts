@@ -50,8 +50,13 @@ const CACHE_MAX_AGE_MS = CACHE_MAX_AGE_SECONDS * 1000;
 
 /** A read costs a DoH-backed SSRF check, a DO round-trip, and an R2 get, but no
  * PSI call on a cache hit — cheap enough that this ceiling is generous and only
- * there to blunt scripted scraping. Shared by the capture and filmstrip reads. */
-const READ_RATE_LIMIT = { limit: 60, windowMs: 10 * 60 * 1000 };
+ * there to blunt scripted scraping. Shared by the capture and filmstrip reads.
+ * One result view now issues 4–6 reads on this budget (2 captures warmed +
+ * 2 bundle fetches, +retries), where it was 1 before the strategy tabs, so the
+ * limit is sized to keep an agency checking ~10+ URLs — and users behind a
+ * shared CGNAT IP — from self-throttling. Cost stays bounded by the global
+ * render ceiling, not this. */
+const READ_RATE_LIMIT = { limit: 300, windowMs: 10 * 60 * 1000 };
 
 /** The window the global render ceiling is counted over. */
 const RENDER_WINDOW_MS = 24 * 60 * 60 * 1000;

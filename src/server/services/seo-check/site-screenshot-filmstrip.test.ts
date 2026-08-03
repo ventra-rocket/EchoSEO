@@ -122,7 +122,7 @@ describe("handleSiteFilmstripRequest", () => {
     expect(checkIpRateLimitMock).toHaveBeenCalledWith(
       {},
       "screenshot:203.0.113.7",
-      expect.objectContaining({ limit: 60 }),
+      expect.objectContaining({ limit: 300 }),
     );
   });
 
