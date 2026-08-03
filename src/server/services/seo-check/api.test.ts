@@ -7,6 +7,7 @@ const {
   checkIpRateLimitMock,
   getCachedLiteReportMock,
   putCachedLiteReportMock,
+  putLiteCheckSnapshotMock,
   runLiteCheckMock,
   getRequiredEnvValueMock,
   normalizeAndValidateStartUrlMock,
@@ -17,6 +18,7 @@ const {
   checkIpRateLimitMock: vi.fn(),
   getCachedLiteReportMock: vi.fn(),
   putCachedLiteReportMock: vi.fn(),
+  putLiteCheckSnapshotMock: vi.fn(),
   runLiteCheckMock: vi.fn(),
   getRequiredEnvValueMock: vi.fn(),
   normalizeAndValidateStartUrlMock: vi.fn(),
@@ -42,6 +44,9 @@ vi.mock("./cache", () => ({
   putCachedLiteReport: putCachedLiteReportMock,
 }));
 vi.mock("./lite", () => ({ runLiteCheck: runLiteCheckMock }));
+vi.mock("./check-store", () => ({
+  putLiteCheckSnapshot: putLiteCheckSnapshotMock,
+}));
 vi.mock("./deep-check-config", () => ({
   isDeepCheckDisabled: isDeepCheckDisabledMock,
 }));
@@ -80,6 +85,10 @@ const FAKE_REPORT = {
   deepTeaser: { coreWebVitalsMetricCount: 4 },
 };
 
+/** Share ids are crypto.randomUUID() — the shape the read path's guard expects. */
+const SHARE_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 beforeEach(() => {
   vi.clearAllMocks();
   getRequiredEnvValueMock.mockResolvedValue("test-secret");
@@ -93,6 +102,7 @@ beforeEach(() => {
   getCachedLiteReportMock.mockResolvedValue(null);
   runLiteCheckMock.mockResolvedValue(FAKE_REPORT);
   putCachedLiteReportMock.mockResolvedValue(undefined);
+  putLiteCheckSnapshotMock.mockResolvedValue(undefined);
   isDeepCheckDisabledMock.mockResolvedValue(false);
 });
 
@@ -189,11 +199,13 @@ describe("handleFreeSeoCheckRequest", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
+    const body = await response.json<{ checkId: string }>();
+    expect(body).toMatchObject({
       report: FAKE_REPORT,
       cached: true,
       deepAvailable: true,
     });
+    expect(body.checkId).toMatch(SHARE_ID_PATTERN);
     expect(getCachedLiteReportMock).toHaveBeenCalledWith("example.test");
     expect(runLiteCheckMock).not.toHaveBeenCalled();
     expect(putCachedLiteReportMock).not.toHaveBeenCalled();
@@ -263,11 +275,13 @@ describe("handleFreeSeoCheckRequest", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
+    const body = await response.json<{ checkId: string }>();
+    expect(body).toMatchObject({
       report: FAKE_REPORT,
       cached: false,
       deepAvailable: true,
     });
+    expect(body.checkId).toMatch(SHARE_ID_PATTERN);
     expect(runLiteCheckMock).toHaveBeenCalledWith("https://example.test/");
     expect(putCachedLiteReportMock).toHaveBeenCalledWith(
       "example.test",
@@ -297,5 +311,112 @@ describe("handleFreeSeoCheckRequest", () => {
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "INTERNAL_ERROR" });
     expect(captureServerErrorMock).toHaveBeenCalled();
+  });
+
+  describe("share snapshots", () => {
+    it("persists the snapshot and returns its id on a fresh run", async () => {
+      const body = await (
+        await handleFreeSeoCheckRequest(
+          makeRequest({ url: "example.test", turnstileToken: "ok" }),
+        )
+      ).json<{ checkId: string }>();
+
+      expect(body.checkId).toMatch(SHARE_ID_PATTERN);
+      expect(putLiteCheckSnapshotMock).toHaveBeenCalledWith(
+        body.checkId,
+        FAKE_REPORT,
+        "en",
+      );
+    });
+
+    it("mints a NEW id per check on a domain-cache hit", async () => {
+      // "Every check → one URL": a hit still freezes its own copy of the
+      // cached content, so two visitors (or two runs) never share an id.
+      getCachedLiteReportMock.mockResolvedValue(FAKE_REPORT);
+
+      const first = await (
+        await handleFreeSeoCheckRequest(
+          makeRequest({ url: "example.test", turnstileToken: "ok" }),
+        )
+      ).json<{ checkId: string }>();
+      const second = await (
+        await handleFreeSeoCheckRequest(
+          makeRequest({ url: "example.test", turnstileToken: "ok" }),
+        )
+      ).json<{ checkId: string }>();
+
+      expect(first.checkId).toMatch(SHARE_ID_PATTERN);
+      expect(second.checkId).toMatch(SHARE_ID_PATTERN);
+      expect(second.checkId).not.toBe(first.checkId);
+      expect(putLiteCheckSnapshotMock).toHaveBeenCalledTimes(2);
+      expect(putLiteCheckSnapshotMock).toHaveBeenCalledWith(
+        first.checkId,
+        FAKE_REPORT,
+        "en",
+      );
+    });
+
+    it("persists the canonical-EN report even for a vi request", async () => {
+      // A signal whose rule carries a real `locales.vi` entry, so the response
+      // localizes while the snapshot must not.
+      const report = {
+        ...FAKE_REPORT,
+        signals: [
+          {
+            id: "server-https",
+            category: "server",
+            status: "pass",
+            label: "Served over HTTPS",
+            severity: "critical",
+            problem: "problem text",
+            fixSteps: ["step"],
+            googleSourceUrl: "https://developers.google.com/x",
+            guideQuote: "quote",
+            lastReviewedDate: "2026-07-13",
+          },
+        ],
+      };
+      runLiteCheckMock.mockResolvedValue(report);
+
+      const body = await (
+        await handleFreeSeoCheckRequest(
+          makeRequest({
+            url: "example.test",
+            turnstileToken: "ok",
+            locale: "vi",
+          }),
+        )
+      ).json<{ checkId: string; report: typeof report }>();
+
+      // The wire is localized for the requester…
+      expect(body.report.signals[0].label).toBe(
+        "Trang được phân phát qua HTTPS",
+      );
+      // …the frozen copy is not: check-read localizes on the way out instead,
+      // using the locale stored beside it.
+      expect(putLiteCheckSnapshotMock).toHaveBeenCalledWith(
+        body.checkId,
+        report,
+        "vi",
+      );
+    });
+
+    it("still answers the check when the snapshot write fails", async () => {
+      // The share URL is an add-on; losing it must not cost the visitor the
+      // report they paid a crawl and a CAPTCHA for.
+      putLiteCheckSnapshotMock.mockRejectedValue(new Error("r2 down"));
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const response = await handleFreeSeoCheckRequest(
+        makeRequest({ url: "example.test", turnstileToken: "ok" }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        report: FAKE_REPORT,
+        checkId: null,
+      });
+      error.mockRestore();
+    });
   });
 });

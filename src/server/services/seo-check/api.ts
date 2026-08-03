@@ -16,6 +16,7 @@ import { freeSeoCheckRequestSchema } from "@/shared/free-seo-check";
 import { formatTurnstileErrorCodes, verifyTurnstileToken } from "./turnstile";
 import { checkIpRateLimit } from "./rate-limit-do";
 import { getCachedLiteReport, putCachedLiteReport } from "./cache";
+import { putLiteCheckSnapshot } from "./check-store";
 import { recordCheckMetric } from "./metrics";
 import { isDeepCheckDisabled } from "./deep-check-config";
 import { isAuthInterstitialUrl } from "./auth-interstitial";
@@ -50,6 +51,29 @@ export async function handleFreeSeoCheckRequest(
     });
 
     const ip = clientIp(request);
+
+    /**
+     * Freezes this check under a fresh share id and returns it — or null when
+     * the R2 put fails, in which case the visitor still gets their report and
+     * only the share URL is lost. The put stays INLINE (never waitUntil): the
+     * response carries the id, so the object must exist before the client can
+     * rewrite the address bar and someone can open the link.
+     *
+     * Always canonical EN, even for a `vi` request — check-read.ts localizes on
+     * the way out, exactly like this handler does below.
+     */
+    const freezeCheckSnapshot = async (
+      report: LiteReport,
+    ): Promise<string | null> => {
+      const checkId = crypto.randomUUID();
+      try {
+        await putLiteCheckSnapshot(checkId, report, viewLocale);
+        return checkId;
+      } catch (error) {
+        console.error("free-seo-check: share snapshot write failed", error);
+        return null;
+      }
+    };
 
     const turnstileSecret = await getRequiredEnvValue("TURNSTILE_SECRET_KEY");
     const turnstile = await verifyTurnstileToken(
@@ -92,10 +116,14 @@ export async function handleFreeSeoCheckRequest(
         );
       }
       recordCheckMetric("lite_check", { domain, cached: true });
+      // A cache hit still mints a NEW id pointing at the cached content —
+      // "every check → one URL". Ids are cheap, and the snapshot IS what this
+      // visitor saw.
       return jsonResponse({
         report: localizeReport(cached),
         cached: true,
         deepAvailable,
+        checkId: await freezeCheckSnapshot(cached),
       });
     }
 
@@ -111,6 +139,7 @@ export async function handleFreeSeoCheckRequest(
       report: localizeReport(report),
       cached: false,
       deepAvailable,
+      checkId: await freezeCheckSnapshot(report),
     });
   } catch (error) {
     return errorResponse(error, request);

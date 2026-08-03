@@ -107,6 +107,18 @@ test.describe("public routes server-render their body", () => {
     expect(await response.text()).toContain("Loading your report");
   });
 
+  test("the share page ships its loading body and stays noindex", async ({
+    request,
+  }) => {
+    const response = await request.get("/c/nonexistent-check-id");
+    expect(response.status()).toBe(200);
+    // Bearer-capability headers, same rule as /r/ (set in server.ts).
+    expect(response.headers()["x-robots-tag"]).toBe("noindex");
+    expect(response.headers()["referrer-policy"]).toBe("no-referrer");
+    // The deterministic initial state before the client fetch resolves.
+    expect(await response.text()).toContain("Loading your report");
+  });
+
   test("the landing serves its SEO metadata and structured data", async ({
     request,
   }) => {
@@ -218,6 +230,7 @@ test.describe("public routes server-render their body", () => {
     expect(xml).toContain("/vi/quyen-rieng-tu");
     // Bearer report links must never be advertised.
     expect(xml).not.toContain("/r/");
+    expect(xml).not.toContain("/c/");
   });
 
   test("robots.txt disallows report pages and points at the sitemap", async ({
@@ -225,6 +238,9 @@ test.describe("public routes server-render their body", () => {
   }) => {
     const txt = await (await request.get("/robots.txt")).text();
     expect(txt).toContain("Disallow: /r/");
+    // Deliberately NOT the share pages: a `/c/` Disallow would stop unfurl
+    // bots from reading the OG tags, and noindex already handles search.
+    expect(txt).not.toContain("Disallow: /c/");
     expect(txt).toMatch(/Sitemap: https?:\/\/\S+\/sitemap\.xml/);
   });
 

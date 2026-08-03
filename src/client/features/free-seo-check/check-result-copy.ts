@@ -204,6 +204,13 @@ const EN: CheckResultCopy = {
       "self-hostable, your data stays private, and reports auto-delete " +
       "after 30 days.",
   },
+  /* ——— share URL (/c/{id}) block — appended; keep at the end. ——— */
+  share: {
+    linkLabel: "Share this result",
+    copyButton: "Copy link",
+    copied: "Link copied",
+    copyFailed: "Couldn't copy — copy the URL from the address bar instead.",
+  },
 };
 
 const VI: CheckResultCopy = {
@@ -390,6 +397,13 @@ const VI: CheckResultCopy = {
       "EchoSEO là nền tảng SEO mở, thiết kế cho AI agent. Công cụ kiểm tra " +
       "này miễn phí — bạn có thể tự triển khai, dữ liệu của bạn được bảo " +
       "mật và báo cáo tự động xoá sau 30 ngày.",
+  },
+  /* ——— share URL (/c/{id}) block — appended; keep at the end. ——— */
+  share: {
+    linkLabel: "Chia sẻ kết quả này",
+    copyButton: "Sao chép liên kết",
+    copied: "Đã sao chép liên kết",
+    copyFailed: "Không sao chép được — hãy tự sao chép URL trên thanh địa chỉ.",
   },
 };
 

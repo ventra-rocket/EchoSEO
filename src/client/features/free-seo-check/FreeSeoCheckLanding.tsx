@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Languages } from "lucide-react";
 import {
+  checkPagePath,
   FREE_SEO_CHECK_API_PATH,
   FREE_SEO_CHECK_LANDING_PATH,
   FREE_SEO_CHECK_VI_LANDING_PATH,
@@ -22,6 +23,7 @@ import { ScanLog } from "./ScanLog";
 import { LandingContent } from "./LandingContent";
 import { SampleReportPreview } from "./SampleReportPreview";
 import { LANDING_COPY, type LandingCopy } from "./landing-copy";
+import { ShareLinkRow } from "./ShareLinkRow";
 import { useTurnstileSiteKey } from "./use-turnstile-site-key";
 import { isValidCheckUrl } from "./validate-check-url";
 
@@ -30,6 +32,12 @@ interface CheckResponse {
   cached: boolean;
   /** Whether the Deep tier is currently accepting requests (kill-switch off). */
   deepAvailable: boolean;
+  /**
+   * The shareable `/c/{id}` snapshot minted for this check — null when the
+   * snapshot write failed, in which case the report still renders and only the
+   * share URL is missing.
+   */
+  checkId: string | null;
 }
 
 interface CheckErrorResponse {
@@ -138,6 +146,13 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
 
       setResult(body);
       setStatus("done");
+      // PSI-style: the address bar becomes the share URL, refresh-safe, with
+      // no reload and no router navigation (the landing keeps rendering; a
+      // refresh lands on the /c/ route and the frozen snapshot). Skipped when
+      // the snapshot write failed — a URL that 404s is worse than none.
+      if (body.checkId) {
+        window.history.replaceState(null, "", checkPagePath(body.checkId));
+      }
       renewChallenge();
     } catch {
       failWith(copy.errorDefault);
@@ -431,6 +446,15 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
             >
               {copy.reportHeading}
             </h2>
+            {/* Keyed by the check id so a second check resets the copied
+                state instead of inheriting the previous confirmation. */}
+            {result.checkId ? (
+              <ShareLinkRow
+                key={result.checkId}
+                checkId={result.checkId}
+                locale={locale}
+              />
+            ) : null}
             <div className="mt-4">
               <LiteReportView
                 report={result.report}

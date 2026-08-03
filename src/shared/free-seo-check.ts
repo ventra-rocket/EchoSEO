@@ -31,6 +31,8 @@ export const FREE_SEO_CHECK_VI_LANDING_PATH = "/vi/kiem-tra-seo";
 export const FREE_SEO_CHECK_CONFIRM_ROUTE = "/free-seo-check/confirm";
 /** Public GET — reads a finished Deep report by id (`?id=<uuid>`). */
 export const FREE_SEO_CHECK_REPORT_PATH = "/api/free-seo-check/report";
+/** Public GET — reads a frozen Lite check snapshot by id (`?id=<uuid>`). */
+export const FREE_SEO_CHECK_CHECK_PATH = "/api/free-seo-check/check";
 /**
  * Public GET — a desktop page capture for a URL (`?url=<url>`), used as the
  * capture shown on both the Lite result and the Deep report. Keyed by domain,
@@ -51,6 +53,22 @@ export function siteScreenshotUrl(pageUrl: string): string {
  * `X-Robots-Tag: noindex` in server.ts and are excluded in robots.txt.
  */
 export const FREE_SEO_CHECK_REPORT_ROUTE_PREFIX = "/r/";
+
+/**
+ * Path prefix of the shareable Lite check page. Separate from `/r/` on purpose:
+ * a `/c/{id}` link is a frozen 30-day R2 snapshot with no lead behind it, while
+ * `/r/{id}` follows the Deep tier's lead-coupled canonical-resolver chain. Same
+ * bearer-capability rules (`X-Robots-Tag: noindex` + `Referrer-Policy:
+ * no-referrer` in server.ts), but deliberately NO robots.txt Disallow — a
+ * Disallow would stop social unfurl bots from ever reading the OG tags, and
+ * noindex already keeps pasted links out of search results.
+ */
+export const FREE_SEO_CHECK_CHECK_ROUTE_PREFIX = "/c/";
+
+/** The share URL path for a check id — single source for client and server. */
+export function checkPagePath(checkId: string): string {
+  return `${FREE_SEO_CHECK_CHECK_ROUTE_PREFIX}${checkId}`;
+}
 
 /**
  * Test-only route that renders the Lite result from a fixture. Exported so the
@@ -90,7 +108,10 @@ const PUBLIC_SSR_EXACT_PATHS: ReadonlySet<string> = new Set([
 export function isPublicSsrPath(pathname: string): boolean {
   return (
     PUBLIC_SSR_EXACT_PATHS.has(pathname) ||
-    pathname.startsWith(FREE_SEO_CHECK_REPORT_ROUTE_PREFIX)
+    pathname.startsWith(FREE_SEO_CHECK_REPORT_ROUTE_PREFIX) ||
+    // Share pages must SSR their shell so unfurl bots (which run no JS) get a
+    // real document around the injected OG tags, not an empty island.
+    pathname.startsWith(FREE_SEO_CHECK_CHECK_ROUTE_PREFIX)
   );
 }
 

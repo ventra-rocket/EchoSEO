@@ -189,4 +189,17 @@ export interface CheckResultCopy {
     /** Footer line naming what EchoSEO is (mirrors the landing's footer). */
     footerLine: string;
   };
+  /* ——— share URL (/c/{id}) block — appended; keep at the end of the shape. ——— */
+  /** The landing's copy-link control for the minted share URL, and the share
+   * page's own chrome. The `/c/` page otherwise reuses `reportPage` strings
+   * (loading/errors/header/footer) — the two pages make the same promises. */
+  share: {
+    /** Lead-in ahead of the mono share URL. */
+    linkLabel: string;
+    copyButton: string;
+    /** Transient confirmation after a successful clipboard write. */
+    copied: string;
+    /** Clipboard write failed — points at the (already rewritten) address bar. */
+    copyFailed: string;
+  };
 }

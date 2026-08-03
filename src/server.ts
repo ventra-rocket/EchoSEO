@@ -30,14 +30,22 @@ import {
 } from "@/server/billing/autumn-webhook";
 import {
   FREE_SEO_CHECK_API_PATH,
+  FREE_SEO_CHECK_CHECK_PATH,
+  FREE_SEO_CHECK_CHECK_ROUTE_PREFIX,
   FREE_SEO_CHECK_CONFIG_PATH,
   FREE_SEO_CHECK_CONFIRM_PATH,
   FREE_SEO_CHECK_DEEP_START_PATH,
   FREE_SEO_CHECK_REPORT_PATH,
   FREE_SEO_CHECK_SITE_SCREENSHOT_PATH,
   FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
+  publicUrl,
 } from "@/shared/free-seo-check";
 import { handleFreeSeoCheckRequest } from "@/server/services/seo-check/api";
+import {
+  buildCheckPageMetaTags,
+  handleCheckReadRequest,
+} from "@/server/services/seo-check/check-read";
+import { escapeHtml } from "@/server/services/seo-check/output-encode";
 import { handleFreeSeoCheckPublicConfigRequest } from "@/server/services/seo-check/public-config";
 import { handleStartDeepCheckRequest } from "@/server/services/seo-check/deep-start";
 import { handleConfirmDeepCheckRequest } from "@/server/services/seo-check/deep-confirm";
@@ -154,6 +162,66 @@ async function fetchSharedReportPage(request: Request): Promise<Response> {
   });
 }
 
+/**
+ * Renders `/c/{id}` — the shareable Lite check page — with the same
+ * bearer-capability headers as `/r/` plus server-injected OG tags.
+ *
+ * The OG tags are injected here with HTMLRewriter rather than emitted by a
+ * route loader, because a `/c/$id` loader has no server-safe way to reach the
+ * snapshot: the route file is client-bundled (so it cannot import
+ * `cloudflare:workers` to read R2), every `createServerFn` passes the global
+ * auth middleware (which requires a session in every AUTH_MODE — the reason
+ * all free-check endpoints are raw Worker routes), and a Worker cannot
+ * subrequest its own custom domain to call the public read endpoint during
+ * SSR. Injection reads the snapshot once, directly from R2, and appends the
+ * tags into the SSR'd `<head>`; a missing/corrupt snapshot skips injection and
+ * the shell renders its own error state.
+ */
+async function fetchSharedCheckPage(request: Request): Promise<Response> {
+  const response = await appFetch(request);
+  const headers = new Headers(response.headers);
+  headers.set("Referrer-Policy", "no-referrer");
+  headers.set("X-Robots-Tag", "noindex");
+  const wrapped = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+
+  // Everything after the prefix is the candidate id; buildCheckPageMetaTags
+  // re-guards it against the UUID shape before touching R2.
+  const checkId = new URL(request.url).pathname.slice(
+    FREE_SEO_CHECK_CHECK_ROUTE_PREFIX.length,
+  );
+
+  let tags;
+  try {
+    tags = await buildCheckPageMetaTags(checkId, publicUrl);
+  } catch (error) {
+    // The card is decoration on top of a working page — never let a transient
+    // R2 failure take the page down with it.
+    console.error("free-seo-check: share OG injection failed", error);
+    return wrapped;
+  }
+  if (!tags || !headers.get("content-type")?.includes("text/html")) {
+    return wrapped;
+  }
+
+  const metaHtml = tags
+    .map(
+      (tag) =>
+        `<meta ${tag.attr}="${escapeHtml(tag.key)}" content="${escapeHtml(tag.content)}">`,
+    )
+    .join("");
+  return new HTMLRewriter()
+    .on("head", {
+      element(element) {
+        element.append(metaHtml, { html: true });
+      },
+    })
+    .transform(wrapped);
+}
+
 function fetch(
   request: Request,
   env: Env,
@@ -190,6 +258,10 @@ function fetch(
     return handleDeepReportRequest(publicRequest);
   }
 
+  if (pathname === FREE_SEO_CHECK_CHECK_PATH) {
+    return handleCheckReadRequest(publicRequest);
+  }
+
   if (pathname === FREE_SEO_CHECK_SITE_SCREENSHOT_PATH) {
     return handleSiteScreenshotRequest(publicRequest);
   }
@@ -199,6 +271,10 @@ function fetch(
   // branches below — that also makes its headers deterministic per mode.
   if (pathname.startsWith(FREE_SEO_CHECK_REPORT_ROUTE_PREFIX)) {
     return fetchSharedReportPage(request);
+  }
+
+  if (pathname.startsWith(FREE_SEO_CHECK_CHECK_ROUTE_PREFIX)) {
+    return fetchSharedCheckPage(request);
   }
 
   if (isHostedAuthMode(authMode)) {
