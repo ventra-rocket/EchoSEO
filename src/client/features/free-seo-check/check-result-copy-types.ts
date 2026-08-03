@@ -189,4 +189,25 @@ export interface CheckResultCopy {
     /** Footer line naming what EchoSEO is (mirrors the landing's footer). */
     footerLine: string;
   };
+
+  // --- appended: Deep-report strategy tabs (keep this block last) ---
+
+  /**
+   * The Di động/Máy tính tabs over the Deep report's lab panel (Core Web
+   * Vitals + Lighthouse). Mobile is the scored strategy; desktop is a
+   * comparative display tab, and reports stored before desktop capture
+   * existed render with no tab bar at all.
+   */
+  strategyTabs: {
+    /** aria-label on the tablist. */
+    ariaLabel: string;
+    mobileTab: string;
+    desktopTab: string;
+    /** Honesty line on the desktop tab — display only, mobile stays scored. */
+    desktopComparativeNote: string;
+    /** Unobtrusive note on reports built before desktop capture existed. */
+    desktopNotCaptured: string;
+    /** Shown inside a tab whose PSI run carried no usable lab data. */
+    noStrategyData: string;
+  };
 }

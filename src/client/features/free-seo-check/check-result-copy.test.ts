@@ -61,3 +61,35 @@ describe("the page-read panel has copy in every locale", () => {
     );
   });
 });
+
+// --- appended: Deep-report strategy tabs (keep this block last) ---
+
+describe("strategy-tab copy exists in every locale", () => {
+  it("carries non-empty labels and notes", () => {
+    // The tabs, the legacy "not captured" note, and the desktop honesty line
+    // all render on the public /r/{id} page; an empty string there would leave
+    // an unlabeled control or a silent gap where an explanation belongs.
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale].strategyTabs;
+      for (const value of [
+        copy.ariaLabel,
+        copy.mobileTab,
+        copy.desktopTab,
+        copy.desktopComparativeNote,
+        copy.desktopNotCaptured,
+        copy.noStrategyData,
+      ]) {
+        expect(value.trim()).not.toBe("");
+      }
+    }
+  });
+
+  it("is translated rather than copied from English", () => {
+    expect(CHECK_RESULT_COPY.vi.strategyTabs.mobileTab).not.toBe(
+      CHECK_RESULT_COPY.en.strategyTabs.mobileTab,
+    );
+    expect(CHECK_RESULT_COPY.vi.strategyTabs.desktopNotCaptured).not.toBe(
+      CHECK_RESULT_COPY.en.strategyTabs.desktopNotCaptured,
+    );
+  });
+});

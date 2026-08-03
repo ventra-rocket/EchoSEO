@@ -204,6 +204,20 @@ const EN: CheckResultCopy = {
       "self-hostable, your data stays private, and reports auto-delete " +
       "after 30 days.",
   },
+
+  // --- appended: Deep-report strategy tabs (keep this block last) ---
+  strategyTabs: {
+    ariaLabel: "Device type",
+    mobileTab: "Mobile",
+    desktopTab: "Desktop",
+    desktopComparativeNote:
+      "For comparison only — scores use mobile data, matching Google's " +
+      "mobile-first indexing.",
+    desktopNotCaptured:
+      "Desktop metrics weren't captured for this report — newer checks " +
+      "include them.",
+    noStrategyData: "No lab data was captured for this device type.",
+  },
 };
 
 const VI: CheckResultCopy = {
@@ -390,6 +404,20 @@ const VI: CheckResultCopy = {
       "EchoSEO là nền tảng SEO mở, thiết kế cho AI agent. Công cụ kiểm tra " +
       "này miễn phí — bạn có thể tự triển khai, dữ liệu của bạn được bảo " +
       "mật và báo cáo tự động xoá sau 30 ngày.",
+  },
+
+  // --- appended: Deep-report strategy tabs (keep this block last) ---
+  strategyTabs: {
+    ariaLabel: "Loại thiết bị",
+    mobileTab: "Di động",
+    desktopTab: "Máy tính",
+    desktopComparativeNote:
+      "Chỉ để so sánh — điểm số dùng dữ liệu di động, đúng theo cách Google " +
+      "lập chỉ mục ưu tiên thiết bị di động.",
+    desktopNotCaptured:
+      "Báo cáo này chưa đo số liệu trên máy tính — các lần kiểm tra mới hơn " +
+      "sẽ có số liệu này.",
+    noStrategyData: "Chưa có số liệu lab cho loại thiết bị này.",
   },
 };
 
