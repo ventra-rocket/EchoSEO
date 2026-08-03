@@ -203,7 +203,7 @@ export const PRIVACY_DOCUMENT_VI: LegalDocument = {
             {
               term: "Lượt gửi ở công cụ kiểm tra miễn phí",
               description:
-                "URL bạn yêu cầu chúng tôi kiểm tra. Chỉ riêng với báo cáo chuyên sâu: thêm địa chỉ email bạn cung cấp và thời điểm bạn xác nhận. Bản kiểm tra nhanh hoàn toàn không lưu dữ liệu cá nhân — bộ nhớ đệm của nó được khóa theo hostname.",
+                "URL bạn yêu cầu chúng tôi kiểm tra. Chỉ riêng với báo cáo chuyên sâu: thêm địa chỉ email bạn cung cấp và thời điểm bạn xác nhận. Bản kiểm tra nhanh không cần email — bộ nhớ đệm của nó được khóa theo hostname, và kết quả bạn đã xem được giữ lại dưới liên kết chia sẻ không thể đoán mà công cụ cấp cho bạn, để liên kết đó tiếp tục hoạt động.",
             },
             {
               term: "Dữ liệu kỹ thuật",
@@ -264,6 +264,11 @@ export const PRIVACY_DOCUMENT_VI: LegalDocument = {
             {
               term: "Ảnh chụp màn hình của website được kiểm tra",
               description: "7 ngày kể từ lúc chụp.",
+            },
+            {
+              term: "Liên kết chia sẻ kết quả của bản kiểm tra nhanh",
+              description:
+                "30 ngày kể từ lượt kiểm tra. Liên kết ngừng hoạt động khi bản chụp kết quả bị xóa; nó chỉ chứa dữ liệu công khai của trang mà kết quả hiển thị, không bao giờ chứa địa chỉ email.",
             },
             {
               term: "Ảnh chụp màn hình bằng chứng trong audit",

@@ -12,6 +12,7 @@
  */
 import { getRetentionWindows } from "./deep-check-config";
 import { deleteDeepReports } from "./report-store";
+import { sweepStaleLiteChecks } from "./check-store";
 import { sweepStaleSiteScreenshots } from "./site-screenshot-store";
 import {
   deleteLeadsByIds,
@@ -41,6 +42,14 @@ const MAX_LEADS_PER_SWEEP = 500;
  * checked daily is never re-rendered by the sweep.
  */
 const SITE_SCREENSHOT_RETENTION_DAYS = 7;
+
+/**
+ * Days a `/c/{id}` share snapshot stays readable. Matches the Deep report's
+ * 30-day promise (the public pages state one number for both), but on its own
+ * clock: snapshots are R2-only, lead-free, and write-once, so age is simply
+ * the object's `uploaded` time.
+ */
+const LITE_CHECK_RETENTION_DAYS = 30;
 
 interface RetentionSweepResult {
   expiredLeads: number;
@@ -86,6 +95,22 @@ export async function sweepFreeCheckRetention(
     }
   } catch (error) {
     console.error("free-seo-check: stale-capture sweep failed", error);
+  }
+
+  // Same isolation, same reason: share snapshots hold only public page data,
+  // so a failure here must never abort the lead sweep below — that one deletes
+  // email addresses, and skipping it is the worse outcome. Logs even when
+  // nothing was purged: a sweep that only speaks when there is work is
+  // indistinguishable from one that stopped running.
+  try {
+    const purged = await sweepStaleLiteChecks(
+      daysBefore(now, LITE_CHECK_RETENTION_DAYS),
+    );
+    console.log(
+      `[cron] free-seo-check retention: purged ${purged} stale check snapshot(s)`,
+    );
+  } catch (error) {
+    console.error("free-seo-check: stale check-snapshot sweep failed", error);
   }
 
   const { reportRetentionDays, unconfirmedGraceDays } =

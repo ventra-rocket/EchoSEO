@@ -4,6 +4,7 @@ const {
   getRetentionWindowsMock,
   deleteDeepReportsMock,
   sweepStaleSiteScreenshotsMock,
+  sweepStaleLiteChecksMock,
   findExpiredLeadIdsMock,
   findAbandonedLeadIdsMock,
   findReportKeysForLeadsMock,
@@ -12,6 +13,7 @@ const {
   getRetentionWindowsMock: vi.fn(),
   deleteDeepReportsMock: vi.fn(),
   sweepStaleSiteScreenshotsMock: vi.fn(),
+  sweepStaleLiteChecksMock: vi.fn(),
   findExpiredLeadIdsMock: vi.fn(),
   findAbandonedLeadIdsMock: vi.fn(),
   findReportKeysForLeadsMock: vi.fn(),
@@ -24,6 +26,9 @@ vi.mock("./deep-check-config", () => ({
 vi.mock("./report-store", () => ({ deleteDeepReports: deleteDeepReportsMock }));
 vi.mock("./site-screenshot-store", () => ({
   sweepStaleSiteScreenshots: sweepStaleSiteScreenshotsMock,
+}));
+vi.mock("./check-store", () => ({
+  sweepStaleLiteChecks: sweepStaleLiteChecksMock,
 }));
 vi.mock("./retention-repository", () => ({
   findExpiredLeadIds: findExpiredLeadIdsMock,
@@ -49,6 +54,7 @@ beforeEach(() => {
   findReportKeysForLeadsMock.mockResolvedValue([]);
   deleteDeepReportsMock.mockResolvedValue([]);
   sweepStaleSiteScreenshotsMock.mockResolvedValue(0);
+  sweepStaleLiteChecksMock.mockResolvedValue(0);
   deleteLeadsByIdsMock.mockImplementation(async (ids: string[]) => ids.length);
 });
 
@@ -120,6 +126,38 @@ describe("sweepFreeCheckRetention", () => {
 
     expect(result.leadsDeleted).toBe(1);
     expect(deleteLeadsByIdsMock).toHaveBeenCalledWith(["lead-1"]);
+  });
+
+  // Share snapshots are lead-free by construction, so like the captures they
+  // age on their own clock — 30 days back from the sweep time — and must be
+  // reaped even on a day with nothing else to do.
+  it("reaps stale check snapshots even when no leads expire", async () => {
+    await sweepFreeCheckRetention(NOW);
+
+    expect(sweepStaleLiteChecksMock).toHaveBeenCalledWith(
+      new Date("2026-06-15T03:00:00.000Z"),
+    );
+  });
+
+  it("still deletes PII when the check-snapshot sweep throws", async () => {
+    sweepStaleLiteChecksMock.mockRejectedValue(new Error("r2 list down"));
+    findExpiredLeadIdsMock.mockResolvedValue(["lead-1"]);
+
+    const result = await sweepFreeCheckRetention(NOW);
+
+    expect(result.leadsDeleted).toBe(1);
+    expect(deleteLeadsByIdsMock).toHaveBeenCalledWith(["lead-1"]);
+  });
+
+  it("logs the check-snapshot sweep even when nothing was purged", async () => {
+    // A sweep that only speaks when there is work is indistinguishable from
+    // one that stopped running — and the difference is data kept past its
+    // stated deadline.
+    await sweepFreeCheckRetention(NOW);
+
+    expect(console.log).toHaveBeenCalledWith(
+      "[cron] free-seo-check retention: purged 0 stale check snapshot(s)",
+    );
   });
 
   it("purges R2 payloads before deleting the rows that point at them", async () => {

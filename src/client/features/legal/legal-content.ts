@@ -219,7 +219,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
             {
               term: "Free checker submissions",
               description:
-                "The URL you asked us to check. For the deep report only, the email address you supply and the time you confirmed it. The quick check stores no personal data at all — its cache is keyed by hostname.",
+                "The URL you asked us to check. For the deep report only, the email address you supply and the time you confirmed it. The quick check needs no email — its cache is keyed by hostname, and the result you saw is kept under the unguessable share link the checker gives you so that link keeps working.",
             },
             {
               term: "Technical data",
@@ -280,6 +280,11 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
             {
               term: "Screenshot of a checked site",
               description: "7 days from capture.",
+            },
+            {
+              term: "Shared result link of a quick check",
+              description:
+                "30 days from the check. The link stops working when its snapshot is deleted; it holds only the public page data the result showed, never an email address.",
             },
             {
               term: "Audit evidence screenshots",
