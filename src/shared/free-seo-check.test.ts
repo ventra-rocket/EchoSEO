@@ -9,6 +9,8 @@ import {
   FREE_SEO_CHECK_VI_LANDING_PATH,
   isPublicSsrPath,
   LITE_REPORT_FIXTURE_ROUTE,
+  siteFilmstripUrl,
+  siteScreenshotUrl,
 } from "./free-seo-check";
 import {
   LEGAL_PRIVACY_PATH,
@@ -84,6 +86,29 @@ describe("isPublicSsrPath", () => {
     // begin with `/c` and must stay client-only.
     expect(isPublicSsrPath("/c")).toBe(false);
     expect(isPublicSsrPath("/create-project")).toBe(false);
+  });
+});
+
+describe("visual-evidence URL builders", () => {
+  it("omits the strategy param entirely when none is given", () => {
+    // The server reads an absent param as desktop, so a URL without one must
+    // stay byte-identical to what pre-mobile-tab clients minted — a cached
+    // copy of that URL has to keep hitting the same cache key.
+    expect(siteScreenshotUrl("https://kello.test/page")).toBe(
+      "/api/free-seo-check/site-screenshot?url=https%3A%2F%2Fkello.test%2Fpage",
+    );
+    expect(siteFilmstripUrl("https://kello.test/page")).toBe(
+      "/api/free-seo-check/site-filmstrip?url=https%3A%2F%2Fkello.test%2Fpage",
+    );
+  });
+
+  it("appends the strategy when one is given", () => {
+    expect(siteScreenshotUrl("https://kello.test/", "mobile")).toBe(
+      "/api/free-seo-check/site-screenshot?url=https%3A%2F%2Fkello.test%2F&strategy=mobile",
+    );
+    expect(siteFilmstripUrl("https://kello.test/", "desktop")).toBe(
+      "/api/free-seo-check/site-filmstrip?url=https%3A%2F%2Fkello.test%2F&strategy=desktop",
+    );
   });
 });
 

@@ -43,9 +43,49 @@ export const FREE_SEO_CHECK_CHECK_PATH = "/api/free-seo-check/check";
 export const FREE_SEO_CHECK_SITE_SCREENSHOT_PATH =
   "/api/free-seo-check/site-screenshot";
 
+/**
+ * Public GET — the loading-filmstrip JSON bundle for a URL
+ * (`?url=<url>&strategy=…`). Strictly read-only: it serves whatever the last
+ * capture render stored, or 404s — it never triggers a PSI render, so client
+ * polls against it can never spend the shared quota. Same prefix, same Access
+ * bypass as the capture endpoint above.
+ */
+export const FREE_SEO_CHECK_SITE_FILMSTRIP_PATH =
+  "/api/free-seo-check/site-filmstrip";
+
+/**
+ * The form factor a capture was rendered on. A local literal rather than an
+ * import of the server's `PsiStrategy` for the same layering reason as
+ * `checkLocaleSchema` below: shared code must not depend on server modules.
+ */
+export type SiteCaptureStrategy = "mobile" | "desktop";
+
+function evidenceUrl(
+  basePath: string,
+  pageUrl: string,
+  strategy?: SiteCaptureStrategy,
+): string {
+  // Omitted strategy puts NOTHING on the wire — the server defaults that to
+  // desktop, so `<img>` URLs minted before the mobile tab existed (and any
+  // copy of them in a browser cache) stay byte-identical and keep resolving.
+  const suffix = strategy ? `&strategy=${strategy}` : "";
+  return `${basePath}?url=${encodeURIComponent(pageUrl)}${suffix}`;
+}
+
 /** The capture URL for a page — single source for the handler and both views. */
-export function siteScreenshotUrl(pageUrl: string): string {
-  return `${FREE_SEO_CHECK_SITE_SCREENSHOT_PATH}?url=${encodeURIComponent(pageUrl)}`;
+export function siteScreenshotUrl(
+  pageUrl: string,
+  strategy?: SiteCaptureStrategy,
+): string {
+  return evidenceUrl(FREE_SEO_CHECK_SITE_SCREENSHOT_PATH, pageUrl, strategy);
+}
+
+/** The filmstrip-bundle URL for a page — mirrors `siteScreenshotUrl`. */
+export function siteFilmstripUrl(
+  pageUrl: string,
+  strategy?: SiteCaptureStrategy,
+): string {
+  return evidenceUrl(FREE_SEO_CHECK_SITE_FILMSTRIP_PATH, pageUrl, strategy);
 }
 /**
  * Path prefix of the shareable report page. The id is an unguessable capability

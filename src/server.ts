@@ -36,6 +36,7 @@ import {
   FREE_SEO_CHECK_CONFIRM_PATH,
   FREE_SEO_CHECK_DEEP_START_PATH,
   FREE_SEO_CHECK_REPORT_PATH,
+  FREE_SEO_CHECK_SITE_FILMSTRIP_PATH,
   FREE_SEO_CHECK_SITE_SCREENSHOT_PATH,
   FREE_SEO_CHECK_REPORT_ROUTE_PREFIX,
   publicUrl,
@@ -50,7 +51,10 @@ import { handleFreeSeoCheckPublicConfigRequest } from "@/server/services/seo-che
 import { handleStartDeepCheckRequest } from "@/server/services/seo-check/deep-start";
 import { handleConfirmDeepCheckRequest } from "@/server/services/seo-check/deep-confirm";
 import { handleDeepReportRequest } from "@/server/services/seo-check/deep-report";
-import { handleSiteScreenshotRequest } from "@/server/services/seo-check/site-screenshot";
+import {
+  handleSiteFilmstripRequest,
+  handleSiteScreenshotRequest,
+} from "@/server/services/seo-check/site-screenshot";
 import {
   FREE_CHECK_RETENTION_CRON,
   sweepFreeCheckRetention,
@@ -264,6 +268,12 @@ function fetch(
 
   if (pathname === FREE_SEO_CHECK_SITE_SCREENSHOT_PATH) {
     return handleSiteScreenshotRequest(publicRequest);
+  }
+
+  // Read-only companion to the capture route: serves the stored filmstrip
+  // bundle or 404s, and never renders — see handleSiteFilmstripRequest.
+  if (pathname === FREE_SEO_CHECK_SITE_FILMSTRIP_PATH) {
+    return handleSiteFilmstripRequest(publicRequest);
   }
 
   // The shareable report page needs no session in any AUTH_MODE, so it renders
