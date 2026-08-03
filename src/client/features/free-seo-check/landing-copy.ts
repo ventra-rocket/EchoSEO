@@ -58,8 +58,10 @@ export interface LandingCopy {
   metaTitle: string;
   metaDescription: string;
   /**
-   * Mono brand line above the h1 — carries the teal accent so the h1 itself can
-   * stay one contiguous keyword string for the SSR tripwire.
+   * Mono line above the h1 — carries the teal accent so the h1 itself can
+   * stay one contiguous keyword string for the SSR tripwire. A concrete scope
+   * readout, not a slogan: three abstract verbs in a row is the stock
+   * AI-landing register this page is trying to shed.
    */
   heroEyebrow: string;
   heroHeading: string;
@@ -82,6 +84,12 @@ export interface LandingCopy {
   samplePreview: SampleReportCopy;
   urlLabel: string;
   urlPlaceholder: string;
+  /**
+   * Label over the Turnstile challenge, same tier as `urlLabel`: framed and
+   * labelled like a form field, the widget reads as part of the form instead of
+   * a stray grey iframe dropped between the input and the button.
+   */
+  challengeLabel: string;
   submitIdle: string;
   submitLoading: string;
   /** Shown when the visitor submitted before the bot check finished. */
@@ -95,10 +103,17 @@ export interface LandingCopy {
   errors: Record<string, string>;
   errorDefault: string;
   intro: string;
+  /**
+   * Mono uppercase kickers over each editorial section heading — the h2 tier is
+   * eyebrow + heading, so sections read as chapters rather than more cards.
+   */
+  whatWeCheckEyebrow: string;
   whatWeCheckHeading: string;
   whatWeCheck: readonly LandingFeature[];
+  howItWorksEyebrow: string;
   howItWorksHeading: string;
   howItWorks: readonly LandingFeature[];
+  faqEyebrow: string;
   faqHeading: string;
   faqs: readonly FaqEntry[];
 }
@@ -107,7 +122,9 @@ const EN: LandingCopy = {
   metaTitle: "Free SEO Checker — EchoSEO",
   metaDescription:
     "Check any page's on-page SEO instantly and free — title, meta, headings, and technical basics, no signup required.",
-  heroEyebrow: "Measured. Diagnosed. Proven.",
+  // NBSPs inside the last term so a narrow viewport wraps at a separator, not
+  // inside "Core Web Vitals".
+  heroEyebrow: "On-page · Technical · Core Web Vitals",
   heroHeading: "Free SEO Checker",
   // The differentiator leads. "Instant on-page SEO check" is the promise every
   // free checker makes; citing each fix to Google's own docs is the one thing
@@ -123,7 +140,7 @@ const EN: LandingCopy = {
   // 4 technical), every fix cites a Google doc, and Deep measures 4 CWV metrics.
   trustSignals: [
     "12 signals scored",
-    "0 signup, $0",
+    "free — no signup",
     "every fix cites Google's docs",
     "deep check adds 4 Core Web Vitals",
   ],
@@ -163,11 +180,12 @@ const EN: LandingCopy = {
   },
   urlLabel: "Website URL",
   urlPlaceholder: "example.com",
+  challengeLabel: "Bot check",
   submitIdle: "Check my site",
   submitLoading: "Checking…",
   submitVerifying: "Starting your check…",
   footerProductLine:
-    "EchoSEO is an open, agent-native SEO platform. This checker is its free tier — self-hostable, and it never sells your data.",
+    "EchoSEO is an open, agent-native SEO platform. This checker is free — self-hostable, your data stays private, and reports auto-delete after 30 days.",
   footerHomeAria: "EchoSEO — Free SEO Checker",
   turnstileUnconfigured: "Turnstile is not configured for this deployment yet.",
   turnstileLoadError: "Couldn't load verification — please refresh the page.",
@@ -190,6 +208,7 @@ const EN: LandingCopy = {
   intro:
     "Paste a URL and get an instant, plain-language read on its on-page SEO — " +
     "then a fix for each issue that points at Google's own guidance, not a guess.",
+  whatWeCheckEyebrow: "Coverage",
   whatWeCheckHeading: "What the free check looks at",
   whatWeCheck: [
     {
@@ -211,6 +230,7 @@ const EN: LandingCopy = {
         "decides whether a page can rank at all before content ever matters.",
     },
   ],
+  howItWorksEyebrow: "Process",
   howItWorksHeading: "How it works",
   howItWorks: [
     {
@@ -229,6 +249,7 @@ const EN: LandingCopy = {
         "us reach you when the crawl finishes.",
     },
   ],
+  faqEyebrow: "FAQ",
   faqHeading: "Frequently asked questions",
   faqs: [
     {
@@ -271,7 +292,7 @@ const VI: LandingCopy = {
   metaTitle: "Kiểm tra SEO miễn phí — EchoSEO",
   metaDescription:
     "Kiểm tra SEO on-page cho bất kỳ trang nào, ngay lập tức và miễn phí — tiêu đề, thẻ meta, heading và các yếu tố kỹ thuật, không cần đăng ký.",
-  heroEyebrow: "Đo lường. Chẩn đoán. Chứng minh.",
+  heroEyebrow: "On-page · Kỹ thuật · Core Web Vitals",
   heroHeading: "Kiểm tra SEO miễn phí",
   heroSubtitleBefore:
     "Kiểm tra SEO on-page tức thì — mỗi lỗi đều kèm cách sửa, ",
@@ -281,7 +302,7 @@ const VI: LandingCopy = {
   languageSwitchAria: "View this page in English",
   trustSignals: [
     "chấm điểm 12 tín hiệu",
-    "không đăng ký, 0 đồng",
+    "miễn phí — không cần đăng ký",
     "mỗi cách sửa đều kèm tài liệu Google",
     "bản chuyên sâu thêm 4 chỉ số Core Web Vitals",
   ],
@@ -322,11 +343,12 @@ const VI: LandingCopy = {
   },
   urlLabel: "Địa chỉ website",
   urlPlaceholder: "example.com",
+  challengeLabel: "Xác minh",
   submitIdle: "Kiểm tra trang của tôi",
   submitLoading: "Đang kiểm tra…",
   submitVerifying: "Đang bắt đầu kiểm tra…",
   footerProductLine:
-    "EchoSEO là nền tảng SEO mã nguồn mở, thiết kế cho AI agent. Công cụ kiểm tra này là bậc dùng thử — bạn có thể tự triển khai, và chúng tôi không bán dữ liệu của bạn.",
+    "EchoSEO là nền tảng SEO mở, thiết kế cho AI agent. Công cụ kiểm tra này miễn phí — bạn có thể tự triển khai, dữ liệu của bạn được bảo mật và báo cáo tự động xoá sau 30 ngày.",
   footerHomeAria: "EchoSEO — Công cụ kiểm tra SEO",
   turnstileUnconfigured:
     "Xác minh Turnstile chưa được cấu hình cho bản triển khai này.",
@@ -348,6 +370,7 @@ const VI: LandingCopy = {
     "Dán một URL và nhận ngay đánh giá SEO on-page bằng ngôn ngữ dễ hiểu — kèm " +
     "cách khắc phục cho từng lỗi, dẫn thẳng tới tài liệu chính thức của Google " +
     "chứ không phải phỏng đoán.",
+  whatWeCheckEyebrow: "Phạm vi",
   whatWeCheckHeading: "Bản kiểm tra miễn phí xem xét những gì?",
   whatWeCheck: [
     {
@@ -369,6 +392,7 @@ const VI: LandingCopy = {
         "móng kỹ thuật quyết định một trang có thể xếp hạng hay không, trước cả khi xét nội dung.",
     },
   ],
+  howItWorksEyebrow: "Quy trình",
   howItWorksHeading: "Cách hoạt động",
   howItWorks: [
     {
@@ -387,6 +411,7 @@ const VI: LandingCopy = {
         "tôi báo bạn khi quét xong.",
     },
   ],
+  faqEyebrow: "Hỏi đáp",
   faqHeading: "Câu hỏi thường gặp",
   faqs: [
     {

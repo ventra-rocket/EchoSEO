@@ -154,10 +154,22 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitQueued, turnstileToken]);
 
+  // An unconfigured challenge can never produce the token a queued submit is
+  // waiting for — release the queue instead of leaving the button "starting".
+  useEffect(() => {
+    if (siteKey !== null || !submitQueued) return;
+    setSubmitQueued(false);
+    setErrorMessage(copy.turnstileUnconfigured);
+  }, [siteKey, submitQueued, copy.turnstileUnconfigured]);
+
   return (
     <div className="fsc-root h-full overflow-auto bg-base-200">
+      {/* Chrome runs at 5xl — the same width the result view breaks out to —
+          so the logo does not float a quarter of the way in from the edge
+          under a full-width border on wide screens. Only the reading column
+          (hero, form, editorial) stays at 2xl. */}
       <header className="border-b border-base-300 bg-base-100">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           {/* The mark is the expected way home. It was previously inert, which
               is one of the strongest "unfinished scaffold" tells a page can
               give. This landing IS the public home — `/` is the authenticated
@@ -186,11 +198,13 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
             </p>
             {/* One contiguous string on purpose: the SSR tripwire greps the raw
                 HTML for it, and it is the exact-match keyword. The teal accent
-                lives on the eyebrow, subtitle keyword, mark, and CTA instead. */}
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                lives on the eyebrow, subtitle keyword, mark, and CTA instead.
+                `text-balance` (not an NBSP, which would change the string) keeps
+                the Vietnamese heading from breaking inside "miễn phí" at 390. */}
+            <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
               {copy.heroHeading}
             </h1>
-            <p className="mx-auto max-w-md text-sm leading-relaxed text-base-content/60">
+            <p className="mx-auto max-w-lg text-base leading-relaxed text-base-content/60">
               {copy.heroSubtitleBefore}
               <span className="font-medium text-primary">
                 {copy.heroSubtitleAccent}
@@ -201,83 +215,114 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
 
           <form
             onSubmit={handleSubmit}
-            className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4 transition-colors focus-within:border-primary/40 sm:p-6"
+            className="overflow-hidden rounded-box border border-base-300 bg-base-100 transition-colors focus-within:border-primary/40"
           >
-            <div className="space-y-1.5">
-              <label
-                htmlFor="fsc-url"
-                className="block font-mono text-xs uppercase tracking-widest text-base-content/60"
+            <div className="space-y-4 p-4 sm:p-6">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="fsc-url"
+                  className="block font-mono text-xs uppercase tracking-widest text-base-content/60"
+                >
+                  {copy.urlLabel}
+                </label>
+                <input
+                  id="fsc-url"
+                  type="text"
+                  inputMode="url"
+                  className="input input-bordered w-full font-mono"
+                  placeholder={copy.urlPlaceholder}
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  autoComplete="off"
+                  required
+                />
+              </div>
+
+              {/* The challenge is framed and labelled like the URL input above
+                  it (same border, radius, and label tier), so the third-party
+                  iframe reads as a form field rather than a stray grey box
+                  between the input and the button. The min-height reserves the
+                  widget's 65px so the frame doesn't collapse-then-jump while
+                  the script loads. */}
+              <div className="space-y-1.5">
+                <span
+                  id="fsc-challenge-label"
+                  className="block font-mono text-xs uppercase tracking-widest text-base-content/60"
+                >
+                  {copy.challengeLabel}
+                </span>
+                <div
+                  role="group"
+                  aria-labelledby="fsc-challenge-label"
+                  className="grid min-h-[77px] items-center rounded-lg border border-base-300 bg-base-100 p-1.5"
+                >
+                  {siteKey ? (
+                    <TurnstileWidget
+                      key={challengeAttempt}
+                      siteKey={siteKey}
+                      locale={locale}
+                      onToken={setTurnstileToken}
+                      onExpire={() => setTurnstileToken(null)}
+                      onLoadError={() => {
+                        // A challenge that failed to load can never mint a
+                        // token, so a queued submit would spin forever —
+                        // release it so the visitor can retry.
+                        setSubmitQueued(false);
+                        setErrorMessage(copy.turnstileLoadError);
+                      }}
+                    />
+                  ) : siteKey === null ? (
+                    <p className="px-2 text-sm text-warning" role="alert">
+                      {copy.turnstileUnconfigured}
+                    </p>
+                  ) : (
+                    <div className="flex justify-center" role="status">
+                      <span className="loading loading-spinner loading-sm" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Never `disabled`. A grey dead button is the page's only action
+                  at first paint, and when the challenge fails to render it stays
+                  dead with nothing said. `aria-disabled` announces the busy state
+                  without blocking the click that queues the check. */}
+              <button
+                type="submit"
+                className="btn btn-primary w-full"
+                aria-disabled={status === "loading" || submitQueued}
               >
-                {copy.urlLabel}
-              </label>
-              <input
-                id="fsc-url"
-                type="text"
-                inputMode="url"
-                className="input input-bordered w-full font-mono"
-                placeholder={copy.urlPlaceholder}
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                autoComplete="off"
-                required
-              />
+                {status === "loading" || submitQueued ? (
+                  <>
+                    <span
+                      className="loading loading-spinner loading-sm"
+                      aria-hidden="true"
+                    />
+                    {status === "loading"
+                      ? copy.submitLoading
+                      : copy.submitVerifying}
+                  </>
+                ) : (
+                  copy.submitIdle
+                )}
+              </button>
             </div>
 
-            {siteKey ? (
-              <TurnstileWidget
-                key={challengeAttempt}
-                siteKey={siteKey}
-                locale={locale}
-                onToken={setTurnstileToken}
-                onExpire={() => setTurnstileToken(null)}
-                onLoadError={() => setErrorMessage(copy.turnstileLoadError)}
-              />
-            ) : siteKey === null ? (
-              <div className="alert alert-warning text-sm" role="alert">
-                {copy.turnstileUnconfigured}
-              </div>
-            ) : (
-              <div className="flex justify-center" role="status">
-                <span className="loading loading-spinner loading-sm" />
-              </div>
-            )}
-
-            {/* Never `disabled`. A grey dead button is the page's only action
-                at first paint, and when the challenge fails to render it stays
-                dead with nothing said. `aria-disabled` announces the busy state
-                without blocking the click that queues the check. */}
-            <button
-              type="submit"
-              className="btn btn-primary w-full"
-              aria-disabled={status === "loading" || submitQueued}
-            >
-              {status === "loading" || submitQueued ? (
-                <>
-                  <span
-                    className="loading loading-spinner loading-sm"
-                    aria-hidden="true"
-                  />
-                  {status === "loading"
-                    ? copy.submitLoading
-                    : copy.submitVerifying}
-                </>
-              ) : (
-                copy.submitIdle
-              )}
-            </button>
+            {/* Trust facts live in the card's footer as a hairline spec grid —
+                part of the form's data surface, not a centered bullet strip
+                wrapping 3+1 below it. The gap-px-over-base-300 trick draws the
+                internal dividers. */}
+            <ul className="grid grid-cols-2 gap-px border-t border-base-300 bg-base-300 font-mono text-xs text-base-content/70">
+              {copy.trustSignals.map((signal) => (
+                <li
+                  key={signal}
+                  className="grid place-items-center bg-base-100 px-3 py-2 text-center leading-snug"
+                >
+                  {signal}
+                </li>
+              ))}
+            </ul>
           </form>
-
-          <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 font-mono text-xs text-base-content/60">
-            {copy.trustSignals.map((signal) => (
-              <li key={signal} className="flex items-center gap-1.5">
-                <span
-                  className="size-1 rounded-full bg-primary"
-                  aria-hidden="true"
-                />
-                {signal}
-              </li>
-            ))}
-          </ul>
 
           {errorMessage ? (
             <div className="alert alert-error text-sm" role="alert">
@@ -321,9 +366,11 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           at. No repository link yet: the repo is private, and a link that 404s
           would cost more credibility than the missing link does. */}
       <footer className="border-t border-base-300 bg-base-100">
-        <div className="mx-auto max-w-2xl space-y-3 px-4 py-8 text-sm text-base-content/60">
-          <p className="leading-relaxed">{copy.footerProductLine}</p>
-          <p className="flex flex-wrap gap-x-4 gap-y-1">
+        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-base-content/60 sm:flex-row sm:items-center sm:justify-between">
+          <p className="leading-relaxed sm:max-w-xl">
+            {copy.footerProductLine}
+          </p>
+          <p className="flex shrink-0 flex-wrap gap-x-4 gap-y-1">
             <a
               href={LEGAL_TERMS_PATH_BY_LOCALE[locale]}
               className="underline underline-offset-2 hover:text-base-content"

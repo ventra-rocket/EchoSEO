@@ -48,7 +48,9 @@ export function SampleReportPreview({ copy }: { copy: LandingCopy }) {
 
   return (
     <section aria-label={sample.label} className="space-y-4">
-      <h2 className="text-lg font-semibold tracking-tight">{sample.heading}</h2>
+      <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+        {sample.heading}
+      </h2>
 
       <div className="rounded-box border border-base-300 bg-base-100">
         <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-2.5">
