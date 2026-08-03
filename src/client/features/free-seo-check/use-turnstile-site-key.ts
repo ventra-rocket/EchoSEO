@@ -35,8 +35,12 @@ export function useTurnstileSiteKey(): TurnstileSiteKeyState {
 
     // `AbortSignal.timeout` is 2022+ — on older browsers fall back to an
     // untimed fetch (the long-standing behavior) rather than throwing during
-    // mount and blanking a public page that otherwise works.
+    // mount and blanking a public page that otherwise works. The global is
+    // guarded too: `typeof AbortSignal.timeout` alone still evaluates the
+    // member access and throws ReferenceError where `AbortSignal` itself is
+    // missing.
     const signal =
+      typeof AbortSignal !== "undefined" &&
       typeof AbortSignal.timeout === "function"
         ? AbortSignal.timeout(CONFIG_TIMEOUT_MS)
         : undefined;
