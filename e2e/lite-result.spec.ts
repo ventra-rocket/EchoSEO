@@ -112,11 +112,22 @@ test.describe("the Lite result state", () => {
 
   test("gives the page capture intrinsic dimensions", async ({ page }) => {
     await page.goto(FIXTURE);
+    // The result page eagerly mounts BOTH strategies' captures (that dual
+    // mount is the render pre-warm), so scope to the default desktop tabpanel
+    // — the only visible one — rather than every capture on the page.
     // Width/height at the frame's 16:10 ratio, so the browser can reserve the
     // box before the (slow, ~25s in production) capture arrives.
-    const img = page.locator("figure img");
+    const img = page
+      .getByRole("tabpanel", { name: "Desktop" })
+      .locator("figure img");
     await expect(img).toHaveAttribute("width", "1600");
     await expect(img).toHaveAttribute("height", "1000");
+    // The pre-warmed mobile capture reserves its own box too, at the phone
+    // frame's ratio — hidden is exactly where a missing reservation would
+    // later cause a layout shift on the first tab switch.
+    const mobileImg = page.locator('[role="tabpanel"][hidden] figure img');
+    await expect(mobileImg).toHaveAttribute("width", "412");
+    await expect(mobileImg).toHaveAttribute("height", "733");
   });
 
   test("has no horizontal overflow on a phone", async ({ page }) => {
