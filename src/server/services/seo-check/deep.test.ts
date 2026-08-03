@@ -14,6 +14,7 @@ function crawlOf(...urls: string[]): CrawlResult {
   return {
     pages: urls.map((url) => ({
       url,
+      normalizedUrl: url,
       statusCode: 200,
       page: makeGoodPage({ url }),
     })),
@@ -96,6 +97,7 @@ describe("buildDeepReport", () => {
       pages: [
         {
           url: PRIMARY,
+          normalizedUrl: PRIMARY,
           statusCode: 200,
           page: makeGoodPage({ url: PRIMARY, title: "" }),
         },
@@ -137,6 +139,7 @@ describe("buildDeepReport", () => {
         ...crawlOf(PRIMARY).pages,
         {
           url: "https://site.test/gone",
+          normalizedUrl: "https://site.test/gone",
           statusCode: 404,
           page: makeGoodPage({ url: "https://site.test/gone" }),
         },

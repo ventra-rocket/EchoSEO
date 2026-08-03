@@ -72,8 +72,59 @@ describe("crawlSite", () => {
   it("respects the page cap (primary + cap-1 internal)", async () => {
     const result = await crawlSite(PRIMARY, 3);
     expect(result.pages).toHaveLength(3);
-    // The cap bounds HTTP requests made, not just pages returned.
+    // Fetching stops the moment the report is full — the remaining valid
+    // candidate (/c) is never requested even though the budget had room.
     expect(safeFetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  // A run of links that all redirect onto one canonical page used to consume
+  // the whole queue: candidates were truncated to the page cap up front, so
+  // each duplicate burned a slot and later valid links were never tried.
+  it("keeps trying candidates after a duplicate redirect, within the budget", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: 200 },
+        finalUrl:
+          url.endsWith("/a") || url.endsWith("/b")
+            ? "https://site.test/login"
+            : url,
+      }),
+    );
+    const result = await crawlSite(PRIMARY, 3);
+    // /b's landing duplicated /a's, so /c — beyond the old truncated queue —
+    // fills the report instead of the crawl coming home short.
+    expect(result.pages.map((p) => p.url)).toEqual([
+      PRIMARY,
+      "https://site.test/login",
+      "https://site.test/c",
+    ]);
+    expect(safeFetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("stops at the request budget even when the page cap is not reached", async () => {
+    parseLitePageMock.mockImplementation((_html: string, url: string) =>
+      url === PRIMARY
+        ? pageWithLinks(["/a", "/b", "/c", "/d", "/e"])
+        : pageWithLinks([]),
+    );
+    // Every internal link redirects onto one page: each fetch is spent on a
+    // duplicate, and the crawl must give up at the hard request ceiling
+    // (2 × (cap − 1) internal fetches) instead of chasing candidates until
+    // the report fills.
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: 200 },
+        finalUrl: url === PRIMARY ? url : "https://site.test/login",
+      }),
+    );
+    const result = await crawlSite(PRIMARY, 3);
+    expect(result.pages.map((p) => p.url)).toEqual([
+      PRIMARY,
+      "https://site.test/login",
+    ]);
+    // Primary + 4 internal attempts; /e was never fetched.
+    expect(safeFetchMock).toHaveBeenCalledTimes(5);
+    expect(safeFetchMock).not.toHaveBeenCalledWith("https://site.test/e");
   });
 
   it("skips an internal page that fails to fetch without failing the crawl", async () => {
@@ -180,6 +231,9 @@ describe("crawlSite", () => {
       "https://site.test/a",
       "https://site.test/b",
     ]);
+    // The raw landing is display identity only; the stable identity rides
+    // alongside it in the canonical form the dedupe keyed by.
+    expect(login?.normalizedUrl).toBe("https://site.test/login?a=1&b=2");
   });
 
   it("drops a same-origin redirect that lands on a robots-Disallow path", async () => {

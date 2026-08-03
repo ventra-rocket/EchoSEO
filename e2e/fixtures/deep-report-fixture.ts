@@ -57,6 +57,7 @@ export const DEEP_REPORT_FIXTURE = buildDeepReport({
   crawl: {
     pages: [PRIMARY, `${PRIMARY}/enterprise`, `${PRIMARY}/faq`].map((url) => ({
       url,
+      normalizedUrl: url,
       statusCode: 200,
       page: makeGoodPage({
         url,

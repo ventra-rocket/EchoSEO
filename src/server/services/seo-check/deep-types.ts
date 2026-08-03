@@ -50,7 +50,14 @@ const coreWebVitalsSchema = z.object({
 });
 
 const deepPageSchema = z.object({
+  /** First raw landing URL — display identity; can vary between crawls. */
   url: z.string(),
+  /**
+   * Stable page identity in the crawler's normalized form. Optional because
+   * reports stored before the field existed live in R2 for their full
+   * retention window and must keep validating on read.
+   */
+  normalizedUrl: z.string().optional(),
   statusCode: z.number(),
   overallScore: z.number(),
   signals: z.array(deepSignalSchema),

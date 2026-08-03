@@ -25,6 +25,14 @@ const DEFAULT_MAX_PAGES = 10;
 interface CrawledPage {
   /** Final URL after redirects — the URL the fetched content belongs to. */
   url: string;
+  /**
+   * `url` in the same normalized form the crawler dedupes by (fragment
+   * stripped, query order canonical). Two crawls of one site can store
+   * different raw variants of the same page depending on which link happened
+   * to be fetched first, so any consumer that keys pages by URL should key by
+   * this, and keep `url` for display.
+   */
+  normalizedUrl: string;
   statusCode: number;
   page: ParsedPage;
   /**
@@ -56,7 +64,12 @@ async function fetchAndParse(url: string): Promise<CrawledPage | null> {
       response.status,
       Date.now() - startedAt,
     );
-    return { url: finalUrl, statusCode: response.status, page };
+    return {
+      url: finalUrl,
+      normalizedUrl: normalizeUrl(finalUrl) ?? finalUrl,
+      statusCode: response.status,
+      page,
+    };
   } catch {
     // SSRF-blocked, unreachable, or too large — skip this page.
     return null;
@@ -114,22 +127,30 @@ export async function crawlSite(
 
   const origin = getOrigin(primary.url);
   const robots = await fetchRobotsTxt(origin);
+  // Two separate bounds: the page cap says how many pages the report may
+  // hold, and the request budget hard-bounds fetches for cost/SSRF no matter
+  // what those fetches return. The budget carries headroom over the page cap
+  // so a run of links that all redirect onto one canonical page (each drop
+  // burns a fetch) cannot starve coverage while later candidates were never
+  // tried — but it is still a hard ceiling, never "fetch until full".
+  const requestBudget = 2 * Math.max(0, maxPages - 1);
   const targets = selectInternalTargets(
     primary,
     origin,
     robots.isAllowed,
-    Math.max(0, maxPages - 1),
+    requestBudget,
   );
 
   const pages: CrawledPage[] = [primary];
   // Key final URLs by the same normalized form the queue uses for links, so
   // two landings that differ only in query order, fragment, or a trailing
-  // slash count as one page. The stored `url` stays the first raw landing.
-  const finalUrlKey = (finalUrl: string) => normalizeUrl(finalUrl) ?? finalUrl;
+  // slash count as one page. The stored `url` stays the first raw landing;
+  // `normalizedUrl` carries the stable identity.
   const byFinalUrl = new Map<string, CrawledPage>([
-    [finalUrlKey(primary.url), primary],
+    [primary.normalizedUrl, primary],
   ]);
   for (const url of targets) {
+    if (pages.length >= maxPages) break;
     const crawled = await fetchAndParse(url);
     // Re-validate the *final* URL after redirects: drop a link that hopped
     // off-origin (not a page of this site) or that redirected onto a
@@ -144,10 +165,10 @@ export async function crawlSite(
     // The queue deduped links as written, but pages are stored under the URL
     // they land on — two different links redirecting to one destination would
     // both arrive here. Keep the first landing and record the extra source on
-    // it rather than listing the same page twice. The duplicate's fetch slot
-    // is not refilled: like every drop above, the page cap bounds requests
-    // made, not pages returned.
-    const existing = byFinalUrl.get(finalUrlKey(crawled.url));
+    // it rather than listing the same page twice. The duplicate consumed one
+    // fetch from the request budget, and the loop moves on to the next
+    // candidate — coverage recovers as long as the budget holds.
+    const existing = byFinalUrl.get(crawled.normalizedUrl);
     if (existing) {
       if (url !== crawled.url) {
         existing.redirectedFrom = [...(existing.redirectedFrom ?? []), url];
@@ -157,7 +178,7 @@ export async function crawlSite(
     if (url !== crawled.url) {
       crawled.redirectedFrom = [url];
     }
-    byFinalUrl.set(finalUrlKey(crawled.url), crawled);
+    byFinalUrl.set(crawled.normalizedUrl, crawled);
     pages.push(crawled);
   }
   return { pages };

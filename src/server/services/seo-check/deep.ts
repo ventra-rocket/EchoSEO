@@ -68,6 +68,7 @@ export function buildDeepReport(input: DeepReportInput): DeepReport {
     const issues = evaluateLiteSignals(crawled.page);
     return {
       url: crawled.url,
+      normalizedUrl: crawled.normalizedUrl,
       statusCode: crawled.statusCode,
       overallScore: averageScore(score(issues, ON_PAGE_CATEGORIES)),
       signals: issues.map(toDeepSignal),
