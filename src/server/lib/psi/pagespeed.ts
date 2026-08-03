@@ -25,6 +25,9 @@ export class PsiRequestError extends Error {
 
 type CwvSource = "field" | "lab";
 
+/** The two Lighthouse form factors PSI can run. */
+export type PsiStrategy = "mobile" | "desktop";
+
 interface PsiLighthouseScores {
   performance: number | null;
   seo: number | null;
@@ -117,7 +120,7 @@ const screenshotSchema = z.object({
 export async function fetchPageSpeed(
   url: string,
   apiKey: string,
-  strategy: "mobile" | "desktop" = "mobile",
+  strategy: PsiStrategy = "mobile",
   signal?: AbortSignal,
 ): Promise<unknown> {
   const endpoint = new URL(PSI_ENDPOINT);
@@ -222,6 +225,91 @@ export function extractScreenshot(raw: unknown): PsiScreenshot | null {
   }
 
   return { bytes, contentType, width: shot.width, height: shot.height };
+}
+
+/**
+ * One frame of Lighthouse's loading filmstrip. The data URI is kept as the
+ * string PSI returned (not decoded): the frames are stored and served as one
+ * JSON bundle and rendered client-side as `<img src="data:…">`, so decoding
+ * here would only be re-encoded on the way out.
+ */
+export interface PsiFilmstripFrame {
+  /** `data:image/(webp|jpeg|png);base64,…` — allowlisted via DATA_URI, never SVG. */
+  data: string;
+  /** Milliseconds from navigation start to this frame. */
+  timingMs: number;
+}
+
+/**
+ * Hard caps keeping the stored filmstrip bundle bounded (~100–200 KB of JSON
+ * worst case). Lighthouse emits 8 frames of small thumbnails, so real
+ * responses sit far under both; the caps only bite on a hostile or degenerate
+ * payload, and then by dropping frames — never by failing the render that
+ * produced them.
+ */
+const MAX_FILMSTRIP_FRAMES = 10;
+const MAX_FILMSTRIP_FRAME_CHARS = 20_000;
+
+const filmstripItemSchema = z.object({
+  data: z.string(),
+  timing: z.number(),
+});
+
+// Like screenshotSchema, read separately from psiResponseSchema so the image
+// payloads are only touched by the function that wants them.
+const filmstripSchema = z.object({
+  lighthouseResult: z
+    .object({
+      audits: z
+        .object({
+          "screenshot-thumbnails": z
+            .object({
+              details: z
+                .object({ items: z.array(z.unknown()).optional() })
+                .optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+/**
+ * Pure — pulls the loading filmstrip out of raw PSI JSON. Zero extra quota:
+ * the audit rides along in the same response the screenshot render fetches.
+ *
+ * Returns null rather than throwing when the audit is absent or unusable, and
+ * drops (rather than fails on) individual frames that are malformed, oversize,
+ * or outside the image allowlist — the filmstrip is corroborating evidence,
+ * never a reason to fail. Frames beyond the count cap are dropped in input
+ * order (PSI emits them chronologically); survivors are sorted by timing.
+ */
+export function extractFilmstrip(raw: unknown): PsiFilmstripFrame[] | null {
+  const parsed = filmstripSchema.safeParse(raw);
+  if (!parsed.success) return null;
+
+  const items =
+    parsed.data.lighthouseResult?.audits?.["screenshot-thumbnails"]?.details
+      ?.items;
+  if (!items) return null;
+
+  const frames: PsiFilmstripFrame[] = [];
+  for (const item of items) {
+    if (frames.length >= MAX_FILMSTRIP_FRAMES) break;
+    const frame = filmstripItemSchema.safeParse(item);
+    if (!frame.success) continue;
+    const { data, timing } = frame.data;
+    // Same allowlist as the capture: these bytes are echoed back from our
+    // origin, so image/svg+xml stays a refused script sink here too.
+    if (!DATA_URI.test(data)) continue;
+    if (data.length > MAX_FILMSTRIP_FRAME_CHARS) continue;
+    frames.push({ data, timingMs: timing });
+  }
+
+  if (frames.length === 0) return null;
+  frames.sort((a, b) => a.timingMs - b.timingMs);
+  return frames;
 }
 
 /** Pure — shapes raw PSI JSON into CWV + category scores. Throws on malformed input. */
