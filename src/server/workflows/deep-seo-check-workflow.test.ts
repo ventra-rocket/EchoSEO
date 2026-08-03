@@ -14,6 +14,7 @@ const {
   markReportDoneMock,
   markReportFailedMock,
   sendReportReadyEmailMock,
+  recordCheckMetricMock,
 } = vi.hoisted(() => {
   class FakeNonRetryableError extends Error {}
   class FakePsiRequestError extends Error {
@@ -35,6 +36,7 @@ const {
     markReportDoneMock: vi.fn(),
     markReportFailedMock: vi.fn(),
     sendReportReadyEmailMock: vi.fn(),
+    recordCheckMetricMock: vi.fn(),
   };
 });
 
@@ -67,6 +69,9 @@ vi.mock("@/server/services/seo-check/report-store", () => ({
 vi.mock("@/server/services/seo-check/report-ready-email", () => ({
   sendReportReadyEmail: sendReportReadyEmailMock,
 }));
+vi.mock("@/server/services/seo-check/metrics", () => ({
+  recordCheckMetric: recordCheckMetricMock,
+}));
 vi.mock("@/server/services/seo-check/seo-reports-repository", () => ({
   markReportRunning: markReportRunningMock,
   markReportDone: markReportDoneMock,
@@ -75,13 +80,27 @@ vi.mock("@/server/services/seo-check/seo-reports-repository", () => ({
 
 const { runDeepSeoCheck } = await import("./deep-seo-check-workflow");
 
+/**
+ * The fake step runs each callback exactly once (no retries), so an error it
+ * records in `failures` is what a real Workflow would see ESCAPE the step —
+ * for a transient error, that models retries exhausted. This is how the tests
+ * can tell "classified retryable inside the step" apart from "degraded at the
+ * call site" without a real retry loop.
+ */
 function makeStep() {
   const order: string[] = [];
+  const failures = new Map<string, unknown>();
   return {
     order,
+    failures,
     do: async <T>(name: string, callback: () => Promise<T> | T): Promise<T> => {
       order.push(name);
-      return callback();
+      try {
+        return await callback();
+      } catch (error) {
+        failures.set(name, error);
+        throw error;
+      }
     },
   };
 }
@@ -116,6 +135,7 @@ describe("runDeepSeoCheck", () => {
     expect(step.order).toEqual([
       "mark-running",
       "pagespeed",
+      "pagespeed-desktop",
       "crawl-and-persist",
       "send-report-email",
     ]);
@@ -123,6 +143,12 @@ describe("runDeepSeoCheck", () => {
     expect(fetchPageSpeedMock).toHaveBeenCalledWith(
       "https://x.test/",
       "psi-key",
+      "mobile",
+    );
+    expect(fetchPageSpeedMock).toHaveBeenCalledWith(
+      "https://x.test/",
+      "psi-key",
+      "desktop",
     );
     expect(buildDeepReportMock).toHaveBeenCalledWith({
       requestedUrl: "https://x.test/",
@@ -130,6 +156,7 @@ describe("runDeepSeoCheck", () => {
       psi: PSI,
       // No crawled page in this fixture → GEO is skipped, never blocking.
       geo: null,
+      desktopPsi: PSI,
     });
     expect(putDeepReportMock).toHaveBeenCalledWith("r1", REPORT);
     expect(markReportDoneMock).toHaveBeenCalledWith(
@@ -230,5 +257,121 @@ describe("runDeepSeoCheck", () => {
 
     expect(markReportDoneMock).toHaveBeenCalled();
     expect(markReportFailedMock).not.toHaveBeenCalled();
+  });
+
+  // The desktop strategy is a comparative display tab, never scored — so its
+  // step is best-effort: whatever escapes it (NonRetryable, or a transient
+  // failure with retries exhausted) must degrade to a report without desktop
+  // data, never to a failed report. The classification itself still runs
+  // INSIDE the step so a real Workflow retries transient failures.
+  describe("desktop step (best-effort)", () => {
+    const DESKTOP_PSI = {
+      coreWebVitals: { lcpMs: 1200, inpMs: 60, cls: 0.01, ttfbMs: 300 },
+      cwvSource: "lab",
+      scores: {},
+    };
+
+    /** Mobile succeeds; only the desktop-strategy fetch fails. */
+    function failDesktopFetchWith(error: unknown) {
+      fetchPageSpeedMock.mockImplementation(
+        async (_url: string, _key: string, strategy: string) => {
+          if (strategy === "desktop") throw error;
+          return { raw: true };
+        },
+      );
+    }
+
+    it("hands the desktop result to the report build when the call succeeds", async () => {
+      shapePsiResultMock
+        .mockReturnValueOnce(PSI)
+        .mockReturnValueOnce(DESKTOP_PSI);
+
+      await runDeepSeoCheck(makeStep(), PARAMS);
+
+      expect(buildDeepReportMock).toHaveBeenCalledWith(
+        expect.objectContaining({ psi: PSI, desktopPsi: DESKTOP_PSI }),
+      );
+      expect(recordCheckMetricMock).toHaveBeenCalledWith("psi_call", {
+        kind: "deep",
+        reportId: "r1",
+      });
+      expect(recordCheckMetricMock).toHaveBeenCalledWith("psi_call", {
+        kind: "deep-desktop",
+        reportId: "r1",
+      });
+    });
+
+    it("completes the report without desktop when a transient failure exhausts its retries", async () => {
+      failDesktopFetchWith(new PsiRequestError(503));
+      const step = makeStep();
+
+      await runDeepSeoCheck(step, PARAMS);
+
+      // What escaped the step is the transient error ITSELF — not wrapped in
+      // NonRetryableError — so a real Workflow retries it on the desktop
+      // step's own budget before the call-site catch ever sees it.
+      const escaped = step.failures.get("pagespeed-desktop");
+      expect(escaped).toBeInstanceOf(PsiRequestError);
+      expect(escaped).not.toBeInstanceOf(NonRetryableError);
+
+      expect(buildDeepReportMock).toHaveBeenCalledWith(
+        expect.objectContaining({ psi: PSI, desktopPsi: null }),
+      );
+      expect(markReportDoneMock).toHaveBeenCalled();
+      expect(markReportFailedMock).not.toHaveBeenCalled();
+      expect(sendReportReadyEmailMock).toHaveBeenCalledWith("r1");
+    });
+
+    it("fails the desktop step fast on a permanent 4xx and still completes", async () => {
+      failDesktopFetchWith(new PsiRequestError(404));
+      const step = makeStep();
+
+      await runDeepSeoCheck(step, PARAMS);
+
+      // Classified inside the step: a permanent 4xx must not burn retries
+      // (each one is a spent PSI call) before the call site degrades it.
+      expect(step.failures.get("pagespeed-desktop")).toBeInstanceOf(
+        NonRetryableError,
+      );
+      expect(buildDeepReportMock).toHaveBeenCalledWith(
+        expect.objectContaining({ desktopPsi: null }),
+      );
+      expect(markReportDoneMock).toHaveBeenCalled();
+      expect(markReportFailedMock).not.toHaveBeenCalled();
+    });
+
+    it("degrades a desktop shaping failure without failing the report", async () => {
+      shapePsiResultMock.mockReturnValueOnce(PSI).mockImplementationOnce(() => {
+        throw new Error("bad desktop payload");
+      });
+      const step = makeStep();
+
+      await runDeepSeoCheck(step, PARAMS);
+
+      expect(step.failures.get("pagespeed-desktop")).toBeInstanceOf(
+        NonRetryableError,
+      );
+      expect(buildDeepReportMock).toHaveBeenCalledWith(
+        expect.objectContaining({ desktopPsi: null }),
+      );
+      expect(markReportDoneMock).toHaveBeenCalled();
+      expect(markReportFailedMock).not.toHaveBeenCalled();
+    });
+
+    it("leaves the mobile step fatal — the desktop catch must not swallow it", async () => {
+      // Mobile rejects for every strategy; the run dies before the desktop
+      // step exists, proving the local catch wraps only `pagespeed-desktop`.
+      fetchPageSpeedMock.mockRejectedValue(new PsiRequestError(500));
+      const step = makeStep();
+
+      await expect(runDeepSeoCheck(step, PARAMS)).rejects.toBeInstanceOf(
+        PsiRequestError,
+      );
+      expect(step.order).not.toContain("pagespeed-desktop");
+      expect(markReportFailedMock).toHaveBeenCalledWith(
+        "r1",
+        expect.any(String),
+      );
+    });
   });
 });

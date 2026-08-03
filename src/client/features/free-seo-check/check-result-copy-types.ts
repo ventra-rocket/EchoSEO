@@ -189,4 +189,73 @@ export interface CheckResultCopy {
     /** Footer line naming what EchoSEO is (mirrors the landing's footer). */
     footerLine: string;
   };
+  /* ——— share URL (/c/{id}) block — appended; keep at the end of the shape. ——— */
+  /** The landing's copy-link control for the minted share URL, and the share
+   * page's own chrome. The `/c/` page otherwise reuses `reportPage` strings
+   * (loading/errors/header/footer) — the two pages make the same promises. */
+  share: {
+    /** Lead-in ahead of the mono share URL. */
+    linkLabel: string;
+    copyButton: string;
+    /** Transient confirmation after a successful clipboard write. */
+    copied: string;
+    /** Clipboard write failed — points at the (already rewritten) address bar. */
+    copyFailed: string;
+  };
+
+  /**
+   * The Di động/Máy tính tabs over the Deep report's lab panel (Core Web
+   * Vitals + Lighthouse). Mobile is the scored strategy; desktop is a
+   * comparative display tab, and reports stored before desktop capture
+   * existed render with no tab bar at all.
+   */
+  strategyTabs: {
+    /** aria-label on the tablist. */
+    ariaLabel: string;
+    mobileTab: string;
+    desktopTab: string;
+    /** Honesty line on the desktop tab — display only, mobile stays scored. */
+    desktopComparativeNote: string;
+    /** Unobtrusive note on reports built before desktop capture existed. */
+    desktopNotCaptured: string;
+    /** Shown inside a tab whose PSI run carried no usable lab data. */
+    noStrategyData: string;
+  };
+
+  /* ——— visual filmstrip block — appended; keep at the end. ——— */
+  /**
+   * The PSI-style loading filmstrip under the capture: progressive render
+   * frames with timing captions. The Di động/Máy tính tabs over the visual
+   * panel reuse the `strategyTabs` labels above.
+   */
+  filmstrip: {
+    /** aria-label on the frame strip. */
+    ariaLabel: string;
+    /** alt per frame; receives the already-formatted timing caption. */
+    frameAlt: (timing: string) => string;
+    /** Milliseconds → the visible caption under a frame (e.g. "0.4 s"). */
+    timing: (ms: number) => string;
+  };
+
+  /* ——— free lab panel block — appended; keep at the end. ——— */
+  /**
+   * The FREE per-strategy lab panel under the visual tabs on the Lite result
+   * and `/c/` page: Lighthouse category scores + lab CWV from the visual
+   * bundle. Everything here must keep saying LAB — the render targets the
+   * origin root, so the data describes the HOMEPAGE in a Lighthouse lab run
+   * even when the checked URL was a subpage, and this panel must never borrow
+   * the Deep report's "Real Chrome user data (CrUX)" line.
+   */
+  labPanel: {
+    /** Accessible name of the panel section. */
+    ariaLabel: string;
+    /** The honesty caption beside the scores heading — "homepage · lab". */
+    caption: string;
+    /** Under the CWV grid: TBT stands in for INP, and why. */
+    tbtNote: string;
+    /** The always-present lab source line — the contrast to Deep's field data. */
+    sourceLine: string;
+    /** Trails `sourceLine` when the bundle carried a render timestamp. */
+    capturedAt: (date: string) => string;
+  };
 }

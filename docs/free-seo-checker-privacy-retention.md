@@ -1,9 +1,14 @@
 # Free SEO Checker — Privacy & Retention
 
-**Version:** 1.1 · **Date:** 2026-07-30 · **Status:** Implemented (retention cron live)
+**Version:** 1.2 · **Date:** 2026-08-03 · **Status:** Implemented (retention cron live)
 **Scope:** the public, anonymous Free SEO Checker only (`/free-seo-check`,
-`/vi/kiem-tra-seo`, `/r/{id}`). Authenticated workspace audits are out of scope
-and keep their own rules; the hosted service's own terms are at `/privacy`.
+`/vi/kiem-tra-seo`, `/r/{id}`, `/c/{id}`). Authenticated workspace audits are out
+of scope and keep their own rules; the hosted service's own terms are at
+`/privacy`.
+
+**What 1.2 adds:** every Lite check now mints a shareable `/c/{id}` link backed
+by a frozen copy of that result (a "share snapshot") in R2. New artifact, new
+retention row, and a second bearer-link surface — documented below.
 
 **What 1.1 corrects,** all verified against the running deployment's configured
 secrets rather than against intent:
@@ -17,14 +22,15 @@ secrets rather than against intent:
 
 ## What we collect, and why
 
-| Data                                                 | Where                                                               | Why                                                                                                                        |
-| ---------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Email address                                        | D1 `leads.email` (+ `email_normalized`)                             | Deliver the Deep report; per-email abuse quota. Given voluntarily on the Deep form.                                        |
-| The URL you asked us to check                        | D1 `leads.url`, `seo_reports.url`, and inside the R2 report payload | It is the subject of the report.                                                                                           |
-| Report contents (scores, signals, crawled page list) | R2 `deep-reports/{id}.json`                                         | The report itself.                                                                                                         |
-| Consent timestamp                                    | D1 `leads.consent_confirmed_at`                                     | Evidence of the double opt-in.                                                                                             |
-| A screenshot of the checked page                     | R2 `site-screenshots/{domain}`                                      | Shown on the result and the report as evidence of what we loaded. Keyed by hostname, not by report id or email.            |
-| IP address                                           | Never stored                                                        | Used only in-memory for rate limiting (Durable Object counters keyed by IP, which self-expire); never written to D1 or R2. |
+| Data                                                 | Where                                                               | Why                                                                                                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email address                                        | D1 `leads.email` (+ `email_normalized`)                             | Deliver the Deep report; per-email abuse quota. Given voluntarily on the Deep form.                                                                      |
+| The URL you asked us to check                        | D1 `leads.url`, `seo_reports.url`, and inside the R2 report payload | It is the subject of the report.                                                                                                                         |
+| Report contents (scores, signals, crawled page list) | R2 `deep-reports/{id}.json`                                         | The report itself.                                                                                                                                       |
+| Consent timestamp                                    | D1 `leads.consent_confirmed_at`                                     | Evidence of the double opt-in.                                                                                                                           |
+| A screenshot of the checked page                     | R2 `site-screenshots/{domain}`                                      | Shown on the result and the report as evidence of what we loaded. Keyed by hostname, not by report id or email.                                          |
+| A frozen copy of a Lite result (share snapshot)      | R2 `lite-checks/{id}.json`                                          | Renders the shareable `/c/{id}` link. Holds the report (public page data), the check's language, and when it ran — no email, keyed by an unguessable id. |
+| IP address                                           | Never stored                                                        | Used only in-memory for rate limiting (Durable Object counters keyed by IP, which self-expire); never written to D1 or R2.                               |
 
 The Lite check stores **no personal data at all** — it is anonymous, needs no
 email, and its per-domain cache is keyed by hostname. The same is true of the
@@ -51,11 +57,15 @@ stops the form being used to send unwanted mail to someone else's address.
 | Confirmed lead + its reports + R2 payloads | **30 days**                                                | When the report **finished** (`seo_reports.finished_at`) |
 | Lead that never confirmed                  | **7 days** after the confirm link expires (links last 24h) | `leads.confirm_token_expires_at`                         |
 | Screenshot of a checked page               | **7 days**                                                 | When the capture was stored                              |
+| Share snapshot of a Lite check (`/c/{id}`) | **30 days**                                                | When the check ran (snapshots are write-once)            |
 
-All three are deleted by a daily sweep at 03:00 UTC
+All four are deleted by a daily sweep at 03:00 UTC
 (`services/seo-check/retention.ts`). The screenshot expires on its own clock
 because it belongs to a hostname rather than to a lead: deleting someone's lead
-cannot delete it, since another visitor may have checked the same site.
+cannot delete it, since another visitor may have checked the same site. The
+share snapshot likewise has no lead to cascade from — it is anonymous by
+construction — so it too ages out on its own clock, measured from the check
+itself. Once swept, the `/c/{id}` link answers 404.
 
 Two details that matter:
 
@@ -84,8 +94,9 @@ Operators can retune both windows without a code deploy:
 
 ## Report links are unguessable, not authenticated
 
-`/r/{id}` is a **bearer link**: anyone holding it can read that report. This is
-deliberate for the free tier — no account exists to log into. Protections:
+`/r/{id}` and `/c/{id}` are **bearer links**: anyone holding one can read that
+report. This is deliberate for the free tier — no account exists to log into.
+Protections:
 
 - The id is a 122-bit `crypto.randomUUID()`. It is not sequential and not derived
   from the URL or the email.
@@ -93,9 +104,14 @@ deliberate for the free tier — no account exists to log into. Protections:
   outbound links), so clicking a Google citation link on the report cannot leak
   the link to Google.
 - `X-Robots-Tag: noindex` and `robots.txt` disallows `/r/`, so a pasted link
-  stays out of search results.
+  stays out of search results. `/c/` carries the same noindex header + meta but
+  is deliberately **not** in robots.txt: the share page exists to be unfurled,
+  and a Disallow would stop Facebook/Zalo/Twitter bots from ever reading its OG
+  tags. Noindex alone is what keeps it out of search results; neither page is
+  in the sitemap.
 - Reads are rate limited per IP.
 - **The page never renders the email or any other lead data** — only the report.
+  `/c/{id}` cannot: its snapshot never contained an email in the first place.
 
 Do not use this mechanism for authenticated workspace audits; those get private,
 invite-based review access instead.

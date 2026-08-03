@@ -49,6 +49,15 @@ const coreWebVitalsSchema = z.object({
   ttfbMs: z.number(),
 });
 
+/** Shared by the top-level (mobile) fields and the desktop section — the two
+ * must never drift apart in shape. */
+const psiScoresSchema = z.object({
+  performance: z.number().nullable(),
+  seo: z.number().nullable(),
+  accessibility: z.number().nullable(),
+  bestPractices: z.number().nullable(),
+});
+
 const deepPageSchema = z.object({
   /** First raw landing URL — display identity; can vary between crawls. */
   url: z.string(),
@@ -86,14 +95,15 @@ export const deepReportSchema = z.object({
   fetchedAt: z.string(),
   overallScore: z.number(),
   categoryScores: z.array(deepCategoryScoreSchema),
+  /**
+   * The top-level lab fields (`coreWebVitals`/`cwvSource`/`psiScores`) are the
+   * MOBILE strategy — the primary, scored one (Google indexes mobile-first).
+   * They keep their names unqualified because every reader since the first
+   * deploy consumes them; renaming would be a silent migration of R2 payloads.
+   */
   coreWebVitals: coreWebVitalsSchema.nullable(),
   cwvSource: z.enum(["field", "lab"]).nullable(),
-  psiScores: z.object({
-    performance: z.number().nullable(),
-    seo: z.number().nullable(),
-    accessibility: z.number().nullable(),
-    bestPractices: z.number().nullable(),
-  }),
+  psiScores: psiScoresSchema,
   /** Primary page's full signal set (on-page + technical + Core Web Vitals). */
   signals: z.array(deepSignalSchema),
   /** One entry per crawled page (on-page + technical), primary first. */
@@ -105,6 +115,21 @@ export const deepReportSchema = z.object({
     wordCount: z.number(),
   }),
   crawl: z.object({ pagesCrawled: z.number() }),
+  /**
+   * Desktop-strategy lab data — a comparative display tab, never scored: the
+   * rules engine and every score keep consuming the mobile fields above.
+   * Optional for the same reason `deepPageSchema.normalizedUrl` is: reports
+   * stored before the field existed live in R2 for their full retention window
+   * and must keep validating on read. Omitted (not null) when the best-effort
+   * desktop run failed, so those payloads stay byte-identical to legacy ones.
+   */
+  desktop: z
+    .object({
+      coreWebVitals: coreWebVitalsSchema.nullable(),
+      cwvSource: z.enum(["field", "lab"]).nullable(),
+      psiScores: psiScoresSchema,
+    })
+    .optional(),
   /**
    * GEO / AI-search section, or null when it was skipped or its extraction
    * failed. `.default(null)` so reports written before GEO existed still

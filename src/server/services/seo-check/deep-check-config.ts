@@ -51,9 +51,11 @@ export async function isScreenshotDisabled(): Promise<boolean> {
 }
 
 /** Ceiling on how many fresh page captures may be RENDERED across all visitors
- * in a rolling day; cache hits are free and never counted. Guards the shared
- * PSI daily quota against the high-volume Lite tier. */
-const DEFAULT_SCREENSHOT_DAILY_CEILING = 300;
+ * in a rolling day; cache hits are free and never counted, and a render's
+ * ride-along artifacts (the filmstrip) cost no extra slot. Guards the shared
+ * PSI daily quota against the high-volume Lite tier. 600 = the pre-strategy
+ * 300 × 2, since every domain now renders once per strategy (mobile+desktop). */
+const DEFAULT_SCREENSHOT_DAILY_CEILING = 600;
 export async function getScreenshotDailyCeiling(): Promise<number> {
   return readPositiveInt(
     "FREE_SCREENSHOT_DAILY_CEILING",

@@ -31,6 +31,8 @@ export const FREE_SEO_CHECK_VI_LANDING_PATH = "/vi/kiem-tra-seo";
 export const FREE_SEO_CHECK_CONFIRM_ROUTE = "/free-seo-check/confirm";
 /** Public GET — reads a finished Deep report by id (`?id=<uuid>`). */
 export const FREE_SEO_CHECK_REPORT_PATH = "/api/free-seo-check/report";
+/** Public GET — reads a frozen Lite check snapshot by id (`?id=<uuid>`). */
+export const FREE_SEO_CHECK_CHECK_PATH = "/api/free-seo-check/check";
 /**
  * Public GET — a desktop page capture for a URL (`?url=<url>`), used as the
  * capture shown on both the Lite result and the Deep report. Keyed by domain,
@@ -41,9 +43,49 @@ export const FREE_SEO_CHECK_REPORT_PATH = "/api/free-seo-check/report";
 export const FREE_SEO_CHECK_SITE_SCREENSHOT_PATH =
   "/api/free-seo-check/site-screenshot";
 
+/**
+ * Public GET — the loading-filmstrip JSON bundle for a URL
+ * (`?url=<url>&strategy=…`). Strictly read-only: it serves whatever the last
+ * capture render stored, or 404s — it never triggers a PSI render, so client
+ * polls against it can never spend the shared quota. Same prefix, same Access
+ * bypass as the capture endpoint above.
+ */
+export const FREE_SEO_CHECK_SITE_FILMSTRIP_PATH =
+  "/api/free-seo-check/site-filmstrip";
+
+/**
+ * The form factor a capture was rendered on. A local literal rather than an
+ * import of the server's `PsiStrategy` for the same layering reason as
+ * `checkLocaleSchema` below: shared code must not depend on server modules.
+ */
+export type SiteCaptureStrategy = "mobile" | "desktop";
+
+function evidenceUrl(
+  basePath: string,
+  pageUrl: string,
+  strategy?: SiteCaptureStrategy,
+): string {
+  // Omitted strategy puts NOTHING on the wire — the server defaults that to
+  // desktop, so `<img>` URLs minted before the mobile tab existed (and any
+  // copy of them in a browser cache) stay byte-identical and keep resolving.
+  const suffix = strategy ? `&strategy=${strategy}` : "";
+  return `${basePath}?url=${encodeURIComponent(pageUrl)}${suffix}`;
+}
+
 /** The capture URL for a page — single source for the handler and both views. */
-export function siteScreenshotUrl(pageUrl: string): string {
-  return `${FREE_SEO_CHECK_SITE_SCREENSHOT_PATH}?url=${encodeURIComponent(pageUrl)}`;
+export function siteScreenshotUrl(
+  pageUrl: string,
+  strategy?: SiteCaptureStrategy,
+): string {
+  return evidenceUrl(FREE_SEO_CHECK_SITE_SCREENSHOT_PATH, pageUrl, strategy);
+}
+
+/** The filmstrip-bundle URL for a page — mirrors `siteScreenshotUrl`. */
+export function siteFilmstripUrl(
+  pageUrl: string,
+  strategy?: SiteCaptureStrategy,
+): string {
+  return evidenceUrl(FREE_SEO_CHECK_SITE_FILMSTRIP_PATH, pageUrl, strategy);
 }
 /**
  * Path prefix of the shareable report page. The id is an unguessable capability
@@ -51,6 +93,22 @@ export function siteScreenshotUrl(pageUrl: string): string {
  * `X-Robots-Tag: noindex` in server.ts and are excluded in robots.txt.
  */
 export const FREE_SEO_CHECK_REPORT_ROUTE_PREFIX = "/r/";
+
+/**
+ * Path prefix of the shareable Lite check page. Separate from `/r/` on purpose:
+ * a `/c/{id}` link is a frozen 30-day R2 snapshot with no lead behind it, while
+ * `/r/{id}` follows the Deep tier's lead-coupled canonical-resolver chain. Same
+ * bearer-capability rules (`X-Robots-Tag: noindex` + `Referrer-Policy:
+ * no-referrer` in server.ts), but deliberately NO robots.txt Disallow — a
+ * Disallow would stop social unfurl bots from ever reading the OG tags, and
+ * noindex already keeps pasted links out of search results.
+ */
+export const FREE_SEO_CHECK_CHECK_ROUTE_PREFIX = "/c/";
+
+/** The share URL path for a check id — single source for client and server. */
+export function checkPagePath(checkId: string): string {
+  return `${FREE_SEO_CHECK_CHECK_ROUTE_PREFIX}${checkId}`;
+}
 
 /**
  * Test-only route that renders the Lite result from a fixture. Exported so the
@@ -90,7 +148,10 @@ const PUBLIC_SSR_EXACT_PATHS: ReadonlySet<string> = new Set([
 export function isPublicSsrPath(pathname: string): boolean {
   return (
     PUBLIC_SSR_EXACT_PATHS.has(pathname) ||
-    pathname.startsWith(FREE_SEO_CHECK_REPORT_ROUTE_PREFIX)
+    pathname.startsWith(FREE_SEO_CHECK_REPORT_ROUTE_PREFIX) ||
+    // Share pages must SSR their shell so unfurl bots (which run no JS) get a
+    // real document around the injected OG tags, not an empty island.
+    pathname.startsWith(FREE_SEO_CHECK_CHECK_ROUTE_PREFIX)
   );
 }
 

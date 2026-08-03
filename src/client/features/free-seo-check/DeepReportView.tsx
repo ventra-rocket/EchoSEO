@@ -4,12 +4,30 @@ import type { Locale } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { ReportScoreBand } from "./ReportScoreBand";
 import { ScoreSummaryPanel } from "./ScoreSummaryPanel";
+import { StrategyLabPanel } from "./StrategyLabPanel";
 import { SectionHeading } from "./SectionHeading";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { GeoSection } from "./GeoSection";
 import { SignalRow } from "./SignalRow";
 import { triageSignals } from "./triage";
 import { pagePathOnly } from "./report-format";
+
+/**
+ * ScoreSummaryPanel renders every group it finds data for, and the lab groups
+ * (Core Web Vitals + Lighthouse) moved into the strategy-tabbed panel beside
+ * it — so it gets a payload with no lab data and renders category scores
+ * only. Without this the mobile lab numbers would appear twice in the rail.
+ */
+const NO_LAB_DATA = {
+  coreWebVitals: null,
+  cwvSource: null,
+  psiScores: {
+    performance: null,
+    seo: null,
+    accessibility: null,
+    bestPractices: null,
+  },
+} satisfies Partial<DeepReport>;
 
 /**
  * Composes the full Deep report. Deliberately renders report data only — the
@@ -47,8 +65,12 @@ export function DeepReportView({
       />
 
       <div className="space-y-6 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
-        <div className="lg:sticky lg:top-6">
-          <ScoreSummaryPanel report={report} locale={locale} />
+        <div className="space-y-4 lg:sticky lg:top-6">
+          <ScoreSummaryPanel
+            report={{ ...report, ...NO_LAB_DATA }}
+            locale={locale}
+          />
+          <StrategyLabPanel report={report} locale={locale} />
         </div>
 
         <div className="min-w-0 space-y-6">

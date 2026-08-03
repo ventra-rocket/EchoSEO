@@ -40,6 +40,14 @@ const PSI_NO_CWV: PsiResult = {
   scores: GOOD_SCORES,
 };
 
+// Deliberately different from every mobile fixture so a leak of desktop data
+// into a score or a top-level field cannot cancel out to a false pass.
+const DESKTOP_PSI: PsiResult = {
+  coreWebVitals: { lcpMs: 9000, inpMs: 900, cls: 0.9, ttfbMs: 4000 },
+  cwvSource: "lab",
+  scores: { performance: 10, seo: 20, accessibility: 30, bestPractices: 40 },
+};
+
 describe("buildDeepReport", () => {
   it("adds Core Web Vitals to the primary page when PSI has CWV data", () => {
     const report = buildDeepReport({
@@ -160,6 +168,52 @@ describe("buildDeepReport", () => {
     expect(withBroken.overallScore).toBe(baseline.overallScore);
     expect(withBroken.categoryScores).toEqual(baseline.categoryScores);
     expect(withBroken.pages).toHaveLength(2);
+  });
+
+  // Mobile stays the scored strategy: the desktop result is attached for the
+  // comparative tab and must never move a score, a signal, or a mobile field —
+  // even an awful desktop run (the fixture is one) changes nothing but
+  // `report.desktop`.
+  it("attaches desktop lab data for display without moving any score", () => {
+    const without = buildDeepReport({
+      requestedUrl: PRIMARY,
+      crawl: crawlOf(PRIMARY),
+      psi: PSI_WITH_CWV,
+    });
+    const withDesktop = buildDeepReport({
+      requestedUrl: PRIMARY,
+      crawl: crawlOf(PRIMARY),
+      psi: PSI_WITH_CWV,
+      desktopPsi: DESKTOP_PSI,
+    });
+
+    expect(withDesktop.desktop).toEqual({
+      coreWebVitals: DESKTOP_PSI.coreWebVitals,
+      cwvSource: "lab",
+      psiScores: DESKTOP_PSI.scores,
+    });
+    expect(withDesktop.overallScore).toBe(without.overallScore);
+    expect(withDesktop.categoryScores).toEqual(without.categoryScores);
+    expect(withDesktop.signals).toEqual(without.signals);
+    // The top-level lab fields remain the mobile result, untouched.
+    expect(withDesktop.coreWebVitals).toEqual(PSI_WITH_CWV.coreWebVitals);
+    expect(withDesktop.cwvSource).toBe("field");
+    expect(withDesktop.psiScores).toEqual(GOOD_SCORES);
+  });
+
+  it("omits the desktop key entirely when there is no desktop result", () => {
+    // Omitted, not null: the stored payload must stay byte-identical to the
+    // legacy shape, and the report page keys "render the tab bar at all" on
+    // the field's presence.
+    for (const desktopPsi of [undefined, null]) {
+      const report = buildDeepReport({
+        requestedUrl: PRIMARY,
+        crawl: crawlOf(PRIMARY),
+        psi: PSI_NO_CWV,
+        desktopPsi,
+      });
+      expect(Object.keys(report)).not.toContain("desktop");
+    }
   });
 
   it("builds a separate GEO section without touching the on-page score", () => {

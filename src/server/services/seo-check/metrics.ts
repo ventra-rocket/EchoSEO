@@ -22,6 +22,8 @@
  */
 type CheckMetricEvent =
   | "lite_check"
+  // A shared `/c/{id}` snapshot was read — the distribution loop's landing step.
+  | "share_view"
   | "deep_start"
   | "deep_confirm"
   | "deep_done"

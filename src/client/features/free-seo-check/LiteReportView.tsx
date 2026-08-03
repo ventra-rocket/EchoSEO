@@ -33,11 +33,20 @@ export function LiteReportView({
   report,
   deepAvailable,
   locale,
+  warmInactiveStrategy = true,
 }: {
   report: LiteReport;
   /** False while the Deep tier's kill-switch is on — offer nothing rather than a form that refuses. */
   deepAvailable: boolean;
   locale: Locale;
+  /**
+   * Threaded to the visual panel. Defaults true because this view's home is
+   * the inline result of a check that just ran: eagerly mounting both
+   * strategies' captures IS the pre-warm (exactly two renders, and only for
+   * a check that succeeded). The `/c/` share page passes false — a stranger
+   * opening a forwarded link must not spend two render-ceiling slots.
+   */
+  warmInactiveStrategy?: boolean;
 }) {
   const copy = CHECK_RESULT_COPY[locale];
   const { actionable, passed, counts } = triageSignals(report.signals);
@@ -120,8 +129,16 @@ export function LiteReportView({
 
         {/* Demoted out of slot #2. It loads from a live capture service and
             spends ten to thirty seconds as an empty frame; sitting directly
-            under the score, it pushed every finding below the fold. */}
-        <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
+            under the score, it pushed every finding below the fold. The lab
+            panel (free Lighthouse scores + lab CWV) rides under each tab —
+            founder decision; the Deep pitch below sells the crawl/field data
+            instead. */}
+        <SiteScreenshot
+          pageUrl={report.finalUrl}
+          locale={locale}
+          warmInactiveStrategy={warmInactiveStrategy}
+          showLabPanel
+        />
 
         {deepAvailable ? (
           // Deep-check the URL the report actually landed on, not the raw input —

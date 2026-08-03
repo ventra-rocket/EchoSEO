@@ -17,6 +17,7 @@ import {
   fetchPageSpeed,
   PsiRequestError,
   shapePsiResult,
+  type PsiResult,
 } from "@/server/lib/psi/pagespeed";
 import { crawlSite } from "@/server/services/seo-check/crawl";
 import { buildDeepReport } from "@/server/services/seo-check/deep";
@@ -43,6 +44,49 @@ interface DeepCheckStep {
   do<T>(name: string, callback: () => Promise<T> | T): Promise<T>;
 }
 
+/**
+ * One PSI call + shaping, with the retryability classification that must run
+ * INSIDE a `step.do` callback: transient 429/5xx rethrow as-is so the Workflow
+ * retries them on that step's own budget; a permanent 4xx or a shaping failure
+ * becomes NonRetryableError because neither recovers on retry and each retry
+ * would re-spend the daily PSI quota. Shared by both strategies so their
+ * classification cannot drift; whether a failure that finally escapes the step
+ * fails the report is the CALL SITE's decision, not this function's.
+ */
+async function fetchShapedPageSpeed(
+  url: string,
+  reportId: string,
+  strategy: "mobile" | "desktop",
+  metricKind: "deep" | "deep-desktop",
+): Promise<PsiResult> {
+  const apiKey = await getRequiredEnvValue("GOOGLE_PSI_API_KEY");
+  let raw: unknown;
+  try {
+    // Counted before the result: a spent PSI call is the cost to track,
+    // whether or not it ends up yielding a usable report.
+    recordCheckMetric("psi_call", { kind: metricKind, reportId });
+    raw = await fetchPageSpeed(url, apiKey, strategy);
+  } catch (error) {
+    // Retry transient 429/5xx; a permanent 4xx (bad URL / key) won't
+    // recover and would keep spending the daily PSI quota — fail fast.
+    if (
+      error instanceof PsiRequestError &&
+      error.status !== 429 &&
+      error.status < 500
+    ) {
+      throw new NonRetryableError(`PSI rejected the URL: ${error.status}`);
+    }
+    throw error;
+  }
+  try {
+    return shapePsiResult(raw);
+  } catch (error) {
+    // A malformed payload won't fix itself on retry — and retrying would
+    // re-spend the PSI quota. Fail fast instead.
+    throw new NonRetryableError(`PSI shaping failed: ${String(error)}`);
+  }
+}
+
 export async function runDeepSeoCheck(
   step: DeepCheckStep,
   params: DeepSeoCheckParams,
@@ -52,34 +96,30 @@ export async function runDeepSeoCheck(
   try {
     await step.do("mark-running", () => markReportRunning(reportId));
 
-    const psi = await step.do("pagespeed", async () => {
-      const apiKey = await getRequiredEnvValue("GOOGLE_PSI_API_KEY");
-      let raw: unknown;
-      try {
-        // Counted before the result: a spent PSI call is the cost to track,
-        // whether or not it ends up yielding a usable report.
-        recordCheckMetric("psi_call", { kind: "deep", reportId });
-        raw = await fetchPageSpeed(url, apiKey);
-      } catch (error) {
-        // Retry transient 429/5xx; a permanent 4xx (bad URL / key) won't
-        // recover and would keep spending the daily PSI quota — fail fast.
-        if (
-          error instanceof PsiRequestError &&
-          error.status !== 429 &&
-          error.status < 500
-        ) {
-          throw new NonRetryableError(`PSI rejected the URL: ${error.status}`);
-        }
-        throw error;
-      }
-      try {
-        return shapePsiResult(raw);
-      } catch (error) {
-        // A malformed payload won't fix itself on retry — and retrying would
-        // re-spend the PSI quota. Fail fast instead.
-        throw new NonRetryableError(`PSI shaping failed: ${String(error)}`);
-      }
-    });
+    const psi = await step.do("pagespeed", () =>
+      fetchShapedPageSpeed(url, reportId, "mobile", "deep"),
+    );
+
+    // Desktop is a comparative display strategy, never scored — best-effort by
+    // contract. Its own step keeps a separate retry budget, and only this CALL
+    // SITE catches: whatever finally escapes the step — NonRetryableError, or
+    // a transient failure with retries exhausted — degrades to a report with
+    // no desktop tab. Catching inside the callback instead would kill retries
+    // for transient 429/5xx; catching nothing would let a desktop failure fail
+    // a report that used to succeed. The mobile step above stays fatal:
+    // nothing here wraps it. Only the small shaped result crosses the step
+    // boundary (never the raw PSI response), well under the 1 MiB cap.
+    let desktopPsi: PsiResult | null = null;
+    try {
+      desktopPsi = await step.do("pagespeed-desktop", () =>
+        fetchShapedPageSpeed(url, reportId, "desktop", "deep-desktop"),
+      );
+    } catch (error) {
+      console.error(
+        `Deep check ${reportId} desktop PSI failed; continuing without it:`,
+        error,
+      );
+    }
 
     // Crawl + build + persist in one step so the multi-page ParsedPage[] stays
     // transient and never becomes a durable step output (Workflows cap step
@@ -102,7 +142,13 @@ export async function runDeepSeoCheck(
             return null;
           })
         : null;
-      const report = buildDeepReport({ requestedUrl: url, crawl, psi, geo });
+      const report = buildDeepReport({
+        requestedUrl: url,
+        crawl,
+        psi,
+        geo,
+        desktopPsi,
+      });
       const r2Key = await putDeepReport(reportId, report);
       await markReportDone(reportId, r2Key);
       recordCheckMetric("deep_done", { reportId });

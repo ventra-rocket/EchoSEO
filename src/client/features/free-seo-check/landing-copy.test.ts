@@ -49,6 +49,29 @@ describe("landing copy", () => {
     }
   });
 
+  it("anchors the deep-check trust chip on the crawl, not on CWV/Lighthouse", () => {
+    // Founder decision (free lab panel): the free result shows Lighthouse
+    // scores + lab Core Web Vitals, so a chip selling CWV as the deep tier's
+    // headline would promise what is no longer gated. The chip must name the
+    // crawl instead.
+    expect(LANDING_COPY.en.trustSignals[3]).toContain("crawl");
+    expect(LANDING_COPY.en.trustSignals[3]).not.toContain("Core Web Vitals");
+    expect(LANDING_COPY.vi.trustSignals[3]).toContain("quét");
+    expect(LANDING_COPY.vi.trustSignals[3]).not.toContain("Core Web Vitals");
+  });
+
+  it("keeps the hero eyebrow's scope readout intact", () => {
+    // "Core Web Vitals" in the EYEBROW describes what the checker covers —
+    // more true since the free lab panel, so the re-anchor must not touch it.
+    // The term is NBSP-joined in the copy so narrow viewports wrap at a
+    // separator; normalize before matching.
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(LANDING_COPY[locale].heroEyebrow.replaceAll(" ", " ")).toContain(
+        "Core Web Vitals",
+      );
+    }
+  });
+
   it("has no empty strings in any localized field", () => {
     for (const locale of SUPPORTED_LOCALES) {
       const copy = LANDING_COPY[locale];
