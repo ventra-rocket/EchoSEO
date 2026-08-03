@@ -59,6 +59,23 @@ describe("buildDeepReport", () => {
     );
   });
 
+  it("keeps crawl-seam fields like redirectedFrom out of the report payload", () => {
+    const crawl = crawlOf(PRIMARY, "https://site.test/login");
+    for (const page of crawl.pages) {
+      page.redirectedFrom = ["https://site.test/dashboard"];
+    }
+    const report = buildDeepReport({
+      requestedUrl: PRIMARY,
+      crawl,
+      psi: PSI_NO_CWV,
+    });
+    // Deep reports are stored in R2 and re-validated on every read; redirect
+    // sources are crawl-side context and must never reach the stored payload.
+    for (const page of report.pages) {
+      expect(page).not.toHaveProperty("redirectedFrom");
+    }
+  });
+
   it("omits Core Web Vitals when PSI has none", () => {
     const report = buildDeepReport({
       requestedUrl: PRIMARY,

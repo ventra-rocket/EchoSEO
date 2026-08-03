@@ -23,9 +23,16 @@ import { isAuthInterstitialUrl } from "./auth-interstitial";
 const DEFAULT_MAX_PAGES = 10;
 
 interface CrawledPage {
+  /** Final URL after redirects — the URL the fetched content belongs to. */
   url: string;
   statusCode: number;
   page: ParsedPage;
+  /**
+   * Same-origin links (as written on the primary page) whose fetch redirected
+   * onto this final URL. Absent when the page was only reached at its own
+   * address.
+   */
+  redirectedFrom?: string[];
 }
 
 export interface CrawlResult {
@@ -115,18 +122,43 @@ export async function crawlSite(
   );
 
   const pages: CrawledPage[] = [primary];
+  // Key final URLs by the same normalized form the queue uses for links, so
+  // two landings that differ only in query order, fragment, or a trailing
+  // slash count as one page. The stored `url` stays the first raw landing.
+  const finalUrlKey = (finalUrl: string) => normalizeUrl(finalUrl) ?? finalUrl;
+  const byFinalUrl = new Map<string, CrawledPage>([
+    [finalUrlKey(primary.url), primary],
+  ]);
   for (const url of targets) {
     const crawled = await fetchAndParse(url);
     // Re-validate the *final* URL after redirects: drop a link that hopped
     // off-origin (not a page of this site) or that redirected onto a
     // robots-Disallow path (the pre-fetch check only saw the requested URL).
     if (
-      crawled &&
-      isSameOrigin(crawled.url, origin) &&
-      robots.isAllowed(crawled.url)
+      !crawled ||
+      !isSameOrigin(crawled.url, origin) ||
+      !robots.isAllowed(crawled.url)
     ) {
-      pages.push(crawled);
+      continue;
     }
+    // The queue deduped links as written, but pages are stored under the URL
+    // they land on — two different links redirecting to one destination would
+    // both arrive here. Keep the first landing and record the extra source on
+    // it rather than listing the same page twice. The duplicate's fetch slot
+    // is not refilled: like every drop above, the page cap bounds requests
+    // made, not pages returned.
+    const existing = byFinalUrl.get(finalUrlKey(crawled.url));
+    if (existing) {
+      if (url !== crawled.url) {
+        existing.redirectedFrom = [...(existing.redirectedFrom ?? []), url];
+      }
+      continue;
+    }
+    if (url !== crawled.url) {
+      crawled.redirectedFrom = [url];
+    }
+    byFinalUrl.set(finalUrlKey(crawled.url), crawled);
+    pages.push(crawled);
   }
   return { pages };
 }

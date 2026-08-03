@@ -72,6 +72,8 @@ describe("crawlSite", () => {
   it("respects the page cap (primary + cap-1 internal)", async () => {
     const result = await crawlSite(PRIMARY, 3);
     expect(result.pages).toHaveLength(3);
+    // The cap bounds HTTP requests made, not just pages returned.
+    expect(safeFetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("skips an internal page that fails to fetch without failing the crawl", async () => {
@@ -100,6 +102,84 @@ describe("crawlSite", () => {
     expect(urls).not.toContain("https://evil.test/landing");
     expect(urls).toContain("https://site.test/b");
     expect(urls).toContain("https://site.test/c");
+  });
+
+  // The queue dedupes links as written, but pages are stored under the URL
+  // they land on — two different links redirecting to one destination (e.g.
+  // /dashboard and /login both ending at the login screen) must not produce
+  // the same page twice in the report.
+  it("keeps one page when two queued links redirect to the same final URL", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: 200 },
+        finalUrl:
+          url.endsWith("/a") || url.endsWith("/b")
+            ? "https://site.test/login"
+            : url,
+      }),
+    );
+    const result = await crawlSite(PRIMARY);
+    const urls = result.pages.map((p) => p.url);
+    expect(urls).toEqual([
+      PRIMARY,
+      "https://site.test/login",
+      "https://site.test/c",
+    ]);
+    // Both redirect sources are preserved on the kept page — "these links all
+    // land here" is real SEO information the dedupe must not discard.
+    const login = result.pages.find((p) => p.url === "https://site.test/login");
+    expect(login?.redirectedFrom).toEqual([
+      "https://site.test/a",
+      "https://site.test/b",
+    ]);
+    // A page reached only at its own address carries no redirect sources.
+    const plain = result.pages.find((p) => p.url === "https://site.test/c");
+    expect(plain?.redirectedFrom).toBeUndefined();
+  });
+
+  it("does not duplicate the primary when a link redirects back to it", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: 200 },
+        finalUrl: url.endsWith("/a") ? PRIMARY : url,
+      }),
+    );
+    const result = await crawlSite(PRIMARY);
+    const urls = result.pages.map((p) => p.url);
+    expect(urls).toEqual([
+      PRIMARY,
+      "https://site.test/b",
+      "https://site.test/c",
+    ]);
+    expect(result.pages[0]?.redirectedFrom).toEqual(["https://site.test/a"]);
+  });
+
+  it("collapses final URLs that differ only in query order", async () => {
+    safeFetchMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        response: { status: 200 },
+        finalUrl: url.endsWith("/a")
+          ? "https://site.test/login?b=2&a=1"
+          : url.endsWith("/b")
+            ? "https://site.test/login?a=1&b=2"
+            : url,
+      }),
+    );
+    const result = await crawlSite(PRIMARY);
+    const urls = result.pages.map((p) => p.url);
+    // One page, stored under the first raw landing; both sources recorded.
+    expect(urls).toEqual([
+      PRIMARY,
+      "https://site.test/login?b=2&a=1",
+      "https://site.test/c",
+    ]);
+    const login = result.pages.find((p) =>
+      p.url.startsWith("https://site.test/login"),
+    );
+    expect(login?.redirectedFrom).toEqual([
+      "https://site.test/a",
+      "https://site.test/b",
+    ]);
   });
 
   it("drops a same-origin redirect that lands on a robots-Disallow path", async () => {
