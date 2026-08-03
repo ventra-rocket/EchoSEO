@@ -85,6 +85,12 @@ export interface LandingCopy {
   urlLabel: string;
   urlPlaceholder: string;
   /**
+   * Inline error under the URL field for input that cannot be a fetchable
+   * site. Shown by the client-side pre-check that runs before the Turnstile
+   * token is spent — see validate-check-url.ts.
+   */
+  urlInvalid: string;
+  /**
    * Label over the Turnstile challenge, same tier as `urlLabel`: framed and
    * labelled like a form field, the widget reads as part of the form instead of
    * a stray grey iframe dropped between the input and the button.
@@ -94,6 +100,13 @@ export interface LandingCopy {
   submitLoading: string;
   /** Shown when the visitor submitted before the bot check finished. */
   submitVerifying: string;
+  /**
+   * H2 over the rendered result — the accessible name of the report section
+   * and the focus/scroll target after a successful check.
+   */
+  reportHeading: string;
+  /** The keyboard user's first tab stop, pointing at the main content. */
+  skipToContent: string;
   /** Footer: one line saying what EchoSEO is, beyond this single tool. */
   footerProductLine: string;
   footerHomeAria: string;
@@ -180,10 +193,13 @@ const EN: LandingCopy = {
   },
   urlLabel: "Website URL",
   urlPlaceholder: "example.com",
+  urlInvalid: "Enter a valid domain, such as example.com.",
   challengeLabel: "Bot check",
   submitIdle: "Check my site",
   submitLoading: "Checking…",
   submitVerifying: "Starting your check…",
+  reportHeading: "Your SEO Report",
+  skipToContent: "Skip to main content",
   footerProductLine:
     "EchoSEO is an open, agent-native SEO platform. This checker is free — self-hostable, your data stays private, and reports auto-delete after 30 days.",
   footerHomeAria: "EchoSEO — Free SEO Checker",
@@ -343,10 +359,13 @@ const VI: LandingCopy = {
   },
   urlLabel: "Địa chỉ website",
   urlPlaceholder: "example.com",
+  urlInvalid: "Nhập tên miền hợp lệ, ví dụ example.com.",
   challengeLabel: "Xác minh",
   submitIdle: "Kiểm tra trang của tôi",
   submitLoading: "Đang kiểm tra…",
   submitVerifying: "Đang bắt đầu kiểm tra…",
+  reportHeading: "Báo cáo SEO của bạn",
+  skipToContent: "Bỏ qua tới nội dung chính",
   footerProductLine:
     "EchoSEO là nền tảng SEO mở, thiết kế cho AI agent. Công cụ kiểm tra này miễn phí — bạn có thể tự triển khai, dữ liệu của bạn được bảo mật và báo cáo tự động xoá sau 30 ngày.",
   footerHomeAria: "EchoSEO — Công cụ kiểm tra SEO",

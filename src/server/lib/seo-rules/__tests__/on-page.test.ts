@@ -119,9 +119,25 @@ describe("ON_PAGE_RULES", () => {
     const rule = ruleById("structure-word-count");
     it("fails under 300 words", () => {
       expect(rule.appliesWhen(makeGoodPage({ wordCount: 50 }))).toBe("fail");
+      expect(rule.appliesWhen(makeGoodPage({ wordCount: 299 }))).toBe("fail");
     });
     it("warns between 300 and 599 words", () => {
+      expect(rule.appliesWhen(makeGoodPage({ wordCount: 300 }))).toBe("warn");
       expect(rule.appliesWhen(makeGoodPage({ wordCount: 400 }))).toBe("warn");
+      expect(rule.appliesWhen(makeGoodPage({ wordCount: 599 }))).toBe("warn");
+    });
+    it("passes at 600 words and above", () => {
+      expect(rule.appliesWhen(makeGoodPage({ wordCount: 600 }))).toBe("pass");
+    });
+    it("names the pass threshold (600) in both labels, never the warn floor", () => {
+      // A label that promised "300+ words" beside a warn verdict at 560 words
+      // read as the tool contradicting itself — the label must state the
+      // recommendation the pass threshold actually implements.
+      expect(rule.label).toContain("600");
+      expect(rule.label).not.toContain("300");
+      const vi = rule.locales?.vi;
+      expect(vi?.label).toContain("600");
+      expect(vi?.label).not.toContain("300");
     });
   });
 });

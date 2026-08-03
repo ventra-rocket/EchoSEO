@@ -11,6 +11,7 @@ import type { Locale } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { STATUS_BADGE, STATUS_TEXT } from "./score-presentation";
 import { formatMeasurement } from "./format-measurement";
+import { summarizeHeadingOutline } from "./heading-outline";
 
 const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
   pass: CheckCircle2,
@@ -37,7 +38,21 @@ export function SignalRow({
   defaultOpen?: boolean;
 }) {
   const copy = CHECK_RESULT_COPY[locale].signal;
+  const outlineCopy = CHECK_RESULT_COPY[locale].headingOutline;
   const Icon = STATUS_ICON[signal.status];
+
+  // The heading-order rule's evidence is the outline as written — on a
+  // heading-heavy page that is hundreds of "H3 ›" tokens, which rendered in
+  // the row header filled multiple phone screens and buried "How to fix
+  // this". Show the reader what they need (count + where the first skip is)
+  // and keep the raw outline reachable behind its own disclosure. A
+  // measurement that fails to parse as an outline falls through to the
+  // verbatim rendering every other measurement gets.
+  const outlineSummary =
+    signal.id === "structure-heading-order" &&
+    signal.measurement?.kind === "text"
+      ? summarizeHeadingOutline(signal.measurement.value)
+      : null;
 
   return (
     // The status is on the element so a test can assert ORDER, not just
@@ -68,7 +83,19 @@ export function SignalRow({
             <code>{signal.id}</code>
             {signal.measurement ? (
               <span data-measurement className="text-base-content/80">
-                {formatMeasurement(signal.measurement, locale)}
+                {outlineSummary
+                  ? [
+                      outlineCopy.headingCount(outlineSummary.headingCount),
+                      ...(outlineSummary.firstSkip
+                        ? [
+                            outlineCopy.firstSkip(
+                              outlineSummary.firstSkip.from,
+                              outlineSummary.firstSkip.to,
+                            ),
+                          ]
+                        : []),
+                    ].join(" · ")
+                  : formatMeasurement(signal.measurement, locale)}
               </span>
             ) : null}
           </div>
@@ -77,6 +104,24 @@ export function SignalRow({
           {copy.statusBadge[signal.status]}
         </span>
       </div>
+
+      {outlineSummary && signal.measurement?.kind === "text" ? (
+        <details className="group/outline mt-2">
+          <summary className="fsc-summary flex cursor-pointer items-center gap-1 py-1 text-sm text-base-content/60">
+            <ChevronRight
+              className="size-3.5 transition-transform group-open/outline:rotate-90"
+              aria-hidden="true"
+            />
+            {outlineCopy.viewFullOutline}
+          </summary>
+          {/* Bounded and wrapping: the outline is the one measurement that can
+              run to hundreds of tokens, so it scrolls inside its own box
+              instead of stretching the card or the viewport. */}
+          <p className="mt-1 max-h-48 overflow-y-auto whitespace-normal break-words rounded-lg bg-base-200 p-2.5 font-mono text-xs leading-relaxed text-base-content/70">
+            {signal.measurement.value}
+          </p>
+        </details>
+      ) : null}
 
       {signal.status !== "pass" ? (
         <details className="group mt-2" open={defaultOpen}>

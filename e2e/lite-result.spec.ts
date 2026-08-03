@@ -45,7 +45,7 @@ test.describe("the Lite result state", () => {
     // Its fix is already open — a reader who came for one answer should not
     // have to guess which row holds it.
     await expect(
-      page.getByText("The page has very little visible text content", {
+      page.getByText("The page's visible text is thinner than", {
         exact: false,
       }),
     ).toBeVisible();
@@ -71,7 +71,13 @@ test.describe("the Lite result state", () => {
     // landing's sample advertised and the real report never delivered.
     await expect(page.getByText("12 chars").first()).toBeVisible();
     await expect(page.getByText("1 of 2")).toBeVisible();
-    // The heading outline shows the skip rather than asserting it.
+    // The heading outline is summarized in the row header — the raw chain can
+    // run to hundreds of tokens on a real page — and names the first skip.
+    await expect(
+      page.getByText("5 headings · first skip: H2 → H4"),
+    ).toBeVisible();
+    // The raw outline is never lost: it opens behind its own disclosure.
+    await page.getByText("View full outline").click();
     await expect(page.getByText("H1 › H2 › H4 › H2 › H1")).toBeVisible();
   });
 
@@ -102,6 +108,15 @@ test.describe("the Lite result state", () => {
     await expect(page.locator("dl").getByText("12 ký tự")).toBeVisible();
     // The triage counts localize too, not just the panel.
     await expect(page.getByText("1 lỗi")).toBeVisible();
+  });
+
+  test("gives the page capture intrinsic dimensions", async ({ page }) => {
+    await page.goto(FIXTURE);
+    // Width/height at the frame's 16:10 ratio, so the browser can reserve the
+    // box before the (slow, ~25s in production) capture arrives.
+    const img = page.locator("figure img");
+    await expect(img).toHaveAttribute("width", "1600");
+    await expect(img).toHaveAttribute("height", "1000");
   });
 
   test("has no horizontal overflow on a phone", async ({ page }) => {

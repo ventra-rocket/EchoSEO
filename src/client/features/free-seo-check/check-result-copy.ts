@@ -43,6 +43,11 @@ const EN: CheckResultCopy = {
     count: (value) => `${value}`,
     ratio: (value, of) => `${value} of ${of}`,
   },
+  headingOutline: {
+    headingCount: (count) => `${count} ${count === 1 ? "heading" : "headings"}`,
+    firstSkip: (from, to) => `first skip: H${from} → H${to}`,
+    viewFullOutline: "View full outline",
+  },
   triage: {
     failing: (n) => `${n} failing`,
     warnings: (n) => `${n} ${n === 1 ? "warning" : "warnings"}`,
@@ -223,6 +228,11 @@ const VI: CheckResultCopy = {
     chars: (count) => `${count} ký tự`,
     count: (value) => `${value}`,
     ratio: (value, of) => `${value}/${of}`,
+  },
+  headingOutline: {
+    headingCount: (count) => `${count} thẻ heading`,
+    firstSkip: (from, to) => `nhảy bậc đầu tiên: H${from} → H${to}`,
+    viewFullOutline: "Xem toàn bộ dàn ý heading",
   },
   triage: {
     failing: (n) => `${n} lỗi`,

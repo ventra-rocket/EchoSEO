@@ -46,6 +46,16 @@ export interface CheckResultCopy {
     ratio: (value: number, of: number) => string;
   };
   /**
+   * The heading-order row's compact readout. The raw outline can run to
+   * hundreds of tokens, so the row header shows this summary and the full
+   * outline sits behind the disclosure labelled below.
+   */
+  headingOutline: {
+    headingCount: (count: number) => string;
+    firstSkip: (from: number, to: number) => string;
+    viewFullOutline: string;
+  };
+  /**
    * The triage strip above the checks: how many of each verdict, and the row
    * that keeps passing checks reachable without letting them crowd the page.
    */

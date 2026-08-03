@@ -252,7 +252,11 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     id: "structure-word-count",
     category: "structure",
     severity: "low",
-    label: "Enough indexable content (300+ words)",
+    // The label names the PASS threshold (600), not the warn floor (300):
+    // stating "300+ words" as the promise made a 560-word page's warn verdict
+    // read as a contradiction. Framed as a recommendation because Google has
+    // no published word-count minimum — see the problem text and guideQuote.
+    label: "Visible content depth (600+ words recommended)",
     appliesWhen: (page) => {
       if (page.wordCount >= 600) return "pass";
       if (page.wordCount >= 300) return "warn";
@@ -262,7 +266,7 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     // Google has no published word-count minimum — this checks for thin
     // content as a proxy, not a documented Google threshold. See guideQuote.
     problem:
-      "The page has very little visible text content, which can read as thin content with little value to searchers.",
+      "The page's visible text is thinner than the ~600 words we recommend as a depth heuristic. Google sets no word-count minimum, but very thin pages can read as low-value to searchers.",
     fixSteps: [
       "Expand the page with substantive, original content that helps the reader accomplish their task.",
       "Don't pad word count with filler — Google evaluates content quality, not length, per its own guidance.",
@@ -274,9 +278,9 @@ export const ON_PAGE_RULES: Array<Rule<OnPageSignals>> = [
     lastReviewedDate: "2026-07-13",
     locales: {
       vi: {
-        label: "Đủ nội dung để lập chỉ mục (300+ từ)",
+        label: "Độ sâu nội dung hiển thị (khuyến nghị từ 600 từ)",
         problem:
-          "Trang có rất ít nội dung văn bản hiển thị, dễ bị xem là nội dung mỏng, ít giá trị với người tìm kiếm.",
+          "Nội dung văn bản hiển thị của trang mỏng hơn mức khoảng 600 từ mà chúng tôi khuyến nghị như một heuristic về độ sâu. Google không đặt ngưỡng số từ tối thiểu, nhưng trang quá mỏng dễ bị xem là ít giá trị với người tìm kiếm.",
         fixSteps: [
           "Bổ sung cho trang nội dung nguyên bản, có chiều sâu, giúp người đọc hoàn thành việc họ cần.",
           "Đừng độn chữ cho đủ số từ — theo chính hướng dẫn của Google, thứ được đánh giá là chất lượng nội dung, không phải độ dài.",

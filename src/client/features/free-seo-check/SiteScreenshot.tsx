@@ -114,6 +114,10 @@ export function SiteScreenshot({
           key={attempt}
           src={siteScreenshotUrl(pageUrl)}
           alt={copy.alt(host)}
+          // Intrinsic dimensions at the frame's 16:10 ratio so the browser can
+          // reserve space; the classes below still control rendered size.
+          width={1600}
+          height={1000}
           decoding="async"
           onLoad={() => setStatus("ready")}
           onError={() => setStatus("failed")}

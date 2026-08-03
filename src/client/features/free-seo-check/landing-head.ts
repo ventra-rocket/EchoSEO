@@ -68,6 +68,19 @@ export function buildLandingHead(locale: Locale) {
     meta: [
       { title: copy.metaTitle },
       { name: "description", content: copy.metaDescription },
+      // Browser chrome color per scheme, matching the page ground (bg-base-200
+      // in app.css): without it mobile browsers paint default chrome against
+      // the near-black page. Two tags with media queries is the standard form.
+      {
+        name: "theme-color",
+        media: "(prefers-color-scheme: light)",
+        content: "#eef1f5",
+      },
+      {
+        name: "theme-color",
+        media: "(prefers-color-scheme: dark)",
+        content: "#0b0f14",
+      },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "EchoSEO" },
       { property: "og:title", content: copy.metaTitle },

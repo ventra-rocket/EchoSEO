@@ -125,6 +125,7 @@ export function DeepRequestForm({
           <span className="sr-only">{copy.emailLabel}</span>
           <input
             type="email"
+            name="email"
             required
             maxLength={254}
             value={email}
@@ -132,6 +133,7 @@ export function DeepRequestForm({
             placeholder={copy.emailPlaceholder}
             className="input input-bordered w-full"
             autoComplete="email"
+            aria-describedby={errorMessage ? "fsc-deep-error" : undefined}
           />
         </label>
 
@@ -141,6 +143,7 @@ export function DeepRequestForm({
         <label className="flex cursor-pointer items-start gap-2 text-xs text-base-content/70">
           <input
             type="checkbox"
+            name="consent"
             checked={consent}
             onChange={(event) => setConsent(event.target.checked)}
             className="checkbox checkbox-sm mt-0.5"
@@ -181,7 +184,12 @@ export function DeepRequestForm({
         )}
 
         {errorMessage ? (
-          <p className="text-sm text-error">{errorMessage}</p>
+          // `role="alert"` so the failure is announced when it appears; the id
+          // ties it to the email input above, which most of these errors
+          // (disposable inbox, malformed address) are about.
+          <p id="fsc-deep-error" role="alert" className="text-sm text-error">
+            {errorMessage}
+          </p>
         ) : null}
 
         <button

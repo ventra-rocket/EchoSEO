@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Languages } from "lucide-react";
 import {
   FREE_SEO_CHECK_API_PATH,
@@ -21,8 +21,9 @@ import { LiteReportView } from "./LiteReportView";
 import { ScanLog } from "./ScanLog";
 import { LandingContent } from "./LandingContent";
 import { SampleReportPreview } from "./SampleReportPreview";
-import { LANDING_COPY } from "./landing-copy";
+import { LANDING_COPY, type LandingCopy } from "./landing-copy";
 import { useTurnstileSiteKey } from "./use-turnstile-site-key";
+import { isValidCheckUrl } from "./validate-check-url";
 
 interface CheckResponse {
   report: LiteReport;
@@ -59,6 +60,10 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
       ? FREE_SEO_CHECK_VI_LANDING_PATH
       : FREE_SEO_CHECK_LANDING_PATH;
   const [url, setUrl] = useState("");
+  /** Client-side format error under the URL field — see validate-check-url.ts. */
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+  const reportHeadingRef = useRef<HTMLHeadingElement>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "done">(
     "idle",
@@ -106,7 +111,7 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
 
     try {
       const payload: FreeSeoCheckRequest = {
-        url,
+        url: url.trim(),
         turnstileToken: token,
         locale,
       };
@@ -135,6 +140,16 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (status === "loading" || submitQueued) return;
+    // Reject unfetchable input before anything touches the challenge: the API
+    // verifies (and so consumes) the Turnstile token before it validates the
+    // URL, so submitting a typo used to burn the token on a doomed request
+    // and answer with "we couldn't reach that site".
+    if (!isValidCheckUrl(url)) {
+      setUrlError(copy.urlInvalid);
+      urlInputRef.current?.focus();
+      return;
+    }
+    setUrlError(null);
     // No token yet means the bot check has not finished, not that the visitor
     // did anything wrong. Hold the intent and run it the moment the token
     // lands, rather than dropping the click and leaving the page inert.
@@ -162,8 +177,36 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     setErrorMessage(copy.turnstileUnconfigured);
   }, [siteKey, submitQueued, copy.turnstileUnconfigured]);
 
+  // After a successful check, move the reader to the report: without this the
+  // page stayed at scroll 0 showing the same form and marketing copy, and the
+  // result sat ~2,000px down — indistinguishable from "nothing happened".
+  // Keyed on `result`, which only ever transitions null → report as the direct
+  // consequence of a user-initiated scan, so SSR, hydration, and unrelated
+  // re-renders can never steal focus.
+  useEffect(() => {
+    if (!result) return;
+    const heading = reportHeadingRef.current;
+    if (!heading) return;
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    });
+  }, [result]);
+
   return (
-    <div className="fsc-root h-full overflow-auto bg-base-200">
+    <div className="fsc-root relative h-full overflow-auto bg-base-200">
+      {/* The keyboard user's first tab stop. Visually hidden until focused;
+          every visual style lives under `focus:` so the sr-only clip rules
+          have nothing to fight. */}
+      <a
+        href="#fsc-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-content focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary"
+      >
+        {copy.skipToContent}
+      </a>
       {/* Chrome runs at 5xl — the same width the result view breaks out to —
           so the logo does not float a quarter of the way in from the edge
           under a full-width border on wide screens. Only the reading column
@@ -190,8 +233,8 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
         </div>
       </header>
 
-      <main className="fsc-hero-glow">
-        <div className="mx-auto max-w-2xl space-y-8 px-4 py-10 sm:py-14">
+      <main id="fsc-main" tabIndex={-1} className="fsc-hero-glow outline-none">
+        <div className="mx-auto max-w-2xl space-y-8 px-4 pt-10 sm:pt-14">
           <section className="space-y-3 text-center">
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-primary">
               {copy.heroEyebrow}
@@ -226,16 +269,35 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
                   {copy.urlLabel}
                 </label>
                 <input
+                  ref={urlInputRef}
                   id="fsc-url"
+                  // `text` + inputMode, not type="url": native url validation
+                  // rejects the schemeless "example.com" this checker is built
+                  // to accept. The format check is validate-check-url.ts.
                   type="text"
+                  name="url"
                   inputMode="url"
                   className="input input-bordered w-full font-mono"
                   placeholder={copy.urlPlaceholder}
                   value={url}
-                  onChange={(event) => setUrl(event.target.value)}
+                  onChange={(event) => {
+                    setUrl(event.target.value);
+                    if (urlError) setUrlError(null);
+                  }}
                   autoComplete="off"
                   required
+                  aria-invalid={urlError ? true : undefined}
+                  aria-describedby={urlError ? "fsc-url-error" : undefined}
                 />
+                {urlError ? (
+                  <p
+                    id="fsc-url-error"
+                    role="alert"
+                    className="text-sm text-error"
+                  >
+                    {urlError}
+                  </p>
+                ) : null}
               </div>
 
               {/* The challenge is framed and labelled like the URL input above
@@ -294,8 +356,10 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
               >
                 {status === "loading" || submitQueued ? (
                   <>
+                    {/* Dots, not the spinner: at this size the spinner's thin
+                        arc frame reads as a stray comma beside the label. */}
                     <span
-                      className="loading loading-spinner loading-sm"
+                      className="loading loading-dots loading-sm"
                       aria-hidden="true"
                     />
                     {status === "loading"
@@ -331,61 +395,93 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           ) : null}
 
           {status === "loading" ? <ScanLog url={url} locale={locale} /> : null}
-
-          {/* Once a real report is on screen the sample has done its job —
-              showing two look-alike reports would invite confusion. */}
-          {/* Hidden during a scan too, not just after one: the sample's large
-              illustrative score sitting under the live scan log invites a
-              skim-reader to take it for an early result. */}
-          {result || status === "loading" ? null : (
-            <SampleReportPreview copy={copy} />
-          )}
-
-          <LandingContent copy={copy} />
         </div>
 
-        {/* The result breaks out of the prose column. A findings list wants a
-            table's width and a score rail beside it; 672px can carry neither,
-            which is why the report read as a phone view on a desktop. The
-            hero, sample, and editorial stay at reading width above. */}
+        {/* The result renders directly under the form — DOM order and screen
+            order both — and breaks out of the prose column: a findings list
+            wants a table's width and a score rail beside it, which 672px
+            cannot carry. It used to render after the editorial content, some
+            2,000px down, where a successful scan was indistinguishable from
+            "nothing happened". The section is labelled by a real H2 (the page
+            H1 → report H2 → subsection H3 outline), which is also the focus
+            target after a successful scan. */}
         {status === "done" && result ? (
-          <div className="mx-auto max-w-5xl px-4 pb-14">
-            <LiteReportView
-              report={result.report}
-              deepAvailable={result.deepAvailable}
-              locale={locale}
-            />
+          <section
+            aria-labelledby="fsc-report-heading"
+            className="mx-auto max-w-5xl px-4 pb-14 pt-8"
+          >
+            <h2
+              ref={reportHeadingRef}
+              id="fsc-report-heading"
+              tabIndex={-1}
+              className="scroll-mt-6 text-xl font-semibold tracking-tight outline-none sm:text-2xl"
+            >
+              {copy.reportHeading}
+            </h2>
+            <div className="mt-4">
+              <LiteReportView
+                report={result.report}
+                deepAvailable={result.deepAvailable}
+                locale={locale}
+              />
+            </div>
+          </section>
+        ) : (
+          /* The sample and editorial content carry the initial landing (and
+             its SSR/SEO weight), but once a real report exists they would sit
+             between the reader and their result — a look-alike sample report
+             is actively confusing next to a real one — so the whole block
+             yields to the report. It returns when the state resets. */
+          <div className="mx-auto max-w-2xl space-y-8 px-4 pb-10 pt-8 sm:pb-14">
+            {/* Hidden during a scan too, not just after one: the sample's
+                large illustrative score sitting under the live scan log
+                invites a skim-reader to take it for an early result. */}
+            {status === "loading" ? null : <SampleReportPreview copy={copy} />}
+
+            <LandingContent copy={copy} />
           </div>
-        ) : null}
+        )}
       </main>
 
-      {/* The page had exactly one link on it — the language switch. No footer,
-          no legal links, and no statement of what EchoSEO is beyond this single
-          tool. A visitor who liked the checker had nowhere to go, which is an
-          expensive thing for the surface the whole distribution strategy points
-          at. No repository link yet: the repo is private, and a link that 404s
-          would cost more credibility than the missing link does. */}
-      <footer className="border-t border-base-300 bg-base-100">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-base-content/60 sm:flex-row sm:items-center sm:justify-between">
-          <p className="leading-relaxed sm:max-w-xl">
-            {copy.footerProductLine}
-          </p>
-          <p className="flex shrink-0 flex-wrap gap-x-4 gap-y-1">
-            <a
-              href={LEGAL_TERMS_PATH_BY_LOCALE[locale]}
-              className="underline underline-offset-2 hover:text-base-content"
-            >
-              {LEGAL_CHROME_COPY[locale].termsLinkLabel}
-            </a>
-            <a
-              href={LEGAL_PRIVACY_PATH_BY_LOCALE[locale]}
-              className="underline underline-offset-2 hover:text-base-content"
-            >
-              {LEGAL_CHROME_COPY[locale].privacyLinkLabel}
-            </a>
-          </p>
-        </div>
-      </footer>
+      <LandingFooter locale={locale} copy={copy} />
     </div>
+  );
+}
+
+/**
+ * The page had exactly one link on it — the language switch. No footer, no
+ * legal links, and no statement of what EchoSEO is beyond this single tool. A
+ * visitor who liked the checker had nowhere to go, which is an expensive thing
+ * for the surface the whole distribution strategy points at. No repository
+ * link yet: the repo is private, and a link that 404s would cost more
+ * credibility than the missing link does.
+ */
+function LandingFooter({
+  locale,
+  copy,
+}: {
+  locale: Locale;
+  copy: LandingCopy;
+}) {
+  return (
+    <footer className="border-t border-base-300 bg-base-100">
+      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-base-content/60 sm:flex-row sm:items-center sm:justify-between">
+        <p className="leading-relaxed sm:max-w-xl">{copy.footerProductLine}</p>
+        <p className="flex shrink-0 flex-wrap gap-x-4 gap-y-1">
+          <a
+            href={LEGAL_TERMS_PATH_BY_LOCALE[locale]}
+            className="underline underline-offset-2 hover:text-base-content"
+          >
+            {LEGAL_CHROME_COPY[locale].termsLinkLabel}
+          </a>
+          <a
+            href={LEGAL_PRIVACY_PATH_BY_LOCALE[locale]}
+            className="underline underline-offset-2 hover:text-base-content"
+          >
+            {LEGAL_CHROME_COPY[locale].privacyLinkLabel}
+          </a>
+        </p>
+      </div>
+    </footer>
   );
 }

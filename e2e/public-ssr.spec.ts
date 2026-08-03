@@ -62,6 +62,20 @@ test.describe("public routes server-render their body", () => {
     expect(vi).toContain('href="/vi/quyen-rieng-tu"');
   });
 
+  test("the landing ships its form semantics and chrome hints in the initial HTML", async ({
+    request,
+  }) => {
+    const html = await (await request.get("/free-seo-check")).text();
+    // The URL field is a named control, not an anonymous input.
+    expect(html).toContain('name="url"');
+    // The keyboard user's first tab stop, and the landmark it points at.
+    expect(html).toContain('href="#fsc-main"');
+    expect(html).toContain('id="fsc-main"');
+    // Browser chrome color hints for both schemes.
+    expect(html).toContain('name="theme-color"');
+    expect(html).toContain('content="#0b0f14"');
+  });
+
   test("the double-opt-in confirm page ships its body in the initial HTML", async ({
     request,
   }) => {
