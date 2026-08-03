@@ -60,12 +60,19 @@ export function Filmstrip({
     overflow.end ? "transparent" : "#000"
   } 100%)`;
 
+  // Keyboard reachability: an overflowing scroll container must be a tab stop
+  // so keyboard-only users can focus it and arrow-scroll to the faded frames
+  // (Safari/Firefox do not auto-focus scrollers). A row that fully fits is not
+  // scrollable, so it stays out of the tab order rather than adding a dead stop.
+  const scrollable = overflow.start || overflow.end;
+
   return (
     <div className="rounded-box border border-base-300 bg-base-100 p-2">
       <ul
         ref={scrollRef}
         aria-label={copy.ariaLabel}
-        className="flex gap-2 overflow-x-auto"
+        tabIndex={scrollable ? 0 : -1}
+        className="flex gap-2 overflow-x-auto rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         style={{ maskImage: mask, WebkitMaskImage: mask }}
       >
         {frames.map((frame, index) => {
