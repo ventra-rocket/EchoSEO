@@ -81,11 +81,19 @@ const EN: CheckResultCopy = {
     otherPagesHeading: (count) => `Other pages crawled (${count})`,
     noIssues: "no issues",
     issuesToFix: (count) => `${count} to fix`,
+    categoriesGroupLabel: "Category scores",
+  },
+  reportBand: {
+    scanned: (date) => `Scanned ${date}`,
+    pagesCrawled: (count) =>
+      `${count} ${count === 1 ? "page" : "pages"} crawled`,
   },
   screenshot: {
     label: "What we loaded",
     alt: (host) => `Screenshot of ${host} as our checker rendered it`,
     unavailable: "Preview unavailable",
+    loadingHint: "Rendering a live capture — this can take up to 30 seconds.",
+    retry: "Retry",
   },
   geoSection: {
     heading: "AI Search readiness",
@@ -181,7 +189,13 @@ const EN: CheckResultCopy = {
       "EchoSEO is an open, agent-native SEO platform — self-host it free " +
       "with your own keys, or let the agent layer apply the fixes and prove " +
       "the result against your own Search Console data.",
+    ctaPrimary: "See what EchoSEO can do",
     ctaLink: "Check another page",
+    headerCta: "Check your site",
+    footerLine:
+      "EchoSEO is an open, agent-native SEO platform. This checker is free — " +
+      "self-hostable, your data stays private, and reports auto-delete " +
+      "after 30 days.",
   },
 };
 
@@ -250,12 +264,19 @@ const VI: CheckResultCopy = {
     otherPagesHeading: (count) => `Các trang khác đã quét (${count})`,
     noIssues: "không lỗi",
     issuesToFix: (count) => `${count} cần sửa`,
+    categoriesGroupLabel: "Điểm theo nhóm",
+  },
+  reportBand: {
+    scanned: (date) => `Quét ngày ${date}`,
+    pagesCrawled: (count) => `${count} trang đã quét`,
   },
   screenshot: {
     label: "Trang chúng tôi đã tải",
     alt: (host) =>
       `Ảnh chụp màn hình ${host} khi trình kiểm tra của chúng tôi tải trang`,
     unavailable: "Không có ảnh xem trước",
+    loadingHint: "Đang dựng ảnh chụp trực tiếp — có thể mất tới 30 giây.",
+    retry: "Thử lại",
   },
   geoSection: {
     heading: "Mức sẵn sàng cho AI Search",
@@ -348,7 +369,13 @@ const VI: CheckResultCopy = {
       "EchoSEO là nền tảng SEO mở, agent-native — tự host miễn phí với khoá " +
       "API của riêng bạn, hoặc để lớp agent tự áp dụng các sửa đổi và chứng " +
       "minh kết quả ngay trên dữ liệu Search Console của bạn.",
+    ctaPrimary: "Xem EchoSEO có thể làm gì",
     ctaLink: "Kiểm tra trang khác",
+    headerCta: "Kiểm tra website của bạn",
+    footerLine:
+      "EchoSEO là nền tảng SEO mở, thiết kế cho AI agent. Công cụ kiểm tra " +
+      "này miễn phí — bạn có thể tự triển khai, dữ liệu của bạn được bảo " +
+      "mật và báo cáo tự động xoá sau 30 ngày.",
   },
 };
 

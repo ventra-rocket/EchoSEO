@@ -1,10 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import type { ReportView } from "@/server/services/seo-check/report-view";
-import { FREE_SEO_CHECK_REPORT_PATH } from "@/shared/free-seo-check";
+import {
+  FREE_SEO_CHECK_LANDING_PATH,
+  FREE_SEO_CHECK_REPORT_PATH,
+  FREE_SEO_CHECK_VI_LANDING_PATH,
+} from "@/shared/free-seo-check";
+import {
+  LEGAL_PRIVACY_PATH_BY_LOCALE,
+  LEGAL_TERMS_PATH_BY_LOCALE,
+} from "@/shared/legal";
+// One source for the legal link labels and the home aria, shared with the
+// landing and the legal pages so this chrome cannot drift from theirs.
+import { LEGAL_CHROME_COPY } from "@/client/features/legal/legal-chrome-copy";
 import type { Locale } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "@/client/features/free-seo-check/check-result-copy";
 import { DeepReportView } from "@/client/features/free-seo-check/DeepReportView";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 
 // A report link is a bearer capability — anyone holding it can read the report.
 // The response also carries `Referrer-Policy: no-referrer` + `X-Robots-Tag:
@@ -46,6 +58,11 @@ function SharedReportPage() {
   // default.
   const locale: Locale = state.kind === "view" ? state.view.locale : "en";
   const copy = CHECK_RESULT_COPY[locale].reportPage;
+  const chrome = LEGAL_CHROME_COPY[locale];
+  const landingPath =
+    locale === "vi"
+      ? FREE_SEO_CHECK_VI_LANDING_PATH
+      : FREE_SEO_CHECK_LANDING_PATH;
 
   const load = useCallback(async (): Promise<ReportView | null> => {
     try {
@@ -94,18 +111,70 @@ function SharedReportPage() {
     };
   }, [load]);
 
+  // The same shell as the landing: `html`/`body` are pinned (overflow: hidden
+  // in app.css), so this wrapper is the page's actual scroll container. It also
+  // hangs the brand chrome a forwarded link previously arrived without — the
+  // first mark of who made this report used to be the CTA at maximum scroll
+  // depth.
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12">
-      <ReportBody state={state} locale={locale} />
+    <div className="fsc-root h-full overflow-auto bg-base-200">
+      <div className="flex min-h-full flex-col">
+        <header className="border-b border-base-300 bg-base-100">
+          <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
+            <a href={landingPath} aria-label={chrome.homeAria}>
+              <EchoSeoLogo variant="lockup" className="text-base" />
+            </a>
+            <a
+              href={landingPath}
+              className="btn btn-ghost btn-sm gap-1.5 font-mono text-xs font-normal"
+            >
+              {copy.headerCta}
+            </a>
+          </div>
+        </header>
 
-      <div className="mt-10 rounded-box border border-primary/30 bg-primary/5 p-5 text-center">
-        <p className="font-medium">{copy.ctaHeading}</p>
-        <p className="mt-1 text-sm text-base-content/70">{copy.ctaBody}</p>
-        <Link to="/free-seo-check" className="btn btn-primary btn-sm mt-4">
-          {copy.ctaLink}
-        </Link>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-10">
+          <ReportBody state={state} locale={locale} />
+
+          <div className="mt-10 rounded-box border border-primary/30 bg-primary/5 p-6 text-center">
+            <p className="text-lg font-semibold">{copy.ctaHeading}</p>
+            <p className="mx-auto mt-1 max-w-xl text-sm text-base-content/70">
+              {copy.ctaBody}
+            </p>
+            {/* Two intents, honestly separated: the primary cashes the
+                heading's promise (the product), the ghost repeats the tool. */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <a href={landingPath} className="btn btn-primary btn-sm">
+                {copy.ctaPrimary}
+              </a>
+              <a href={landingPath} className="btn btn-ghost btn-sm">
+                {copy.ctaLink}
+              </a>
+            </div>
+          </div>
+        </main>
+
+        <footer className="border-t border-base-300 bg-base-100">
+          <div className="mx-auto w-full max-w-5xl space-y-3 px-4 py-8 text-sm text-base-content/60">
+            <p className="leading-relaxed">{copy.footerLine}</p>
+            <p className="flex flex-wrap gap-x-4 gap-y-1">
+              <a
+                href={LEGAL_TERMS_PATH_BY_LOCALE[locale]}
+                className="underline underline-offset-2 hover:text-base-content"
+              >
+                {chrome.termsLinkLabel}
+              </a>
+              <a
+                href={LEGAL_PRIVACY_PATH_BY_LOCALE[locale]}
+                className="underline underline-offset-2 hover:text-base-content"
+              >
+                {chrome.privacyLinkLabel}
+              </a>
+            </p>
+          </div>
+        </footer>
       </div>
-    </main>
+    </div>
   );
 }
 

@@ -87,6 +87,14 @@ export interface CheckResultCopy {
     otherPagesHeading: (count: number) => string;
     noIssues: string;
     issuesToFix: (count: number) => string;
+    /** Group label over the per-category scores in the merged score panel. */
+    categoriesGroupLabel: string;
+  };
+  /** The horizontal score band across the top of the Deep report. */
+  reportBand: {
+    /** The caller passes an already-localized date string. */
+    scanned: (date: string) => string;
+    pagesCrawled: (count: number) => string;
   };
   /** The desktop page capture, shown on both the Lite result and Deep report. */
   screenshot: {
@@ -94,6 +102,10 @@ export interface CheckResultCopy {
     alt: (host: string) => string;
     /** Shown in the frame when a capture could not be produced. */
     unavailable: string;
+    /** Sets expectation while the live capture renders (it can take ~30s). */
+    loadingHint: string;
+    /** The failed state's one action. */
+    retry: string;
   };
   /** The GEO / AI-search section — scored separately, framed as directional. */
   geoSection: {
@@ -155,6 +167,12 @@ export interface CheckResultCopy {
     dedupedNotice: string;
     ctaHeading: string;
     ctaBody: string;
+    /** Cashes the ctaHeading's cheque — points at the product, not the tool. */
+    ctaPrimary: string;
     ctaLink: string;
+    /** Header action for whoever received this link — run their own check. */
+    headerCta: string;
+    /** Footer line naming what EchoSEO is (mirrors the landing's footer). */
+    footerLine: string;
   };
 }

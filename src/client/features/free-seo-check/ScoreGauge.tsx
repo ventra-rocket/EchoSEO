@@ -70,8 +70,11 @@ export function ScoreGauge({
         </span>
       </div>
 
+      {/* Anchored ON the ring: bottom-center, its own surface color masking the
+          stroke behind it, so it reads as a clasp on the gauge rather than a
+          stray element floating in the card's corner. */}
       <span
-        className={`absolute right-1 top-2 rounded-full border border-current px-1.5 font-mono text-xs font-bold ${BAND_TEXT[band]}`}
+        className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full border border-current bg-base-100 px-2 font-mono text-xs font-bold ${BAND_TEXT[band]}`}
         aria-label={copy.gradeAria(grade)}
       >
         {grade}

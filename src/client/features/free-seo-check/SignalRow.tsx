@@ -52,7 +52,12 @@ export function SignalRow({
           aria-hidden="true"
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium" title={signal.label}>
+          {/* Two lines before clipping: the NAME of the finding is the one
+              thing that must survive a 390px viewport. */}
+          <div
+            className="line-clamp-2 text-sm font-medium"
+            title={signal.label}
+          >
             {signal.label}
           </div>
           {/* The measured value sits beside the machine id, which is what
