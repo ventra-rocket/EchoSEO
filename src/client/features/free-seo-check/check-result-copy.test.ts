@@ -93,3 +93,24 @@ describe("strategy-tab copy exists in every locale", () => {
     );
   });
 });
+
+// --- appended: visual filmstrip (keep this block last) ---
+
+describe("filmstrip copy exists in every locale", () => {
+  it("carries an accessible strip label, per-frame alt, and a timing caption", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale].filmstrip;
+      expect(copy.ariaLabel.trim()).not.toBe("");
+      const timing = copy.timing(375);
+      // 375ms must surface the value in seconds, whatever the locale's
+      // decimal separator — a caption without the number says nothing.
+      expect(timing).toMatch(/0[.,]4/);
+      expect(copy.frameAlt(timing)).toContain(timing);
+    }
+  });
+
+  it("formats the Vietnamese decimal with a comma", () => {
+    expect(CHECK_RESULT_COPY.vi.filmstrip.timing(1250)).toContain("1,3");
+    expect(CHECK_RESULT_COPY.en.filmstrip.timing(1250)).toContain("1.3");
+  });
+});

@@ -210,4 +210,11 @@ export const CHECK_RESULT_COPY_VI: CheckResultCopy = {
       "sẽ có số liệu này.",
     noStrategyData: "Chưa có số liệu lab cho loại thiết bị này.",
   },
+  /* ——— visual filmstrip block — appended; keep at the end. ——— */
+  filmstrip: {
+    ariaLabel: "Tiến trình tải trang",
+    frameAlt: (timing) => `Khung hình tải trang tại ${timing}`,
+    // Vietnamese decimal separator is a comma; the unit stays the SI "s".
+    timing: (ms) => `${(ms / 1000).toFixed(1).replace(".", ",")} s`,
+  },
 };

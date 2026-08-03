@@ -181,11 +181,14 @@ function CheckBody({ state, locale }: { state: PageState; locale: Locale }) {
       </p>
       {/* The exact component the landing renders inline — it neither knows nor
           cares whether the report came from the POST response or a snapshot.
-          Includes the Deep form/pitch, driven by the per-read availability. */}
+          Includes the Deep form/pitch, driven by the per-read availability.
+          Except: no eager dual capture mount here — every share-view would
+          spend render-ceiling slots on a check its reader didn't run. */}
       <LiteReportView
         report={view.report}
         deepAvailable={view.deepAvailable}
         locale={locale}
+        warmInactiveStrategy={false}
       />
     </div>
   );

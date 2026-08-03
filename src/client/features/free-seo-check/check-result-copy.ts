@@ -224,6 +224,12 @@ const EN: CheckResultCopy = {
       "include them.",
     noStrategyData: "No lab data was captured for this device type.",
   },
+  /* ——— visual filmstrip block — appended; keep at the end. ——— */
+  filmstrip: {
+    ariaLabel: "Loading timeline",
+    frameAlt: (timing) => `Loading frame at ${timing}`,
+    timing: (ms) => `${(ms / 1000).toFixed(1)} s`,
+  },
 };
 
 export const CHECK_RESULT_COPY: Record<Locale, CheckResultCopy> = {

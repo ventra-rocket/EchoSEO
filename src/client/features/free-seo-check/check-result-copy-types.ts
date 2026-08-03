@@ -221,4 +221,19 @@ export interface CheckResultCopy {
     /** Shown inside a tab whose PSI run carried no usable lab data. */
     noStrategyData: string;
   };
+
+  /* ——— visual filmstrip block — appended; keep at the end. ——— */
+  /**
+   * The PSI-style loading filmstrip under the capture: progressive render
+   * frames with timing captions. The Di động/Máy tính tabs over the visual
+   * panel reuse the `strategyTabs` labels above.
+   */
+  filmstrip: {
+    /** aria-label on the frame strip. */
+    ariaLabel: string;
+    /** alt per frame; receives the already-formatted timing caption. */
+    frameAlt: (timing: string) => string;
+    /** Milliseconds → the visible caption under a frame (e.g. "0.4 s"). */
+    timing: (ms: number) => string;
+  };
 }
