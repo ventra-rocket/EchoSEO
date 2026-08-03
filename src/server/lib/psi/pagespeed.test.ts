@@ -4,6 +4,7 @@ import {
   extractScreenshot,
   fetchPageSpeed,
   PsiRequestError,
+  shapePsiLabResult,
   shapePsiResult,
 } from "./pagespeed";
 
@@ -93,6 +94,71 @@ describe("shapePsiResult", () => {
 
   it("throws on a non-object payload", () => {
     expect(() => shapePsiResult("nope")).toThrow();
+  });
+});
+
+describe("shapePsiLabResult", () => {
+  // The load-bearing honesty rule of the free bundle: it is labelled "lab",
+  // so field data must never win even when CrUX has a full set.
+  it("returns the LAB numbers even when field data is present", () => {
+    const result = shapePsiLabResult({
+      loadingExperience: {
+        metrics: {
+          LARGEST_CONTENTFUL_PAINT_MS: { percentile: 2100 },
+          CUMULATIVE_LAYOUT_SHIFT_SCORE: { percentile: 12 },
+          INTERACTION_TO_NEXT_PAINT: { percentile: 180 },
+          EXPERIMENTAL_TIME_TO_FIRST_BYTE: { percentile: 600 },
+        },
+      },
+      lighthouseResult: {
+        categories: { performance: { score: 0.92 }, seo: { score: 1 } },
+        audits: {
+          "largest-contentful-paint": { numericValue: 3200 },
+          "cumulative-layout-shift": { numericValue: 0.05 },
+          "total-blocking-time": { numericValue: 340 },
+          "server-response-time": { numericValue: 700 },
+        },
+      },
+    });
+
+    expect(result.coreWebVitals).toEqual({
+      lcpMs: 3200,
+      cls: 0.05,
+      inpMs: 340,
+      ttfbMs: 700,
+    });
+    expect(result.scores).toEqual({
+      performance: 92,
+      seo: 100,
+      accessibility: null,
+      bestPractices: null,
+    });
+  });
+
+  it("returns scores with null CWV when the lab set is incomplete, even with full field data", () => {
+    const result = shapePsiLabResult({
+      loadingExperience: {
+        metrics: {
+          LARGEST_CONTENTFUL_PAINT_MS: { percentile: 2100 },
+          CUMULATIVE_LAYOUT_SHIFT_SCORE: { percentile: 12 },
+          INTERACTION_TO_NEXT_PAINT: { percentile: 180 },
+          EXPERIMENTAL_TIME_TO_FIRST_BYTE: { percentile: 600 },
+        },
+      },
+      lighthouseResult: {
+        categories: { performance: { score: 0.5 } },
+        audits: { "largest-contentful-paint": { numericValue: 3200 } },
+      },
+    });
+
+    // Falling back to the field set here would smuggle CrUX numbers under the
+    // "lab" label — absence is the honest answer.
+    expect(result.coreWebVitals).toBeNull();
+    expect(result.scores.performance).toBe(50);
+  });
+
+  it("throws on a non-object payload", () => {
+    expect(() => shapePsiLabResult("nope")).toThrow();
   });
 });
 

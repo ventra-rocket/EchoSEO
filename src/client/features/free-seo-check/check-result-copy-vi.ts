@@ -107,10 +107,12 @@ export const CHECK_RESULT_COPY_VI: CheckResultCopy = {
   },
   deepPitch: {
     unlockTitle: "Mở khoá báo cáo chuyên sâu",
-    unlockBody: (metricCount) =>
-      `Bổ sung ${metricCount} chỉ số Core Web Vitals từ người dùng Chrome ` +
-      "thực, điểm Google Lighthouse, và lượt quét các trang khác của bạn — " +
-      "miễn phí.",
+    // Re-anchored cùng lúc với panel lab miễn phí — xem ghi chú ở bản EN.
+    unlockBody: () =>
+      "Quét thêm các trang khác của bạn và liệt kê lỗi cụ thể trên từng " +
+      "trang, chấm mức sẵn sàng cho AI Search, và đo Core Web Vitals cho " +
+      "đúng URL bạn kiểm tra — kèm dữ liệu người dùng Chrome thực khi Google " +
+      "có — miễn phí.",
     pausedNotice:
       "Báo cáo chuyên sâu đang tạm dừng trong lúc chúng tôi hoàn thiện khâu " +
       "gửi báo cáo — vui lòng quay lại sau.",
@@ -216,5 +218,18 @@ export const CHECK_RESULT_COPY_VI: CheckResultCopy = {
     frameAlt: (timing) => `Khung hình tải trang tại ${timing}`,
     // Vietnamese decimal separator is a comma; the unit stays the SI "s".
     timing: (ms) => `${(ms / 1000).toFixed(1).replace(".", ",")} s`,
+  },
+  /* ——— free lab panel block — appended; keep at the end. ——— */
+  labPanel: {
+    ariaLabel: "Điểm Lighthouse và Core Web Vitals đo lab",
+    // "lab" giữ nguyên — thuật ngữ Lighthouse/PSI quen thuộc, khớp bản EN.
+    caption: "trang chủ · lab",
+    tbtNote:
+      "TBT thay cho INP — bản đo lab không ghi nhận được tương tác của " +
+      "người dùng thực.",
+    sourceLine:
+      "Kết quả đo lab Lighthouse trên trang chủ — không phải dữ liệu thực " +
+      "tế từ người dùng.",
+    capturedAt: (date) => `Đo ngày ${date}`,
   },
 };

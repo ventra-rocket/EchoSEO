@@ -118,9 +118,15 @@ const EN: CheckResultCopy = {
   },
   deepPitch: {
     unlockTitle: "Unlock the Deep report",
-    unlockBody: (metricCount) =>
-      `Adds ${metricCount} Core Web Vitals metrics from real Chrome users, ` +
-      "Google Lighthouse scores, and a crawl of your other pages — free.",
+    // Re-anchored when the free panel started showing Lighthouse scores + lab
+    // CWV: Deep now sells what the free tier does NOT have — the crawl, the
+    // per-page issues, AI-search readiness, and field data for the exact URL
+    // (the free panel is a homepage lab run). The metricCount arg stays in the
+    // type for frozen snapshots; the new pitch simply doesn't need it.
+    unlockBody: () =>
+      "Crawls more of your pages and lists the concrete issues on each, " +
+      "scores AI-search readiness, and measures Core Web Vitals on your " +
+      "exact URL — with real Chrome user data where Google has it — free.",
     pausedNotice:
       "Deep reports are paused while we finish setting up delivery — check " +
       "back soon.",
@@ -229,6 +235,17 @@ const EN: CheckResultCopy = {
     ariaLabel: "Loading timeline",
     frameAlt: (timing) => `Loading frame at ${timing}`,
     timing: (ms) => `${(ms / 1000).toFixed(1)} s`,
+  },
+  /* ——— free lab panel block — appended; keep at the end. ——— */
+  labPanel: {
+    ariaLabel: "Lighthouse scores and lab Core Web Vitals",
+    caption: "homepage · lab",
+    tbtNote:
+      "TBT stands in for INP — a lab run can't measure real-user interaction.",
+    sourceLine:
+      "Lighthouse lab run of the site's homepage — not field data from real " +
+      "visitors.",
+    capturedAt: (date) => `Captured ${date}`,
   },
 };
 

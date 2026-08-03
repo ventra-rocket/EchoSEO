@@ -114,3 +114,70 @@ describe("filmstrip copy exists in every locale", () => {
     expect(CHECK_RESULT_COPY.en.filmstrip.timing(1250)).toContain("1.3");
   });
 });
+
+// --- appended: free lab panel + Deep-pitch re-anchor (keep this block last) ---
+
+describe("free lab-panel copy", () => {
+  it("carries non-empty strings in every locale", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale].labPanel;
+      for (const value of [
+        copy.ariaLabel,
+        copy.caption,
+        copy.tbtNote,
+        copy.sourceLine,
+        copy.capturedAt("Aug 3, 2026"),
+      ]) {
+        expect(value.trim(), locale).not.toBe("");
+      }
+    }
+  });
+
+  it('pins the honesty caption to "homepage · lab" per locale', () => {
+    // The render targets the origin root, so the panel's data describes the
+    // homepage in a lab run even when the checked URL was a subpage — the
+    // caption is the one line making that true on screen.
+    expect(CHECK_RESULT_COPY.en.labPanel.caption).toBe("homepage · lab");
+    expect(CHECK_RESULT_COPY.vi.labPanel.caption).toBe("trang chủ · lab");
+  });
+
+  it("never reuses the Deep report's CrUX field-data line", () => {
+    // The free panel is lab-only by construction; borrowing the "Real Chrome
+    // user data (CrUX)" string would put field language on lab numbers AND
+    // erase the exact-URL field data the Deep pitch now sells.
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale];
+      expect(copy.labPanel.sourceLine).not.toBe(copy.coreWebVitals.sourceField);
+      expect(copy.labPanel.sourceLine).not.toContain("CrUX");
+    }
+  });
+
+  it("presents the inpMs slot as TBT, with the proxy explained", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const note = CHECK_RESULT_COPY[locale].labPanel.tbtNote;
+      expect(note).toContain("TBT");
+      expect(note).toContain("INP");
+    }
+  });
+});
+
+describe("the Deep pitch after the free lab panel", () => {
+  it("no longer sells Lighthouse scores as Deep's headline", () => {
+    // Founder decision: the free tier now shows Lighthouse + lab CWV, so the
+    // pitch must anchor on what stays Deep-only — crawl, per-page issues,
+    // AI-search readiness, exact-URL field data.
+    for (const locale of SUPPORTED_LOCALES) {
+      const body = CHECK_RESULT_COPY[locale].deepPitch.unlockBody(4);
+      expect(body).not.toContain("Lighthouse");
+    }
+  });
+
+  it("anchors on the crawl and real-user (field) data in both locales", () => {
+    const en = CHECK_RESULT_COPY.en.deepPitch.unlockBody(4);
+    expect(en).toContain("Crawls");
+    expect(en).toContain("real Chrome user data");
+    const vi = CHECK_RESULT_COPY.vi.deepPitch.unlockBody(4);
+    expect(vi).toContain("Quét");
+    expect(vi).toContain("người dùng Chrome thực");
+  });
+});

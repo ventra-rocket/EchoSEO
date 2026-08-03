@@ -129,11 +129,15 @@ export function LiteReportView({
 
         {/* Demoted out of slot #2. It loads from a live capture service and
             spends ten to thirty seconds as an empty frame; sitting directly
-            under the score, it pushed every finding below the fold. */}
+            under the score, it pushed every finding below the fold. The lab
+            panel (free Lighthouse scores + lab CWV) rides under each tab —
+            founder decision; the Deep pitch below sells the crawl/field data
+            instead. */}
         <SiteScreenshot
           pageUrl={report.finalUrl}
           locale={locale}
           warmInactiveStrategy={warmInactiveStrategy}
+          showLabPanel
         />
 
         {deepAvailable ? (

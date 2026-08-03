@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { Locale } from "@/client/i18n/config";
 import {
   siteScreenshotUrl,
@@ -6,6 +6,8 @@ import {
 } from "@/shared/free-seo-check";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
 import { Filmstrip } from "./Filmstrip";
+import { LabPanel } from "./LabPanel";
+import { useVisualBundle } from "./use-visual-bundle";
 
 /** Mobile listed first to match the tab copy ("Di động / Máy tính"); desktop
  * is still the DEFAULT tab below. */
@@ -14,9 +16,10 @@ const STRATEGIES: readonly SiteCaptureStrategy[] = ["mobile", "desktop"];
 /**
  * The visual evidence for the checked page — the "we really loaded your site"
  * trust signal on the Lite result, the `/c/` share page, and the Deep report —
- * now a Di động/Máy tính tabbed panel: a per-strategy capture (browser-window
+ * a Di động/Máy tính tabbed panel: a per-strategy capture (browser-window
  * frame on desktop, phone frame on mobile) with the PSI-style loading
- * filmstrip underneath.
+ * filmstrip underneath, and (on the free tiers) the lab panel of Lighthouse
+ * scores + lab CWV from the same render's bundle.
  *
  * The capture comes from a live PSI render measured at ~25s on a cold domain,
  * so each tab paints a skeleton that says what is coming, and a capture that
@@ -29,6 +32,7 @@ export function SiteScreenshot({
   pageUrl,
   locale,
   warmInactiveStrategy = false,
+  showLabPanel = false,
 }: {
   pageUrl: string;
   locale: Locale;
@@ -40,6 +44,14 @@ export function SiteScreenshot({
    * two render-ceiling slots per visit.
    */
   warmInactiveStrategy?: boolean;
+  /**
+   * True renders the free lab panel (Lighthouse scores + lab CWV) under each
+   * strategy's capture. Default false: the Deep report renders this component
+   * too, and its own StrategyLabPanel already carries the exact-URL,
+   * field-preferring numbers — a second, homepage-lab panel there would state
+   * the same categories twice with different values.
+   */
+  showLabPanel?: boolean;
 }) {
   const tabs = CHECK_RESULT_COPY[locale].strategyTabs;
   // Desktop by default, deterministically: this component server-renders on
@@ -50,6 +62,40 @@ export function SiteScreenshot({
   const [mounted, setMounted] = useState<Record<SiteCaptureStrategy, boolean>>(
     () => ({ desktop: true, mobile: warmInactiveStrategy }),
   );
+  const idBase = useId();
+  const tabRefs = useRef<
+    Partial<Record<SiteCaptureStrategy, HTMLButtonElement | null>>
+  >({});
+
+  const tabId = (key: SiteCaptureStrategy) => `${idBase}-tab-${key}`;
+  const panelId = (key: SiteCaptureStrategy) => `${idBase}-panel-${key}`;
+
+  const selectTab = (key: SiteCaptureStrategy) => {
+    setActive(key);
+    // Once mounted, a strategy stays mounted: unmounting on switch would drop
+    // the bundle state and re-fetch it on every toggle.
+    setMounted((current) =>
+      current[key] ? current : { ...current, [key]: true },
+    );
+  };
+
+  // Roving tabindex per the APG tabs pattern: arrows move focus AND selection
+  // (selection follows focus — two tabs, cheap panels, no async cost beyond
+  // what mounting already pays).
+  const onTablistKeyDown = (event: React.KeyboardEvent) => {
+    const index = STRATEGIES.indexOf(active);
+    let next: number | null = null;
+    if (event.key === "ArrowRight") next = (index + 1) % STRATEGIES.length;
+    else if (event.key === "ArrowLeft")
+      next = (index - 1 + STRATEGIES.length) % STRATEGIES.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = STRATEGIES.length - 1;
+    if (next === null) return;
+    event.preventDefault();
+    const key = STRATEGIES[next];
+    selectTab(key);
+    tabRefs.current[key]?.focus();
+  };
 
   return (
     <div className="space-y-3">
@@ -57,23 +103,22 @@ export function SiteScreenshot({
         role="tablist"
         aria-label={tabs.ariaLabel}
         className="tabs tabs-box w-fit"
+        onKeyDown={onTablistKeyDown}
       >
         {STRATEGIES.map((key) => (
           <button
             key={key}
+            ref={(element) => {
+              tabRefs.current[key] = element;
+            }}
             type="button"
             role="tab"
+            id={tabId(key)}
             aria-selected={active === key}
+            aria-controls={panelId(key)}
+            tabIndex={active === key ? 0 : -1}
             className={`tab ${active === key ? "tab-active" : ""}`}
-            onClick={() => {
-              setActive(key);
-              // Once mounted, a strategy stays mounted: unmounting on switch
-              // would drop the filmstrip state and re-fetch its bundle on
-              // every toggle.
-              setMounted((current) =>
-                current[key] ? current : { ...current, [key]: true },
-              );
-            }}
+            onClick={() => selectTab(key)}
           >
             {key === "mobile" ? tabs.mobileTab : tabs.desktopTab}
           </button>
@@ -84,8 +129,20 @@ export function SiteScreenshot({
         mounted[key] ? (
           // `hidden`, not unmount: an unmounted <img> never loads, and the
           // warm-inactive case exists precisely to load the hidden tab.
-          <div key={key} hidden={active !== key}>
-            <StrategyCapture pageUrl={pageUrl} strategy={key} locale={locale} />
+          <div
+            key={key}
+            role="tabpanel"
+            id={panelId(key)}
+            aria-labelledby={tabId(key)}
+            tabIndex={0}
+            hidden={active !== key}
+          >
+            <StrategyCapture
+              pageUrl={pageUrl}
+              strategy={key}
+              locale={locale}
+              showLabPanel={showLabPanel}
+            />
           </div>
         ) : null,
       )}
@@ -95,19 +152,22 @@ export function SiteScreenshot({
 
 /**
  * One strategy's capture with its frame chrome, loading skeleton, failure
- * row, and — once the capture has actually decoded — its filmstrip. The
- * filmstrip mounts only on the capture's `onLoad` because the render stores
- * the filmstrip BEFORE the capture: by the time this image exists, so does
- * the bundle (Filmstrip.tsx handles the one cache-race exception).
+ * row, and — from the shared bundle fetch — its filmstrip and lab panel. The
+ * bundle fetch fires on the capture's `onLoad` (the render stores the bundle
+ * BEFORE the capture, so by the time this image exists, so does the bundle)
+ * and once, without retry, on `onError` — when PSI returned no screenshot the
+ * scores must still appear. Policy details live in `use-visual-bundle.ts`.
  */
 function StrategyCapture({
   pageUrl,
   strategy,
   locale,
+  showLabPanel,
 }: {
   pageUrl: string;
   strategy: SiteCaptureStrategy;
   locale: Locale;
+  showLabPanel: boolean;
 }) {
   const copy = CHECK_RESULT_COPY[locale].screenshot;
   const [status, setStatus] = useState<"loading" | "ready" | "failed">(
@@ -115,6 +175,8 @@ function StrategyCapture({
   );
   // Bumping remounts the <img>, which is what re-issues the request on retry.
   const [attempt, setAttempt] = useState(0);
+  const { frames, lab, settled, onCaptureLoaded, onCaptureFailed } =
+    useVisualBundle(pageUrl, strategy);
 
   let host = pageUrl;
   try {
@@ -126,20 +188,27 @@ function StrategyCapture({
 
   if (status === "failed") {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-box border border-base-300 bg-base-100 px-4 py-3">
-        <span className="min-w-0 truncate text-sm text-base-content/60">
-          {copy.label} — {copy.unavailable.toLowerCase()}
-        </span>
-        <button
-          type="button"
-          className="btn btn-ghost btn-xs shrink-0"
-          onClick={() => {
-            setStatus("loading");
-            setAttempt((current) => current + 1);
-          }}
-        >
-          {copy.retry}
-        </button>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 rounded-box border border-base-300 bg-base-100 px-4 py-3">
+          <span className="min-w-0 truncate text-sm text-base-content/60">
+            {copy.label} — {copy.unavailable.toLowerCase()}
+          </span>
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs shrink-0"
+            onClick={() => {
+              setStatus("loading");
+              setAttempt((current) => current + 1);
+            }}
+          >
+            {copy.retry}
+          </button>
+        </div>
+        {/* The capture failing is exactly when the scores must not vanish
+            with it — the bundle may exist even though the image does not. */}
+        {showLabPanel ? (
+          <LabPanel lab={lab} settled={settled} locale={locale} />
+        ) : null}
       </div>
     );
   }
@@ -226,8 +295,14 @@ function StrategyCapture({
             width={phone ? 412 : 1600}
             height={phone ? 733 : 1000}
             decoding="async"
-            onLoad={() => setStatus("ready")}
-            onError={() => setStatus("failed")}
+            onLoad={() => {
+              setStatus("ready");
+              onCaptureLoaded();
+            }}
+            onError={() => {
+              setStatus("failed");
+              onCaptureFailed();
+            }}
             // `object-top`: show the hero the visitor lands on, not the middle
             // of a page that can run thousands of pixels tall. Kept mounted
             // (invisible) while loading — an unmounted <img> never loads.
@@ -246,8 +321,10 @@ function StrategyCapture({
         ) : null}
       </figure>
 
-      {ready ? (
-        <Filmstrip pageUrl={pageUrl} strategy={strategy} locale={locale} />
+      {ready && frames ? <Filmstrip frames={frames} locale={locale} /> : null}
+
+      {showLabPanel ? (
+        <LabPanel lab={lab} settled={settled} locale={locale} />
       ) : null}
     </div>
   );

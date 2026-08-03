@@ -2,7 +2,8 @@
  * Raw HTTP handlers serving the visual evidence for a URL — the trust signal
  * ("we really loaded your site") shown on both the anonymous Lite result and
  * the shared Deep report: a full-page capture per strategy (mobile/desktop)
- * plus the loading filmstrip that rode along in the same PSI response.
+ * plus a visual bundle — the loading filmstrip and the lab-only Lighthouse
+ * scores/CWV — that rode along in the same PSI response.
  *
  * Wired directly into server.ts's fetch() under `/api/free-seo-check/*`, which
  * is already on the Cloudflare Access bypass, so it needs no new bypass
@@ -23,7 +24,9 @@ import {
   fetchPageSpeed,
   extractScreenshot,
   extractFilmstrip,
+  shapePsiLabResult,
   type PsiFilmstripFrame,
+  type PsiLabResult,
   type PsiStrategy,
 } from "@/server/lib/psi/pagespeed";
 import { AppError } from "@/server/lib/errors";
@@ -157,10 +160,18 @@ export async function handleSiteScreenshotRequest(
     }
 
     const rendered = await renderScreenshot(captureUrl, strategy);
-    // One spent render slot yields BOTH artifacts. The filmstrip is stored even
-    // when the capture is missing — the quota was spent either way — and always
-    // best-effort: it must never fail a response the capture alone would serve.
-    if (rendered) await storeFilmstrip(domain, strategy, rendered.filmstrip);
+    // One spent render slot yields ALL the artifacts. The visual bundle
+    // (filmstrip + lab scores) is stored even when the capture is missing —
+    // the quota was spent either way — and always best-effort: it must never
+    // fail a response the capture alone would serve.
+    if (rendered) {
+      await storeVisualBundle(
+        domain,
+        strategy,
+        rendered.filmstrip,
+        rendered.lab,
+      );
+    }
 
     const shot = rendered?.screenshot ?? null;
     if (!shot) {
@@ -237,6 +248,7 @@ function cachedType(object: R2ObjectBody): string {
 interface RenderedArtifacts {
   screenshot: ReturnType<typeof extractScreenshot>;
   filmstrip: PsiFilmstripFrame[] | null;
+  lab: PsiLabResult | null;
 }
 
 async function renderScreenshot(
@@ -255,6 +267,7 @@ async function renderScreenshot(
     return {
       screenshot: extractScreenshot(raw),
       filmstrip: extractFilmstrip(raw),
+      lab: shapeLab(raw, url, strategy),
     };
   } catch (error) {
     console.error(
@@ -265,19 +278,49 @@ async function renderScreenshot(
   }
 }
 
-/** Best-effort: the filmstrip rides along on a render already spent for the
- * capture, so failing to extract or store it must never fail the response. */
-async function storeFilmstrip(
+/**
+ * `shapePsiLabResult` throws on malformed input by design (Workflow
+ * semantics), and the catch in `renderScreenshot` discards EVERYTHING — so
+ * shaping gets its own catch here, where a failure costs only the lab fields,
+ * never the capture. A shaped result with nothing in it reads as null so the
+ * store guard treats it like any other absent artifact.
+ */
+function shapeLab(
+  raw: unknown,
+  url: string,
+  strategy: PsiStrategy,
+): PsiLabResult | null {
+  try {
+    const lab = shapePsiLabResult(raw);
+    const hasData =
+      lab.coreWebVitals !== null ||
+      Object.values(lab.scores).some((score) => score !== null);
+    return hasData ? lab : null;
+  } catch (error) {
+    console.error(
+      `site-screenshot: PSI lab shaping failed for ${url} (${strategy})`,
+      error,
+    );
+    return null;
+  }
+}
+
+/** Best-effort: the bundle rides along on a render already spent for the
+ * capture, so failing to extract or store it must never fail the response.
+ * Either half alone is worth storing — a filmstrip-extract failure must not
+ * swallow the scores, nor the reverse. */
+async function storeVisualBundle(
   domain: string,
   strategy: PsiStrategy,
   frames: PsiFilmstripFrame[] | null,
+  lab: PsiLabResult | null,
 ): Promise<void> {
-  if (!frames) return;
+  if (!frames && !lab) return;
   try {
-    await putSiteFilmstrip(domain, strategy, frames);
+    await putSiteFilmstrip(domain, strategy, frames, lab);
   } catch (error) {
     console.error(
-      `site-screenshot: filmstrip store failed for ${domain} (${strategy})`,
+      `site-screenshot: visual-bundle store failed for ${domain} (${strategy})`,
       error,
     );
   }

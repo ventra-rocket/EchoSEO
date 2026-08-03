@@ -28,7 +28,7 @@ type CwvSource = "field" | "lab";
 /** The two Lighthouse form factors PSI can run. */
 export type PsiStrategy = "mobile" | "desktop";
 
-interface PsiLighthouseScores {
+export interface PsiLighthouseScores {
   performance: number | null;
   seo: number | null;
   accessibility: number | null;
@@ -38,6 +38,16 @@ interface PsiLighthouseScores {
 export interface PsiResult {
   coreWebVitals: CoreWebVitalsSignals | null;
   cwvSource: CwvSource | null;
+  scores: PsiLighthouseScores;
+}
+
+/**
+ * The lab-only shape stored in the free visual bundle. No `cwvSource`: the
+ * metrics are lab by construction (see `shapePsiLabResult`), so a source field
+ * would only invite storing something else under it.
+ */
+export interface PsiLabResult {
+  coreWebVitals: CoreWebVitalsSignals | null;
   scores: PsiLighthouseScores;
 }
 
@@ -312,6 +322,16 @@ export function extractFilmstrip(raw: unknown): PsiFilmstripFrame[] | null {
   return frames;
 }
 
+function shapeScores(response: PsiResponse): PsiLighthouseScores {
+  const categories = response.lighthouseResult?.categories;
+  return {
+    performance: toScore(categories?.performance?.score),
+    seo: toScore(categories?.seo?.score),
+    accessibility: toScore(categories?.accessibility?.score),
+    bestPractices: toScore(categories?.["best-practices"]?.score),
+  };
+}
+
 /** Pure — shapes raw PSI JSON into CWV + category scores. Throws on malformed input. */
 export function shapePsiResult(raw: unknown): PsiResult {
   const response = psiResponseSchema.parse(raw);
@@ -321,15 +341,19 @@ export function shapePsiResult(raw: unknown): PsiResult {
   const cwvSource: CwvSource | null =
     coreWebVitals === null ? null : field ? "field" : "lab";
 
-  const categories = response.lighthouseResult?.categories;
-  return {
-    coreWebVitals,
-    cwvSource,
-    scores: {
-      performance: toScore(categories?.performance?.score),
-      seo: toScore(categories?.seo?.score),
-      accessibility: toScore(categories?.accessibility?.score),
-      bestPractices: toScore(categories?.["best-practices"]?.score),
-    },
-  };
+  return { coreWebVitals, cwvSource, scores: shapeScores(response) };
+}
+
+/**
+ * Pure — shapes raw PSI JSON into category scores + LAB-ONLY Core Web Vitals,
+ * for the free visual bundle. Deliberately never reads `loadingExperience`:
+ * the bundle is labelled "homepage · lab", and CrUX field data slipping in
+ * here would both falsify that label and give away the exact-URL field data
+ * that stays the Deep tier's differentiator. Like `shapePsiResult`, throws on
+ * malformed input — the render path wraps it so a shaping failure can never
+ * cost the capture.
+ */
+export function shapePsiLabResult(raw: unknown): PsiLabResult {
+  const response = psiResponseSchema.parse(raw);
+  return { coreWebVitals: labCwv(response), scores: shapeScores(response) };
 }
