@@ -22,7 +22,7 @@ export function TableBulkActionBar({
       : "flex justify-center";
   const toolbarClass =
     placement === "fixed"
-      ? "pointer-events-auto flex items-stretch overflow-visible rounded-xl border border-base-content/15 bg-base-300/85 shadow-2xl backdrop-blur"
+      ? "pointer-events-auto flex items-stretch overflow-visible rounded-xl border border-base-content/15 bg-base-100/95 shadow-2xl backdrop-blur"
       : "flex items-stretch overflow-visible rounded-xl border border-base-content/15 bg-base-200";
 
   return (

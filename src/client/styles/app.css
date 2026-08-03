@@ -156,10 +156,19 @@
   /* EchoSEO "Signal" brand — dark theme (the primary surface). Ground
      #0B0F14 lives on base-200 because the app paints the page with bg-base-200;
      base-100 is the raised card surface. Teal primary, amber accent/warning,
-     green success so score bands stay legible. */
-  --color-base-100: #121a24;
+     green success so score bands stay legible.
+
+     The card must clear the ground by enough lightness that a card edge is
+     visible without relying on the border: the ground is the brand's locked
+     ink anchor and sits near the display floor, so separation comes from
+     raising the card, not darkening the ground. base-300 doubles as the
+     border token (`border-base-300` everywhere) and is a translucent
+     blue-biased near-white so edges catch light on any surface instead of
+     sinking into it; as a fill (`bg-base-300` tracks/dots) the same alpha
+     still reads a step above the card. */
+  --color-base-100: #182330;
   --color-base-200: #0b0f14;
-  --color-base-300: #1c2733;
+  --color-base-300: oklch(93% 0.01 250 / 0.1);
   --color-base-content: #e6eaf0;
   --color-primary: #19e3b1;
   --color-primary-content: #04140f;
@@ -183,7 +192,10 @@
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
-  --depth: 0;
+  /* Dark surfaces have no ambient shadow to separate them, so daisyUI's depth
+     effect (a hairline top highlight + drop shadow on buttons, fields and
+     boxes) does the job the light theme gets for free from its white cards. */
+  --depth: 1;
   --noise: 0;
 }
 
@@ -434,6 +446,48 @@ html[data-theme="openseo-dark"] .alert-error {
   @apply border-error/60 bg-error/20;
 }
 
+/* ── Dark-theme text ramp ──────────────────────────────────────────────────
+   The markup dims secondary text with `text-base-content/NN` and the same
+   alpha that reads fine on white ground turns body copy to murk on the dark
+   one. Retuned here at the emitted utility (one place) instead of hundreds of
+   call sites: the body band (/60–/70) is lifted to a 75% floor, the metadata
+   band (/55 and below) stays visibly dimmer but compensates for the raised
+   card, and every step keeps its relative order so no usage renders brighter
+   than a step above it. Decorative /30–/45 are left alone. These rules are
+   unlayered, so they win over Tailwind's layered utilities by cascade, not
+   specificity. Variant-prefixed forms (hover:, sm:) compile to other class
+   names and are not remapped. */
+html[data-theme="openseo-dark"] .text-base-content\/50 {
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/55 {
+  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/60 {
+  color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/65 {
+  color: color-mix(in oklab, var(--color-base-content) 77%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/68 {
+  color: color-mix(in oklab, var(--color-base-content) 78%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/70 {
+  color: color-mix(in oklab, var(--color-base-content) 81%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/75 {
+  color: color-mix(in oklab, var(--color-base-content) 84%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/80 {
+  color: color-mix(in oklab, var(--color-base-content) 87%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/85 {
+  color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
+}
+html[data-theme="openseo-dark"] .text-base-content\/90 {
+  color: color-mix(in oklab, var(--color-base-content) 93%, transparent);
+}
+
 /* ── Free SEO Checker (public page) — scoped design system ─────────────────
    All rules here are prefixed .fsc-* and applied only under .fsc-root, so the
    authenticated dashboard is untouched. */
@@ -466,9 +520,15 @@ html[data-theme="openseo-dark"] .fsc-verdict-fail {
   color: #fda4af;
 }
 
-/* Gauge track (the unfilled part of the ring) — subtle in both themes. */
+/* Gauge track (the unfilled part of the ring). The track is what makes a
+   partial score read as "N of 100": if it sinks into the card the filled arc
+   reads as a broken ring instead. 12% survives on white; on the dark card it
+   needs more presence to stay a complete circle. */
 .fsc-gauge-track {
   stroke: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+}
+html[data-theme="openseo-dark"] .fsc-gauge-track {
+  stroke: color-mix(in oklab, var(--color-base-content) 22%, transparent);
 }
 
 /* Terminal-style console block — intentionally dark in BOTH themes (a terminal
@@ -515,11 +575,34 @@ html[data-theme="openseo-dark"] .fsc-verdict-fail {
 
 /* Faint teal signal glow behind the landing hero. Reads from the primary token
    so it stays coherent in both themes; color-mix over a theme var inside a
-   radial-gradient is not expressible as a legible utility class. */
+   radial-gradient is not expressible as a legible utility class. 9% of the
+   primary is visible over white but vanishes over the near-black ground, so
+   the dark theme runs the same glow hotter. */
 .fsc-hero-glow {
   background: radial-gradient(
     48rem 20rem at 50% 0%,
     color-mix(in oklab, var(--color-primary) 9%, transparent),
     transparent 70%
   );
+}
+html[data-theme="openseo-dark"] .fsc-hero-glow {
+  background: radial-gradient(
+    48rem 20rem at 50% 0%,
+    color-mix(in oklab, var(--color-primary) 16%, transparent),
+    transparent 70%
+  );
+}
+
+/* Dot-grid texture on the checker's dark ground, so the space outside the
+   content column reads as an intentional instrument surface rather than a
+   void. Painted on the scroll container's own background (not `local`), so it
+   holds still while content scrolls past. Dark-only: on white ground the
+   near-white dots are invisible anyway. */
+html[data-theme="openseo-dark"] .fsc-root {
+  background-image: radial-gradient(
+    circle,
+    oklch(93% 0.01 250 / 0.05) 1px,
+    transparent 1.6px
+  );
+  background-size: 22px 22px;
 }
