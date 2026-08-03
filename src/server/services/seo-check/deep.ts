@@ -51,14 +51,21 @@ function averageScore(scores: Array<{ score: number }>): number {
 interface DeepReportInput {
   requestedUrl: string;
   crawl: CrawlResult;
+  /** The mobile-strategy PSI result — the primary, SCORED one. */
   psi: PsiResult;
   /** GEO signals, or null when extraction was skipped or failed — the report
    * ships either way (decision C). */
   geo?: GeoSignals | null;
+  /**
+   * Desktop-strategy PSI result, or null when the best-effort desktop run
+   * failed or was skipped. Attached for the comparative display tab only:
+   * no rule and no score below ever reads it.
+   */
+  desktopPsi?: PsiResult | null;
 }
 
 export function buildDeepReport(input: DeepReportInput): DeepReport {
-  const { requestedUrl, crawl, psi, geo = null } = input;
+  const { requestedUrl, crawl, psi, geo = null, desktopPsi = null } = input;
   const primary = crawl.pages[0];
   if (!primary) {
     throw new AppError("UPSTREAM_UNAVAILABLE", "No pages were crawled");
@@ -105,6 +112,18 @@ export function buildDeepReport(input: DeepReportInput): DeepReport {
       wordCount: primary.page.wordCount,
     },
     crawl: { pagesCrawled: crawl.pages.length },
+    // Attach-only: nothing above reads desktopPsi, so mobile stays the scored
+    // strategy. The key is omitted (not null) when there is no desktop result,
+    // keeping such payloads byte-identical to reports stored before it existed.
+    ...(desktopPsi
+      ? {
+          desktop: {
+            coreWebVitals: desktopPsi.coreWebVitals,
+            cwvSource: desktopPsi.cwvSource,
+            psiScores: desktopPsi.scores,
+          },
+        }
+      : {}),
     geo: geo ? buildGeoSection(geo) : null,
   };
 }

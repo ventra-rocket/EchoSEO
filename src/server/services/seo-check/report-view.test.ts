@@ -124,6 +124,35 @@ describe("loadReportView", () => {
     expect(view.report.signals[0]?.guideQuote).toBe(englishSignal.guideQuote);
   });
 
+  it("carries the desktop section through localization untouched", async () => {
+    // The desktop lab data holds numbers only — nothing to translate — so the
+    // vi read path (the one that rebuilds the report) must pass it through
+    // as stored rather than dropping it in a spread it does not know about.
+    givenRows(
+      row({
+        id: "r1",
+        status: "done",
+        locale: "vi",
+        r2Key: "deep-reports/r1.json",
+      }),
+    );
+    const desktop = {
+      coreWebVitals: { lcpMs: 1200, inpMs: 60, cls: 0.01, ttfbMs: 300 },
+      cwvSource: "lab" as const,
+      psiScores: {
+        performance: 99,
+        seo: 80,
+        accessibility: 96,
+        bestPractices: 92,
+      },
+    };
+    getDeepReportMock.mockResolvedValue({ ...REPORT, desktop });
+
+    const view = await loadReportView("r1");
+    if (view?.status !== "done") throw new Error("expected a done view");
+    expect(view.report.desktop).toEqual(desktop);
+  });
+
   it.each(["confirming", "queued", "running"] as const)(
     "reports %s as pending",
     async (status) => {
