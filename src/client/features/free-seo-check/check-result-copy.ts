@@ -153,6 +153,8 @@ const EN: CheckResultCopy = {
       "Email me my deep SEO report. We'll send a confirmation link first — " +
       "no marketing without your say-so.",
     unconfigured: "Deep checks aren't configured for this deployment yet.",
+    challengeLoadError: "Couldn't load verification.",
+    challengeRetry: "Try again",
     submitIdle: "Email me the deep report",
     submitLoading: "Sending…",
   },
@@ -342,6 +344,8 @@ const VI: CheckResultCopy = {
       "kết xác nhận trước — không gửi email tiếp thị nếu bạn chưa đồng ý.",
     unconfigured:
       "Kiểm tra chuyên sâu chưa được cấu hình cho bản triển khai này.",
+    challengeLoadError: "Không tải được phần xác minh.",
+    challengeRetry: "Thử lại",
     submitIdle: "Gửi báo cáo chuyên sâu cho tôi",
     submitLoading: "Đang gửi…",
   },

@@ -16,7 +16,7 @@ import {
 import { LEGAL_CHROME_COPY } from "@/client/features/legal/legal-chrome-copy";
 import type { LiteReport } from "@/server/services/seo-check/types";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
-import { TurnstileWidget } from "./TurnstileWidget";
+import { ChallengeField } from "./ChallengeField";
 import { LiteReportView } from "./LiteReportView";
 import { ScanLog } from "./ScanLog";
 import { LandingContent } from "./LandingContent";
@@ -46,7 +46,7 @@ interface CheckErrorResponse {
  */
 export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   const copy = LANDING_COPY[locale];
-  const siteKey = useTurnstileSiteKey();
+  const challenge = useTurnstileSiteKey();
   // The language switch is a plain full-page anchor, not a router Link: a
   // language change swaps URL, <head>, and hreflang identity, so a real
   // navigation is the correct (and simplest) behavior.
@@ -78,6 +78,13 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   // burns it. Without the remount the retry button stays disabled until
   // Turnstile self-refreshes, and the visitor's obvious next move is dead.
   const [challengeAttempt, setChallengeAttempt] = useState(0);
+  /**
+   * The mounted widget failed to load or render, so it can never mint a token
+   * again. Remembered rather than acted on: remounting right inside
+   * `onLoadError` would loop forever when the script is blocked outright, so
+   * the remount waits for the visitor's next submit.
+   */
+  const [challengeFailed, setChallengeFailed] = useState(false);
   /** A submit made before the bot check produced a token — held, not dropped. */
   const [submitQueued, setSubmitQueued] = useState(false);
 
@@ -154,6 +161,16 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     // did anything wrong. Hold the intent and run it the moment the token
     // lands, rather than dropping the click and leaving the page inert.
     if (!turnstileToken) {
+      // A widget that failed to load is not "still finishing" — queueing
+      // behind it would spin forever. The submit is the visitor's retry:
+      // remount the challenge so the queued intent waits on one that can
+      // actually deliver, and if it fails again `onLoadError` re-releases
+      // the queue with the same actionable error.
+      if (challengeFailed) {
+        setChallengeFailed(false);
+        setErrorMessage(null);
+        renewChallenge();
+      }
       setSubmitQueued(true);
       return;
     }
@@ -169,13 +186,30 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitQueued, turnstileToken]);
 
-  // An unconfigured challenge can never produce the token a queued submit is
-  // waiting for — release the queue instead of leaving the button "starting".
+  // A challenge that can never produce the token a queued submit is waiting
+  // for — no key configured, or the config fetch failed/timed out — must
+  // release the queue instead of leaving the button "starting". The two
+  // terminal states carry different messages: "unconfigured" is a fact about
+  // the deployment, "unavailable" only means the config could not be loaded.
   useEffect(() => {
-    if (siteKey !== null || !submitQueued) return;
+    if (
+      challenge.status === "loading" ||
+      challenge.status === "ready" ||
+      !submitQueued
+    )
+      return;
     setSubmitQueued(false);
-    setErrorMessage(copy.turnstileUnconfigured);
-  }, [siteKey, submitQueued, copy.turnstileUnconfigured]);
+    setErrorMessage(
+      challenge.status === "unconfigured"
+        ? copy.turnstileUnconfigured
+        : copy.turnstileLoadError,
+    );
+  }, [
+    challenge.status,
+    submitQueued,
+    copy.turnstileUnconfigured,
+    copy.turnstileLoadError,
+  ]);
 
   // After a successful check, move the reader to the report: without this the
   // page stayed at scroll 0 showing the same form and marketing copy, and the
@@ -300,50 +334,29 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
                 ) : null}
               </div>
 
-              {/* The challenge is framed and labelled like the URL input above
-                  it (same border, radius, and label tier), so the third-party
-                  iframe reads as a form field rather than a stray grey box
-                  between the input and the button. The min-height reserves the
-                  widget's 65px so the frame doesn't collapse-then-jump while
-                  the script loads. */}
-              <div className="space-y-1.5">
-                <span
-                  id="fsc-challenge-label"
-                  className="block font-mono text-xs uppercase tracking-widest text-base-content/60"
-                >
-                  {copy.challengeLabel}
-                </span>
-                <div
-                  role="group"
-                  aria-labelledby="fsc-challenge-label"
-                  className="grid min-h-[77px] items-center rounded-lg border border-base-300 bg-base-100 p-1.5"
-                >
-                  {siteKey ? (
-                    <TurnstileWidget
-                      key={challengeAttempt}
-                      siteKey={siteKey}
-                      locale={locale}
-                      onToken={setTurnstileToken}
-                      onExpire={() => setTurnstileToken(null)}
-                      onLoadError={() => {
-                        // A challenge that failed to load can never mint a
-                        // token, so a queued submit would spin forever —
-                        // release it so the visitor can retry.
-                        setSubmitQueued(false);
-                        setErrorMessage(copy.turnstileLoadError);
-                      }}
-                    />
-                  ) : siteKey === null ? (
-                    <p className="px-2 text-sm text-warning" role="alert">
-                      {copy.turnstileUnconfigured}
-                    </p>
-                  ) : (
-                    <div className="flex justify-center" role="status">
-                      <span className="loading loading-spinner loading-sm" />
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ChallengeField
+                copy={copy}
+                locale={locale}
+                challenge={challenge}
+                challengeAttempt={challengeAttempt}
+                onToken={(token) => {
+                  // The render-timeout can call a widget failed and the
+                  // widget still paint late — a token supersedes that.
+                  setChallengeFailed(false);
+                  setTurnstileToken(token);
+                }}
+                onExpire={() => setTurnstileToken(null)}
+                onLoadError={() => {
+                  // A challenge that failed to load can never mint a token,
+                  // so a queued submit would spin forever — release it, and
+                  // remember the failure so the next submit remounts the
+                  // widget instead of queueing behind one that is already
+                  // dead.
+                  setChallengeFailed(true);
+                  setSubmitQueued(false);
+                  setErrorMessage(copy.turnstileLoadError);
+                }}
+              />
 
               {/* Never `disabled`. A grey dead button is the page's only action
                   at first paint, and when the challenge fails to render it stays

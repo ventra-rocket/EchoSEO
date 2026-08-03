@@ -154,6 +154,10 @@ export interface CheckResultCopy {
     emailPlaceholder: string;
     consentLabel: string;
     unconfigured: string;
+    /** Shown when the Turnstile widget (or its config) failed to load. */
+    challengeLoadError: string;
+    /** Label on the user-initiated control that remounts a failed widget. */
+    challengeRetry: string;
     submitIdle: string;
     submitLoading: string;
   };

@@ -31,7 +31,7 @@ export function DeepRequestForm({
   locale: Locale;
 }) {
   const copy = CHECK_RESULT_COPY[locale].deepForm;
-  const siteKey = useTurnstileSiteKey();
+  const challenge = useTurnstileSiteKey();
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -45,6 +45,19 @@ export function DeepRequestForm({
   // the token even though the visitor only has to fix a typo. Without the
   // remount the retry button stays disabled until Turnstile self-refreshes.
   const [challengeAttempt, setChallengeAttempt] = useState(0);
+  /**
+   * The mounted widget failed to load or render. The submit button is gated on
+   * a token this widget can no longer mint, so without an explicit retry the
+   * form is a dead end. The retry is user-initiated — remounting from inside
+   * `onLoadError` would loop forever when the script is blocked outright.
+   */
+  const [challengeFailed, setChallengeFailed] = useState(false);
+
+  function retryChallenge() {
+    setChallengeFailed(false);
+    setErrorMessage(null);
+    setChallengeAttempt((attempt) => attempt + 1);
+  }
 
   function failWith(message: string) {
     setErrorMessage(message);
@@ -163,20 +176,42 @@ export function DeepRequestForm({
           </span>
         </label>
 
-        {siteKey ? (
+        {challengeFailed ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p role="alert" className="text-sm text-error">
+              {copy.challengeLoadError}
+            </p>
+            <button
+              type="button"
+              onClick={retryChallenge}
+              className="btn btn-outline btn-xs"
+            >
+              {copy.challengeRetry}
+            </button>
+          </div>
+        ) : challenge.status === "ready" ? (
           <TurnstileWidget
             key={challengeAttempt}
-            siteKey={siteKey}
+            siteKey={challenge.siteKey}
             locale={locale}
-            onToken={setTurnstileToken}
-            onExpire={() => setTurnstileToken(null)}
-            onLoadError={() => {
-              setErrorMessage(copy.errorDefault);
-              setStatus("error");
+            onToken={(token) => {
+              // A token that lands after a failure report supersedes it —
+              // clear the failed state so the retry UI can't sit beside a
+              // form that is actually ready to submit.
+              setChallengeFailed(false);
+              setTurnstileToken(token);
             }}
+            onExpire={() => setTurnstileToken(null)}
+            onLoadError={() => setChallengeFailed(true)}
           />
-        ) : siteKey === null ? (
+        ) : challenge.status === "unconfigured" ? (
           <p className="text-xs text-base-content/60">{copy.unconfigured}</p>
+        ) : challenge.status === "unavailable" ? (
+          // The config could not be loaded, which is not the same fact as
+          // "not configured" — say so without promising a retry we don't have.
+          <p role="alert" className="text-sm text-error">
+            {copy.challengeLoadError}
+          </p>
         ) : (
           <div className="flex justify-center" role="status">
             <span className="loading loading-spinner loading-sm" />

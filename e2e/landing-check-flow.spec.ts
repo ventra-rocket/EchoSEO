@@ -17,6 +17,17 @@ import { LITE_REPORT_FIXTURE } from "./fixtures/lite-report-fixture";
 const LANDING = "/free-seo-check";
 const CHECK_API = "**/api/free-seo-check";
 
+async function stubCheckApi(page: Page) {
+  await page.route("**/api/free-seo-check/config", (route) =>
+    route.fulfill({ json: { turnstileSiteKey: "e2e-site-key" } }),
+  );
+  await page.route(CHECK_API, (route) =>
+    route.fulfill({
+      json: { report: LITE_REPORT_FIXTURE, cached: false, deepAvailable: true },
+    }),
+  );
+}
+
 async function stubChallengeAndApi(page: Page) {
   await page.addInitScript(() => {
     // Same surface TurnstileWidget's global declaration expects; assigned via
@@ -33,14 +44,7 @@ async function stubChallengeAndApi(page: Page) {
     };
     Object.assign(window, { turnstile });
   });
-  await page.route("**/api/free-seo-check/config", (route) =>
-    route.fulfill({ json: { turnstileSiteKey: "e2e-site-key" } }),
-  );
-  await page.route(CHECK_API, (route) =>
-    route.fulfill({
-      json: { report: LITE_REPORT_FIXTURE, cached: false, deepAvailable: true },
-    }),
-  );
+  await stubCheckApi(page);
 }
 
 /**
@@ -139,6 +143,116 @@ test.describe("the result placement contract", () => {
       "section[aria-labelledby='fsc-report-heading']",
     );
     await expect(section.getByText("out of 100")).toBeVisible();
+  });
+});
+
+test.describe("challenge failure recovery", () => {
+  test("a submit after a transient challenge failure remounts it and completes", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      // The first render throws — a challenge that failed to load — and the
+      // remount succeeds, like a network blip that has passed by the time the
+      // visitor retries.
+      let calls = 0;
+      const turnstile = {
+        render: (
+          _el: HTMLElement,
+          opts: { callback: (token: string) => void },
+        ): string => {
+          calls += 1;
+          if (calls === 1) throw new Error("challenge failed to load");
+          setTimeout(() => opts.callback("e2e-turnstile-token"), 25);
+          return `e2e-widget-${calls}`;
+        },
+        remove: (): void => {},
+      };
+      Object.assign(window, { turnstile });
+    });
+    await stubCheckApi(page);
+    await gotoHydrated(page);
+
+    // The failure surfaces as an actionable error, not a silent dead form.
+    await expect(page.locator(".alert-error")).toContainText(
+      "Couldn't load verification",
+    );
+
+    await page.getByPlaceholder("example.com").fill("example.com");
+    await page.getByRole("button", { name: "Check my site" }).click();
+
+    // The submit remounted the challenge, got a fresh token, and the queued
+    // check ran to completion.
+    await expect(
+      page.getByRole("heading", { name: "Your SEO Report", level: 2 }),
+    ).toBeVisible();
+  });
+
+  test("a still-failing challenge releases every submit instead of pinning the button", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const turnstile = {
+        render: (): string => {
+          throw new Error("challenge blocked");
+        },
+        remove: (): void => {},
+      };
+      Object.assign(window, { turnstile });
+    });
+    await stubCheckApi(page);
+    const checkPosts: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        request.url().endsWith("/api/free-seo-check")
+      ) {
+        checkPosts.push(request.url());
+      }
+    });
+    await gotoHydrated(page);
+
+    const submit = page.locator("button[type=submit]");
+    await page.getByPlaceholder("example.com").fill("example.com");
+
+    // Each submit retries the challenge and settles back to the actionable
+    // error — never stuck at "Starting your check…" until a reload.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await submit.click();
+      await expect(page.locator(".alert-error")).toContainText(
+        "Couldn't load verification",
+      );
+      await expect(submit).toHaveText("Check my site");
+    }
+    expect(checkPosts).toHaveLength(0);
+  });
+
+  test("a hanging config request releases a queued submit within the timeout", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    // No turnstile stub and no config response: the handler never fulfills,
+    // so the request hangs the way a silently dropped connection does.
+    await page.route("**/api/free-seo-check/config", () => {});
+    const configRequested = page.waitForRequest((request) =>
+      request.url().includes("/api/free-seo-check/config"),
+    );
+    await page.goto(LANDING);
+    // The config request fires from a mount effect, so it is the same
+    // hydration signal `gotoHydrated` reads from the response.
+    await configRequested;
+
+    const submit = page.locator("button[type=submit]");
+    await page.getByPlaceholder("example.com").fill("example.com");
+    await submit.click();
+    await expect(submit).toContainText("Starting your check…");
+
+    // The client-side fetch timeout turns the hang into a terminal state that
+    // releases the queue with a visible, actionable message.
+    await expect(page.locator(".alert-error")).toContainText(
+      "Couldn't load verification",
+      { timeout: 15_000 },
+    );
+    await expect(submit).toHaveText("Check my site");
   });
 });
 
