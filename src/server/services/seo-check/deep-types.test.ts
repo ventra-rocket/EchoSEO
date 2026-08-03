@@ -39,7 +39,12 @@ const LEGACY_REPORT = {
   categoryScores: [{ category: "meta", score: 80 }],
   coreWebVitals: { lcpMs: 961, inpMs: 81, cls: 0, ttfbMs: 653 },
   cwvSource: "field",
-  psiScores: { performance: 100, seo: 80, accessibility: 96, bestPractices: 96 },
+  psiScores: {
+    performance: 100,
+    seo: 80,
+    accessibility: 96,
+    bestPractices: 96,
+  },
   signals: [STORED_SIGNAL],
   pages: [
     {
@@ -49,7 +54,12 @@ const LEGACY_REPORT = {
       signals: [STORED_SIGNAL],
     },
   ],
-  pageSummary: { title: "Legacy", metaDescription: "", h1: null, wordCount: 120 },
+  pageSummary: {
+    title: "Legacy",
+    metaDescription: "",
+    h1: null,
+    wordCount: 120,
+  },
   crawl: { pagesCrawled: 1 },
   geo: null,
 };
