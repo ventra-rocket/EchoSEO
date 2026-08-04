@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import type { LiteReport } from "@/server/services/seo-check/types";
 import {
   FREE_SEO_CHECK_CHECK_PATH,
   FREE_SEO_CHECK_LANDING_PATH,
@@ -18,6 +17,11 @@ import { CHECK_RESULT_COPY } from "@/client/features/free-seo-check/check-result
 import { LiteReportView } from "@/client/features/free-seo-check/LiteReportView";
 import { formatScanDate } from "@/client/features/free-seo-check/report-format";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
+import {
+  peekCheckView,
+  takeCheckView,
+  type CheckView,
+} from "@/client/features/free-seo-check/check-view-cache";
 
 // A check link is a bearer capability — anyone holding it sees the frozen
 // result. The response also carries `Referrer-Policy: no-referrer` +
@@ -39,15 +43,6 @@ export const Route = createFileRoute("/c/$id")({
   component: SharedCheckPage,
 });
 
-/** What the check-read endpoint answers for a live snapshot. */
-interface CheckView {
-  report: LiteReport;
-  locale: Locale;
-  createdAt: string;
-  /** Fresh per read — the Deep kill-switch can flip after the snapshot froze. */
-  deepAvailable: boolean;
-}
-
 type PageState =
   | { kind: "loading" }
   | { kind: "view"; view: CheckView }
@@ -57,7 +52,13 @@ type PageState =
 
 function SharedCheckPage() {
   const { id } = Route.useParams();
-  const [state, setState] = useState<PageState>({ kind: "loading" });
+  // Seeded by the landing's hand-off? Render it on the first paint — no loading
+  // flash and no re-fetch of a report the check just produced. `peek` (not
+  // `take`) keeps this initializer pure; the effect below consumes the seed.
+  const [state, setState] = useState<PageState>(() => {
+    const seeded = peekCheckView(id);
+    return seeded ? { kind: "view", view: seeded } : { kind: "loading" };
+  });
 
   // The snapshot carries the requester's language; until it arrives (or when
   // the load failed) there is no locale to honor, so English is the transient
@@ -73,6 +74,12 @@ function SharedCheckPage() {
   // One fetch, no polling: unlike a Deep report, a snapshot either exists in
   // full or not at all — there is no pending state to wait out.
   useEffect(() => {
+    // The landing seeded this id — the report is already in state, so consume
+    // the hand-off and skip the fetch (and its loading flash). A missing seed
+    // (direct visit, refresh, forwarded link, or an id change) falls through to
+    // the authoritative fetch below.
+    if (takeCheckView(id)) return;
+
     let cancelled = false;
 
     async function load() {

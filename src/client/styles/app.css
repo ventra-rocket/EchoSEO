@@ -553,23 +553,56 @@ html[data-theme="openseo-dark"] .fsc-gauge-track {
   display: none;
 }
 
-/* Blinking caret for the scan-log loading state. */
-@keyframes fsc-caret {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
+/* Soft entrance for the loading skeleton so submit → scanning reads as a reveal,
+   not a hard cut where the sample card blinks out. Motion-safe only. */
+@keyframes fsc-fade-in {
+  from {
     opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
-.fsc-caret {
-  animation: fsc-caret 1s step-end infinite;
+.fsc-fade-in {
+  animation: fsc-fade-in 220ms ease-out both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .fsc-caret {
+  .fsc-fade-in {
     animation: none;
+  }
+}
+
+/* Skeleton fill for the loading ghost of the report. A shimmer sweep signals
+   "your result is forming" and reads as active work, which measures as a
+   shorter perceived wait than a static block. Tinted from the theme's
+   base-content so it holds in both light and dark. Shape (size, radius) comes
+   from utilities on each element; this only paints the animated fill. */
+.fsc-skeleton {
+  background: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--color-base-content) 6%, transparent) 40%,
+    color-mix(in oklab, var(--color-base-content) 13%, transparent) 50%,
+    color-mix(in oklab, var(--color-base-content) 6%, transparent) 60%
+  );
+  background-size: 200% 100%;
+  animation: fsc-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes fsc-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+/* Motion-safe: hold a flat tint instead of the sweep for reduced-motion users,
+   so the shape still reads as a placeholder without animating. */
+@media (prefers-reduced-motion: reduce) {
+  .fsc-skeleton {
+    animation: none;
+    background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
   }
 }
 

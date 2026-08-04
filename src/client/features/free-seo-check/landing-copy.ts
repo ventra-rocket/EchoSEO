@@ -105,6 +105,12 @@ export interface LandingCopy {
    * and the focus/scroll target after a successful check.
    */
   reportHeading: string;
+  /**
+   * H2 over the loading skeleton. Sits in the same slot the report heading will
+   * occupy, so when the real report swaps in the heading doesn't move — only the
+   * body firms up from ghost to result.
+   */
+  scanHeading: string;
   /** The keyboard user's first tab stop, pointing at the main content. */
   skipToContent: string;
   /** Footer: one line saying what EchoSEO is, beyond this single tool. */
@@ -202,6 +208,7 @@ const EN: LandingCopy = {
   submitLoading: "Checking…",
   submitVerifying: "Starting your check…",
   reportHeading: "Your SEO Report",
+  scanHeading: "Scanning your site",
   skipToContent: "Skip to main content",
   footerProductLine:
     "EchoSEO is an open, agent-native SEO platform. This checker is free — self-hostable, your data stays private, and reports auto-delete after 30 days.",
@@ -218,8 +225,12 @@ const EN: LandingCopy = {
     // reading "Success!" while this told them verification had failed.
     FORBIDDEN: "Verification didn't go through — we've reset it, try again.",
     RATE_LIMITED: "You've hit the free-check limit for now — try again later.",
+    // "Check the URL" was wrong advice: the client already validated the URL's
+    // format before submitting, so a failure here is almost never the address —
+    // it's a site that blocks automated checkers (bot protection) or that timed
+    // out. Say that instead of implying the visitor typed it wrong.
     UPSTREAM_UNAVAILABLE:
-      "We couldn't reach that site. Check the URL and try again.",
+      "We couldn't fetch that page. The site may block automated checkers or didn't respond in time — usually not your URL. Try another page.",
     TARGET_BEHIND_AUTH:
       "That site is behind a login, so we can't check its pages.",
   },
@@ -372,6 +383,7 @@ const VI: LandingCopy = {
   submitLoading: "Đang kiểm tra…",
   submitVerifying: "Đang bắt đầu kiểm tra…",
   reportHeading: "Báo cáo SEO của bạn",
+  scanHeading: "Đang quét trang của bạn",
   skipToContent: "Bỏ qua tới nội dung chính",
   footerProductLine:
     "EchoSEO là nền tảng SEO mở, thiết kế cho AI agent. Công cụ kiểm tra này miễn phí — bạn có thể tự triển khai, dữ liệu của bạn được bảo mật và báo cáo tự động xoá sau 30 ngày.",
@@ -387,7 +399,7 @@ const VI: LandingCopy = {
     RATE_LIMITED:
       "Bạn đã dùng hết lượt kiểm tra miễn phí lúc này — vui lòng thử lại sau.",
     UPSTREAM_UNAVAILABLE:
-      "Chúng tôi không truy cập được trang đó. Kiểm tra lại URL rồi thử lần nữa.",
+      "Không tải được trang đó. Site có thể chặn công cụ kiểm tra tự động hoặc phản hồi quá chậm — thường không phải do URL của bạn. Thử một trang khác.",
     TARGET_BEHIND_AUTH:
       "Trang đó nằm sau lớp đăng nhập nên chúng tôi không kiểm tra được.",
   },

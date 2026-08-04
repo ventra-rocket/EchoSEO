@@ -19,7 +19,9 @@ import type { LiteReport } from "@/server/services/seo-check/types";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { ChallengeField } from "./ChallengeField";
 import { LiteReportView } from "./LiteReportView";
-import { ScanLog } from "./ScanLog";
+import { ScanSection } from "./ReportSkeleton";
+import { useLiveStateScroll } from "./use-live-state-scroll";
+import { seedCheckView } from "./check-view-cache";
 import { LandingContent } from "./LandingContent";
 import { SampleReportPreview } from "./SampleReportPreview";
 import { LANDING_COPY, type LandingCopy } from "./landing-copy";
@@ -71,7 +73,6 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   /** Client-side format error under the URL field — see validate-check-url.ts. */
   const [urlError, setUrlError] = useState<string | null>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
-  const reportHeadingRef = useRef<HTMLHeadingElement>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "done">(
     "idle",
@@ -146,11 +147,22 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
 
       setResult(body);
       setStatus("done");
-      // PSI-style: the address bar becomes the share URL, refresh-safe, with
-      // no reload and no router navigation (the landing keeps rendering; a
-      // refresh lands on the /c/ route and the frozen snapshot). Skipped when
-      // the snapshot write failed — a URL that 404s is worse than none.
+      // PSI-style: the address bar becomes the share URL, refresh-safe. Changing
+      // it to `/c/{id}` navigates the router there (TanStack patches history, so
+      // even a raw `replaceState` is a navigation) — so hand that page the report
+      // we already hold, letting it render instantly instead of re-fetching and
+      // flashing its own loading state. Skipped when the snapshot write failed —
+      // a URL that 404s is worse than none.
       if (body.checkId) {
+        seedCheckView(body.checkId, {
+          report: body.report,
+          locale,
+          // The scan just finished; the snapshot's own createdAt is
+          // authoritative on any later fetch, but for this immediate hand-off
+          // "now" is that same instant.
+          createdAt: new Date().toISOString(),
+          deepAvailable: body.deepAvailable,
+        });
         window.history.replaceState(null, "", checkPagePath(body.checkId));
       }
       renewChallenge();
@@ -226,24 +238,8 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     copy.turnstileLoadError,
   ]);
 
-  // After a successful check, move the reader to the report: without this the
-  // page stayed at scroll 0 showing the same form and marketing copy, and the
-  // result sat ~2,000px down — indistinguishable from "nothing happened".
-  // Keyed on `result`, which only ever transitions null → report as the direct
-  // consequence of a user-initiated scan, so SSR, hydration, and unrelated
-  // re-renders can never steal focus.
-  useEffect(() => {
-    if (!result) return;
-    const heading = reportHeadingRef.current;
-    if (!heading) return;
-    heading.focus({ preventScroll: true });
-    heading.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    });
-  }, [result]);
+  // Keep the reader on whatever the check is doing right now — see the hook.
+  useLiveStateScroll(status, Boolean(result));
 
   return (
     <div className="fsc-root relative h-full overflow-auto bg-base-200">
@@ -417,12 +413,15 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           </form>
 
           {errorMessage ? (
-            <div className="alert alert-error text-sm" role="alert">
+            <div
+              id="fsc-check-error"
+              className="alert alert-error text-sm"
+              role="alert"
+            >
               {errorMessage}
             </div>
           ) : null}
 
-          {status === "loading" ? <ScanLog url={url} locale={locale} /> : null}
         </div>
 
         {/* The result renders directly under the form — DOM order and screen
@@ -439,7 +438,6 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
             className="mx-auto max-w-5xl px-4 pb-14 pt-8"
           >
             <h2
-              ref={reportHeadingRef}
               id="fsc-report-heading"
               tabIndex={-1}
               className="scroll-mt-6 text-xl font-semibold tracking-tight outline-none sm:text-2xl"
@@ -463,6 +461,8 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
               />
             </div>
           </section>
+        ) : status === "loading" ? (
+          <ScanSection url={url} locale={locale} heading={copy.scanHeading} />
         ) : (
           /* The sample and editorial content carry the initial landing (and
              its SSR/SEO weight), but once a real report exists they would sit
@@ -470,11 +470,7 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
              is actively confusing next to a real one — so the whole block
              yields to the report. It returns when the state resets. */
           <div className="mx-auto max-w-2xl space-y-8 px-4 pb-10 pt-8 sm:pb-14">
-            {/* Hidden during a scan too, not just after one: the sample's
-                large illustrative score sitting under the live scan log
-                invites a skim-reader to take it for an early result. */}
-            {status === "loading" ? null : <SampleReportPreview copy={copy} />}
-
+            <SampleReportPreview copy={copy} />
             <LandingContent copy={copy} />
           </div>
         )}
