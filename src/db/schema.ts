@@ -8,3 +8,4 @@ export * from "./billing.schema";
 export * from "./free-seo-check.schema";
 export * from "./gsc.schema";
 export * from "./reddit-attribution.schema";
+export * from "./seo-credential.schema";

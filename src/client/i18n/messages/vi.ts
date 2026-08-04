@@ -204,4 +204,27 @@ export const vi: Messages = {
   "commandCenter.provenance.dataForSeoConfigured": "DataForSEO: đã cấu hình",
   "commandCenter.provenance.dataForSeoNotConfigured":
     "DataForSEO: chưa cấu hình",
+
+  "seoProvider.section": "Nhà cung cấp dữ liệu SEO",
+  "seoProvider.description":
+    "Dùng tài khoản DataForSEO của riêng bạn cho dữ liệu từ khóa, thứ hạng, backlink và tên miền. DataForSEO tính phí trực tiếp cho bạn; EchoSEO chỉ chi trả cho các tính năng AI. Để trống nếu muốn dùng khóa mặc định của nền tảng khi có.",
+  "seoProvider.getKey": "Lấy khóa tại dataforseo.com",
+  "seoProvider.inputLabel": "Khóa API (base64 của login:password)",
+  "seoProvider.placeholder": "Dán khóa API DataForSEO của bạn",
+  "seoProvider.checking": "Đang kiểm tra…",
+  "seoProvider.loadError": "Không tải được trạng thái khóa DataForSEO.",
+  "seoProvider.save": "Lưu khóa",
+  "seoProvider.saving": "Đang lưu…",
+  "seoProvider.remove": "Xóa",
+  "seoProvider.removing": "Đang xóa…",
+  "seoProvider.badge.org": "Khóa của bạn",
+  "seoProvider.badge.global": "Mặc định nền tảng",
+  "seoProvider.badge.none": "Chưa đặt",
+  "seoProvider.toast.saved": "Đã lưu khóa DataForSEO.",
+  "seoProvider.toast.removed": "Đã xóa khóa DataForSEO.",
+  "seoProvider.toast.invalidKey":
+    "Khóa DataForSEO bị từ chối. Kiểm tra lại base64 của login:password rồi thử lại.",
+  "seoProvider.toast.forbidden":
+    "Chỉ chủ sở hữu và quản trị viên workspace mới được đổi khóa DataForSEO.",
+  "seoProvider.toast.error": "Không lưu được khóa DataForSEO.",
 };

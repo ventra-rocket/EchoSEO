@@ -25,6 +25,7 @@ import { normalizeBacklinksTarget } from "@/server/lib/dataforseo";
 import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { getOrigin } from "@/server/lib/audit/url-utils";
 import { AppError } from "@/server/lib/errors";
+import { isHostedAccessOpen } from "@/server/lib/runtime-env";
 
 const PROVIDER = "dataforseo";
 // The summary query includes subdomains (see backlinks buildCommonPayload), so
@@ -170,9 +171,12 @@ async function refreshSnapshot(input: {
   }
 
   // Hosted deployments run on our managed, metered provider key; gate the spend
-  // on plan access, mirroring the crawl launch gate.
+  // on plan access, mirroring the crawl launch gate. Open-access mode has no
+  // billing provider to check, so it skips the gate (the provider key — global
+  // or a workspace's own — carries its own cost).
   if (
     input.authMode === "hosted" &&
+    !(await isHostedAccessOpen()) &&
     !(await customerHasManagedAccess(input.organizationId))
   ) {
     throw new AppError(

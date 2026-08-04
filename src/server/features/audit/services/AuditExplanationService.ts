@@ -33,7 +33,10 @@ import {
   type BillingCustomerContext,
 } from "@/server/billing/subscription";
 import { checkIpRateLimit } from "@/server/services/seo-check/rate-limit-do";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import {
+  isHostedAccessOpen,
+  isHostedServerAuthMode,
+} from "@/server/lib/runtime-env";
 import { AppError } from "@/server/lib/errors";
 import { safeHttpUrl } from "@/lib/safe-url";
 import type { Locale } from "@/server/lib/seo-rules";
@@ -108,6 +111,10 @@ async function explainIssue(input: {
   // Everything below this point can spend money, so the gates go here rather
   // than at the top — a cache hit must never consume quota.
   const hosted = await isHostedServerAuthMode();
+  // Open-access mode has no billing provider: the operator funds the LLM
+  // directly, so skip the credit gate and the spend metering (both would hit an
+  // unconfigured Autumn) while keeping the abuse rate limit.
+  const billingActive = hosted && !(await isHostedAccessOpen());
   let monthlyRemaining = 0;
   if (hosted) {
     const rateLimit = await checkIpRateLimit(
@@ -117,14 +124,17 @@ async function explainIssue(input: {
     );
     if (!rateLimit.allowed) return UNAVAILABLE;
 
-    try {
-      ({ monthlyRemaining } = await assertUsageCreditsAvailable(
-        input.billingCustomer.organizationId,
-      ));
-    } catch {
-      // Out of credits reads the same as unconfigured: the panel is absent and
-      // the cited fix steps are untouched. No upsell in a technical screen.
-      return UNAVAILABLE;
+    if (billingActive) {
+      try {
+        ({ monthlyRemaining } = await assertUsageCreditsAvailable(
+          input.billingCustomer.organizationId,
+        ));
+      } catch {
+        // Out of credits reads the same as unconfigured: the panel is absent
+        // and the cited fix steps are untouched. No upsell in a technical
+        // screen.
+        return UNAVAILABLE;
+      }
     }
   }
 
@@ -147,7 +157,7 @@ async function explainIssue(input: {
 
   if (!generated) return UNAVAILABLE;
 
-  if (hosted) {
+  if (billingActive) {
     if (generated.costUsd > 0) {
       await trackUsageCreditSpend({
         customer: input.billingCustomer,

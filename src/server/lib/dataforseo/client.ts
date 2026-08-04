@@ -52,101 +52,138 @@ import {
   type DataforseoApiCallCost,
   type DataforseoApiResponse,
 } from "@/server/lib/dataforseo/envelope";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { runWithDataforseoKey } from "@/server/lib/dataforseo/credential-context";
+import {
+  resolveDataforseoCredentials,
+  type ResolvedDataforseoCredentials,
+} from "@/server/lib/dataforseo/resolve-credentials";
+import {
+  isHostedAccessOpen,
+  isHostedServerAuthMode,
+} from "@/server/lib/runtime-env";
 
 export { mapDataforseoPathToCreditFeature };
 
-/**
- * Wraps a section fetcher with billing metering. Each entry on the client is
- * `meter(customer, fetcher, defaultFeature?)`, which returns a function with the
- * fetcher's own input type and resolves to its unwrapped `.data`.
- *
- * `defaultFeature` is the fallback credit feature; a caller can override it per
- * call by passing `creditFeature` in the input (e.g. an MCP tool attributing
- * spend to its own feature). The extra field is ignored by the fetchers, which
- * read named fields rather than spreading the input.
- */
-function meter<I, T>(
-  customer: BillingCustomerContext,
-  fetcher: (input: I) => Promise<DataforseoApiResponse<T>>,
-  defaultFeature?: CreditFeature,
-): (input: I & { creditFeature?: CreditFeature }) => Promise<T> {
-  return (input) =>
-    meterDataforseoCall(
-      customer,
-      () => fetcher(input),
-      input.creditFeature ?? defaultFeature,
-    );
-}
-
 export function createDataforseoClient(customer: BillingCustomerContext) {
+  // Resolve the organization's DataForSEO credentials at most once per client
+  // instance (lazily, on the first metered call). A client that makes several
+  // section calls therefore decrypts the BYO key and reads the row a single
+  // time; the source (`org` | `global` | `none`) drives both key threading and
+  // the Autumn-bypass decision below.
+  let credentialsPromise: Promise<ResolvedDataforseoCredentials> | undefined;
+  const getCredentials = () =>
+    (credentialsPromise ??= resolveDataforseoCredentials(
+      customer.organizationId,
+    ));
+
+  /**
+   * Wraps a section fetcher with billing metering. Each entry on the client is
+   * `meter(fetcher, defaultFeature?)`, returning a function with the fetcher's
+   * own input type that resolves to its unwrapped `.data`.
+   *
+   * `defaultFeature` is the fallback credit feature; a caller can override it
+   * per call by passing `creditFeature` in the input (e.g. an MCP tool
+   * attributing spend to its own feature). The extra field is ignored by the
+   * fetchers, which read named fields rather than spreading the input.
+   */
+  const meter =
+    <I, T>(
+      fetcher: (input: I) => Promise<DataforseoApiResponse<T>>,
+      defaultFeature?: CreditFeature,
+    ) =>
+    (input: I & { creditFeature?: CreditFeature }): Promise<T> =>
+      meterDataforseoCall(
+        customer,
+        getCredentials,
+        () => fetcher(input),
+        input.creditFeature ?? defaultFeature,
+      );
+
   return {
     business: {
-      businessListings: meter(
-        customer,
-        fetchBusinessListingsSearch,
-        "local_seo",
-      ),
-      questionsAnswers: meter(customer, fetchQuestionsAnswers, "local_seo"),
+      businessListings: meter(fetchBusinessListingsSearch, "local_seo"),
+      questionsAnswers: meter(fetchQuestionsAnswers, "local_seo"),
     },
     backlinks: {
-      summary: meter(customer, fetchBacklinksSummary),
-      rows: meter(customer, fetchBacklinksRows),
-      referringDomains: meter(customer, fetchReferringDomains),
-      domainPages: meter(customer, fetchDomainPagesSummary),
-      history: meter(customer, fetchBacklinksHistory),
+      summary: meter(fetchBacklinksSummary),
+      rows: meter(fetchBacklinksRows),
+      referringDomains: meter(fetchReferringDomains),
+      domainPages: meter(fetchDomainPagesSummary),
+      history: meter(fetchBacklinksHistory),
     },
     keywords: {
-      related: meter(customer, fetchRelatedKeywords),
-      suggestions: meter(customer, fetchKeywordSuggestions),
-      ideas: meter(customer, fetchKeywordIdeas),
+      related: meter(fetchRelatedKeywords),
+      suggestions: meter(fetchKeywordSuggestions),
+      ideas: meter(fetchKeywordIdeas),
       // Google Ads endpoints for countries Labs doesn't support.
-      adsIdeas: meter(customer, fetchAdsKeywordIdeas),
-      adsSearchVolume: meter(customer, fetchAdsSearchVolume),
+      adsIdeas: meter(fetchAdsKeywordIdeas),
+      adsSearchVolume: meter(fetchAdsSearchVolume),
     },
     domain: {
-      rankOverview: meter(customer, fetchDomainRankOverview),
-      rankedKeywords: meter(customer, fetchRankedKeywords),
-      relevantPages: meter(customer, fetchRelevantPages),
+      rankOverview: meter(fetchDomainRankOverview),
+      rankedKeywords: meter(fetchRankedKeywords),
+      relevantPages: meter(fetchRelevantPages),
     },
     serp: {
-      live: meter(customer, fetchLiveSerp),
-      rankCheck: meter(customer, fetchRankCheckSerp, "rank_tracking"),
+      live: meter(fetchLiveSerp),
+      rankCheck: meter(fetchRankCheckSerp, "rank_tracking"),
       // Posts up to 100 queued rank check tasks; one metered charge covers the
       // whole batch (DataForSEO bills task_post at post time, collection is
       // free).
-      rankCheckTaskPost: meter(customer, postRankCheckTasks, "rank_tracking"),
-      local: meter(customer, fetchLocalSerp, "local_seo"),
+      rankCheckTaskPost: meter(postRankCheckTasks, "rank_tracking"),
+      local: meter(fetchLocalSerp, "local_seo"),
     },
     labs: {
       // Callers (e.g. the keyword-metrics MCP tool) can attribute the spend to
       // their own feature by passing `creditFeature` in the input; defaults to
       // rank_tracking when omitted.
-      keywordOverview: meter(customer, fetchKeywordOverview, "rank_tracking"),
-      serpCompetitors: meter(customer, fetchSerpCompetitors),
+      keywordOverview: meter(fetchKeywordOverview, "rank_tracking"),
+      serpCompetitors: meter(fetchSerpCompetitors),
     },
     lighthouse: {
-      live: meter(customer, fetchLighthouseResult),
+      live: meter(fetchLighthouseResult),
     },
     aiSearch: {
-      mentionsSearch: meter(customer, fetchLlmMentionsSearch),
-      aggregatedMetrics: meter(customer, fetchLlmAggregatedMetrics),
-      topPages: meter(customer, fetchLlmTopPages),
-      crossAggregatedMetrics: meter(customer, fetchLlmCrossAggregatedMetrics),
-      llmResponse: meter(customer, fetchLlmResponse),
+      mentionsSearch: meter(fetchLlmMentionsSearch),
+      aggregatedMetrics: meter(fetchLlmAggregatedMetrics),
+      topPages: meter(fetchLlmTopPages),
+      crossAggregatedMetrics: meter(fetchLlmCrossAggregatedMetrics),
+      llmResponse: meter(fetchLlmResponse),
     },
   } as const;
 }
 
 async function meterDataforseoCall<T>(
   customer: BillingCustomerContext,
+  getCredentials: () => Promise<ResolvedDataforseoCredentials>,
   execute: () => Promise<DataforseoApiResponse<T>>,
   creditFeature?: CreditFeature,
 ): Promise<T> {
-  const isHostedMode = await isHostedServerAuthMode();
+  const credentials = await getCredentials();
 
-  if (!isHostedMode) {
-    const result = await execute();
+  // Thread the organization's own key into the SDK fetch only when the org
+  // brought one; `global`/`none` set no ambient resolver, so `core.ts` keeps
+  // reading the global operator env key exactly as before (old tests stay
+  // green). A self-paid BYO key also bypasses Autumn entirely.
+  const usesOwnKey = credentials.source === "org";
+  const run =
+    credentials.source === "org"
+      ? () =>
+          runWithDataforseoKey(
+            () => Promise.resolve(credentials.apiKey),
+            execute,
+          )
+      : execute;
+
+  // Autumn is exercised only on the operator-billed path: hosted mode, not
+  // open-access, and not a self-paid org key. Open-access and BYO-key orgs
+  // execute directly without ever touching the billing provider.
+  const isHostedMode = await isHostedServerAuthMode();
+  const billingActive =
+    isHostedMode && !usesOwnKey && !(await isHostedAccessOpen());
+
+  if (!billingActive) {
+    const result = await run();
     return result.data;
   }
 
@@ -158,7 +195,7 @@ async function meterDataforseoCall<T>(
 
   let result: DataforseoApiResponse<T>;
   try {
-    result = await execute();
+    result = await run();
   } catch (error) {
     if (error instanceof DataforseoChargedTaskError) {
       await trackDataforseoCost({
