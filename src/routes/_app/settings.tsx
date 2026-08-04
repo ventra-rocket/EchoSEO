@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { DataForSeoKeyCard } from "@/client/features/seo-credentials/DataForSeoKeyCard";
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
 import { authClient, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
@@ -113,6 +114,8 @@ function SettingsPage() {
             </div>
           </section>
         ) : null}
+
+        <DataForSeoKeyCard />
       </div>
     </div>
   );

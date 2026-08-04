@@ -14,13 +14,21 @@ interface TrackCallArg {
   properties?: { balanceFeatureId: string };
 }
 
-const { checkMock, trackMock, getOrCreateMock, isHostedServerAuthModeMock } =
-  vi.hoisted(() => ({
-    checkMock: vi.fn(),
-    trackMock: vi.fn<(arg: TrackCallArg) => void>(),
-    getOrCreateMock: vi.fn(),
-    isHostedServerAuthModeMock: vi.fn(),
-  }));
+const {
+  checkMock,
+  trackMock,
+  getOrCreateMock,
+  isHostedServerAuthModeMock,
+  isHostedAccessOpenMock,
+  resolveCredentialsMock,
+} = vi.hoisted(() => ({
+  checkMock: vi.fn(),
+  trackMock: vi.fn<(arg: TrackCallArg) => void>(),
+  getOrCreateMock: vi.fn(),
+  isHostedServerAuthModeMock: vi.fn(),
+  isHostedAccessOpenMock: vi.fn(),
+  resolveCredentialsMock: vi.fn(),
+}));
 
 vi.mock("cloudflare:workers", () => ({
   waitUntil: vi.fn(),
@@ -46,6 +54,15 @@ vi.mock("@/server/billing/subscription", async (importOriginal) => {
 
 vi.mock("@/server/lib/runtime-env", () => ({
   isHostedServerAuthMode: isHostedServerAuthModeMock,
+  isHostedAccessOpen: isHostedAccessOpenMock,
+}));
+
+// Resolve credentials is exercised by its own real-SQLite suite; here it is
+// stubbed so the metering/threading branches can be driven directly. The real
+// credential-context (AsyncLocalStorage) stays unmocked so key threading is
+// genuinely observed inside `execute`.
+vi.mock("@/server/lib/dataforseo/resolve-credentials", () => ({
+  resolveDataforseoCredentials: resolveCredentialsMock,
 }));
 
 vi.mock("@/server/lib/posthog", () => ({
@@ -97,6 +114,7 @@ import {
   mapDataforseoPathToCreditFeature,
 } from "@/server/lib/dataforseo/client";
 import { DataforseoChargedTaskError } from "@/server/lib/dataforseo/envelope";
+import { getDataforseoKeyResolver } from "@/server/lib/dataforseo/credential-context";
 import { fetchBacklinksSummary } from "@/server/lib/dataforseo/backlinks";
 
 const billingCustomer = {
@@ -136,6 +154,13 @@ function mockDataforseoResult(costUsd: number) {
 describe("meterDataforseoCall with split balances", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default to the global operator key with billing on: the scenario these
+    // metering/split-balance assertions were written for.
+    resolveCredentialsMock.mockResolvedValue({
+      apiKey: "global-key",
+      source: "global",
+    });
+    isHostedAccessOpenMock.mockResolvedValue(false);
   });
 
   it("skips billing in non-hosted mode", async () => {
@@ -295,6 +320,134 @@ describe("meterDataforseoCall with split balances", () => {
     expect(topupCall![0].properties?.balanceFeatureId).toBe(
       AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
     );
+  });
+});
+
+describe("per-organization key threading and open-access", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resolveCredentialsMock.mockResolvedValue({
+      apiKey: "global-key",
+      source: "global",
+    });
+    isHostedAccessOpenMock.mockResolvedValue(false);
+    getOrCreateMock.mockResolvedValue({ id: "org_123" });
+  });
+
+  // Runs the mocked fetcher and returns whatever ambient key the code inside the
+  // metered call (i.e. what `createAuthenticatedFetch` would read) observes.
+  function captureAmbientKey() {
+    const observed: { key: string | null | undefined } = { key: "unread" };
+    vi.mocked(fetchBacklinksSummary).mockImplementation(async () => {
+      const resolver = getDataforseoKeyResolver();
+      observed.key = resolver ? await resolver() : null;
+      return {
+        data: { rank: 7 },
+        billing: { costUsd: 0.05, path: ["backlinks", "summary"] },
+      };
+    });
+    return observed;
+  }
+
+  it("threads the org's own key into the metered call and skips Autumn", async () => {
+    isHostedServerAuthModeMock.mockResolvedValue(true);
+    resolveCredentialsMock.mockResolvedValue({
+      apiKey: "org-key-A",
+      source: "org",
+    });
+    const observed = captureAmbientKey();
+
+    const client = createDataforseoClient(billingCustomer);
+    const result = await client.backlinks.summary(backlinksInput);
+
+    expect(result).toEqual({ rank: 7 });
+    // The code running inside `execute` sees the org's own decrypted key.
+    expect(observed.key).toBe("org-key-A");
+    // A self-paid key never touches the billing provider, even in hosted mode.
+    expect(getOrCreateMock).not.toHaveBeenCalled();
+    expect(checkMock).not.toHaveBeenCalled();
+    expect(trackMock).not.toHaveBeenCalled();
+  });
+
+  it("sets no ambient resolver for the global key and still meters", async () => {
+    setupHostedMode();
+    mockBalances(5000, 3000);
+    const observed = captureAmbientKey();
+
+    const client = createDataforseoClient(billingCustomer);
+    await client.backlinks.summary(backlinksInput);
+
+    // No resolver in scope -> core.ts falls back to the global env key.
+    expect(observed.key).toBeNull();
+    expect(trackMock).toHaveBeenCalled();
+  });
+
+  it("bypasses Autumn under open-access even with the global key", async () => {
+    isHostedServerAuthModeMock.mockResolvedValue(true);
+    isHostedAccessOpenMock.mockResolvedValue(true);
+    mockDataforseoResult(0.05);
+
+    const client = createDataforseoClient(billingCustomer);
+    const result = await client.backlinks.summary(backlinksInput);
+
+    expect(result).toEqual({ rank: 42 });
+    expect(getOrCreateMock).not.toHaveBeenCalled();
+    expect(checkMock).not.toHaveBeenCalled();
+    expect(trackMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves credentials once per client instance across calls", async () => {
+    isHostedServerAuthModeMock.mockResolvedValue(true);
+    resolveCredentialsMock.mockResolvedValue({
+      apiKey: "org-key-A",
+      source: "org",
+    });
+    mockDataforseoResult(0.05);
+
+    const client = createDataforseoClient(billingCustomer);
+    await client.backlinks.summary(backlinksInput);
+    await client.backlinks.summary(backlinksInput);
+
+    expect(resolveCredentialsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps two organizations' keys from leaking across concurrent calls", async () => {
+    isHostedServerAuthModeMock.mockResolvedValue(true);
+    resolveCredentialsMock.mockImplementation(async (orgId: string) => ({
+      apiKey: orgId === "org_A" ? "key-A" : "key-B",
+      source: "org" as const,
+    }));
+
+    const observed: Record<string, string | null | undefined> = {};
+    vi.mocked(fetchBacklinksSummary).mockImplementation(async (input) => {
+      // Interleave the two contexts so a leaked resolver would surface.
+      await new Promise((resolve) =>
+        setTimeout(resolve, input.target === "a.com" ? 10 : 5),
+      );
+      const resolver = getDataforseoKeyResolver();
+      observed[input.target] = resolver ? await resolver() : null;
+      return {
+        data: { rank: 1 },
+        billing: { costUsd: 0, path: ["backlinks", "summary"] },
+      };
+    });
+
+    const clientA = createDataforseoClient({
+      ...billingCustomer,
+      organizationId: "org_A",
+    });
+    const clientB = createDataforseoClient({
+      ...billingCustomer,
+      organizationId: "org_B",
+    });
+
+    await Promise.all([
+      clientA.backlinks.summary({ target: "a.com" }),
+      clientB.backlinks.summary({ target: "b.com" }),
+    ]);
+
+    expect(observed["a.com"]).toBe("key-A");
+    expect(observed["b.com"]).toBe("key-B");
   });
 });
 

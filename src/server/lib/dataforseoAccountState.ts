@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
+import { getDataforseoKeyResolver } from "@/server/lib/dataforseo/credential-context";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 
 const API_BASE = "https://api.dataforseo.com";
@@ -51,7 +52,13 @@ export function hasActiveDataforseoSubscription(
 }
 
 export async function fetchDataforseoAccountState(): Promise<DataforseoAccountState | null> {
-  const apiKey = await getRequiredEnvValue("DATAFORSEO_API_KEY");
+  // Same key precedence as the SDK fetch (see core.ts): ambient BYO resolver if
+  // set, else the global operator key. Lets a validate-on-save flow run under a
+  // just-entered key via `runWithDataforseoKey` without touching the global env.
+  const resolver = getDataforseoKeyResolver();
+  const apiKey = resolver
+    ? await resolver()
+    : await getRequiredEnvValue("DATAFORSEO_API_KEY");
   const response = await fetch(`${API_BASE}/v3/appendix/user_data`, {
     method: "GET",
     headers: { Authorization: `Basic ${apiKey}` },

@@ -7,6 +7,7 @@ import { GscService } from "@/server/features/gsc/services/GscService";
 import { hasSelfHostedGscConfig } from "@/server/features/gsc/oauth-config";
 import { ProjectService } from "@/server/features/projects/services/ProjectService";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
+import { OrganizationSeoCredentialRepository } from "@/server/features/seo-credentials/OrganizationSeoCredentialRepository";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import {
   buildCommandCenterActions,
@@ -62,7 +63,7 @@ export const getProjectCommandCenter = createServerFn({ method: "POST" })
       context.projectId,
     );
 
-    const [gsc, audits, rankTrackers] = await Promise.all([
+    const [gsc, audits, rankTrackers, orgSeoKey] = await Promise.all([
       readSource(async () => {
         const [connection, currentUserHasGrant, hosted, configured] =
           await Promise.all([
@@ -82,6 +83,11 @@ export const getProjectCommandCenter = createServerFn({ method: "POST" })
       readSource(() =>
         RankTrackingRepository.getConfigSummaries(context.projectId),
       ),
+      // A transient credential-store read must not break the whole home page;
+      // fall back to global-env detection below when it fails.
+      OrganizationSeoCredentialRepository.getEncrypted(
+        context.organizationId,
+      ).catch(() => null),
     ]);
 
     const latestAudit = audits.data?.latest ?? null;
@@ -116,7 +122,8 @@ export const getProjectCommandCenter = createServerFn({ method: "POST" })
     return {
       project,
       readiness: {
-        dataForSeoConfigured: Boolean(env.DATAFORSEO_API_KEY?.trim()),
+        dataForSeoConfigured:
+          orgSeoKey != null || Boolean(env.DATAFORSEO_API_KEY?.trim()),
         gsc: gsc.data,
       },
       audit: {

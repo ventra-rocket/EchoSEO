@@ -202,6 +202,29 @@ export const en = {
   "commandCenter.provenance.dataForSeoConfigured": "DataForSEO: configured",
   "commandCenter.provenance.dataForSeoNotConfigured":
     "DataForSEO: not configured",
+
+  "seoProvider.section": "SEO data provider",
+  "seoProvider.description":
+    "Use your own DataForSEO account for keyword, rank, backlink, and domain data. You're billed by DataForSEO directly; EchoSEO only covers the AI features. Leave this empty to use the platform default when one is available.",
+  "seoProvider.getKey": "Get a key at dataforseo.com",
+  "seoProvider.inputLabel": "API key (base64 of your login:password)",
+  "seoProvider.placeholder": "Paste your DataForSEO API key",
+  "seoProvider.checking": "Checking…",
+  "seoProvider.loadError": "We couldn't load the DataForSEO key status.",
+  "seoProvider.save": "Save key",
+  "seoProvider.saving": "Saving…",
+  "seoProvider.remove": "Remove",
+  "seoProvider.removing": "Removing…",
+  "seoProvider.badge.org": "Your key",
+  "seoProvider.badge.global": "Platform default",
+  "seoProvider.badge.none": "Not set",
+  "seoProvider.toast.saved": "DataForSEO key saved.",
+  "seoProvider.toast.removed": "DataForSEO key removed.",
+  "seoProvider.toast.invalidKey":
+    "That DataForSEO key was rejected. Check the base64 of your login:password and try again.",
+  "seoProvider.toast.forbidden":
+    "Only workspace owners and admins can change the DataForSEO key.",
+  "seoProvider.toast.error": "We couldn't save the DataForSEO key.",
 } as const;
 
 export type MessageId = keyof typeof en;

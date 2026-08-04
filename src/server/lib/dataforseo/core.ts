@@ -8,6 +8,7 @@ import {
   SerpApi,
 } from "dataforseo-client";
 import { AppError } from "@/server/lib/errors";
+import { getDataforseoKeyResolver } from "@/server/lib/dataforseo/credential-context";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import type { ErrorCode } from "@/shared/error-codes";
 
@@ -66,7 +67,14 @@ function formatDataforseoRequestPath(url: RequestInfo): string {
  */
 function createAuthenticatedFetch(classify?: DataforseoErrorClassifier) {
   return async (url: RequestInfo, init?: RequestInit): Promise<Response> => {
-    const apiKey = await getRequiredEnvValue("DATAFORSEO_API_KEY");
+    // Prefer the ambient per-organization key set by the metering chokepoint
+    // (`runWithDataforseoKey`); fall back to the global operator key when no
+    // resolver is in scope, preserving the pre-BYO behavior for self-host and
+    // global-key requests.
+    const resolver = getDataforseoKeyResolver();
+    const apiKey = resolver
+      ? await resolver()
+      : await getRequiredEnvValue("DATAFORSEO_API_KEY");
     const headers = new Headers(init?.headers);
     headers.set("Authorization", `Basic ${apiKey}`);
     // Resolve the signal once so retries share the overall request timeout

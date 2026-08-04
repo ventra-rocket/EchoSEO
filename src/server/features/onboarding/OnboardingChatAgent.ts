@@ -13,7 +13,10 @@ import { z } from "zod";
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
 import { buildOnboardingTools } from "@/server/features/onboarding/onboardingChatTools";
 import { getOnboardingModel } from "@/server/lib/openrouter";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import {
+  isHostedAccessOpen,
+  isHostedServerAuthMode,
+} from "@/server/lib/runtime-env";
 import {
   customerHasManagedAccess,
   getUsageCreditsRemaining,
@@ -126,10 +129,13 @@ export class OnboardingChatAgent extends AIChatAgent {
     // user must have paid access, and either way the org must still have credits
     // — LLM tokens and DataForSEO tool calls all draw down the same
     // onboarding-plan balance. Self-hosted has no Autumn balance and brings its
-    // own provider keys, so it's ungated. Captured for metering in onFinish.
+    // own provider keys, so it's ungated; open-access runs the managed app with
+    // no billing provider configured, so it's ungated the same way (Autumn would
+    // throw on a missing secret). Either way `creditCustomerId` stays null, so
+    // `onFinish` tracks no spend. Captured for metering in onFinish.
     let creditCustomerId: string | null = null;
     let monthlyCreditsRemaining = 0;
-    if (await isHostedServerAuthMode()) {
+    if ((await isHostedServerAuthMode()) && !(await isHostedAccessOpen())) {
       const questionCount = this.messages.filter(
         (message) => message.role === "user",
       ).length;
