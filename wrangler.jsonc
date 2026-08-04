@@ -11,6 +11,10 @@
   // Cloudflare Access OTP in front of the product routes.
   "vars": {
     "AUTH_MODE": "hosted",
+    // Temporary open-access mode: full product access with no paywall and no
+    // forced onboarding, without touching the billing provider. Set to "false"
+    // to re-enable the subscribe gate once billing is configured.
+    "HOSTED_ACCESS_OPEN": "true",
     // Where the free checker's outgoing mail points its report links. Request
     // handlers read their own origin off the request; the Workflow and the email
     // cron have no request, so this is the only way they can know.

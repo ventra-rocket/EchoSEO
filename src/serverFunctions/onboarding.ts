@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { user, userOnboardingAnswers } from "@/db/schema";
 import { db } from "@/db";
+import { isHostedAccessOpen } from "@/server/lib/runtime-env";
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 
 const onboardingAnswersSchema = z.object({
@@ -50,8 +51,14 @@ export const getOnboardingAnswers = createServerFn({ method: "GET" })
       }
     }
 
+    // In open-access mode the onboarding wizard (whose final step is the
+    // paywall) must not gate the app, so report onboarding as already complete.
+    const completedAt =
+      answers?.completedAt ??
+      ((await isHostedAccessOpen()) ? new Date().toISOString() : null);
+
     return {
-      completedAt: answers?.completedAt ?? null,
+      completedAt,
       gscNudgeDismissedAt: answers?.gscNudgeDismissedAt ?? null,
       userCreatedAt: userRecord?.createdAt?.toISOString() ?? null,
       answers: {
