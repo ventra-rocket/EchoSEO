@@ -1,12 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function getProjectId(page: Page) {
+  // `/` resolves to the remembered/first project home (`/p/:id`), not a feature
+  // route, so read the project id there and let each test navigate on from it.
   await page.goto("/");
-  await page.waitForURL(/\/p\/([^/]+)\/keywords(?:\?.*)?$/, {
-    timeout: 30_000,
-  });
+  await page.waitForURL(/\/p\/[^/?#]+/, { timeout: 30_000 });
 
-  const match = page.url().match(/\/p\/([^/]+)\/keywords/);
+  const match = page.url().match(/\/p\/([^/?#]+)/);
   if (!match) throw new Error(`Could not read project id from ${page.url()}`);
   return match[1];
 }

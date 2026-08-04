@@ -1,95 +1,106 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, CheckCircle2, CircleAlert, Database } from "lucide-react";
-import type { CommandCenterAction } from "@/shared/command-center";
-
-export type CommandCenterData = {
-  readiness: {
-    dataForSeoConfigured: boolean;
-    gsc: {
-      connected: boolean;
-      currentUserHasGrant: boolean;
-      googleOAuthConfigured: boolean;
-      siteUrl: string | null;
-    } | null;
-  };
-  audit: {
-    latest: {
-      id: string;
-      status: string;
-      pagesCrawled: number;
-      pagesTotal: number;
-      completedAt: string | null;
-    } | null;
-    latestCompleted: {
-      id: string;
-      status: string;
-      pagesCrawled: number;
-      pagesTotal: number;
-      completedAt: string | null;
-    } | null;
-    criticalIssueCount: number;
-    highIssueCount: number;
-    issuesMaterializedAt: string | null;
-  };
-  rankTracking: Array<{
-    id: string;
-    domain: string;
-    keywordCount: number;
-    lastRunStatus: string | null;
-    lastRunCompletedAt: string | null;
-  }>;
-  sources: {
-    gscError: string | null;
-    auditError: string | null;
-    rankTrackingError: string | null;
-    issueError: string | null;
-  };
-  nextActions: CommandCenterAction[];
-};
+import { useIntl } from "react-intl";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  CircleAlert,
+  Database,
+} from "lucide-react";
+import type {
+  CommandCenterView,
+  IssuesView,
+  NextActionView,
+} from "./command-center-view-model";
+import { ACTION_MESSAGE_IDS, ActionLink } from "./CommandCenterActionLink";
 
 export function NextActionCard({
+  nextAction,
   projectId,
-  actions,
+  criticalCount,
+  highCount,
+  onRetry,
 }: {
+  nextAction: NextActionView;
   projectId: string;
-  actions: CommandCenterAction[];
+  criticalCount: number;
+  highCount: number;
+  onRetry: () => void;
 }) {
-  const [primary, ...secondary] = actions;
+  const intl = useIntl();
 
-  if (!primary) {
+  if (nextAction.state === "complete") {
     return (
-      <section className="card border border-base-300 bg-base-100 shadow-sm">
-        <div className="card-body gap-3">
+      <section className="signal-panel p-4 sm:p-5">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 text-success">
             <CheckCircle2 className="size-5" aria-hidden="true" />
             <h2 className="font-semibold text-base-content">
-              Foundation complete
+              {intl.formatMessage({
+                id: "commandCenter.nextAction.completeTitle",
+              })}
             </h2>
           </div>
           <p className="text-sm text-base-content/70">
-            Your core project signals are connected. Use the evidence below to
-            choose the next SEO task.
+            {intl.formatMessage({
+              id: "commandCenter.nextAction.completeBody",
+            })}
           </p>
         </div>
       </section>
     );
   }
 
+  if (nextAction.state === "incomplete") {
+    return (
+      <section className="signal-panel p-4 sm:p-5" role="status">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-warning">
+            <AlertTriangle className="size-5" aria-hidden="true" />
+            <h2 className="font-semibold text-base-content">
+              {intl.formatMessage({
+                id: "commandCenter.nextAction.incompleteTitle",
+              })}
+            </h2>
+          </div>
+          <p className="text-sm text-base-content/70">
+            {intl.formatMessage({
+              id: "commandCenter.nextAction.incompleteBody",
+            })}
+          </p>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost w-fit"
+            onClick={onRetry}
+          >
+            {intl.formatMessage({ id: "commandCenter.retry" })}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const { primary, secondary } = nextAction;
+  const titleValues = { critical: criticalCount, high: highCount };
+
   return (
-    <section className="card border border-base-300 bg-base-100 shadow-sm">
-      <div className="card-body gap-4">
+    <section className="signal-panel p-4 sm:p-5">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 text-primary">
           <Activity className="size-5" aria-hidden="true" />
-          <p className="text-sm font-medium uppercase tracking-wide">
-            Next action
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            {intl.formatMessage({ id: "commandCenter.nextAction.eyebrow" })}
           </p>
         </div>
         <div>
           <h2 className="text-xl font-semibold text-base-content">
-            {primary.title}
+            {intl.formatMessage({ id: ACTION_MESSAGE_IDS[primary.id].title })}
           </h2>
           <p className="mt-1 text-sm text-base-content/70">
-            {primary.description}
+            {intl.formatMessage(
+              { id: ACTION_MESSAGE_IDS[primary.id].body },
+              titleValues,
+            )}
           </p>
         </div>
         <ActionLink action={primary} projectId={projectId} primary />
@@ -110,65 +121,99 @@ export function NextActionCard({
 }
 
 export function DataHealthCard({
+  view,
   projectId,
-  data,
 }: {
+  view: CommandCenterView;
   projectId: string;
-  data: CommandCenterData;
 }) {
-  const gsc = data.readiness.gsc;
-  const audit = data.audit.latest;
-  const rankKeywordCount = data.rankTracking.reduce(
-    (total, tracker) => total + tracker.keywordCount,
-    0,
-  );
+  const intl = useIntl();
+
+  const gscValue =
+    view.gsc.state === "unavailable"
+      ? intl.formatMessage({ id: "commandCenter.value.unavailable" })
+      : view.gsc.state === "connected"
+        ? intl.formatMessage({ id: "commandCenter.health.connected" })
+        : intl.formatMessage({ id: "commandCenter.health.notConnected" });
+
+  const auditValue = (() => {
+    const progress = view.auditProgress;
+    switch (progress.state) {
+      case "unavailable":
+        return intl.formatMessage({ id: "commandCenter.value.unavailable" });
+      case "none":
+        return intl.formatMessage({ id: "commandCenter.value.noAudit" });
+      case "queued":
+        return intl.formatMessage({ id: "commandCenter.health.auditQueued" });
+      case "completed":
+        return intl.formatMessage(
+          { id: "commandCenter.health.auditCompleted" },
+          { crawled: progress.pagesCrawled, total: progress.pagesTotal },
+        );
+      case "running":
+        return intl.formatMessage(
+          { id: "commandCenter.health.auditRunning" },
+          { crawled: progress.pagesCrawled, total: progress.pagesTotal },
+        );
+      case "failed":
+        return intl.formatMessage(
+          { id: "commandCenter.health.auditFailed" },
+          { crawled: progress.pagesCrawled, total: progress.pagesTotal },
+        );
+    }
+  })();
+
+  const rankValue = (() => {
+    const rank = view.rank;
+    if (rank.state === "unavailable") {
+      return intl.formatMessage({ id: "commandCenter.value.unavailable" });
+    }
+    if (rank.state === "not-configured") {
+      return intl.formatMessage({ id: "commandCenter.value.notConfigured" });
+    }
+    return intl.formatMessage(
+      { id: "commandCenter.health.rankSummary" },
+      { keywords: rank.keywordCount, trackers: rank.trackerCount },
+    );
+  })();
 
   return (
-    <section className="card border border-base-300 bg-base-100 shadow-sm">
-      <div className="card-body gap-4">
+    <section className="signal-panel p-4 sm:p-5">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Database
             className="size-5 text-base-content/70"
             aria-hidden="true"
           />
-          <h2 className="font-semibold">Data health</h2>
+          <h2 className="font-semibold">
+            {intl.formatMessage({ id: "commandCenter.health.title" })}
+          </h2>
         </div>
         <HealthRow
-          label="Search Console"
-          value={
-            data.sources.gscError
-              ? "Unavailable"
-              : gsc?.connected
-                ? "Connected"
-                : "Not connected"
-          }
-          ok={Boolean(gsc?.connected)}
+          label={intl.formatMessage({
+            id: "commandCenter.health.searchConsole",
+          })}
+          value={gscValue}
+          ok={view.gsc.state === "connected"}
           to="/p/$projectId/search-performance"
           projectId={projectId}
         />
         <HealthRow
-          label="Site audit"
-          value={
-            data.sources.auditError
-              ? "Unavailable"
-              : audit
-                ? `${audit.status} · ${audit.pagesCrawled}/${audit.pagesTotal} pages`
-                : "No audit yet"
-          }
-          ok={audit?.status === "completed"}
+          label={intl.formatMessage({ id: "commandCenter.health.siteAudit" })}
+          value={auditValue}
+          ok={view.auditProgress.state === "completed"}
           to="/p/$projectId/audit"
           projectId={projectId}
         />
         <HealthRow
-          label="Rank tracking"
-          value={
-            data.sources.rankTrackingError
-              ? "Unavailable"
-              : data.rankTracking.length > 0
-                ? `${rankKeywordCount} keywords across ${data.rankTracking.length} tracker${data.rankTracking.length === 1 ? "" : "s"}`
-                : "Not configured"
+          label={intl.formatMessage({
+            id: "commandCenter.health.rankTracking",
+          })}
+          value={rankValue}
+          ok={
+            view.rank.state !== "unavailable" &&
+            view.rank.state !== "not-configured"
           }
-          ok={data.rankTracking.length > 0}
           to="/p/$projectId/rank-tracking"
           projectId={projectId}
         />
@@ -178,28 +223,24 @@ export function DataHealthCard({
 }
 
 export function PriorityQueue({
+  issues,
   projectId,
-  data,
 }: {
+  issues: IssuesView;
   projectId: string;
-  data: CommandCenterData;
 }) {
-  const audit = data.audit.latestCompleted;
-  const hasAuditPriority =
-    audit?.status === "completed" &&
-    data.audit.issuesMaterializedAt &&
-    data.audit.criticalIssueCount + data.audit.highIssueCount > 0;
+  const intl = useIntl();
 
   return (
-    <section className="card border border-base-300 bg-base-100 shadow-sm">
-      <div className="card-body gap-4">
+    <section className="signal-panel p-4 sm:p-5">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-base-content/60">
-              Priority queue
+            <p className="signal-label">
+              {intl.formatMessage({ id: "commandCenter.priority.eyebrow" })}
             </p>
             <h2 className="mt-1 text-lg font-semibold">
-              Evidence before action
+              {intl.formatMessage({ id: "commandCenter.priority.heading" })}
             </h2>
           </div>
           <Link
@@ -207,43 +248,76 @@ export function PriorityQueue({
             params={{ projectId }}
             className="btn btn-ghost btn-sm"
           >
-            Open audit
+            {intl.formatMessage({ id: "commandCenter.priority.openAudit" })}
           </Link>
         </div>
-        {data.sources.auditError ? (
-          <div className="alert alert-error text-sm" role="alert">
-            <CircleAlert className="size-5" aria-hidden="true" />
-            <span>
-              Audit data is temporarily unavailable. Retry the page to refresh
-              it.
-            </span>
-          </div>
-        ) : hasAuditPriority ? (
-          <div className="space-y-3">
-            <PriorityRow
-              label="Critical issue groups"
-              value={data.audit.criticalIssueCount}
-              tone="error"
-            />
-            <PriorityRow
-              label="High-priority issue groups"
-              value={data.audit.highIssueCount}
-              tone="warning"
-            />
-            <p className="text-xs text-base-content/60">
-              Source: completed crawl. Open the audit to inspect affected URLs
-              and remediation guidance.
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-base-content/70">
-            {audit?.status === "completed"
-              ? "Issues are still being materialized. EchoSEO will not present a clean result until that analysis is complete."
-              : "Run a site audit to create evidence-backed priorities for this project."}
-          </p>
-        )}
+        <PriorityBody issues={issues} />
       </div>
     </section>
+  );
+}
+
+function PriorityBody({ issues }: { issues: IssuesView }) {
+  const intl = useIntl();
+
+  if (issues.state === "unavailable") {
+    return (
+      <div className="alert alert-error text-sm" role="alert">
+        <CircleAlert className="size-5" aria-hidden="true" />
+        <span>
+          {intl.formatMessage({ id: "commandCenter.priority.unavailable" })}
+        </span>
+      </div>
+    );
+  }
+
+  if (issues.state === "no-audit") {
+    return (
+      <p className="text-sm text-base-content/70">
+        {intl.formatMessage({ id: "commandCenter.priority.runAudit" })}
+      </p>
+    );
+  }
+
+  if (issues.state === "materializing") {
+    return (
+      <p className="text-sm text-base-content/70">
+        {intl.formatMessage({ id: "commandCenter.priority.materializing" })}
+      </p>
+    );
+  }
+
+  if (issues.priorityCount === 0) {
+    return (
+      <p className="text-sm text-base-content/70">
+        {intl.formatMessage({ id: "commandCenter.priority.clean" })}
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <PriorityRow
+        label={intl.formatMessage({ id: "commandCenter.priority.critical" })}
+        value={issues.criticalCount}
+        tone="error"
+      />
+      <PriorityRow
+        label={intl.formatMessage({ id: "commandCenter.priority.high" })}
+        value={issues.highCount}
+        tone="warning"
+      />
+      <p className="signal-meta">
+        {intl.formatMessage({ id: "commandCenter.priority.source" })}
+      </p>
+      {issues.fromDifferentAudit ? (
+        <p className="signal-meta">
+          {intl.formatMessage({
+            id: "commandCenter.priority.fromLastCompleted",
+          })}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -257,7 +331,7 @@ function PriorityRow({
   tone: "error" | "warning";
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-base-300 px-3 py-2">
+    <div className="signal-row rounded-lg border border-base-300 px-3 py-2">
       <span className="text-sm text-base-content/75">{label}</span>
       <span className={`badge badge-${tone} tabular-nums`}>{value}</span>
     </div>
@@ -284,7 +358,7 @@ function HealthRow({
     <Link
       to={to}
       params={{ projectId }}
-      className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-2 -mx-2 hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="signal-row signal-interactive -mx-2 rounded-lg px-2 hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <span className="text-sm text-base-content/70">{label}</span>
       <span className={`badge ${ok ? "badge-success" : "badge-ghost"}`}>
@@ -292,62 +366,4 @@ function HealthRow({
       </span>
     </Link>
   );
-}
-
-function ActionLink({
-  action,
-  projectId,
-  primary = false,
-}: {
-  action: CommandCenterAction;
-  projectId: string;
-  primary?: boolean;
-}) {
-  const className = primary
-    ? "btn btn-primary min-h-11 w-full sm:w-fit"
-    : "link link-hover text-sm";
-  const label = primary ? action.title : action.title;
-
-  switch (action.target) {
-    case "settings":
-      return (
-        <Link
-          to="/p/$projectId/settings"
-          params={{ projectId }}
-          className={className}
-        >
-          {label}
-        </Link>
-      );
-    case "search-performance":
-      return (
-        <Link
-          to="/p/$projectId/search-performance"
-          params={{ projectId }}
-          className={className}
-        >
-          {label}
-        </Link>
-      );
-    case "audit":
-      return (
-        <Link
-          to="/p/$projectId/audit"
-          params={{ projectId }}
-          className={className}
-        >
-          {label}
-        </Link>
-      );
-    case "rank-tracking":
-      return (
-        <Link
-          to="/p/$projectId/rank-tracking"
-          params={{ projectId }}
-          className={className}
-        >
-          {label}
-        </Link>
-      );
-  }
 }

@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 import { LanguageSwitcher } from "@/client/i18n/LanguageSwitcher";
 import {
-  ChevronDown,
   CircleHelp,
   CreditCard,
   Menu,
@@ -15,10 +14,11 @@ import {
 import {
   AppContent,
   MissingSeoSetupModal,
+  NavDrawer,
   SeoApiStatusBanners,
 } from "@/client/layout/AppShellParts";
 import { GscReEngagementModal } from "@/client/features/gsc/GscReEngagementModal";
-import { getProjectNavGroups } from "@/client/navigation/items";
+import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { BILLING_ROUTE } from "@/shared/billing";
@@ -30,6 +30,7 @@ import { getLastProjectId } from "@/client/lib/active-project";
 
 const DATAFORSEO_HELP_PATH = "/help/dataforseo-api-key";
 const SUPPORT_PATH = "/support";
+const MAIN_CONTENT_ID = "app-main-content";
 
 export function AuthenticatedAppLayout({
   children,
@@ -40,9 +41,9 @@ export function AuthenticatedAppLayout({
   projectId?: string;
   banner?: React.ReactNode;
 }) {
+  const intl = useIntl();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const setupModalRef = React.useRef<HTMLDivElement | null>(null);
   const [showMissingSeoApiKeyModal, setShowMissingSeoApiKeyModal] =
     React.useState(false);
   // On non-project pages (e.g. /settings) there's no projectId in the URL, so
@@ -107,22 +108,12 @@ export function AuthenticatedAppLayout({
     isSeoApiKeyConfigured === false &&
     !shouldShowMissingSeoApiKeyModal;
 
-  React.useEffect(() => {
-    if (!shouldShowMissingSeoApiKeyModal) return;
-
-    setupModalRef.current?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setShowMissingSeoApiKeyModal(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [shouldShowMissingSeoApiKeyModal]);
+  const closeSetupModal = React.useCallback(
+    () => setShowMissingSeoApiKeyModal(false),
+    [],
+  );
+  const openDrawer = React.useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = React.useCallback(() => setDrawerOpen(false), []);
 
   React.useEffect(() => {
     if (!projectId) {
@@ -130,34 +121,79 @@ export function AuthenticatedAppLayout({
     }
   }, [projectId]);
 
+  // The drawer only exists below the desktop breakpoint (its overlay is
+  // `xl:hidden`). If the viewport crosses into desktop while the drawer is open,
+  // close it — otherwise the shell stays `inert` behind a now-hidden dialog and
+  // the whole app becomes uninteractable.
+  React.useEffect(() => {
+    if (!drawerOpen) return;
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    if (desktop.matches) {
+      setDrawerOpen(false);
+      return;
+    }
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setDrawerOpen(false);
+    };
+    desktop.addEventListener("change", onChange);
+    return () => desktop.removeEventListener("change", onChange);
+  }, [drawerOpen]);
+
+  const focusMainContent = React.useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault();
+      const main = document.getElementById(MAIN_CONTENT_ID);
+      main?.focus();
+      main?.scrollIntoView();
+    },
+    [],
+  );
+
   return (
     <div className="flex h-[100dvh] flex-col bg-base-200">
-      <TopNav
-        drawerOpen={drawerOpen}
+      {/* The whole shell goes inert while the drawer owns the screen, so focus
+          stays trapped in the dialog and the background is hidden from AT. */}
+      <div inert={drawerOpen} className="flex h-full min-h-0 flex-col">
+        {/* Kept in the tab order at full size and pushed off-screen with a
+            transform (not clipped to 1px like sr-only, which some browsers drop
+            from sequential focus), so it is reliably the first Tab stop and
+            reveals itself on focus. */}
+        <a
+          href={`#${MAIN_CONTENT_ID}`}
+          onClick={focusMainContent}
+          className="signal-focus fixed left-4 top-3 z-[60] -translate-y-20 rounded-lg border border-base-300 bg-base-100 px-4 py-2 text-sm font-medium text-base-content shadow-lg focus:translate-y-0"
+        >
+          {intl.formatMessage({ id: "shell.skipToContent" })}
+        </a>
+
+        <TopNav
+          drawerOpen={drawerOpen}
+          projectId={headerProjectId}
+          pathname={location.pathname}
+          onOpenDrawer={openDrawer}
+        />
+
+        <SeoApiStatusBanners
+          shouldShowSeoApiWarning={shouldShowSeoApiWarning}
+          seoApiKeyStatusError={seoApiKeyStatusError}
+        />
+
+        {banner}
+
+        <AppContent projectId={headerProjectId} onExpandNav={openDrawer}>
+          {children}
+        </AppContent>
+      </div>
+
+      <NavDrawer
+        open={drawerOpen}
         projectId={headerProjectId}
-        pathname={location.pathname}
-        onOpenDrawer={() => setDrawerOpen(true)}
+        onClose={closeDrawer}
       />
-
-      <SeoApiStatusBanners
-        shouldShowSeoApiWarning={shouldShowSeoApiWarning}
-        seoApiKeyStatusError={seoApiKeyStatusError}
-      />
-
-      {banner}
-
-      <AppContent
-        drawerOpen={drawerOpen}
-        projectId={headerProjectId}
-        onCloseDrawer={() => setDrawerOpen(false)}
-      >
-        {children}
-      </AppContent>
 
       <MissingSeoSetupModal
-        ref={setupModalRef}
         isOpen={shouldShowMissingSeoApiKeyModal}
-        onClose={() => setShowMissingSeoApiKeyModal(false)}
+        onClose={closeSetupModal}
       />
 
       <GscReEngagementModal
@@ -180,122 +216,29 @@ function TopNav({
   onOpenDrawer: () => void;
 }) {
   const intl = useIntl();
-  const navGroups = projectId ? getProjectNavGroups(projectId) : [];
   const isSupportActive = pathname === SUPPORT_PATH;
 
   return (
-    <div className="navbar shrink-0 gap-2 border-b border-base-300 bg-base-100">
-      <div className="flex flex-none items-center md:hidden">
+    <div className="flex h-14 shrink-0 items-center gap-2 border-b border-base-300 bg-base-100 px-2 sm:px-3">
+      <div className="flex flex-none items-center gap-1">
         {projectId ? (
           <button
             type="button"
-            className="btn btn-square btn-ghost"
+            className="btn btn-square btn-ghost min-h-11 min-w-11 md:hidden"
             aria-label={intl.formatMessage({ id: "nav.toggleSidebar" })}
             aria-expanded={drawerOpen}
             onClick={onOpenDrawer}
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-5 w-5" />
           </button>
         ) : null}
-        <Link to="/" className="ml-1 font-semibold text-base-content">
-          EchoSEO
+        <Link
+          to="/"
+          className="ml-1 flex items-center text-base-content"
+          aria-label="EchoSEO"
+        >
+          <EchoSeoLogo variant="lockup" />
         </Link>
-      </div>
-
-      <div className="hidden items-center gap-1 md:flex">
-        <Link to="/" className="px-2 text-lg font-semibold text-base-content">
-          EchoSEO
-        </Link>
-        {projectId
-          ? navGroups.map((entry) => {
-              if (entry.type === "standalone") {
-                const {
-                  icon: Icon,
-                  matchSegment,
-                  labelId,
-                  ...linkProps
-                } = entry.item;
-                const isActive =
-                  matchSegment === "/"
-                    ? pathname === `/p/${projectId}` ||
-                      pathname === `/p/${projectId}/`
-                    : pathname.includes(matchSegment);
-                return (
-                  <Link
-                    key={linkProps.to}
-                    {...linkProps}
-                    className={`btn btn-sm gap-2 ${
-                      isActive
-                        ? "border-transparent bg-primary/10 font-medium text-primary"
-                        : "btn-ghost text-base-content/60 hover:text-base-content"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {intl.formatMessage({ id: labelId })}
-                  </Link>
-                );
-              }
-
-              const GroupIcon = entry.icon;
-              const isGroupActive = entry.matchSegments.some((seg) =>
-                pathname.includes(seg),
-              );
-
-              return (
-                <div key={entry.labelId} className="dropdown dropdown-hover">
-                  <button
-                    type="button"
-                    tabIndex={0}
-                    className={`btn btn-sm gap-1.5 ${
-                      isGroupActive
-                        ? "border-transparent bg-primary/10 font-medium text-primary"
-                        : "btn-ghost text-base-content/60 hover:text-base-content"
-                    }`}
-                  >
-                    <GroupIcon className="h-4 w-4" />
-                    {intl.formatMessage({ id: entry.labelId })}
-                    <ChevronDown className="h-3 w-3 opacity-50" />
-                  </button>
-                  <ul
-                    tabIndex={0}
-                    className="dropdown-content z-20 menu w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-                  >
-                    {entry.items.map((item) => {
-                      const {
-                        icon: Icon,
-                        matchSegment,
-                        labelId,
-                        ...linkProps
-                      } = item;
-                      const isActive = pathname.includes(matchSegment);
-                      return (
-                        <li key={linkProps.to}>
-                          <Link
-                            {...linkProps}
-                            className={
-                              isActive
-                                ? "bg-primary/10 font-medium text-primary"
-                                : ""
-                            }
-                            onClick={() => {
-                              if (
-                                document.activeElement instanceof HTMLElement
-                              ) {
-                                document.activeElement.blur();
-                              }
-                            }}
-                          >
-                            <Icon className="h-4 w-4" />
-                            {intl.formatMessage({ id: labelId })}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })
-          : null}
       </div>
 
       <div className="flex-1" />
@@ -339,12 +282,12 @@ function AccountMenu({ mobileOnly = false }: { mobileOnly?: boolean }) {
   const handleSignOut = () => signOutAndRedirect();
 
   const menu = (
-    <div className={mobileOnly ? "ml-2 flex-none md:hidden" : "flex-none"}>
+    <div className={mobileOnly ? "ml-1 flex-none md:hidden" : "flex-none"}>
       <div className="dropdown dropdown-end">
         <button
           type="button"
           tabIndex={0}
-          className={`btn btn-ghost btn-circle ${mobileOnly ? "" : "hover:bg-base-200/80"}`}
+          className={`btn btn-ghost btn-circle btn-sm ${mobileOnly ? "" : "hover:bg-base-200/80"}`}
           aria-label={intl.formatMessage({ id: "account.menuLabel" })}
         >
           <User className="h-5 w-5" />

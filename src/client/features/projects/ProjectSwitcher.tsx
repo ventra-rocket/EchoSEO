@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 import { Check, ChevronsUpDown, FolderCog } from "lucide-react";
 import { getProjects } from "@/serverFunctions/projects";
 import { setLastProjectId } from "@/client/lib/active-project";
@@ -22,6 +23,7 @@ export function ProjectSwitcher({
   // drawer overlay.
   onCloseDrawer?: () => void;
 }) {
+  const intl = useIntl();
   const navigate = useNavigate();
   const projectsQuery = useQuery({
     queryKey: ["projects"],
@@ -49,7 +51,7 @@ export function ProjectSwitcher({
       <button
         type="button"
         tabIndex={0}
-        aria-label="Switch project"
+        aria-label={intl.formatMessage({ id: "projectSwitcher.switch" })}
         className={
           isSidebar
             ? "btn btn-ghost btn-sm w-full justify-between font-medium"
@@ -57,11 +59,18 @@ export function ProjectSwitcher({
         }
       >
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium text-base-content">
-            {activeProject?.name ?? "Select project"}
+          <span
+            className="truncate text-sm font-medium text-base-content"
+            data-ph-mask
+          >
+            {activeProject?.name ??
+              intl.formatMessage({ id: "projectSwitcher.select" })}
           </span>
           {activeProject?.domain ? (
-            <span className="truncate text-xs font-normal text-base-content/50">
+            <span
+              className="truncate text-xs font-normal text-base-content/50"
+              data-ph-mask
+            >
               {activeProject.domain}
             </span>
           ) : null}
@@ -85,9 +94,14 @@ export function ProjectSwitcher({
                 className={isActive ? "active" : ""}
               >
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate">{project.name}</span>
+                  <span className="truncate" data-ph-mask>
+                    {project.name}
+                  </span>
                   {project.domain ? (
-                    <span className="truncate text-xs text-base-content/50">
+                    <span
+                      className="truncate text-xs text-base-content/50"
+                      data-ph-mask
+                    >
                       {project.domain}
                     </span>
                   ) : null}
@@ -115,7 +129,7 @@ export function ProjectSwitcher({
             }}
           >
             <FolderCog className="size-4" />
-            Manage projects
+            {intl.formatMessage({ id: "projectSwitcher.manage" })}
           </Link>
         </li>
       </ul>
