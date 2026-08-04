@@ -488,6 +488,91 @@ html[data-theme="openseo-dark"] .text-base-content\/90 {
   color: color-mix(in oklab, var(--color-base-content) 93%, transparent);
 }
 
+/* ── EchoSEO Signal Console (authenticated shell) — scoped design vocabulary ─
+   A small, flat data-workbench layer for the authenticated dashboard. Every
+   rule is prefixed .signal-* and composes only the existing daisyUI Signal
+   tokens, so the public checker (.fsc-*) and the global themes are untouched.
+   Density 8 / variance 4 / motion 3: near-flat base-100 work surfaces on the
+   base-200 ground, hairline dividers, tabular readouts, quiet metadata. No new
+   colour, font, radius scale, or theme is introduced here — presentation only.
+
+   A trend/delta/sparkline utility is deliberately absent: the command-center
+   response exposes current state, not a persisted comparison series, so there
+   is nothing honest to draw. Do not add one until the server provides
+   comparable snapshots. */
+
+/* Flat work surface: a raised card that reads one step above the base-200
+   ground without a heavy shadow. */
+.signal-panel {
+  @apply rounded-lg border border-base-300 bg-base-100;
+}
+
+/* A quieter surface that sits directly on the ground — inset rows, rails, and
+   provenance blocks where a card shadow would be too loud. */
+.signal-panel-inset {
+  @apply rounded-lg border border-base-300 bg-base-200;
+}
+
+/* Hairline divider between rows/sections. Reads from base-content so it holds
+   in both themes without pinning a colour. */
+.signal-divider {
+  border-top: 1px solid
+    color-mix(in oklab, var(--color-base-content) 10%, transparent);
+}
+
+/* Section / evidence label: small, quiet, uppercase. This is the metadata
+   band, not a heading — pair it with a real semantic heading where the visual
+   hierarchy needs one. */
+.signal-label {
+  @apply text-xs font-semibold uppercase tracking-wide text-base-content/60;
+}
+
+/* Muted metadata line — source, freshness, provenance. */
+.signal-meta {
+  @apply text-xs text-base-content/60;
+}
+
+/* Primary readout: tabular figures so digits align down a column of rows. */
+.signal-value {
+  @apply font-semibold text-base-content;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Compact interactive row with a comfortable 44px touch target. */
+.signal-row {
+  @apply flex min-h-11 items-center justify-between gap-3;
+}
+
+/* Shared visible focus ring for custom (non-daisyUI) interactive elements such
+   as the skip link, rail controls, and the drawer close button. */
+.signal-focus:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Motion. A single spin keyframe for the refresh affordance plus a colour
+   transition for hoverable surfaces, both suppressed under reduced motion so
+   nothing this layer adds animates for motion-sensitive users. */
+@keyframes signal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.signal-spin {
+  animation: signal-spin 0.8s linear infinite;
+}
+.signal-interactive {
+  @apply transition-colors;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-spin {
+    animation: none;
+  }
+  .signal-interactive {
+    transition: none;
+  }
+}
+
 /* ── Free SEO Checker (public page) — scoped design system ─────────────────
    All rules here are prefixed .fsc-* and applied only under .fsc-root, so the
    authenticated dashboard is untouched. */
