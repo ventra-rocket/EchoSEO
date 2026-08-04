@@ -7,6 +7,7 @@ import {
 import { AppError } from "@/server/lib/errors";
 import {
   getRequiredEnvValue,
+  isHostedAccessOpen,
   isHostedServerAuthMode,
 } from "@/server/lib/runtime-env";
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
@@ -59,6 +60,13 @@ export const getManagedAccessStatus = createServerFn({ method: "POST" })
   .middleware(requireAuthenticatedContext)
   .handler(async ({ context }) => {
     if (!(await isHostedServerAuthMode())) {
+      return { hasManagedAccess: true };
+    }
+
+    // Open-access mode grants entry without a billing plan and, importantly,
+    // without touching the billing provider — so access does not depend on it
+    // being configured.
+    if (await isHostedAccessOpen()) {
       return { hasManagedAccess: true };
     }
 

@@ -28,6 +28,16 @@ export async function isHostedServerAuthMode(): Promise<boolean> {
   return isHostedAuthMode(await getOptionalEnvValue("AUTH_MODE"));
 }
 
+/**
+ * Operator escape hatch: when `HOSTED_ACCESS_OPEN=true`, hosted users get full
+ * product access with no paywall and no forced onboarding. Intended for running
+ * the managed app before (or without) the billing provider is configured; set
+ * back to "false" to re-enable the subscribe gate.
+ */
+export async function isHostedAccessOpen(): Promise<boolean> {
+  return (await getOptionalEnvValue("HOSTED_ACCESS_OPEN")) === "true";
+}
+
 async function getWorkersEnv(): Promise<Record<string, unknown> | null> {
   if (!workersEnvPromise) {
     workersEnvPromise = loadWorkersEnv();
