@@ -5,6 +5,7 @@ import {
   FREE_SEO_CHECK_API_PATH,
   FREE_SEO_CHECK_LANDING_PATH,
   FREE_SEO_CHECK_VI_LANDING_PATH,
+  marketingHomeUrl,
   type FreeSeoCheckRequest,
 } from "@/shared/free-seo-check";
 import type { Locale } from "@/client/i18n/config";
@@ -61,10 +62,6 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
   // language change swaps URL, <head>, and hreflang identity, so a real
   // navigation is the correct (and simplest) behavior.
   const otherLocale: Locale = locale === "en" ? "vi" : "en";
-  const landingPath =
-    locale === "vi"
-      ? FREE_SEO_CHECK_VI_LANDING_PATH
-      : FREE_SEO_CHECK_LANDING_PATH;
   const otherLandingPath =
     otherLocale === "vi"
       ? FREE_SEO_CHECK_VI_LANDING_PATH
@@ -258,11 +255,12 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
           (hero, form, editorial) stays at 2xl. */}
       <header className="border-b border-base-300 bg-base-100">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          {/* The mark is the expected way home. It was previously inert, which
-              is one of the strongest "unfinished scaffold" tells a page can
-              give. This landing IS the public home — `/` is the authenticated
-              app and would put a stranger at a sign-in wall. */}
-          <a href={landingPath} aria-label={copy.footerHomeAria}>
+          {/* The mark is the expected way home — but "home" is the marketing
+              landing on the apex, a separate origin from this app, not the
+              checker itself. It used to point here (the checker was the public
+              front door); since the apex migration the brand home is the
+              landing, so this is an absolute cross-origin link. */}
+          <a href={marketingHomeUrl(locale)} aria-label={copy.footerHomeAria}>
             <EchoSeoLogo variant="lockup" className="text-base" />
           </a>
           <a
@@ -421,7 +419,6 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
               {errorMessage}
             </div>
           ) : null}
-
         </div>
 
         {/* The result renders directly under the form — DOM order and screen

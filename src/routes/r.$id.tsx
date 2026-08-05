@@ -5,6 +5,7 @@ import {
   FREE_SEO_CHECK_LANDING_PATH,
   FREE_SEO_CHECK_REPORT_PATH,
   FREE_SEO_CHECK_VI_LANDING_PATH,
+  marketingHomeUrl,
 } from "@/shared/free-seo-check";
 import {
   LEGAL_PRIVACY_PATH_BY_LOCALE,
@@ -121,7 +122,7 @@ function SharedReportPage() {
       <div className="flex min-h-full flex-col">
         <header className="border-b border-base-300 bg-base-100">
           <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
-            <a href={landingPath} aria-label={chrome.homeAria}>
+            <a href={marketingHomeUrl(locale)} aria-label={chrome.homeAria}>
               <EchoSeoLogo variant="lockup" className="text-base" />
             </a>
             <a
