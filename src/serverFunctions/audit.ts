@@ -5,7 +5,7 @@ import { AuditService } from "@/server/features/audit/services/AuditService";
 import { AuditVerificationService } from "@/server/features/audit/services/AuditVerificationService";
 import { IndexNowService } from "@/server/features/audit/services/IndexNowService";
 import { AuditIndexStatusService } from "@/server/features/audit/services/AuditIndexStatusService";
-import { customerHasManagedAccess } from "@/server/billing/subscription";
+import { orgMayUseManagedFeatures } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { requireProjectContext } from "@/serverFunctions/middleware";
@@ -32,10 +32,12 @@ export const startAudit = createServerFn({ method: "POST" })
     const authMode = getAuthMode(env.AUTH_MODE);
 
     // The crawler runs on our Workers compute and isn't credit-metered, so
-    // gate it on plan access in hosted mode (grandfathered free plans pass).
+    // gate it on managed access in hosted mode. Allowlisted orgs (founder +
+    // invited) pass while billing is deferred; everyone else gets a clean
+    // PAYMENT_REQUIRED rather than a 500 when Autumn is unconfigured.
     if (
       authMode === "hosted" &&
-      !(await customerHasManagedAccess(context.organizationId))
+      !(await orgMayUseManagedFeatures(context.organizationId))
     ) {
       throw new AppError("PAYMENT_REQUIRED", "Subscribe to run site audits");
     }

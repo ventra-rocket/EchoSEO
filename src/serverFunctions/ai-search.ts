@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getBrandLookup } from "@/server/features/ai-search/services/brandLookup";
 import { explorePrompt as runExplorePrompt } from "@/server/features/ai-search/services/promptExplorer";
-import { customerHasPaidPlan } from "@/server/billing/subscription";
+import { orgMayUsePaidFeatures } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { requireProjectContext } from "@/serverFunctions/middleware";
@@ -17,7 +17,7 @@ import {
  */
 async function assertPaidPlan(organizationId: string) {
   if (!(await isHostedServerAuthMode())) return;
-  if (await customerHasPaidPlan(organizationId)) return;
+  if (await orgMayUsePaidFeatures(organizationId)) return;
   throw new AppError(
     "PAYMENT_REQUIRED",
     "Upgrade to the paid plan to use AI Visibility",

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import { getDomainPagesPage } from "@/serverFunctions/domain";
 import { debugDomain } from "@/client/features/domain/domainDebug";
 import { toPageSortMode } from "@/client/features/domain/utils";
@@ -25,6 +26,7 @@ type DomainPagesQueryInput = {
 
 export function useDomainPagesQuery(input: DomainPagesQueryInput) {
   const pageSortMode = toPageSortMode(input.sortMode);
+  const seoApiKeyStatus = useSeoApiKeyStatus();
   const queryKey = useMemo(
     () => [
       "domain-pages",
@@ -61,7 +63,10 @@ export function useDomainPagesQuery(input: DomainPagesQueryInput) {
   }, [input.domain, input.enabled, queryKey]);
 
   const query = useQuery({
-    enabled: input.enabled && Boolean(input.domain),
+    enabled:
+      input.enabled &&
+      Boolean(input.domain) &&
+      seoApiKeyStatus.data?.configured === true,
     queryKey,
     queryFn: () =>
       getDomainPagesPage({

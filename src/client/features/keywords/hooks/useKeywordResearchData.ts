@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { LOCATIONS, getLanguageCode } from "@/client/features/keywords/utils";
@@ -119,6 +120,7 @@ export function useKeywordResearchData(
     [request],
   );
   const queryKeyString = JSON.stringify(queryKey);
+  const seoApiKeyStatus = useSeoApiKeyStatus();
 
   const researchQuery = useQuery({
     queryKey,
@@ -129,7 +131,7 @@ export function useKeywordResearchData(
 
       return keywordResearchQueryFn(request);
     },
-    enabled: request !== null,
+    enabled: request !== null && seoApiKeyStatus.data?.configured === true,
     staleTime: KEYWORD_RESEARCH_STALE_TIME_MS,
     gcTime: KEYWORD_RESEARCH_STALE_TIME_MS,
     retry: false,

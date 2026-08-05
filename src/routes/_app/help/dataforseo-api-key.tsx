@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 const DATAFORSEO_API_ACCESS_URL = "https://app.dataforseo.com/api-access";
 
@@ -55,22 +55,17 @@ function DataforseoApiKeyHelpPage() {
 
         <div className="card bg-base-100 border border-base-300">
           <div className="card-body gap-2 text-sm text-base-content/75">
-            <h2 className="card-title text-base">
-              Cloudflare Workers (Dashboard UI)
-            </h2>
+            <h2 className="card-title text-base">Add the key in Settings</h2>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-base-content/80">
               <li>
-                In Cloudflare, go to <code>Compute</code> -&gt;{" "}
-                <code>Workers &amp; Pages</code>
-                and open your EchoSEO Worker.
+                Open{" "}
+                <Link to="/settings" className="link link-primary">
+                  Settings
+                </Link>
+                .
               </li>
               <li>
-                Open <code>Settings</code>.
-              </li>
-              <li>
-                Go to <code>Variables &amp; Secrets</code> and add a new secret
-                named
-                <code className="mx-1">DATAFORSEO_API_KEY</code>.
+                Find the <strong>DataForSEO API Key</strong> card.
               </li>
               <li>
                 Paste the base64 value from the terminal command above and save.
@@ -79,12 +74,10 @@ function DataforseoApiKeyHelpPage() {
 
             <div className="divider my-1" />
 
-            <p>Or set the same secret from your terminal with:</p>
-            <pre className="p-3 rounded bg-base-200 border border-base-300 overflow-x-auto text-xs">
-              <code>npx wrangler secret put DATAFORSEO_API_KEY</code>
-            </pre>
             <p>
-              Use the base64 value of <code>login:password</code> when prompted.
+              Self-hosting? Set the <code>DATAFORSEO_API_KEY</code> secret
+              instead — see <code>npx wrangler secret put</code> in your
+              deployment docs.
             </p>
           </div>
         </div>

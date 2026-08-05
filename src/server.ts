@@ -8,10 +8,14 @@ import { ProjectRepository } from "@/server/features/projects/repositories/Proje
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { beginRankCheckRun } from "@/server/features/rank-tracking/services/rankCheckRunGuards";
 import {
-  customerHasPaidPlan,
   getOrCreateOrganizationCustomer,
+  orgMayUsePaidFeatures,
 } from "@/server/billing/subscription";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { resolveDataforseoCredentials } from "@/server/lib/dataforseo/resolve-credentials";
+import {
+  isAutumnConfigured,
+  isHostedServerAuthMode,
+} from "@/server/lib/runtime-env";
 import { getAuthMode, isHostedAuthMode } from "@/lib/auth-mode";
 import {
   createOpenSeoOAuthProvider,
@@ -93,8 +97,10 @@ async function authorizeOnboardingChat(
   // Ensure the org's Autumn customer exists (and gets its default onboarding-plan
   // credits) before the DO checks the balance — otherwise a brand-new org's first
   // message can hit a false "out of credits" gate. Hosted-only; self-hosted has
-  // no Autumn.
-  if (await isHostedServerAuthMode()) {
+  // no Autumn. Guarded on Autumn being configured: with billing deferred this
+  // call would throw on the missing secret, 500-ing the chat gateway; degrade
+  // instead (the DO's own credit gate is likewise bypassed under open access).
+  if ((await isHostedServerAuthMode()) && (await isAutumnConfigured())) {
     await getOrCreateOrganizationCustomer(context);
   }
   return undefined;
@@ -361,11 +367,42 @@ export default {
 
     for (const config of dueConfigs) {
       try {
-        // Skip configs whose org doesn't have a paid plan
-        if (isHosted && !(await customerHasPaidPlan(config.organizationId))) {
+        // Advance nextCheckAt so a config never stays "due forever" — used on
+        // every skip path AND before starting a run (retry-storm guard).
+        const interval = isScheduledRankTrackingInterval(
+          config.scheduleInterval,
+        )
+          ? config.scheduleInterval
+          : null;
+        const advanceSchedule = () =>
+          interval
+            ? RankTrackingRepository.updateConfig(config.id, config.projectId, {
+                nextCheckAt: computeNextCheckAt(interval, config.nextCheckAt),
+              })
+            : Promise.resolve();
+
+        // Access gate: allowlisted (founder + invited) or a paid plan. With
+        // billing deferred this degrades to a clean SKIP, never a failed run.
+        if (isHosted && !(await orgMayUsePaidFeatures(config.organizationId))) {
           console.log(
-            `[cron] Skipping config ${config.id} (${config.domain}) — org ${config.organizationId} no longer has access`,
+            `[cron] Skipping config ${config.id} (${config.domain}) — org ${config.organizationId} has no core access`,
           );
+          await advanceSchedule();
+          continue;
+        }
+
+        // Key gate: a scheduled run with no DataForSEO key would start the
+        // workflow then fail at the credential seam (DATAFORSEO_KEY_MISSING).
+        // Skip before spending a run so scheduled runs never show `failed` just
+        // because the org hasn't connected a key.
+        const credentials = await resolveDataforseoCredentials(
+          config.organizationId,
+        );
+        if (credentials.source === "none") {
+          console.log(
+            `[cron] Skipping config ${config.id} (${config.domain}) — no DataForSEO key for org ${config.organizationId}`,
+          );
+          await advanceSchedule();
           continue;
         }
 
@@ -377,42 +414,12 @@ export default {
           console.log(
             `[cron] Skipping config ${config.id} (${config.domain}) — no keywords`,
           );
-          // Still advance schedule so this config doesn't stay due forever
-          const skipInterval = isScheduledRankTrackingInterval(
-            config.scheduleInterval,
-          )
-            ? config.scheduleInterval
-            : null;
-          if (skipInterval) {
-            await RankTrackingRepository.updateConfig(
-              config.id,
-              config.projectId,
-              {
-                nextCheckAt: computeNextCheckAt(
-                  skipInterval,
-                  config.nextCheckAt,
-                ),
-              },
-            );
-          }
+          await advanceSchedule();
           continue;
         }
 
         // Advance nextCheckAt immediately to prevent retry storms if the run fails
-        const interval = isScheduledRankTrackingInterval(
-          config.scheduleInterval,
-        )
-          ? config.scheduleInterval
-          : null;
-        if (interval) {
-          await RankTrackingRepository.updateConfig(
-            config.id,
-            config.projectId,
-            {
-              nextCheckAt: computeNextCheckAt(interval, config.nextCheckAt),
-            },
-          );
-        }
+        await advanceSchedule();
 
         const result = await beginRankCheckRun({
           workflow: env.RANK_CHECK_WORKFLOW,

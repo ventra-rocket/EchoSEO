@@ -14,6 +14,7 @@ import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 import {
   customerHasManagedAccess,
   getOrCreateOrganizationCustomer,
+  isOrgAllowlisted,
 } from "@/server/billing/subscription";
 
 const AUTUMN_EVENTS_LIST_URL = "https://api.useautumn.com/v1/events.list";
@@ -67,6 +68,15 @@ export const getManagedAccessStatus = createServerFn({ method: "POST" })
     // without touching the billing provider — so access does not depend on it
     // being configured.
     if (await isHostedAccessOpen()) {
+      return { hasManagedAccess: true };
+    }
+
+    // Allowlisted orgs (founder + invited) likewise get the app shell without
+    // touching the billing provider — so if HOSTED_ACCESS_OPEN is ever flipped
+    // false before Autumn is configured, they aren't walled out. This must
+    // precede getOrCreateOrganizationCustomer, which calls Autumn and would
+    // throw on the missing secret.
+    if (await isOrgAllowlisted(context.organizationId)) {
       return { hasManagedAccess: true };
     }
 

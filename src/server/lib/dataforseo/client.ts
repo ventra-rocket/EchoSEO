@@ -57,6 +57,7 @@ import {
   resolveDataforseoCredentials,
   type ResolvedDataforseoCredentials,
 } from "@/server/lib/dataforseo/resolve-credentials";
+import { AppError } from "@/server/lib/errors";
 import {
   isHostedAccessOpen,
   isHostedServerAuthMode,
@@ -160,6 +161,16 @@ async function meterDataforseoCall<T>(
   creditFeature?: CreditFeature,
 ): Promise<T> {
   const credentials = await getCredentials();
+
+  // No key at all (no BYO org key, no global operator key). Surface a typed
+  // "connect a key" error the client maps to the setup CTA, instead of the bare
+  // env-missing Error that core.ts would otherwise throw as an unmapped 500.
+  if (credentials.source === "none") {
+    throw new AppError(
+      "DATAFORSEO_KEY_MISSING",
+      "No DataForSEO API key configured for this organization",
+    );
+  }
 
   // Thread the organization's own key into the SDK fetch only when the org
   // brought one; `global`/`none` set no ambient resolver, so `core.ts` keeps

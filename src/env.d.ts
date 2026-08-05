@@ -51,6 +51,14 @@ declare namespace Cloudflare {
     // Optional model slug for the audit issue explainer, kept separate so
     // retuning the chat model cannot change the audit panel's cost or voice.
     OPENROUTER_EXPLAINER_MODEL?: string;
+
+    // Optional OpenAI-compatible endpoint override for the audit issue
+    // explainer (e.g. NVIDIA NIM hosting GLM). All three must be set to take
+    // effect; otherwise the explainer falls back to OpenRouter. Used to run the
+    // explainer on a free / self-paid key without an OpenRouter account.
+    AI_EXPLAINER_BASE_URL?: string;
+    AI_EXPLAINER_API_KEY?: string;
+    AI_EXPLAINER_MODEL?: string;
   }
 }
 

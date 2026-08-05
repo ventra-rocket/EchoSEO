@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import { getDomainKeywordsPage } from "@/serverFunctions/domain";
 import { debugDomain } from "@/client/features/domain/domainDebug";
 import type {
@@ -49,6 +50,7 @@ function toFiltersPayload(
 }
 
 export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
+  const seoApiKeyStatus = useSeoApiKeyStatus();
   const filtersPayload = useMemo(
     () => toFiltersPayload(input.appliedFilters),
     [input.appliedFilters],
@@ -89,7 +91,10 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
   }, [input.domain, input.enabled, queryKey]);
 
   const query = useQuery({
-    enabled: input.enabled && Boolean(input.domain),
+    enabled:
+      input.enabled &&
+      Boolean(input.domain) &&
+      seoApiKeyStatus.data?.configured === true,
     queryKey,
     queryFn: () =>
       getDomainKeywordsPage({

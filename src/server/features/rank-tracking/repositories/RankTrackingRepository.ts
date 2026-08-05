@@ -129,6 +129,9 @@ async function getDueConfigsWithOrganization(nowIso: string) {
     .where(
       and(
         eq(rankTrackingConfigs.isActive, true),
+        // Only configs the owner explicitly opted into scheduled runs. Others
+        // are never selected, so they neither auto-spend nor churn the loop.
+        eq(rankTrackingConfigs.scheduledEnabled, true),
         lte(rankTrackingConfigs.nextCheckAt, nowIso),
         isNull(projects.archivedAt),
       ),

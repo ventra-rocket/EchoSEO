@@ -28,6 +28,7 @@ import {
 } from "@/server/lib/audit/types";
 import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
 import { getOrigin } from "@/server/lib/audit/url-utils";
+import { resolveDataforseoCredentials } from "@/server/lib/dataforseo/resolve-credentials";
 
 async function startAudit(input: {
   actorUserId: string;
@@ -63,7 +64,20 @@ async function startAudit(input: {
     clampAuditMaxPages(input.maxPages),
     target.maxPagesLimit,
   );
-  const lighthouseStrategy = input.lighthouseStrategy ?? "auto";
+  // Audit Lighthouse runs through DataForSEO (dataforseo.lighthouse.live), not
+  // free PSI. With no key available for this org, force it off rather than
+  // firing a metered call that spends (BYO key) or returns null rows
+  // (open-access, no global key). The launch UI also disables the checkbox, but
+  // gate here too so a direct API caller can't opt back in.
+  let lighthouseStrategy = input.lighthouseStrategy ?? "auto";
+  if (lighthouseStrategy !== "none") {
+    const credentials = await resolveDataforseoCredentials(
+      input.billingCustomer.organizationId,
+    );
+    if (credentials.source === "none") {
+      lighthouseStrategy = "none";
+    }
+  }
 
   // Large hosted crawls require a verified domain; verification is derived from
   // the connected GSC property. An IndexNow key can never satisfy this.

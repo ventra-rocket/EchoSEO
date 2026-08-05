@@ -12,6 +12,17 @@ import type { CreditFeature } from "@/shared/billing-credit-features";
 import { autumn } from "@/server/billing/autumn";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { AppError } from "@/server/lib/errors";
+import {
+  getOptionalEnvValue,
+  isAutumnConfigured,
+} from "@/server/lib/runtime-env";
+
+/**
+ * Comma-separated org IDs granted core access while billing is deferred
+ * (founder + invited early users). Mirrors the `deep-check-config` env pattern.
+ * Unset/blank = no one (fail-closed).
+ */
+const CORE_ACCESS_ALLOWLIST_ENV = "CORE_ACCESS_ALLOWLIST";
 
 export type BillingCustomerContext = Pick<
   EnsuredUserContext,
@@ -38,7 +49,21 @@ export async function getOrCreateOrganizationCustomer(
   };
 }
 
-export async function customerHasPaidPlan(customerId: string) {
+// Billing FACT: does this org actually hold the paid-plan entitlement? When
+// Autumn is not configured we degrade to `false` (with a traceable warn) rather
+// than calling `autumn.check()` — which would throw on the missing secret and
+// surface as a 500. A present-but-broken key still calls through and throws
+// loudly (never swallowed to false), so a billing outage can't silently pass.
+export async function customerHasPaidPlan(
+  customerId: string,
+): Promise<boolean> {
+  if (!(await isAutumnConfigured())) {
+    console.warn(
+      `[billing] paid-plan denied: Autumn not configured (customer=${customerId})`,
+    );
+    return false;
+  }
+
   const result = await autumn.check({
     customerId,
     featureId: AUTUMN_PAID_PLAN_FEATURE_ID,
@@ -47,13 +72,70 @@ export async function customerHasPaidPlan(customerId: string) {
   return result.allowed;
 }
 
-export async function customerHasManagedAccess(customerId: string) {
+// Billing FACT: does this org hold the managed-service entitlement? Same
+// degrade-on-absent / throw-on-broken contract as {@link customerHasPaidPlan}.
+export async function customerHasManagedAccess(
+  customerId: string,
+): Promise<boolean> {
+  if (!(await isAutumnConfigured())) {
+    console.warn(
+      `[billing] managed-access denied: Autumn not configured (customer=${customerId})`,
+    );
+    return false;
+  }
+
   const result = await autumn.check({
     customerId,
     featureId: AUTUMN_MANAGED_ACCESS_FEATURE_ID,
   });
 
   return result.allowed;
+}
+
+/**
+ * Membership test against `CORE_ACCESS_ALLOWLIST`. Fail-closed: an unset, blank,
+ * or malformed env grants no one; blank entries are dropped, never widened to
+ * "everyone". This is a POLICY layer kept separate from the billing facts above
+ * so the two access axes — access(billing) vs capability(data-provider) — stay
+ * orthogonal.
+ */
+export async function isOrgAllowlisted(
+  organizationId: string,
+): Promise<boolean> {
+  if (!organizationId) return false;
+  const raw = await getOptionalEnvValue(CORE_ACCESS_ALLOWLIST_ENV);
+  if (!raw) return false;
+  return raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0)
+    .includes(organizationId);
+}
+
+/**
+ * POLICY: may this org use MANAGED (Workers-compute) features like Site Audit?
+ * Allowlisted (founder + invited, billing deferred) OR actually holds the
+ * managed-access entitlement. Kept distinct from {@link orgMayUsePaidFeatures}
+ * on purpose: the two gate on DIFFERENT Autumn features, so collapsing them
+ * would silently downgrade one once billing is configured.
+ */
+export async function orgMayUseManagedFeatures(
+  organizationId: string,
+): Promise<boolean> {
+  if (await isOrgAllowlisted(organizationId)) return true;
+  return customerHasManagedAccess(organizationId);
+}
+
+/**
+ * POLICY: may this org use PAID DataForSEO-fanout features (AI Visibility, rank
+ * checks)? Allowlisted OR holds the paid-plan entitlement. See
+ * {@link orgMayUseManagedFeatures} for why the two policies stay separate.
+ */
+export async function orgMayUsePaidFeatures(
+  organizationId: string,
+): Promise<boolean> {
+  if (await isOrgAllowlisted(organizationId)) return true;
+  return customerHasPaidPlan(organizationId);
 }
 
 // Remaining shared usage credits — the monthly `usage_credits` balance plus the

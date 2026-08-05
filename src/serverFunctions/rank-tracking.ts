@@ -5,7 +5,7 @@ import { RankTrackingService } from "@/server/features/rank-tracking/services/Ra
 import { getLatestResults } from "@/server/features/rank-tracking/services/rankTrackingResults";
 import { AppError, asAppError } from "@/server/lib/errors";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
-import { customerHasPaidPlan } from "@/server/billing/subscription";
+import { orgMayUsePaidFeatures } from "@/server/billing/subscription";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
@@ -114,6 +114,7 @@ export const updateRankTrackingConfig = createServerFn({ method: "POST" })
       serpDepth: data.serpDepth,
       scheduleInterval: data.scheduleInterval,
       isActive: data.isActive,
+      scheduledEnabled: data.scheduledEnabled,
     });
     return { success: true };
   });
@@ -123,7 +124,7 @@ export const triggerRankCheck = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => triggerCheckSchema.parse(data))
   .handler(async ({ data, context }) => {
     const isHosted = await isHostedServerAuthMode();
-    if (isHosted && !(await customerHasPaidPlan(context.organizationId))) {
+    if (isHosted && !(await orgMayUsePaidFeatures(context.organizationId))) {
       throw new AppError(
         "PAYMENT_REQUIRED",
         "Upgrade to the paid plan to run rank checks",
@@ -194,7 +195,7 @@ export const addTrackingKeywords = createServerFn({ method: "POST" })
     if (result.addedIds.length > 0) {
       const isHosted = await isHostedServerAuthMode();
       const hasPaidPlan =
-        !isHosted || (await customerHasPaidPlan(context.organizationId));
+        !isHosted || (await orgMayUsePaidFeatures(context.organizationId));
 
       if (hasPaidPlan) {
         try {

@@ -220,6 +220,12 @@ export const rankTrackingConfigs = sqliteTable(
       .notNull()
       .default("weekly"),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    // Opt-in to the scheduled cron. Defaults OFF so no config auto-runs (and
+    // auto-spends) on deploy while billing is deferred — the founder opts their
+    // own configs in. Manual triggers are unaffected by this flag.
+    scheduledEnabled: integer("scheduled_enabled", { mode: "boolean" })
+      .notNull()
+      .default(false),
     lastCheckedAt: text("last_checked_at"),
     nextCheckAt: text("next_check_at"),
     lastSkipReason: text("last_skip_reason"),

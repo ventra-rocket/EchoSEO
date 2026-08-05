@@ -15,6 +15,7 @@ const ERROR_CODES = [
   "AI_SEARCH_NOT_ENABLED",
   "AI_SEARCH_BILLING_ISSUE",
   "DATAFORSEO_AUTH_FAILED",
+  "DATAFORSEO_KEY_MISSING",
   "RATE_LIMITED",
   "UPSTREAM_UNAVAILABLE",
   "TARGET_BEHIND_AUTH",
@@ -32,6 +33,9 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   "PAYMENT_REQUIRED",
   "INSUFFICIENT_CREDITS",
   "VALIDATION_ERROR",
+  // The org simply hasn't connected a DataForSEO key yet — an expected
+  // "not configured" state the UI turns into a setup CTA, not a fault to log.
+  "DATAFORSEO_KEY_MISSING",
   // A 429 is the rate limiter doing its job, not a fault to investigate. The
   // public report page polls while a check runs, so one visitor behind a shared
   // NAT can emit a long 429 run — capturing each one is pure noise and cost.

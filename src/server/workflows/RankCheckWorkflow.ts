@@ -21,7 +21,10 @@ import {
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
 } from "@/shared/billing";
 import { estimateRankCheckCredits } from "@/shared/rank-tracking";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import {
+  isAutumnConfigured,
+  isHostedServerAuthMode,
+} from "@/server/lib/runtime-env";
 
 const SINGLE_ATTEMPT_STEP_CONFIG = {
   retries: { limit: 0, delay: "1 second" as const },
@@ -80,7 +83,14 @@ async function prepareRankCheckKeywords(input: {
   // Verify the user has enough credits for the full check before starting.
   // Scheduled checks go through the cheaper task queue, so estimate at queued
   // pricing — a live-price estimate would skip checks the user can afford.
-  if (await isHostedServerAuthMode()) {
+  //
+  // Only meaningful when Autumn is configured: with billing deferred the
+  // `autumn.check` calls below would throw on the missing secret, killing an
+  // allowlisted+keyed run at pre-flight. Guard on env presence (not try/catch)
+  // so a present-but-broken key still surfaces loudly. BYO-key orgs self-pay and
+  // bypass Autumn at the metering seam, so skipping this credit gate for them is
+  // correct; the run still resolves its own key downstream.
+  if ((await isHostedServerAuthMode()) && (await isAutumnConfigured())) {
     const { costCredits } = estimateRankCheckCredits(
       trackingKeywords.length,
       input.devices,
