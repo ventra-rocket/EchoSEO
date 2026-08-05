@@ -199,7 +199,14 @@ function BrandLookupPageInner({
     setValidationError(null);
   }, [initialQuery, competitorKey]);
 
-  const isLoading = hasActiveQuery && lookupQuery.isPending;
+  // A query disabled by the key gate is `isPending` while idle; treat "no key"
+  // (configured === false) as not-loading so a keyless user falls through to the
+  // setup CTA/banner instead of an infinite spinner. `undefined` (status still
+  // loading) keeps the spinner to avoid a flash of empty state.
+  const isLoading =
+    hasActiveQuery &&
+    lookupQuery.isPending &&
+    seoApiKeyStatus.data?.configured !== false;
   const errorMessage =
     hasActiveQuery && lookupQuery.isError
       ? getStandardErrorMessage(lookupQuery.error)

@@ -232,15 +232,15 @@ async function markRankCheckRunFailed(input: {
     input.error instanceof Error ? input.error.message : "Unknown error";
   await failRunIfActive(input.runId, errorMessage);
 
-  // Flag the config so the UI can show why the scheduled check was skipped
+  // Flag the config so the UI can show why the scheduled check was skipped.
+  // On any OTHER failure, clear a stale skip reason so a past
+  // "insufficient_credits" flag can't mask the new run's real error message.
   const isInsufficientCredits =
     input.error instanceof AppError &&
     input.error.code === "INSUFFICIENT_CREDITS";
-  if (isInsufficientCredits) {
-    await RankTrackingRepository.updateConfig(input.configId, input.projectId, {
-      lastSkipReason: "insufficient_credits",
-    });
-  }
+  await RankTrackingRepository.updateConfig(input.configId, input.projectId, {
+    lastSkipReason: isInsufficientCredits ? "insufficient_credits" : null,
+  });
 
   await captureServerEvent({
     distinctId: input.billingCustomer.userId,

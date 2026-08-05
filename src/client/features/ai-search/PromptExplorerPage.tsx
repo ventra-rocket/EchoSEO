@@ -191,7 +191,13 @@ function PromptExplorerPageInner({
   const errorMessage = exploreQuery.isError
     ? getStandardErrorMessage(exploreQuery.error)
     : null;
-  const isLoading = hasActivePrompt && exploreQuery.isPending;
+  // See BrandLookupPage: a key-gated query stays `isPending` while idle, so a
+  // keyless user would spin forever. Fall through to the setup CTA when there is
+  // no key (configured === false); keep spinning while status is still loading.
+  const isLoading =
+    hasActivePrompt &&
+    exploreQuery.isPending &&
+    seoApiKeyStatus.data?.configured !== false;
   const resultData = hasActivePrompt ? exploreQuery.data : undefined;
 
   const updateForm = <K extends keyof PromptExplorerFormValues>(

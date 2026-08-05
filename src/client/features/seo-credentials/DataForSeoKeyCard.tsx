@@ -45,15 +45,20 @@ export function DataForSeoKeyCard() {
   });
   const status = statusQuery.data;
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: STATUS_KEY });
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: STATUS_KEY });
+    // Also refresh the app-wide status the feature-query gates read
+    // (["seoApiKeyStatus"]) so connecting or removing a key flips the gates and
+    // banner immediately instead of after the 5-minute staleTime.
+    void queryClient.invalidateQueries({ queryKey: ["seoApiKeyStatus"] });
+  };
 
   const saveMutation = useMutation({
     mutationFn: (key: string) => saveDataforseoKey({ data: { apiKey: key } }),
     onSuccess: () => {
       toast.success(intl.formatMessage({ id: "seoProvider.toast.saved" }));
       setApiKey("");
-      void invalidate();
+      invalidate();
     },
     onError: (error) =>
       toast.error(intl.formatMessage({ id: mutationErrorMessageId(error) })),
@@ -63,7 +68,7 @@ export function DataForSeoKeyCard() {
     mutationFn: () => deleteDataforseoKey(),
     onSuccess: () => {
       toast.success(intl.formatMessage({ id: "seoProvider.toast.removed" }));
-      void invalidate();
+      invalidate();
     },
     onError: (error) =>
       toast.error(intl.formatMessage({ id: mutationErrorMessageId(error) })),

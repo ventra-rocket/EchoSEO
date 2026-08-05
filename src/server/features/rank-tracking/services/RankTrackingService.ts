@@ -118,6 +118,21 @@ async function updateConfig(
     }
   }
 
+  // Enabling scheduled runs must give the config a due time, or the cron's
+  // `nextCheckAt <= now` filter never selects it and the opt-in silently does
+  // nothing. Backfill from the effective interval when this call doesn't already
+  // set nextCheckAt (a caller explicitly setting `manual` keeps its null).
+  if (input.scheduledEnabled === true && updates.nextCheckAt === undefined) {
+    const config = await getValidatedConfig(configId, projectId);
+    const effectiveInterval = input.scheduleInterval ?? config.scheduleInterval;
+    if (
+      config.nextCheckAt == null &&
+      isScheduledRankTrackingInterval(effectiveInterval)
+    ) {
+      updates.nextCheckAt = computeNextCheckAt(effectiveInterval);
+    }
+  }
+
   await RankTrackingRepository.updateConfig(configId, projectId, updates);
 }
 

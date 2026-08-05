@@ -7,6 +7,7 @@ import {
 import { AppError } from "@/server/lib/errors";
 import {
   getRequiredEnvValue,
+  isAutumnConfigured,
   isHostedAccessOpen,
   isHostedServerAuthMode,
 } from "@/server/lib/runtime-env";
@@ -78,6 +79,14 @@ export const getManagedAccessStatus = createServerFn({ method: "POST" })
     // throw on the missing secret.
     if (await isOrgAllowlisted(context.organizationId)) {
       return { hasManagedAccess: true };
+    }
+
+    // Billing not configured and org not allowlisted: deny cleanly rather than
+    // 500. getOrCreateOrganizationCustomer below calls Autumn and would throw on
+    // the missing secret; a present-but-broken key still reaches Autumn (this is
+    // env-presence, not try/catch), so a real outage still surfaces.
+    if (!(await isAutumnConfigured())) {
+      return { hasManagedAccess: false };
     }
 
     const customer = await getOrCreateOrganizationCustomer(context);

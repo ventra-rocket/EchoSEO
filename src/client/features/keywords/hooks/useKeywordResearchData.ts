@@ -184,7 +184,13 @@ export function useKeywordResearchData(
     researchError,
     researchMutationError: researchQuery.error,
     searchedKeyword: request?.seedKeyword ?? "",
-    isLoading: hasSearched && researchQuery.isPending,
+    // A query disabled by the key gate stays `isPending` while idle; don't
+    // report loading when there is no key (configured === false) or the search
+    // screen spins forever. `undefined` (status loading) keeps loading true.
+    isLoading:
+      hasSearched &&
+      researchQuery.isPending &&
+      seoApiKeyStatus.data?.configured !== false,
     researchQuery,
     retryResearch: researchQuery.refetch,
   };

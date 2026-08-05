@@ -15,13 +15,13 @@
     // forced onboarding, without touching the billing provider. Set to "false"
     // to re-enable the subscribe gate once billing is configured.
     "HOSTED_ACCESS_OPEN": "true",
-    // Comma-separated org IDs granted the paid/managed core features (Site Audit,
-    // rank checks, AI Visibility) while billing is deferred — the founder + a few
-    // invited early users. Empty = no one (fail-closed); set the real IDs at
-    // deploy (e.g. `--var CORE_ACCESS_ALLOWLIST:"org_a,org_b"` or the dashboard)
-    // so they never land in git. Orthogonal to HOSTED_ACCESS_OPEN: this scopes
-    // WHICH orgs get in, that flag toggles the paywall globally.
-    "CORE_ACCESS_ALLOWLIST": "",
+    // NOTE: CORE_ACCESS_ALLOWLIST (comma-separated org IDs granted the
+    // paid/managed core features while billing is deferred) is intentionally NOT
+    // a var here — a committed var would be clobbered back to its config value on
+    // every `wrangler deploy`, silently de-allowlisting the founder. Provision it
+    // as a secret instead: `wrangler secret put CORE_ACCESS_ALLOWLIST --name
+    // open-seo`. Read via getOptionalEnvValue, which sees secrets in the Worker
+    // env. Unset = no one (fail-closed). Orthogonal to HOSTED_ACCESS_OPEN.
     // Where the free checker's outgoing mail points its report links. Request
     // handlers read their own origin off the request; the Workflow and the email
     // cron have no request, so this is the only way they can know.
