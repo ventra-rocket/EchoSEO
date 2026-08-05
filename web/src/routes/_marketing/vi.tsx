@@ -9,17 +9,17 @@ const LOCALE_ALTERNATES = [
   { hreflang: "x-default", path: "/" },
 ];
 
-export const Route = createFileRoute("/_marketing/")({
+export const Route = createFileRoute("/_marketing/vi")({
   head: () => {
-    const c = landingContent.en;
+    const c = landingContent.vi;
     return buildPageSeo({
       title: c.meta.title,
       description: c.meta.description,
-      path: "/",
-      imageAlt: "EchoSEO agent-native SEO workspace",
+      path: "/vi",
+      imageAlt: "EchoSEO — nền tảng SEO mã nguồn mở cho AI agent",
       ogLocale: c.ogLocale,
       alternates: LOCALE_ALTERNATES,
     });
   },
-  component: () => <LandingPage locale="en" />,
+  component: () => <LandingPage locale="vi" />,
 });

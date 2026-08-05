@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "open-seo-landing",
+  "name": "echoseo-landing",
   "compatibility_date": "2026-02-19",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
@@ -17,19 +17,22 @@
       "invocation_logs": true,
     },
   },
+  // Marketing landing owns the apex (echoseo.ventrarocket.vn); www is kept as a
+  // mirror. Deploying this worker reassigns the apex custom domain here from the
+  // app worker (workers-sdk #13925) — the app now lives on app.echoseo.ventrarocket.vn.
   "routes": [
     {
-      "pattern": "openseo.so",
+      "pattern": "echoseo.ventrarocket.vn",
       "custom_domain": true,
     },
     {
-      "pattern": "www.openseo.so",
+      "pattern": "www.echoseo.ventrarocket.vn",
       "custom_domain": true,
     },
   ],
   "env": {
     "preview": {
-      "name": "open-seo-landing-preview",
+      "name": "echoseo-landing-preview",
       "workers_dev": true,
       "preview_urls": true,
     },

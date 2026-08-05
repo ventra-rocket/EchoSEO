@@ -5,10 +5,49 @@
 @theme {
   --color-brand: #111111;
   --color-brand-muted: #66625e;
-  --color-brand-accent: #ff5600;
+  --color-brand-accent: #0b7a5f;
   --color-surface: #f5f1ec;
   --color-surface-raised: #ffffff;
   --color-border-subtle: #d8d1c8;
+}
+
+/* EchoSEO "Signal" marketing tokens — shared by the homepage, nav, and footer.
+   Kept outside @theme so they don't spawn Tailwind utilities; referenced via
+   var() from scoped landing CSS and marketing-chrome classes. */
+:root {
+  --echo-ground: #0b0f14;
+  --echo-surface: #182330;
+  --echo-hairline: #26313e;
+  --echo-ink: #e6eaf0;
+  --echo-ink-muted: rgba(230, 234, 240, 0.72);
+  --echo-ink-faint: rgba(230, 234, 240, 0.55);
+  --echo-primary: #19e3b1;
+  --echo-primary-ink: #0b7a5f;
+  --echo-accent: #f5a524;
+  --echo-accent-ink: #b06a0e;
+  --echo-light: #eef1f5;
+  --echo-light-hairline: #dbe1ea;
+}
+
+/* Logo wordmark accent ("SEO" in EchoSeoLogo lockup), usable in any chrome. */
+.echo-seo-accent {
+  color: var(--echo-primary, #19e3b1);
+}
+/* On the teal home header the neon accent would sink into the band — read it as
+   the warm gold used across the hero instead. */
+.esl-home-logo .echo-seo-accent {
+  color: #ffd9a3;
+}
+
+/* CLS-limiting fallback metrics for IBM Plex Sans (swap becomes a near-no-op
+   reflow). Starter overrides — refine with capsize if a shift is measured. */
+@font-face {
+  font-family: "Plex Sans Fallback";
+  src: local("Arial");
+  size-adjust: 100.5%;
+  ascent-override: 102%;
+  descent-override: 27%;
+  line-gap-override: 0%;
 }
 
 html,
@@ -16,7 +55,14 @@ body {
   background: var(--color-fd-background);
   color: var(--color-fd-foreground);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+    "IBM Plex Sans",
+    "Plex Sans Fallback",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
   overflow-x: clip;
 }
