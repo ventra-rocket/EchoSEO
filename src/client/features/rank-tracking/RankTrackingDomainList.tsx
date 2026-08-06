@@ -208,6 +208,11 @@ function DomainRow({
           {LOCATIONS[summary.locationCode] ?? "US"} &middot;{" "}
           {devicesLabel(summary.devices)} &middot;{" "}
           {scheduleLabel(summary.scheduleInterval)}
+          {/* An interval alone doesn't run anything — the cron reads the
+              separate opt-in. Say when the schedule is only a setting. */}
+          {summary.scheduleInterval !== "manual" &&
+            !summary.scheduledEnabled &&
+            " (paused)"}
           {summary.lastRunCompletedAt && (
             <>
               {" "}
