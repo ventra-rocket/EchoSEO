@@ -182,7 +182,7 @@ export function publicUrl(pathname: string): string {
  * above (this app's own origin, for canonical/share URLs) so the two are never
  * conflated even while they still share a domain today.
  */
-export const MARKETING_SITE_ORIGIN = "https://echoseo.ventrarocket.vn";
+const MARKETING_SITE_ORIGIN = "https://echoseo.ventrarocket.vn";
 
 /** The marketing landing home for a locale — English `/`, Vietnamese `/vi`. */
 export function marketingHomeUrl(locale: "en" | "vi"): string {
