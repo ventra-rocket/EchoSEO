@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -17,12 +17,12 @@ import { VerificationOutcomeBanner } from "@/client/features/audit/verification/
 import { IndexNowCard } from "@/client/features/audit/indexnow/IndexNowCard";
 import { GoogleIndexStatusCard } from "@/client/features/audit/indexing/GoogleIndexStatusCard";
 import {
+  buildCrawlEta,
   extractHostname,
   extractPathname,
   formatStartedAt,
   HttpStatusBadge,
   StatusBadge,
-  SUPPORT_URL,
 } from "@/client/features/audit/shared";
 
 export const Route = createFileRoute<"/_project/p/$projectId/audit/">(
@@ -205,15 +205,10 @@ function AuditDetail({
               </p>
               <p>
                 This is often caused by anti-bot or firewall settings. Reach out
-                at{" "}
-                <a
-                  className="link link-primary"
-                  href={SUPPORT_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  everyapp.dev/support
-                </a>{" "}
+                via our{" "}
+                <Link className="link link-primary" to="/support">
+                  support page
+                </Link>{" "}
                 and we'll help configure auditing for your site.
               </p>
             </div>
@@ -265,6 +260,7 @@ function ProgressCard({
     lighthouseCompleted: number;
     lighthouseFailed: number;
     currentPhase: string | null;
+    startedAt: string;
   };
 }) {
   const crawlProgress =
@@ -288,6 +284,7 @@ function ProgressCard({
             ? "Finalizing"
             : (status.currentPhase ?? "Running");
   const progress = isLighthousePhase ? lighthouseProgress : crawlProgress;
+  const etaLabel = buildCrawlEta(status);
 
   const crawlProgressQuery = useQuery({
     queryKey: ["audit-crawl-progress", projectId, auditId],
@@ -332,6 +329,10 @@ function ProgressCard({
             )}
             <span className="text-base-content/60">{progress}%</span>
           </div>
+
+          {etaLabel && (
+            <p className="text-xs text-base-content/50">{etaLabel}</p>
+          )}
         </div>
       </div>
 

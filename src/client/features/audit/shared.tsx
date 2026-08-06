@@ -1,7 +1,5 @@
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 
-export const SUPPORT_URL = "https://everyapp.dev/support";
-
 export function extractPathname(url: string): string {
   try {
     return new URL(url).pathname;
@@ -33,6 +31,44 @@ export function formatStartedAt(dateStr: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+// A rough time-remaining estimate for the crawl progress card. Uses the
+// observed crawl rate (pages per elapsed ms), which already amortises the
+// step.sleep pauses that have already happened, so it self-corrects as the
+// crawl runs. Only meaningful once pages are landing against a known total;
+// before that (or during discovery) it returns a soft "Estimating…" so the
+// card isn't blank while the user waits.
+export function buildCrawlEta(status: {
+  pagesCrawled: number;
+  pagesTotal: number;
+  currentPhase: string | null;
+  startedAt: string;
+}): string | null {
+  if (
+    status.currentPhase === "crawling" &&
+    status.pagesCrawled > 0 &&
+    status.pagesTotal > status.pagesCrawled
+  ) {
+    // started_at is D1's `current_timestamp`: "YYYY-MM-DD HH:MM:SS" in UTC.
+    const startedMs = Date.parse(`${status.startedAt.replace(" ", "T")}Z`);
+    const elapsedMs = Date.now() - startedMs;
+    if (Number.isFinite(startedMs) && elapsedMs > 0) {
+      const remaining = status.pagesTotal - status.pagesCrawled;
+      const etaMs = (elapsedMs / status.pagesCrawled) * remaining;
+      const mins = Math.round(etaMs / 60_000);
+      return mins >= 1
+        ? `~${mins} min remaining`
+        : `~${Math.max(5, Math.round(etaMs / 1_000))} sec remaining`;
+    }
+  }
+  if (
+    status.currentPhase === "discovery" ||
+    (status.currentPhase === "crawling" && status.pagesCrawled === 0)
+  ) {
+    return "Estimating…";
+  }
+  return null;
 }
 
 export function StatusBadge({ status }: { status: string }) {
