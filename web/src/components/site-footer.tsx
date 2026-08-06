@@ -8,11 +8,13 @@ const featureLinks = featureGroups.flatMap((group) =>
   })),
 );
 
+/** Compact footer for non-home marketing pages (features, etc.). The home
+ *  landing renders its own bilingual footer. */
 export function SiteFooter({ className }: { className?: string }) {
   return (
     <div className={className}>
       <Link to="/" className="text-sm font-semibold text-neutral-900">
-        OpenSEO
+        Echo<span className="text-[#0b7a5f]">SEO</span>
       </Link>
 
       <div className="mt-6 grid grid-cols-2 gap-8 md:grid-cols-4">
@@ -31,7 +33,7 @@ export function SiteFooter({ className }: { className?: string }) {
         <div>
           <p className="font-semibold text-neutral-900">AI agents</p>
           <div className="mt-2 flex flex-col gap-1.5">
-            <Link to="/features/mcp">OpenSEO MCP</Link>
+            <Link to="/features/mcp">EchoSEO MCP</Link>
             <Link to="/google-search-console-mcp">
               Google Search Console MCP
             </Link>
@@ -41,30 +43,28 @@ export function SiteFooter({ className }: { className?: string }) {
         <div>
           <p className="font-semibold text-neutral-900">Resources</p>
           <div className="mt-2 flex flex-col gap-1.5">
-            <Link to="/open-source-seo">Why Open Source?</Link>
+            <Link to="/open-source-seo">Why open source?</Link>
             <Link to="/blogs">Blog</Link>
             <a href="/docs">Docs</a>
-            <a href="/docs/skills">Skills</a>
+            <a
+              href="https://echoseo.ventrarocket.vn/free-seo-check"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Free SEO check
+            </a>
           </div>
         </div>
 
         <div>
-          <p className="font-semibold text-neutral-900">Company</p>
+          <p className="font-semibold text-neutral-900">Project</p>
           <div className="mt-2 flex flex-col gap-1.5">
-            <Link to="/pricing">Pricing</Link>
             <a
               href="https://github.com/every-app/open-seo"
               target="_blank"
               rel="noopener noreferrer"
             >
-              GitHub
-            </a>
-            <a
-              href="https://discord.gg/c9uGs3cFXr"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Discord
+              Built on open-seo
             </a>
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms-and-conditions">Terms</Link>

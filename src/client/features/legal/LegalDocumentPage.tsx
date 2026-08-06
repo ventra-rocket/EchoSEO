@@ -15,6 +15,7 @@ import {
 import {
   FREE_SEO_CHECK_LANDING_PATH,
   FREE_SEO_CHECK_VI_LANDING_PATH,
+  marketingHomeUrl,
 } from "@/shared/free-seo-check";
 import type { Locale } from "@/client/i18n/config";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
@@ -66,7 +67,10 @@ export function LegalDocumentPage({
   // A plain anchor, not a router Link: switching language swaps the URL, the
   // <head>, and the page's hreflang identity, so a real navigation is correct.
   const otherLanguageHref = pathByLocale[otherLocale];
-  const homeHref =
+  // The footer's "checker" link stays inside this app (the free checker); only
+  // the header mark goes to the marketing home. Two different destinations, so
+  // they no longer share one variable.
+  const checkerHref =
     locale === "vi"
       ? FREE_SEO_CHECK_VI_LANDING_PATH
       : FREE_SEO_CHECK_LANDING_PATH;
@@ -75,7 +79,7 @@ export function LegalDocumentPage({
     <div className="h-full overflow-auto bg-base-200">
       <header className="border-b border-base-300 bg-base-100">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <a href={homeHref} aria-label={copy.homeAria}>
+          <a href={marketingHomeUrl(locale)} aria-label={copy.homeAria}>
             <EchoSeoLogo variant="lockup" className="text-base" />
           </a>
           <a
@@ -136,7 +140,7 @@ export function LegalDocumentPage({
                 {copy.privacyLinkLabel}
               </a>
               <a
-                href={homeHref}
+                href={checkerHref}
                 className="underline underline-offset-2 hover:text-base-content"
               >
                 {copy.checkerLinkLabel}

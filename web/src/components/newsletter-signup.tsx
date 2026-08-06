@@ -1,7 +1,43 @@
 import { type FormEvent, useState } from "react";
 
+type NewsletterLocale = "en" | "vi";
+
+const COPY: Record<
+  NewsletterLocale,
+  {
+    label: string;
+    placeholder: string;
+    subscribe: string;
+    loading: string;
+    success: string;
+    error: string;
+  }
+> = {
+  en: {
+    label: "Email address",
+    placeholder: "you@example.com",
+    subscribe: "Subscribe",
+    loading: "…",
+    success: "You're on the list.",
+    error: "Something went wrong",
+  },
+  vi: {
+    label: "Địa chỉ email",
+    placeholder: "ban@vidu.com",
+    subscribe: "Đăng ký",
+    loading: "…",
+    success: "Bạn đã có trong danh sách.",
+    error: "Đã có lỗi xảy ra",
+  },
+};
+
 /** Newsletter subscribe form. Shared by the marketing footer and home page. */
-export function NewsletterSignup() {
+export function NewsletterSignup({
+  locale = "en",
+}: {
+  locale?: NewsletterLocale;
+}) {
+  const t = COPY[locale];
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
@@ -20,29 +56,29 @@ export function NewsletterSignup() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(
-          (data as { error?: string }).error || "Something went wrong",
-        );
+        throw new Error((data as { error?: string }).error || t.error);
       }
       setStatus("success");
       setEmail("");
     } catch (err) {
       setStatus("error");
-      setErrorMessage(
-        err instanceof Error ? err.message : "Something went wrong",
-      );
+      setErrorMessage(err instanceof Error ? err.message : t.error);
     }
   };
 
   if (status === "success") {
-    return <p className="text-sm text-neutral-900">You&apos;re on the list.</p>;
+    return (
+      <p role="status" aria-live="polite" className="text-sm text-neutral-900">
+        {t.success}
+      </p>
+    );
   }
 
   return (
     <form onSubmit={handleSubmit} autoComplete="on">
       <div className="flex gap-2">
         <label htmlFor="newsletter-email" className="sr-only">
-          Email address
+          {t.label}
         </label>
         <input
           id="newsletter-email"
@@ -52,7 +88,7 @@ export function NewsletterSignup() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
+          placeholder={t.placeholder}
           disabled={status === "loading"}
           className="h-10 min-w-0 flex-1 rounded-lg border border-[var(--color-border-subtle)] bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-500 transition focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
         />
@@ -61,11 +97,17 @@ export function NewsletterSignup() {
           disabled={status === "loading"}
           className="h-10 shrink-0 rounded-lg bg-neutral-950 px-5 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:opacity-50"
         >
-          {status === "loading" ? "..." : "Subscribe"}
+          {status === "loading" ? t.loading : t.subscribe}
         </button>
       </div>
       {status === "error" && (
-        <p className="mt-2 text-xs text-red-600">{errorMessage}</p>
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-2 text-xs text-red-600"
+        >
+          {errorMessage}
+        </p>
       )}
     </form>
   );

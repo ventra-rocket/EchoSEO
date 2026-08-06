@@ -1,6 +1,6 @@
 {
-  "name": "OpenSEO",
-  "short_name": "OpenSEO",
+  "name": "EchoSEO",
+  "short_name": "EchoSEO",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -13,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#0a0f0d",
-  "background_color": "#0a0f0d",
+  "theme_color": "#0B0F14",
+  "background_color": "#0B0F14",
   "display": "standalone"
 }

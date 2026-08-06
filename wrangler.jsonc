@@ -29,7 +29,7 @@
     // Where the free checker's outgoing mail points its report links. Request
     // handlers read their own origin off the request; the Workflow and the email
     // cron have no request, so this is the only way they can know.
-    "FREE_CHECK_PUBLIC_ORIGIN": "https://echoseo.ventrarocket.vn",
+    "FREE_CHECK_PUBLIC_ORIGIN": "https://app.echoseo.ventrarocket.vn",
     // Verified Resend sender (mail.echoseo.ventrarocket.vn, a subdomain so a
     // reputation problem here never reaches the apex). Paired with the
     // RESEND_API_KEY secret — without both, the checker logs mail instead of
@@ -45,9 +45,13 @@
     // bundle. TURNSTILE_SECRET_KEY remains an encrypted Worker secret.
     "TURNSTILE_SITE_KEY": "0x4AAAAAAD04Kn1C68CSFRS3",
   },
-  // EchoSEO deploys to its own zone (ventrarocket.vn) as a custom domain.
-  // workers_dev is disabled so deploys don't require a workers.dev subdomain.
-  "routes": [{ "pattern": "echoseo.ventrarocket.vn", "custom_domain": true }],
+  // The app lives on app.echoseo.ventrarocket.vn; the apex (echoseo.ventrarocket.vn)
+  // is the public marketing landing (a separate worker, `echoseo-landing`). The
+  // apex is intentionally NOT listed here — listing it would make a redeploy steal
+  // it back from the landing worker (workers-sdk #13925).
+  "routes": [
+    { "pattern": "app.echoseo.ventrarocket.vn", "custom_domain": true },
+  ],
   "workers_dev": false,
   "workflows": [
     {

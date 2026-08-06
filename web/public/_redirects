@@ -1,0 +1,13 @@
+# The app moved to app.echoseo.ventrarocket.vn; the apex is now the marketing
+# landing. Send old app deep-links (bookmarks, free-check report emails, MCP
+# clients) to the app origin. Landing-owned paths (/, /features, /vi, /blogs,
+# /docs, /privacy, /terms-and-conditions) are intentionally NOT listed.
+# NB: /api/* is deliberately excluded — the landing serves its own /api/event
+# analytics beacon, and no legitimate app traffic hits the apex /api anymore.
+/sign-up  https://app.echoseo.ventrarocket.vn/sign-up  301
+/sign-in  https://app.echoseo.ventrarocket.vn/sign-in  301
+/free-seo-check  https://app.echoseo.ventrarocket.vn/free-seo-check  301
+/vi/kiem-tra-seo  https://app.echoseo.ventrarocket.vn/vi/kiem-tra-seo  301
+/mcp  https://app.echoseo.ventrarocket.vn/mcp  301
+/r/*  https://app.echoseo.ventrarocket.vn/r/:splat  301
+/c/*  https://app.echoseo.ventrarocket.vn/c/:splat  301

@@ -212,7 +212,7 @@ const EN: LandingCopy = {
   skipToContent: "Skip to main content",
   footerProductLine:
     "EchoSEO is an open, agent-native SEO platform. This checker is free — self-hostable, your data stays private, and reports auto-delete after 30 days.",
-  footerHomeAria: "EchoSEO — Free SEO Checker",
+  footerHomeAria: "EchoSEO home",
   turnstileUnconfigured: "Turnstile is not configured for this deployment yet.",
   turnstileLoadError: "Couldn't load verification — please refresh the page.",
   errors: {
@@ -387,7 +387,7 @@ const VI: LandingCopy = {
   skipToContent: "Bỏ qua tới nội dung chính",
   footerProductLine:
     "EchoSEO là nền tảng SEO mở, thiết kế cho AI agent. Công cụ kiểm tra này miễn phí — bạn có thể tự triển khai, dữ liệu của bạn được bảo mật và báo cáo tự động xoá sau 30 ngày.",
-  footerHomeAria: "EchoSEO — Công cụ kiểm tra SEO",
+  footerHomeAria: "Trang chủ EchoSEO",
   turnstileUnconfigured:
     "Xác minh Turnstile chưa được cấu hình cho bản triển khai này.",
   turnstileLoadError: "Không tải được phần xác minh — vui lòng tải lại trang.",

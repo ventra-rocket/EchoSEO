@@ -172,6 +172,26 @@ export function publicUrl(pathname: string): string {
 }
 
 /**
+ * The public MARKETING site — a different origin from this app. The brand home
+ * is the marketing landing on the apex (echoseo.ventrarocket.vn), while this app
+ * (the checker, its reports, the legal pages) is served from
+ * app.echoseo.ventrarocket.vn. The EchoSEO mark in each public page's header
+ * means "go to the brand home", so it must be an absolute URL to the landing —
+ * not a path back into this app, which is where it used to point when the
+ * checker itself was the public front door. Kept distinct from PUBLIC_ORIGIN
+ * above (this app's own origin, for canonical/share URLs) so the two are never
+ * conflated even while they still share a domain today.
+ */
+export const MARKETING_SITE_ORIGIN = "https://echoseo.ventrarocket.vn";
+
+/** The marketing landing home for a locale — English `/`, Vietnamese `/vi`. */
+export function marketingHomeUrl(locale: "en" | "vi"): string {
+  return locale === "vi"
+    ? `${MARKETING_SITE_ORIGIN}/vi`
+    : MARKETING_SITE_ORIGIN;
+}
+
+/**
  * The check-result language. Optional on the wire so older clients still
  * validate; the server treats a missing value as English. Kept as a local
  * literal (not imported from the client i18n config) to avoid a shared→client

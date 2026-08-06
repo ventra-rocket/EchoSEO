@@ -1,403 +1,296 @@
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
-  createFileRoute,
-  Link,
-  Outlet,
-  useLocation,
-} from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { NewsletterSignup } from "@/components/newsletter-signup";
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { EchoSeoLogo } from "@/components/echoseo-logo";
 import { SiteFooter } from "@/components/site-footer";
-import { featureGroups } from "@/lib/feature-pages";
-
-const GITHUB_REPO = "every-app/open-seo";
-// Used if GitHub is unreachable at build time so the header never renders empty.
-const FALLBACK_STAR_COUNT = "2.1k";
-
-// Round to the nearest hundred and render in thousands, e.g. 3140 -> "3.1k".
-function formatStarCount(count: number): string {
-  if (count < 1000) return String(count);
-  return `${(Math.round(count / 100) / 10).toString()}k`;
-}
-
-async function fetchGithubStarCount(): Promise<string> {
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}`, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        // GitHub rejects requests without a User-Agent.
-        "User-Agent": "openseo-landing",
-      },
-    });
-    if (!res.ok) return FALLBACK_STAR_COUNT;
-    const data = (await res.json()) as { stargazers_count?: number };
-    return typeof data.stargazers_count === "number"
-      ? formatStarCount(data.stargazers_count)
-      : FALLBACK_STAR_COUNT;
-  } catch {
-    return FALLBACK_STAR_COUNT;
-  }
-}
-
-// Memoized for the duration of a build so prerendering every marketing page
-// only hits GitHub once instead of once per page.
-let starCountPromise: Promise<string> | null = null;
-function loadGithubStarCount(): Promise<string> {
-  starCountPromise ??= fetchGithubStarCount();
-  return starCountPromise;
-}
-
-function getMobileNavItems(githubStarCount: string) {
-  return [
-    {
-      label: "Product",
-      links: [
-        { label: "Features", href: "/features" },
-        { label: "Pricing", href: "/pricing" },
-      ],
-    },
-    {
-      label: "Resources",
-      links: [
-        { label: "Blog", href: "/blogs" },
-        { label: "Why Open Source?", href: "/open-source-seo" },
-        { label: "MCP Setup", href: "/docs/mcp" },
-        { label: "Skills", href: "/docs/skills" },
-      ],
-    },
-    {
-      label: "Community",
-      links: [
-        {
-          label: `GitHub ${githubStarCount}`,
-          href: "https://github.com/every-app/open-seo",
-        },
-      ],
-    },
-  ];
-}
-
-function GitHubIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-    </svg>
-  );
-}
-
-function MenuIcon({ size = 28 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M4 7h16" />
-      <path d="M4 12h16" />
-      <path d="M4 17h16" />
-    </svg>
-  );
-}
-
-function CloseIcon({ size = 28 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M6 6l12 12" />
-      <path d="M18 6L6 18" />
-    </svg>
-  );
-}
+import { NewsletterSignup } from "@/components/newsletter-signup";
+import { IconClose, IconMenu } from "@/components/landing-icons";
+import {
+  landingContent,
+  URLS,
+  type LandingLocale,
+} from "@/components/landing-content";
 
 export const Route = createFileRoute("/_marketing")({
-  // Runs at prerender/SSR time, so the count is baked into the static HTML that
-  // Cloudflare serves from the edge — no per-viewer request for it.
-  loader: async () => ({ githubStarCount: await loadGithubStarCount() }),
-  // The value is fixed per build; never refetch it on client navigation.
-  staleTime: Infinity,
   component: MarketingLayout,
 });
 
+function localeFor(pathname: string): LandingLocale {
+  return pathname === "/vi" || pathname.startsWith("/vi/") ? "vi" : "en";
+}
+
 function MarketingLayout() {
-  const { githubStarCount } = Route.useLoaderData();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const { pathname } = useLocation();
+  const locale = localeFor(pathname);
+  const nav = landingContent[locale].nav;
+  const freeCheck = URLS.freeCheck[locale];
+  // The home routes ("/" and "/vi") own the full-viewport landing (with its own
+  // footer); every other marketing page gets the light content canvas.
+  const isHome = pathname === "/" || pathname === "/vi";
+  // On home the sticky header sits on the deep-teal hero band, so it blends into
+  // the band (teal fill, light text, amber CTA) instead of a heavy dark bar.
+  const onTeal = isHome;
+  const headerCls = onTeal
+    ? // Solid teal (not /95): a translucent bar lets a white section behind it
+      // lift the effective background, dropping white/80 nav text below AA.
+      "sticky top-0 z-50 border-b border-white/12 bg-[#0a6b54]"
+    : "sticky top-0 z-50 border-b border-[#26313e] bg-[#0b0f14]/90 backdrop-blur supports-[backdrop-filter]:bg-[#0b0f14]/80";
+  const navLinkCls = onTeal
+    ? "text-sm font-medium text-white/80 transition-colors hover:text-white"
+    : "text-sm font-medium text-[#aeb6c0] transition-colors hover:text-[#e6eaf0]";
 
-  const mobileNavItems = getMobileNavItems(githubStarCount);
-  // The home route owns the full viewport width (and its own footer/CTA band);
-  // every other marketing page gets the shared marketing canvas and footer.
-  const isHome = pathname === "/";
-
-  // On the landing route, paint html/body cream so the area behind the
-  // floating nav and any overscroll matches the landing canvas.
+  // Close the mobile drawer on Escape, returning focus to the trigger so a
+  // keyboard user isn't stranded when the focused drawer element unmounts.
   useEffect(() => {
-    if (!isHome) return;
-    const root = document.documentElement;
-    const prevRoot = root.style.backgroundColor;
-    const prevBody = document.body.style.backgroundColor;
-    root.style.backgroundColor = "#f5f1ec";
-    document.body.style.backgroundColor = "#f5f1ec";
-    return () => {
-      root.style.backgroundColor = prevRoot;
-      document.body.style.backgroundColor = prevBody;
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+        menuButtonRef.current?.focus();
+      }
     };
-  }, [isHome]);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
 
   return (
-    <main className="min-h-screen bg-[var(--color-surface)] text-[var(--color-brand)]">
-      <div className="relative z-50 mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6 md:pt-8">
-        <div className="relative mx-auto max-w-5xl">
-          <nav className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-3 rounded-full border border-[var(--color-border-subtle)] bg-white/90 px-4 py-2.5 shadow-sm shadow-neutral-900/5 backdrop-blur md:grid-cols-[1fr_auto_1fr] md:px-5">
-            <Link
-              to="/"
-              className="text-sm font-semibold hover:opacity-80 transition-opacity"
+    <>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-[#19e3b1] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#0b0f14]"
+      >
+        {locale === "vi" ? "Tới nội dung chính" : "Skip to content"}
+      </a>
+
+      <header className={headerCls}>
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-6">
+          <a
+            href={locale === "vi" ? "/vi" : "/"}
+            className={`transition-opacity hover:opacity-80 ${onTeal ? "esl-home-logo text-white" : "text-[#e6eaf0]"}`}
+            style={
+              onTeal
+                ? ({
+                    ["--echo-primary" as string]: "#eafff8",
+                    ["--echo-accent" as string]: "#f5a524",
+                  } as CSSProperties)
+                : undefined
+            }
+            aria-label="EchoSEO"
+          >
+            <EchoSeoLogo variant="lockup" className="text-[15px]" />
+          </a>
+
+          <nav
+            className="hidden items-center gap-6 lg:flex"
+            aria-label={locale === "vi" ? "Điều hướng chính" : "Primary"}
+          >
+            <ProductMenu nav={nav} onTeal={onTeal} />
+            <a
+              href={locale === "vi" ? "/vi#open-source" : "/#open-source"}
+              className={navLinkCls}
             >
-              OpenSEO
-            </Link>
-
-            <div className="hidden items-center justify-center gap-5 md:flex">
-              <FeatureDropdown />
-              <ResourcesDropdown />
-              <Link
-                to="/pricing"
-                className="text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-900"
-              >
-                Pricing
-              </Link>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 sm:gap-3">
-              <button
-                type="button"
-                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-                aria-expanded={mobileMenuOpen}
-                onClick={() => setMobileMenuOpen((open) => !open)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-900 transition-colors hover:bg-[#f5f1ec] md:hidden"
-              >
-                {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
-              </button>
-              <a
-                href="https://github.com/every-app/open-seo"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`GitHub, ${githubStarCount} stars`}
-                className="hidden h-9 items-center gap-1.5 px-2 text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-900 md:inline-flex"
-              >
-                <GitHubIcon size={16} />
-                <span>GitHub</span>
-                <span className="text-neutral-500">{githubStarCount}</span>
-              </a>
-              <a
-                href="https://app.openseo.so/sign-in"
-                className="hidden h-9 items-center rounded-full border border-[var(--color-border-subtle)] px-4 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 md:inline-flex"
-              >
-                Sign in
-              </a>
-            </div>
+              {nav.openSource}
+            </a>
+            <a href={freeCheck} className={navLinkCls}>
+              {nav.freeCheck}
+            </a>
           </nav>
 
-          {mobileMenuOpen ? (
-            <div className="absolute left-0 right-0 top-full z-30 mt-3 rounded-2xl border border-[var(--color-border-subtle)] bg-white p-3 shadow-xl shadow-neutral-900/10 md:hidden">
-              <div className="grid grid-cols-2 gap-2">
-                <a
-                  href="https://app.openseo.so/sign-in"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex h-11 items-center justify-center rounded-xl bg-neutral-950 px-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-800"
-                >
-                  Try OpenSEO
-                </a>
-                <a
-                  href="https://app.openseo.so/sign-in"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex h-11 items-center justify-center rounded-xl border border-[var(--color-border-subtle)] px-3 text-sm font-semibold text-neutral-800 transition-colors hover:border-neutral-900 hover:bg-[#f5f1ec]"
-                >
-                  Sign in
-                </a>
-              </div>
-
-              <div className="mt-3 space-y-3">
-                {mobileNavItems.map((section) => (
-                  <div key={section.label}>
-                    <p className="px-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      {section.label}
-                    </p>
-                    <div className="mt-1 space-y-1">
-                      {section.links.map((item) => (
-                        <a
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex min-h-10 items-center rounded-xl px-2 text-sm font-semibold text-neutral-800 transition-colors hover:bg-neutral-50 hover:text-neutral-950"
-                        >
-                          {item.label}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LangSwitch locale={locale} onTeal={onTeal} />
+            <a
+              href={URLS.signIn}
+              className={`hidden h-9 items-center rounded-lg px-3 lg:inline-flex ${navLinkCls}`}
+            >
+              {nav.signIn}
+            </a>
+            <a
+              href={URLS.signUp}
+              className="hidden h-9 items-center rounded-lg bg-[#f5a524] px-4 text-sm font-semibold text-[#231500] transition-colors hover:bg-[#f7b445] lg:inline-flex"
+            >
+              {nav.startFree}
+            </a>
+            <button
+              ref={menuButtonRef}
+              type="button"
+              aria-label={mobileOpen ? nav.menuClose : nav.menuOpen}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-drawer"
+              onClick={() => setMobileOpen((o) => !o)}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-lg transition-colors lg:hidden ${onTeal ? "text-white hover:bg-white/10" : "text-[#e6eaf0] hover:bg-[#182330]"}`}
+            >
+              {mobileOpen ? <IconClose size={26} /> : <IconMenu size={26} />}
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {isHome ? (
-        <Outlet />
-      ) : (
-        <div className="mx-auto max-w-5xl px-6 py-16 md:py-24">
+      {mobileOpen ? (
+        <MobileDrawer
+          nav={nav}
+          locale={locale}
+          freeCheck={freeCheck}
+          onClose={() => setMobileOpen(false)}
+        />
+      ) : null}
+
+      <main
+        id="main"
+        className={isHome ? undefined : "min-h-screen bg-[#f5f1ec]"}
+      >
+        {isHome ? (
           <Outlet />
-          <MarketingFooter />
-        </div>
-      )}
-    </main>
+        ) : (
+          <div className="mx-auto max-w-5xl px-6 py-16 md:py-24">
+            <Outlet />
+            <MarketingFooter locale={locale} />
+          </div>
+        )}
+      </main>
+    </>
   );
 }
 
-function ResourcesDropdown() {
-  const resources = [
-    {
-      label: "Blog",
-      href: "/blogs",
-      description: "SEO articles and guides.",
-    },
-    {
-      label: "Why Open Source?",
-      href: "/open-source-seo",
-      description: "Open source puts the power in user's hands.",
-    },
-    {
-      label: "MCP",
-      href: "/docs/mcp",
-      description: "Connect OpenSEO to AI clients.",
-    },
-    {
-      label: "Skills",
-      href: "/docs/skills",
-      description: "Focused OpenSEO workflows.",
-    },
-  ];
-
+function LangSwitch({
+  locale,
+  onTeal,
+}: {
+  locale: LandingLocale;
+  onTeal: boolean;
+}) {
+  const base = "px-2 py-1 text-xs font-semibold rounded transition-colors";
+  const border = onTeal ? "border-white/55" : "border-[#26313e]";
+  const active = onTeal
+    ? "bg-white/15 text-white"
+    : "bg-[#182330] text-[#e6eaf0]";
+  // white/80 ≈ 4.9:1 on the solid teal header — AA for the 12px labels (white/60
+  // was 3.4:1).
+  const idle = onTeal
+    ? "text-white/80 hover:text-white"
+    : "text-[#8b95a1] hover:text-[#e6eaf0]";
   return (
-    <div className="group relative">
+    <div
+      className={`hidden items-center rounded-lg border p-0.5 sm:inline-flex ${border}`}
+      role="group"
+      aria-label="Language"
+    >
       <a
-        href="/blogs"
-        className="text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-900 md:hidden"
+        href="/"
+        aria-current={locale === "en" ? "true" : undefined}
+        className={`${base} ${locale === "en" ? active : idle}`}
       >
-        Resources
+        EN
       </a>
-      <button
-        type="button"
-        className="hidden h-10 items-center text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-900 md:inline-flex"
+      <a
+        href="/vi"
+        aria-current={locale === "vi" ? "true" : undefined}
+        className={`${base} ${locale === "vi" ? active : idle}`}
       >
-        Resources
-      </button>
-      <div className="pointer-events-none absolute left-1/2 top-[calc(100%-2px)] z-20 hidden w-[280px] -translate-x-1/2 pt-2 opacity-0 transition md:block group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-        <div className="rounded-lg border border-[var(--color-border-subtle)] bg-white p-3 shadow-xl shadow-neutral-900/10">
-          {resources.map((resource) => (
-            <a
-              key={resource.href}
-              href={resource.href}
-              className="block rounded-md px-3 py-2.5 transition-colors hover:bg-[#f5f1ec]"
-            >
-              <span className="block text-sm font-semibold text-neutral-900">
-                {resource.label}
-              </span>
-              <span className="mt-0.5 block text-xs leading-relaxed text-neutral-600">
-                {resource.description}
-              </span>
-            </a>
-          ))}
-        </div>
-      </div>
+        VI
+      </a>
     </div>
   );
 }
 
-function FeatureDropdown() {
+type NavContent = (typeof landingContent)["en"]["nav"];
+
+function ProductMenu({ nav, onTeal }: { nav: NavContent; onTeal: boolean }) {
+  // A disclosure (not an ARIA menu — the panel holds navigation links): the
+  // button owns an honest aria-expanded, Escape and focus-out close it, and the
+  // CSS hover/focus-within still opens it for pointer users.
+  const [open, setOpen] = useState(false);
   return (
-    <div className="group relative">
-      <Link
-        to="/features"
-        className="text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-900 md:hidden"
-      >
-        Features
-      </Link>
+    <div
+      className="group relative"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setOpen(false);
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
+      }}
+    >
       <button
         type="button"
-        className="hidden h-10 items-center text-sm font-semibold text-neutral-600 transition-colors hover:text-neutral-900 md:inline-flex"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className={`flex h-10 items-center gap-1 text-sm font-medium transition-colors ${onTeal ? "text-white/80 hover:text-white" : "text-[#aeb6c0] hover:text-[#e6eaf0]"}`}
       >
-        Features
+        {nav.product}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
-      <div className="pointer-events-none absolute left-1/2 top-[calc(100%-2px)] z-20 hidden w-[560px] -translate-x-1/2 pt-2 opacity-0 transition md:block group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-        <div className="rounded-lg border border-[var(--color-border-subtle)] bg-white p-5 shadow-xl shadow-neutral-900/10">
+      <div
+        className={`absolute left-0 top-[calc(100%-2px)] z-20 hidden w-[600px] max-w-[calc(100vw-2rem)] pt-3 transition group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 md:block ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+      >
+        <div className="rounded-xl border border-[#26313e] bg-[#0f151c] p-5 shadow-2xl shadow-black/40">
           <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-            {featureGroups.map((group) => (
+            {nav.productGroups.map((group) => (
               <div key={group.label}>
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#7f8a97]">
                   {group.label}
                 </p>
-                <div className="mt-3 space-y-1">
-                  {group.pages.map((page) => (
+                <div className="mt-3 flex flex-col gap-1">
+                  {group.items.map((item) => (
                     <a
-                      key={page.slug}
-                      href={`/features/${page.slug}`}
-                      className="block rounded-md px-2 py-1.5 transition-colors hover:bg-[#f5f1ec]"
+                      key={item.slug}
+                      href={`/features/${item.slug}`}
+                      className="rounded-md px-2 py-1.5 text-sm font-medium text-[#d4dae2] transition-colors hover:bg-[#182330] hover:text-white"
                     >
-                      <span className="block text-sm font-semibold text-neutral-900">
-                        {page.eyebrow}
-                      </span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-neutral-600">
-                        {page.navDescription}
-                      </span>
+                      {item.name}
                     </a>
                   ))}
                 </div>
               </div>
             ))}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                AI agents
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#7f8a97]">
+                {nav.agentsHeading}
               </p>
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 flex flex-col gap-2">
                 <a
-                  href="/features/mcp"
-                  className="block rounded-md p-2 transition-colors hover:bg-[#f5f1ec]"
+                  href={URLS.mcp}
+                  className="rounded-md p-2 transition-colors hover:bg-[#182330]"
                 >
-                  <span className="text-sm font-semibold text-neutral-900">
-                    OpenSEO MCP
+                  <span className="block text-sm font-semibold text-[#e6eaf0]">
+                    {nav.mcpName}
                   </span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-neutral-600">
-                    Connect Claude, Codex, and agents.
+                  <span className="mt-0.5 block text-xs text-[#8b95a1]">
+                    {nav.mcpBlurb}
                   </span>
                 </a>
                 <a
-                  href="/google-search-console-mcp"
-                  className="block rounded-md p-2 transition-colors hover:bg-[#f5f1ec]"
+                  href={URLS.searchConsoleMcp}
+                  className="rounded-md p-2 transition-colors hover:bg-[#182330]"
                 >
-                  <span className="text-sm font-semibold text-neutral-900">
-                    Search Console MCP
+                  <span className="block text-sm font-semibold text-[#e6eaf0]">
+                    {nav.scMcpName}
                   </span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-neutral-600">
-                    Search Console data for agents.
+                  <span className="mt-0.5 block text-xs text-[#8b95a1]">
+                    {nav.scMcpBlurb}
                   </span>
                 </a>
                 <a
-                  href="/features"
-                  className="block rounded-md border border-[var(--color-border-subtle)] bg-[#f5f1ec] px-2 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900"
+                  href={URLS.features}
+                  className="rounded-md border border-[#26313e] px-2 py-1.5 text-sm font-medium text-[#e6eaf0] transition-colors hover:border-[#19e3b1]"
                 >
-                  View all features <span aria-hidden="true">&rarr;</span>
+                  {nav.allFeatures} <span aria-hidden="true">&rarr;</span>
                 </a>
               </div>
             </div>
@@ -408,23 +301,150 @@ function FeatureDropdown() {
   );
 }
 
-function MarketingFooter() {
+function MobileDrawer({
+  nav,
+  locale,
+  freeCheck,
+  onClose,
+}: {
+  nav: NavContent;
+  locale: LandingLocale;
+  freeCheck: string;
+  onClose: () => void;
+}) {
+  const firstRef = useRef<HTMLAnchorElement>(null);
+  const trapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    firstRef.current?.focus();
+  }, []);
+
+  // Keep Tab focus inside the open drawer (Escape closes it — see the layout's
+  // keydown effect); prevents keyboard users tabbing into the obscured page.
+  const onKeyDown = (e: ReactKeyboardEvent) => {
+    if (e.key !== "Tab") return;
+    const items = trapRef.current?.querySelectorAll<HTMLElement>(
+      "a[href],button:not([disabled])",
+    );
+    if (!items || items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  return (
+    <div
+      id="mobile-drawer"
+      ref={trapRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={locale === "vi" ? "Menu điều hướng" : "Navigation menu"}
+      onKeyDown={onKeyDown}
+      className="fixed inset-0 top-16 z-40 overflow-y-auto bg-[#0b0f14] px-6 pb-10 pt-4 lg:hidden"
+    >
+      <div className="flex flex-col gap-1">
+        <a
+          ref={firstRef}
+          href={URLS.signUp}
+          onClick={onClose}
+          className="flex h-12 items-center justify-center rounded-lg bg-[#f5a524] px-4 text-sm font-semibold text-[#231500]"
+        >
+          {nav.startFree}
+        </a>
+        <a
+          href={freeCheck}
+          onClick={onClose}
+          className="mt-2 flex h-12 items-center justify-center rounded-lg border border-[#26313e] px-4 text-sm font-semibold text-[#e6eaf0]"
+        >
+          {nav.freeCheck}
+        </a>
+      </div>
+
+      <nav
+        className="mt-6 flex flex-col"
+        aria-label={locale === "vi" ? "Điều hướng" : "Menu"}
+      >
+        <p className="px-1 py-2 text-xs font-semibold uppercase tracking-wide text-[#7f8a97]">
+          {nav.product}
+        </p>
+        {nav.productGroups
+          .flatMap((g) => g.items)
+          .map((item) => (
+            <a
+              key={item.slug}
+              href={`/features/${item.slug}`}
+              onClick={onClose}
+              className="flex min-h-12 items-center rounded-lg px-1 text-[15px] font-medium text-[#d4dae2] hover:bg-[#182330]"
+            >
+              {item.name}
+            </a>
+          ))}
+        <a
+          href={URLS.mcp}
+          onClick={onClose}
+          className="flex min-h-12 items-center rounded-lg px-1 text-[15px] font-medium text-[#d4dae2] hover:bg-[#182330]"
+        >
+          {nav.mcpName}
+        </a>
+        <a
+          href={locale === "vi" ? "/vi#open-source" : "/#open-source"}
+          onClick={onClose}
+          className="flex min-h-12 items-center rounded-lg px-1 text-[15px] font-medium text-[#d4dae2] hover:bg-[#182330]"
+        >
+          {nav.openSource}
+        </a>
+        <a
+          href={URLS.signIn}
+          onClick={onClose}
+          className="flex min-h-12 items-center rounded-lg px-1 text-[15px] font-medium text-[#d4dae2] hover:bg-[#182330]"
+        >
+          {nav.signIn}
+        </a>
+      </nav>
+
+      <div className="mt-6 flex items-center gap-3 border-t border-[#26313e] pt-4">
+        <span className="text-xs text-[#7f8a97]">{nav.langSwitchLabel}:</span>
+        <a
+          href="/"
+          onClick={onClose}
+          aria-current={locale === "en" ? "true" : undefined}
+          className={`text-sm font-semibold ${locale === "en" ? "text-[#19e3b1]" : "text-[#8b95a1]"}`}
+        >
+          EN
+        </a>
+        <a
+          href="/vi"
+          onClick={onClose}
+          aria-current={locale === "vi" ? "true" : undefined}
+          className={`text-sm font-semibold ${locale === "vi" ? "text-[#19e3b1]" : "text-[#8b95a1]"}`}
+        >
+          VI
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/** Footer for non-home marketing pages (features/pricing/etc.). */
+function MarketingFooter({ locale }: { locale: LandingLocale }) {
   return (
     <>
-      {/* Newsletter */}
       <div className="mt-16 border-t border-[var(--color-border-subtle)] pt-8">
         <p className="text-sm font-semibold text-neutral-900">
           Stay in the loop
         </p>
-        <p className="text-sm text-neutral-600 mt-1 leading-relaxed">
+        <p className="mt-1 text-sm leading-relaxed text-neutral-600">
           Product updates, new features, and the occasional behind-the-scenes.
         </p>
         <div className="mt-3">
-          <NewsletterSignup />
+          <NewsletterSignup locale={locale} />
         </div>
       </div>
-
-      {/* Footer */}
       <div className="mt-8">
         <SiteFooter className="text-xs text-neutral-600 [&_a]:transition-colors [&_a]:hover:text-neutral-900" />
       </div>
