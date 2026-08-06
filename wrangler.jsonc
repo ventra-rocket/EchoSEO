@@ -7,6 +7,14 @@
   "observability": {
     "enabled": true,
   },
+  // The site-audit crawl runs many step.do batches back-to-back within one
+  // Workflow invocation; CPU is billed per invocation and defaults to 30s,
+  // which a multi-hundred-page crawl blows through (exceededCpu -> the audit
+  // hangs). Raise to the 5-minute max; the crawl also rotates invocations via
+  // step.sleep (see runCrawlPhase) so a very large crawl still stays under it.
+  "limits": {
+    "cpu_ms": 300000,
+  },
   // Public SaaS: customer identity is handled by Better Auth sessions, not a
   // Cloudflare Access OTP in front of the product routes.
   "vars": {

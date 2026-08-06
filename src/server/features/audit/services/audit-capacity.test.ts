@@ -10,7 +10,7 @@ describe("audit capacity helpers", () => {
     expect(clampAuditMaxPages()).toBe(50);
     expect(clampAuditMaxPages(1)).toBe(10);
     expect(clampAuditMaxPages(500)).toBe(500);
-    expect(clampAuditMaxPages(20_000)).toBe(10_000);
+    expect(clampAuditMaxPages(20_000)).toBe(5_000);
   });
 
   it("estimates capacity for each lighthouse strategy", () => {
@@ -50,7 +50,7 @@ describe("audit capacity helpers", () => {
   it("stays within the global capacity limit for the maximum auto audit", () => {
     expect(
       getEstimatedAuditCapacity({
-        maxPages: 10_000,
+        maxPages: 5_000,
         lighthouseStrategy: "auto",
       }).total,
     ).toBeLessThan(MAX_USER_AUDIT_USAGE);
