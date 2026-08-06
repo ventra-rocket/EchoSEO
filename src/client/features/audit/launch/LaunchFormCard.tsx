@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import {
   MAX_PAGES_LIMIT,
   MIN_PAGES,
@@ -140,6 +141,11 @@ function LaunchOptions({ launchForm, commitMaxPagesInput }: Props) {
 }
 
 function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
+  // Lighthouse runs through DataForSEO, so a keyless org can't select it —
+  // ticking it would just fail server-side once the run fires.
+  const seoApiKeyStatus = useSeoApiKeyStatus();
+  const seoApiKeyConfigured = seoApiKeyStatus.data?.configured === true;
+
   return (
     <div className="rounded-lg border border-base-300 bg-base-200/20 p-3 space-y-2">
       <label className="label cursor-pointer justify-start gap-2 p-0">
@@ -149,6 +155,7 @@ function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
               type="checkbox"
               className="toggle toggle-sm toggle-primary"
               checked={Boolean(field.state.value)}
+              disabled={!seoApiKeyConfigured}
               onChange={(event) => field.handleChange(event.target.checked)}
             />
           )}
@@ -161,20 +168,26 @@ function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
         </span>
       </label>
 
-      <launchForm.Subscribe
-        selector={(snapshot) => snapshot.values.runLighthouse}
-      >
-        {(runLighthouse) =>
-          runLighthouse ? (
-            <div className="space-y-1">
-              <p className="text-xs text-base-content/60">
-                We choose a sample of 20 pages to audit, removing pages from
-                duplicate templates.
-              </p>
-            </div>
-          ) : null
-        }
-      </launchForm.Subscribe>
+      {seoApiKeyConfigured ? (
+        <launchForm.Subscribe
+          selector={(snapshot) => snapshot.values.runLighthouse}
+        >
+          {(runLighthouse) =>
+            runLighthouse ? (
+              <div className="space-y-1">
+                <p className="text-xs text-base-content/60">
+                  We choose a sample of 20 pages to audit, removing pages from
+                  duplicate templates.
+                </p>
+              </div>
+            ) : null
+          }
+        </launchForm.Subscribe>
+      ) : (
+        <p className="text-xs text-base-content/60">
+          Lighthouse needs a DataForSEO key — add one in Settings.
+        </p>
+      )}
     </div>
   );
 }

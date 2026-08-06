@@ -21,6 +21,7 @@ import { AiSearchLoadingState } from "@/client/features/ai-search/components/AiS
 import { AiSearchPaidPlanGate } from "@/client/features/ai-search/components/AiSearchPaidPlanGate";
 import { AiSearchSetupGate } from "@/client/features/ai-search/components/AiSearchSetupGate";
 import { AccessGateLoadingState } from "@/client/features/access-gate/AccessGate";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import { useAiSearchAccess } from "@/client/features/ai-search/useAiSearchAccess";
 import { useBrandLookupSearchHistory } from "@/client/hooks/useBrandLookupSearchHistory";
 import {
@@ -81,6 +82,7 @@ function BrandLookupPageInner({
   } | null>(null);
 
   const access = useAiSearchAccess(projectId);
+  const seoApiKeyStatus = useSeoApiKeyStatus();
 
   const trimmedInitialQuery = initialQuery.trim();
   const hasActiveQuery = trimmedInitialQuery.length > 0;
@@ -101,7 +103,11 @@ function BrandLookupPageInner({
           languageCode: "en",
         },
       }),
-    enabled: hasActiveQuery && !planGate.isFreePlan && access.enabled,
+    enabled:
+      hasActiveQuery &&
+      !planGate.isFreePlan &&
+      access.enabled &&
+      seoApiKeyStatus.data?.configured === true,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -193,7 +199,14 @@ function BrandLookupPageInner({
     setValidationError(null);
   }, [initialQuery, competitorKey]);
 
-  const isLoading = hasActiveQuery && lookupQuery.isPending;
+  // A query disabled by the key gate is `isPending` while idle; treat "no key"
+  // (configured === false) as not-loading so a keyless user falls through to the
+  // setup CTA/banner instead of an infinite spinner. `undefined` (status still
+  // loading) keeps the spinner to avoid a flash of empty state.
+  const isLoading =
+    hasActiveQuery &&
+    lookupQuery.isPending &&
+    seoApiKeyStatus.data?.configured !== false;
   const errorMessage =
     hasActiveQuery && lookupQuery.isError
       ? getStandardErrorMessage(lookupQuery.error)

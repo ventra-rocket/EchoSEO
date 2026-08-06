@@ -2,6 +2,7 @@ import {
   createOpenRouter,
   type LanguageModelV3,
 } from "@openrouter/ai-sdk-provider";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   getOptionalEnvValue,
   getRequiredEnvValue,
@@ -60,6 +61,24 @@ const DEFAULT_EXPLAINER_MODEL = "minimax/minimax-m3";
  * the credit metering reads the real USD cost off that.
  */
 export async function getIssueExplainerModel(): Promise<LanguageModelV3 | null> {
+  // Optional OpenAI-compatible endpoint override (e.g. NVIDIA NIM hosting GLM):
+  // when AI_EXPLAINER_BASE_URL + _API_KEY + _MODEL are ALL set, the explainer
+  // talks to that endpoint instead of OpenRouter. A generic OpenAI-compatible
+  // provider reports no usage cost, so metering reads 0 for it — acceptable
+  // while the explainer runs on a free / self-paid key. generateExplanation()
+  // swallows any error to null, so an endpoint lacking structured-output support
+  // degrades to "no commentary", never a 500.
+  const compatBaseUrl = await getOptionalEnvValue("AI_EXPLAINER_BASE_URL");
+  const compatApiKey = await getOptionalEnvValue("AI_EXPLAINER_API_KEY");
+  const compatModel = await getOptionalEnvValue("AI_EXPLAINER_MODEL");
+  if (compatBaseUrl && compatApiKey && compatModel) {
+    return createOpenAICompatible({
+      name: "ai-explainer",
+      baseURL: compatBaseUrl,
+      apiKey: compatApiKey,
+    }).chatModel(compatModel);
+  }
+
   const apiKey = await getOptionalEnvValue("OPENROUTER_API_KEY");
   if (!apiKey) return null;
 

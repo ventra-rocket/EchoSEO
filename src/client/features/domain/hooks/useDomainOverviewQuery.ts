@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import { getDomainOverview } from "@/serverFunctions/domain";
 
 type Input = {
@@ -11,9 +12,10 @@ type Input = {
 
 export function useDomainOverviewQuery(input: Input) {
   const trimmedDomain = input.domain.trim();
+  const seoApiKeyStatus = useSeoApiKeyStatus();
 
   return useQuery({
-    enabled: trimmedDomain !== "",
+    enabled: trimmedDomain !== "" && seoApiKeyStatus.data?.configured === true,
     queryKey: [
       "domain-overview",
       input.projectId,

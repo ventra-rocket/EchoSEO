@@ -421,7 +421,6 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
               {errorMessage}
             </div>
           ) : null}
-
         </div>
 
         {/* The result renders directly under the form — DOM order and screen

@@ -21,7 +21,10 @@ import {
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
 } from "@/shared/billing";
 import { estimateRankCheckCredits } from "@/shared/rank-tracking";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import {
+  isAutumnConfigured,
+  isHostedServerAuthMode,
+} from "@/server/lib/runtime-env";
 
 const SINGLE_ATTEMPT_STEP_CONFIG = {
   retries: { limit: 0, delay: "1 second" as const },
@@ -80,7 +83,14 @@ async function prepareRankCheckKeywords(input: {
   // Verify the user has enough credits for the full check before starting.
   // Scheduled checks go through the cheaper task queue, so estimate at queued
   // pricing — a live-price estimate would skip checks the user can afford.
-  if (await isHostedServerAuthMode()) {
+  //
+  // Only meaningful when Autumn is configured: with billing deferred the
+  // `autumn.check` calls below would throw on the missing secret, killing an
+  // allowlisted+keyed run at pre-flight. Guard on env presence (not try/catch)
+  // so a present-but-broken key still surfaces loudly. BYO-key orgs self-pay and
+  // bypass Autumn at the metering seam, so skipping this credit gate for them is
+  // correct; the run still resolves its own key downstream.
+  if ((await isHostedServerAuthMode()) && (await isAutumnConfigured())) {
     const { costCredits } = estimateRankCheckCredits(
       trackingKeywords.length,
       input.devices,
@@ -222,15 +232,15 @@ async function markRankCheckRunFailed(input: {
     input.error instanceof Error ? input.error.message : "Unknown error";
   await failRunIfActive(input.runId, errorMessage);
 
-  // Flag the config so the UI can show why the scheduled check was skipped
+  // Flag the config so the UI can show why the scheduled check was skipped.
+  // On any OTHER failure, clear a stale skip reason so a past
+  // "insufficient_credits" flag can't mask the new run's real error message.
   const isInsufficientCredits =
     input.error instanceof AppError &&
     input.error.code === "INSUFFICIENT_CREDITS";
-  if (isInsufficientCredits) {
-    await RankTrackingRepository.updateConfig(input.configId, input.projectId, {
-      lastSkipReason: "insufficient_credits",
-    });
-  }
+  await RankTrackingRepository.updateConfig(input.configId, input.projectId, {
+    lastSkipReason: isInsufficientCredits ? "insufficient_credits" : null,
+  });
 
   await captureServerEvent({
     distinctId: input.billingCustomer.userId,

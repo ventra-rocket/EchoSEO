@@ -21,6 +21,7 @@ import { PromptExplorerHistorySection } from "@/client/features/ai-search/compon
 import { AiSearchPaidPlanGate } from "@/client/features/ai-search/components/AiSearchPaidPlanGate";
 import { AiSearchSetupGate } from "@/client/features/ai-search/components/AiSearchSetupGate";
 import { AccessGateLoadingState } from "@/client/features/access-gate/AccessGate";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import { useAiSearchAccess } from "@/client/features/ai-search/useAiSearchAccess";
 import { usePromptExplorerSearchHistory } from "@/client/hooks/usePromptExplorerSearchHistory";
 import {
@@ -78,6 +79,7 @@ function PromptExplorerPageInner({
   const [form, setForm] = useState<PromptExplorerFormValues>(urlState);
   const [validationError, setValidationError] = useState<string | null>(null);
   const access = useAiSearchAccess(projectId);
+  const seoApiKeyStatus = useSeoApiKeyStatus();
 
   const {
     history,
@@ -114,7 +116,8 @@ function PromptExplorerPageInner({
       hasActivePrompt &&
       urlState.models.length > 0 &&
       !planGate.isFreePlan &&
-      access.enabled,
+      access.enabled &&
+      seoApiKeyStatus.data?.configured === true,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -188,7 +191,13 @@ function PromptExplorerPageInner({
   const errorMessage = exploreQuery.isError
     ? getStandardErrorMessage(exploreQuery.error)
     : null;
-  const isLoading = hasActivePrompt && exploreQuery.isPending;
+  // See BrandLookupPage: a key-gated query stays `isPending` while idle, so a
+  // keyless user would spin forever. Fall through to the setup CTA when there is
+  // no key (configured === false); keep spinning while status is still loading.
+  const isLoading =
+    hasActivePrompt &&
+    exploreQuery.isPending &&
+    seoApiKeyStatus.data?.configured !== false;
   const resultData = hasActivePrompt ? exploreQuery.data : undefined;
 
   const updateForm = <K extends keyof PromptExplorerFormValues>(

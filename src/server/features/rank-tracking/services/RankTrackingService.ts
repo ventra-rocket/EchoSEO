@@ -92,6 +92,7 @@ async function updateConfig(
     serpDepth?: number;
     scheduleInterval?: RankTrackingConfig["scheduleInterval"];
     isActive?: boolean;
+    scheduledEnabled?: boolean;
   },
 ) {
   const updates: typeof input & { nextCheckAt?: string | null } = {};
@@ -105,6 +106,8 @@ async function updateConfig(
   if (input.devices !== undefined) updates.devices = input.devices;
   if (input.serpDepth !== undefined) updates.serpDepth = input.serpDepth;
   if (input.isActive !== undefined) updates.isActive = input.isActive;
+  if (input.scheduledEnabled !== undefined)
+    updates.scheduledEnabled = input.scheduledEnabled;
 
   if (input.scheduleInterval !== undefined) {
     updates.scheduleInterval = input.scheduleInterval;
@@ -112,6 +115,21 @@ async function updateConfig(
       updates.nextCheckAt = null;
     } else {
       updates.nextCheckAt = computeNextCheckAt(input.scheduleInterval);
+    }
+  }
+
+  // Enabling scheduled runs must give the config a due time, or the cron's
+  // `nextCheckAt <= now` filter never selects it and the opt-in silently does
+  // nothing. Backfill from the effective interval when this call doesn't already
+  // set nextCheckAt (a caller explicitly setting `manual` keeps its null).
+  if (input.scheduledEnabled === true && updates.nextCheckAt === undefined) {
+    const config = await getValidatedConfig(configId, projectId);
+    const effectiveInterval = input.scheduleInterval ?? config.scheduleInterval;
+    if (
+      config.nextCheckAt == null &&
+      isScheduledRankTrackingInterval(effectiveInterval)
+    ) {
+      updates.nextCheckAt = computeNextCheckAt(effectiveInterval);
     }
   }
 

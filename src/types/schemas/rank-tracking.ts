@@ -71,6 +71,8 @@ export const updateConfigSchema = z.object({
   serpDepth: z.number().int().min(10).max(100).multipleOf(10).optional(),
   scheduleInterval: scheduleEnum.optional(),
   isActive: z.boolean().optional(),
+  // Opt this config into the scheduled cron (default off at creation).
+  scheduledEnabled: z.boolean().optional(),
 });
 
 export const triggerCheckSchema = z.object({

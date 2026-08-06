@@ -43,13 +43,7 @@ function displayHost(url: string): string {
  * skeleton reads as "your result is forming" where a spinner reads as "still
  * nothing"; that difference is measured as a shorter perceived wait.
  */
-export function ReportSkeleton({
-  url,
-  locale,
-}: {
-  url: string;
-  locale: Locale;
-}) {
+function ReportSkeleton({ url, locale }: { url: string; locale: Locale }) {
   const copy = SKELETON_COPY[locale];
 
   // Announce the scan exactly once. This live region mounts only now, and some

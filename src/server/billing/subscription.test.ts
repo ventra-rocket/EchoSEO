@@ -1,9 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AUTUMN_PAID_PLAN_FEATURE_ID } from "@/shared/billing";
+import {
+  AUTUMN_MANAGED_ACCESS_FEATURE_ID,
+  AUTUMN_PAID_PLAN_FEATURE_ID,
+} from "@/shared/billing";
 
-const { checkMock, getOrCreateMock } = vi.hoisted(() => ({
+const {
+  checkMock,
+  getOrCreateMock,
+  isAutumnConfiguredMock,
+  getOptionalEnvValueMock,
+} = vi.hoisted(() => ({
   checkMock: vi.fn(),
   getOrCreateMock: vi.fn(),
+  isAutumnConfiguredMock: vi.fn(),
+  getOptionalEnvValueMock: vi.fn(),
 }));
 
 vi.mock("@/server/billing/autumn", () => ({
@@ -15,24 +25,37 @@ vi.mock("@/server/billing/autumn", () => ({
   },
 }));
 
+// subscription.ts now imports isAutumnConfigured + getOptionalEnvValue from
+// runtime-env (the degrade-on-absent guard and the allowlist reader); mock both
+// or the imports resolve to undefined and every call throws.
 vi.mock("@/server/lib/runtime-env", () => ({
   isHostedServerAuthMode: vi.fn(),
+  isAutumnConfigured: isAutumnConfiguredMock,
+  getOptionalEnvValue: getOptionalEnvValueMock,
 }));
 
-// subscription.ts now imports posthog (for trackUsageCreditSpend); stub it so
-// the test doesn't pull in the cloudflare:workers runtime it depends on.
+// subscription.ts imports posthog (for trackUsageCreditSpend); stub it so the
+// test doesn't pull in the cloudflare:workers runtime it depends on.
 vi.mock("@/server/lib/posthog", () => ({
   captureServerEvent: vi.fn(),
 }));
 
 import {
+  customerHasManagedAccess,
   customerHasPaidPlan,
   getOrCreateOrganizationCustomer,
+  isOrgAllowlisted,
+  orgMayUseManagedFeatures,
+  orgMayUsePaidFeatures,
 } from "./subscription";
 
 describe("subscription billing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default to the configured, empty-allowlist world; individual tests
+    // override to exercise the degrade / allowlist branches.
+    isAutumnConfiguredMock.mockResolvedValue(true);
+    getOptionalEnvValueMock.mockResolvedValue(undefined);
   });
 
   it("checks the paid plan entitlement", async () => {
@@ -64,6 +87,70 @@ describe("subscription billing", () => {
     expect(getOrCreateMock).toHaveBeenCalledWith({
       customerId: "org_123",
       email: "alice@example.com",
+    });
+  });
+
+  it("degrades to false without calling Autumn when it is not configured", async () => {
+    isAutumnConfiguredMock.mockResolvedValue(false);
+
+    await expect(customerHasPaidPlan("org_123")).resolves.toBe(false);
+    await expect(customerHasManagedAccess("org_123")).resolves.toBe(false);
+    expect(checkMock).not.toHaveBeenCalled();
+  });
+
+  it("propagates (never swallows to false) when Autumn is present but check throws", async () => {
+    isAutumnConfiguredMock.mockResolvedValue(true);
+    checkMock.mockRejectedValue(new Error("autumn outage"));
+
+    // A present-but-broken key MUST surface loudly — a billing outage silently
+    // returning false would 402 paying customers.
+    await expect(customerHasPaidPlan("org_123")).rejects.toThrow(
+      "autumn outage",
+    );
+  });
+
+  it("isOrgAllowlisted is fail-closed on unset/blank env and drops empty entries", async () => {
+    getOptionalEnvValueMock.mockResolvedValue(undefined);
+    await expect(isOrgAllowlisted("org_123")).resolves.toBe(false);
+
+    getOptionalEnvValueMock.mockResolvedValue("");
+    await expect(isOrgAllowlisted("org_123")).resolves.toBe(false);
+
+    getOptionalEnvValueMock.mockResolvedValue(" , ,org_123, ");
+    await expect(isOrgAllowlisted("org_123")).resolves.toBe(true);
+    // A blank org id must never match a stray blank entry.
+    await expect(isOrgAllowlisted("")).resolves.toBe(false);
+    // Pin the env key name so a refactor can't silently read the wrong var.
+    expect(getOptionalEnvValueMock).toHaveBeenCalledWith(
+      "CORE_ACCESS_ALLOWLIST",
+    );
+  });
+
+  it("orgMayUsePaidFeatures grants an allowlisted org without touching Autumn", async () => {
+    isAutumnConfiguredMock.mockResolvedValue(false);
+    getOptionalEnvValueMock.mockResolvedValue("org_123, org_456");
+
+    await expect(orgMayUsePaidFeatures("org_123")).resolves.toBe(true);
+    expect(checkMock).not.toHaveBeenCalled();
+  });
+
+  it("orgMayUsePaidFeatures denies a non-allowlisted org when Autumn is absent (no throw)", async () => {
+    isAutumnConfiguredMock.mockResolvedValue(false);
+    getOptionalEnvValueMock.mockResolvedValue("org_999");
+
+    await expect(orgMayUsePaidFeatures("org_123")).resolves.toBe(false);
+    expect(checkMock).not.toHaveBeenCalled();
+  });
+
+  it("orgMayUseManagedFeatures delegates to the managed fact when not allowlisted and Autumn is present", async () => {
+    isAutumnConfiguredMock.mockResolvedValue(true);
+    getOptionalEnvValueMock.mockResolvedValue(undefined);
+    checkMock.mockResolvedValue({ allowed: true });
+
+    await expect(orgMayUseManagedFeatures("org_123")).resolves.toBe(true);
+    expect(checkMock).toHaveBeenCalledWith({
+      customerId: "org_123",
+      featureId: AUTUMN_MANAGED_ACCESS_FEATURE_ID,
     });
   });
 });

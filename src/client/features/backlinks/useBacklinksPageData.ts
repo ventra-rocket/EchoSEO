@@ -5,6 +5,7 @@ import type {
   BacklinksSearchState,
 } from "./backlinksPageTypes";
 import { useAccessGate } from "@/client/features/access-gate/useAccessGate";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import {
   getErrorCode,
   getStandardErrorMessage,
@@ -83,6 +84,7 @@ export function useBacklinksPageData({
   });
   const backlinksEnabled = accessGate.enabled;
   const retryAccessGate = accessGate.onRetry;
+  const seoApiKeyStatus = useSeoApiKeyStatus();
   const searchCardInitialValues = useMemo(
     () => ({
       target: searchState.target,
@@ -93,7 +95,10 @@ export function useBacklinksPageData({
 
   const { target, scope, tab, page, pageSize, sort, order, view } = searchState;
   const rowsMode = view === "all" ? "as_is" : "one_per_domain";
-  const targetReady = backlinksEnabled && Boolean(target);
+  const targetReady =
+    backlinksEnabled &&
+    Boolean(target) &&
+    seoApiKeyStatus.data?.configured === true;
   const baseQueryKeyParts = [projectId, scope, target] as const;
   const pageInputBase = { projectId, target, scope, page, pageSize };
 

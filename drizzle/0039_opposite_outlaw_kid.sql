@@ -1,0 +1,1 @@
+ALTER TABLE `rank_tracking_configs` ADD `scheduled_enabled` integer DEFAULT false NOT NULL;
