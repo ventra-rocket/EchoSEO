@@ -32,6 +32,28 @@ const DATAFORSEO_HELP_PATH = "/help/dataforseo-api-key";
 const SUPPORT_PATH = "/support";
 const MAIN_CONTENT_ID = "app-main-content";
 
+// The DataForSEO setup modal auto-opens once to prompt a missing key, then must
+// stay dismissed. It can't use component state/ref: there are two
+// AuthenticatedAppLayout instances (one per layout route) and TanStack remounts
+// on cross-layout navigation, which resets a ref and re-pops the modal on every
+// move. sessionStorage survives remounts and reloads within the tab; the
+// persistent banner carries the CTA after dismissal.
+const SEO_SETUP_MODAL_DISMISSED_KEY = "echoseo:dataforseo-setup-dismissed";
+
+function isSeoSetupModalDismissed() {
+  if (typeof window === "undefined") return false;
+  return window.sessionStorage.getItem(SEO_SETUP_MODAL_DISMISSED_KEY) === "1";
+}
+
+function setSeoSetupModalDismissed(dismissed: boolean) {
+  if (typeof window === "undefined") return;
+  if (dismissed) {
+    window.sessionStorage.setItem(SEO_SETUP_MODAL_DISMISSED_KEY, "1");
+  } else {
+    window.sessionStorage.removeItem(SEO_SETUP_MODAL_DISMISSED_KEY);
+  }
+}
+
 export function AuthenticatedAppLayout({
   children,
   projectId,
@@ -46,10 +68,6 @@ export function AuthenticatedAppLayout({
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [showMissingSeoApiKeyModal, setShowMissingSeoApiKeyModal] =
     React.useState(false);
-  // Tracks the last known `configured` value so the setup modal auto-opens only
-  // on the transition into an unconfigured state — not on every route change or
-  // background refetch (which is what made the popup "keep coming back").
-  const prevSeoApiKeyConfiguredRef = React.useRef<boolean | null>(null);
   // On non-project pages (e.g. /settings) there's no projectId in the URL, so
   // derive one for the nav/switcher: prefer the last-visited project, else the
   // most recent. Reading localStorage in an effect keeps SSR/first render stable.
@@ -96,18 +114,14 @@ export function AuthenticatedAppLayout({
 
     if (!seoApiKeyStatusQuery.isSuccess) return;
 
-    const configured = seoApiKeyStatusQuery.data.configured;
-    const prevConfigured = prevSeoApiKeyConfiguredRef.current;
-    prevSeoApiKeyConfiguredRef.current = configured;
-
-    if (configured) {
-      // Key is set — close the modal and let it re-arm for a future removal.
+    if (seoApiKeyStatusQuery.data.configured) {
+      // Key is set — close and re-arm so a future removal prompts once more.
+      setSeoSetupModalDismissed(false);
       setShowMissingSeoApiKeyModal(false);
-    } else if (prevConfigured !== false) {
-      // First time we learn the key is missing, or it was just removed
-      // (configured -> unconfigured): open once. If it was already known
-      // missing, leave the user's choice alone — the persistent banner keeps
-      // the CTA visible, so we never re-open on navigation or refetch.
+    } else if (!isSeoSetupModalDismissed()) {
+      // Key missing and not yet dismissed this session: open once. The
+      // dismissal lives in sessionStorage so it survives AppShell remounts and
+      // navigation — the banner carries the CTA afterward, so we never re-pop.
       setShowMissingSeoApiKeyModal(true);
     }
   }, [
@@ -125,10 +139,10 @@ export function AuthenticatedAppLayout({
     isSeoApiKeyConfigured === false &&
     !shouldShowMissingSeoApiKeyModal;
 
-  const closeSetupModal = React.useCallback(
-    () => setShowMissingSeoApiKeyModal(false),
-    [],
-  );
+  const closeSetupModal = React.useCallback(() => {
+    setSeoSetupModalDismissed(true);
+    setShowMissingSeoApiKeyModal(false);
+  }, []);
   const openDrawer = React.useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = React.useCallback(() => setDrawerOpen(false), []);
 
