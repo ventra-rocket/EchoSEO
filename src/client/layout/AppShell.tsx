@@ -46,6 +46,10 @@ export function AuthenticatedAppLayout({
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [showMissingSeoApiKeyModal, setShowMissingSeoApiKeyModal] =
     React.useState(false);
+  // Tracks the last known `configured` value so the setup modal auto-opens only
+  // on the transition into an unconfigured state — not on every route change or
+  // background refetch (which is what made the popup "keep coming back").
+  const prevSeoApiKeyConfiguredRef = React.useRef<boolean | null>(null);
   // On non-project pages (e.g. /settings) there's no projectId in the URL, so
   // derive one for the nav/switcher: prefer the last-visited project, else the
   // most recent. Reading localStorage in an effect keeps SSR/first render stable.
@@ -91,9 +95,22 @@ export function AuthenticatedAppLayout({
     }
 
     if (!seoApiKeyStatusQuery.isSuccess) return;
-    setShowMissingSeoApiKeyModal(!seoApiKeyStatusQuery.data.configured);
+
+    const configured = seoApiKeyStatusQuery.data.configured;
+    const prevConfigured = prevSeoApiKeyConfiguredRef.current;
+    prevSeoApiKeyConfiguredRef.current = configured;
+
+    if (configured) {
+      // Key is set — close the modal and let it re-arm for a future removal.
+      setShowMissingSeoApiKeyModal(false);
+    } else if (prevConfigured !== false) {
+      // First time we learn the key is missing, or it was just removed
+      // (configured -> unconfigured): open once. If it was already known
+      // missing, leave the user's choice alone — the persistent banner keeps
+      // the CTA visible, so we never re-open on navigation or refetch.
+      setShowMissingSeoApiKeyModal(true);
+    }
   }, [
-    location.pathname,
     seoApiKeyStatusQuery.data,
     seoApiKeyStatusQuery.isError,
     seoApiKeyStatusQuery.isSuccess,
