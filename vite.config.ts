@@ -28,6 +28,10 @@ export default defineConfig(({ mode }) => {
       "POSTHOG_PUBLIC_KEY",
       "POSTHOG_HOST",
       "TURNSTILE_SITE_KEY",
+      // Read by the sign-in page to decide whether to offer Google. Without it
+      // here Vite leaves `import.meta.env.GOOGLE_AUTH_ENABLED` undefined and the
+      // button silently never renders, however the deployment is configured.
+      "GOOGLE_AUTH_ENABLED",
     ],
     server: {
       allowedHosts,

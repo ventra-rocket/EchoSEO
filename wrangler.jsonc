@@ -38,8 +38,12 @@
     // Reuse the verified EchoSEO sender for account verification, password
     // reset, and workspace invitations. The Resend API key stays a secret.
     "AUTH_EMAIL_FROM": "EchoSEO <reports@mail.echoseo.ventrarocket.vn>",
-    // Browser-visible feature flag only. OAuth credentials remain encrypted
-    // Worker secrets, so self-hosters don't see an unusable Google button.
+    // Declared for parity with the other deployment settings, but the sign-in
+    // page reads this flag at BUILD time (`import.meta.env`), not from the
+    // Worker env — so the build environment is what actually decides whether the
+    // Google button renders. Set it in `.env.local` too, or the button stays
+    // hidden no matter what this says. Keeping the flag build-side is what lets
+    // a self-hoster without Google credentials avoid an unusable button.
     "GOOGLE_AUTH_ENABLED": "true",
     // Turnstile site keys are intentionally public and baked into the client
     // bundle. TURNSTILE_SECRET_KEY remains an encrypted Worker secret.
