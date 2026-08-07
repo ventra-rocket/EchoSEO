@@ -101,6 +101,14 @@ export const getBillingUsageEvents = createServerFn({ method: "POST" })
       return [];
     }
 
+    // Billing deferred: fetchAutumnEventsPage requires AUTUMN_SECRET_KEY and
+    // would throw on the missing secret, 500-ing the usage page. There is no
+    // usage to report without a billing provider, so report none. Env-presence,
+    // not try/catch — a present-but-broken key still surfaces its real error.
+    if (!(await isAutumnConfigured())) {
+      return [];
+    }
+
     const events: BillingUsageEvent[] = [];
     let offset = 0;
 

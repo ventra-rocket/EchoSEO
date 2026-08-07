@@ -48,6 +48,11 @@ export function RankTrackingDetailHeader({
           {LOCATIONS[config.locationCode] ?? "US"} &middot;{" "}
           {devicesLabel(config.devices)} &middot;{" "}
           {scheduleLabel(config.scheduleInterval)}
+          {/* An interval alone doesn't run anything — the cron reads the
+              separate opt-in. Say when the schedule is only a setting. */}
+          {config.scheduleInterval !== "manual" &&
+            !config.scheduledEnabled &&
+            " (paused)"}
           {run && (
             <>
               {" "}

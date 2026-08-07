@@ -113,6 +113,11 @@ async function updateConfig(
     updates.scheduleInterval = input.scheduleInterval;
     if (input.scheduleInterval === "manual") {
       updates.nextCheckAt = null;
+      // A manual config has no schedule for the cron to follow, so the opt-in
+      // retires with the interval. A flag left on would let a later switch back
+      // to an interval resume unattended spending on the organization's own key
+      // without anyone opting in again.
+      updates.scheduledEnabled = false;
     } else {
       updates.nextCheckAt = computeNextCheckAt(input.scheduleInterval);
     }
@@ -121,14 +126,15 @@ async function updateConfig(
   // Enabling scheduled runs must give the config a due time, or the cron's
   // `nextCheckAt <= now` filter never selects it and the opt-in silently does
   // nothing. Backfill from the effective interval when this call doesn't already
-  // set nextCheckAt (a caller explicitly setting `manual` keeps its null).
-  if (input.scheduledEnabled === true && updates.nextCheckAt === undefined) {
+  // set nextCheckAt.
+  if (updates.scheduledEnabled === true && updates.nextCheckAt === undefined) {
     const config = await getValidatedConfig(configId, projectId);
     const effectiveInterval = input.scheduleInterval ?? config.scheduleInterval;
-    if (
-      config.nextCheckAt == null &&
-      isScheduledRankTrackingInterval(effectiveInterval)
-    ) {
+    if (!isScheduledRankTrackingInterval(effectiveInterval)) {
+      // Opting in a config that runs on no schedule stores a flag the cron can
+      // never honour, and would arm itself the moment someone picks an interval.
+      updates.scheduledEnabled = false;
+    } else if (config.nextCheckAt == null) {
       updates.nextCheckAt = computeNextCheckAt(effectiveInterval);
     }
   }

@@ -11,11 +11,7 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import { domainField, normalizeDomain } from "@/types/schemas/domain";
-import {
-  depthToPages,
-  pagesToDepth,
-  estimateRankCheckCredits,
-} from "@/shared/rank-tracking";
+import { depthToPages, pagesToDepth } from "@/shared/rank-tracking";
 import {
   DEFAULT_LOCATION_CODE,
   getLanguageCode,
@@ -23,6 +19,8 @@ import {
 } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
+import { ScheduledRunsField } from "./ScheduledRunsField";
+import { CostEstimateNote } from "./CostEstimateNote";
 
 type Props = {
   projectId: string;
@@ -60,6 +58,9 @@ export function RankTrackingConfigModal({
   const [schedule, setSchedule] = useState<
     RankTrackingConfig["scheduleInterval"]
   >(existingConfig?.scheduleInterval ?? "weekly");
+  const [scheduledEnabled, setScheduledEnabled] = useState(
+    existingConfig?.scheduledEnabled ?? false,
+  );
   const [createdConfigId, setCreatedConfigId] = useState<string | null>(null);
 
   const createMutation = useMutation({
@@ -99,6 +100,11 @@ export function RankTrackingConfigModal({
           locationCode,
           languageCode,
           scheduleInterval: schedule,
+          // A manual config has no schedule for the cron to follow, so switching
+          // to it retires the opt-in too. Leaving a stale `true` behind would let
+          // a later switch back to an interval resume automatic spending without
+          // the owner opting in again.
+          scheduledEnabled: schedule === "manual" ? false : scheduledEnabled,
         },
       }),
     onSuccess: () => {
@@ -290,6 +296,14 @@ export function RankTrackingConfigModal({
               <span>Daily checks use 7x more credits than weekly</span>
             </div>
           )}
+          <div className="mt-3">
+            <ScheduledRunsField
+              isEdit={isEdit}
+              schedule={schedule}
+              enabled={scheduledEnabled}
+              onChange={setScheduledEnabled}
+            />
+          </div>
         </div>
 
         <div className="form-control">
@@ -313,37 +327,11 @@ export function RankTrackingConfigModal({
           </div>
         </div>
 
-        {(() => {
-          // Scheduled checks run through the cheaper task queue; manual
-          // configs only ever pay the live price.
-          const { costUsd: costPerKeyword } = estimateRankCheckCredits(
-            1,
-            devices,
-            serpDepth,
-            schedule === "manual" ? "live" : "queued",
-          );
-          const checksPerMonth =
-            schedule === "daily" ? 30 : schedule === "weekly" ? 4 : 1;
-          return (
-            <div className="rounded-lg bg-base-200/50 px-3 py-2.5 text-xs text-base-content/70 space-y-0.5">
-              <div>
-                <span className="font-mono font-semibold text-base-content">
-                  ~${costPerKeyword.toFixed(4)}
-                </span>{" "}
-                per keyword per check
-              </div>
-              {schedule !== "manual" && (
-                <div>
-                  50 keywords would cost{" "}
-                  <span className="font-mono font-semibold text-base-content">
-                    ~${(costPerKeyword * 50 * checksPerMonth).toFixed(2)}
-                  </span>
-                  /month
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        <CostEstimateNote
+          devices={devices}
+          serpDepth={serpDepth}
+          schedule={schedule}
+        />
 
         <div className="flex justify-end gap-2 pt-2">
           <button
