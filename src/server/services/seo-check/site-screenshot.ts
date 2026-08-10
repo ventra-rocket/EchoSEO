@@ -61,9 +61,19 @@ const READ_RATE_LIMIT = { limit: 300, windowMs: 10 * 60 * 1000 };
 /** The window the global render ceiling is counted over. */
 const RENDER_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-/** PSI usually answers within ~15s; cut it off so a hung call can't pin a
- * request open, and let the client retry. */
-const PSI_TIMEOUT_MS = 28_000;
+/** How long PSI gets to answer before the render is abandoned.
+ *
+ * This is not the visitor's wait for their report: the capture loads through an
+ * `<img>`, so the report is already on screen and only this tile is pending.
+ * The number that matters is whether a real site's render can ever COMPLETE —
+ * an abandoned render stores nothing, so a domain that cannot finish inside the
+ * budget stays blank forever, re-rendering and failing for every later visitor
+ * alike, and taking the filmstrip and the free Lighthouse/CWV scores down with
+ * it. Measured against prod: example.com answers in ~3s, while stripe.com and
+ * notion.so both ran past 28s and were cut off. Waiting longer is close to free
+ * — a timed-out render cost 4ms of CPU against 32s of wall, and wall time is
+ * not billed — and one success caches for 24h. */
+const PSI_TIMEOUT_MS = 60_000;
 
 const strategySchema = z.enum(["mobile", "desktop"]);
 
