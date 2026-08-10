@@ -6,7 +6,8 @@
  * content, and adds the JSON-LD `@type` list the GEO checks need.
  */
 import * as cheerio from "cheerio";
-import { analyzeHtml } from "@/server/lib/audit/page-analyzer";
+import type { CheerioAPI } from "cheerio";
+import { analyzeDocument } from "@/server/lib/audit/page-analyzer";
 import type { PageAnalysis } from "@/server/lib/audit/types";
 
 export interface ParsedPage extends PageAnalysis {
@@ -21,8 +22,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** Collects `@type` strings from every JSON-LD block, flattening arrays and
  * `@graph` nodes. Malformed JSON in one block is skipped, not fatal. */
-function extractSchemaTypes(html: string): string[] {
-  const $ = cheerio.load(html);
+function extractSchemaTypes($: CheerioAPI): string[] {
   const types = new Set<string>();
 
   const collect = (node: unknown): void => {
@@ -58,9 +58,20 @@ export function parseLitePage(
   statusCode: number,
   responseTimeMs: number,
 ): ParsedPage {
-  const analysis = analyzeHtml(html, pageUrl, statusCode, responseTimeMs, null);
+  // One parse feeds both passes. Building the DOM is the whole cost of a check
+  // — the rule engine that runs afterwards is free by comparison — so a second
+  // `cheerio.load` here would add roughly a third to every page scanned, on the
+  // lite check and on each page of a deep crawl alike.
+  const $ = cheerio.load(html);
+  const analysis = analyzeDocument(
+    $,
+    pageUrl,
+    statusCode,
+    responseTimeMs,
+    null,
+  );
   return {
     ...analysis,
-    schemaTypes: extractSchemaTypes(html),
+    schemaTypes: extractSchemaTypes($),
   };
 }

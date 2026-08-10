@@ -27,6 +27,35 @@ describe("parseLitePage", () => {
     expect(page.hasMixedContent).toBe(false);
   });
 
+  it("still reads JSON-LD types after the page analysis has run", () => {
+    // Both passes share one cheerio root, and the analysis runs first — so an
+    // analysis step that stripped <script> from the live DOM instead of from
+    // its own clone would silently empty this list. Word counting does exactly
+    // that removal, on a clone, and nothing here would notice if that changed.
+    const html = `
+      <html>
+        <head>
+          <script type="application/ld+json">
+            {"@context":"https://schema.org","@type":"Organization"}
+          </script>
+          <script type="application/ld+json">
+            {"@graph":[{"@type":["Article","NewsArticle"]}]}
+          </script>
+          <script type="application/ld+json">{ not json </script>
+        </head>
+        <body><h1>Words here</h1></body>
+      </html>`;
+
+    const page = parseLitePage(html, "https://example.test/page", 200, 10);
+
+    expect(page.schemaTypes.toSorted()).toEqual([
+      "Article",
+      "NewsArticle",
+      "Organization",
+    ]);
+    expect(page.wordCount).toBeGreaterThan(0);
+  });
+
   it("flags mixed content when an HTTPS page loads an HTTP resource", () => {
     const html = `<html><body><img src="http://insecure.test/img.png"></body></html>`;
 
