@@ -6,6 +6,7 @@
  * structured data, robots meta, word count, hreflang.
  */
 import * as cheerio from "cheerio";
+import type { CheerioAPI } from "cheerio";
 import { normalizeUrl, isSameOrigin } from "./url-utils";
 import { detectMixedContent } from "./mixed-content";
 import type { PageAnalysis } from "./types";
@@ -20,8 +21,28 @@ export function analyzeHtml(
   responseTimeMs: number,
   redirectUrl: string | null = null,
 ): PageAnalysis {
-  const $ = cheerio.load(html);
+  return analyzeDocument(
+    cheerio.load(html),
+    pageUrl,
+    statusCode,
+    responseTimeMs,
+    redirectUrl,
+  );
+}
 
+/**
+ * Same analysis over an already-loaded cheerio root, for callers that walk the
+ * same document more than once — building the DOM twice costs more than every
+ * other stage of a check combined. Read-only, so callers may share one root
+ * across passes in any order.
+ */
+export function analyzeDocument(
+  $: CheerioAPI,
+  pageUrl: string,
+  statusCode: number,
+  responseTimeMs: number,
+  redirectUrl: string | null = null,
+): PageAnalysis {
   const title = $("title").first().text().trim();
 
   const metaDescription =
