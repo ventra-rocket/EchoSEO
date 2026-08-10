@@ -25,7 +25,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      # Uploading needs a PostHog token that only this project's own repository
+      # has. A fork, a contributor's pull request, or this repository before the
+      # token is configured has nothing to upload with, and failing there would
+      # report broken code when nothing is broken. Skip instead.
       - name: Install dependencies
+        if: env.POSTHOG_CLI_TOKEN != ''
         run: pnpm install --frozen-lockfile
       - name: Build and upload sourcemaps
+        if: env.POSTHOG_CLI_TOKEN != ''
         run: pnpm run sourcemaps:upload
