@@ -61,19 +61,34 @@ const READ_RATE_LIMIT = { limit: 300, windowMs: 10 * 60 * 1000 };
 /** The window the global render ceiling is counted over. */
 const RENDER_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-/** How long PSI gets to answer before the render is abandoned.
+/** How long PSI gets to answer before the render is abandoned. Must stay ABOVE
+ * PSI's own ceiling, so this deadline only ever catches a call PSI has already
+ * given up on rather than cutting short one that was about to answer.
+ *
+ * PSI caps an analysis at 120s — raised from 60s on 2021-03-02 precisely
+ * because "complex and heavy web pages can take longer to analyze, and many
+ * would time out"
+ * (https://developers.google.com/speed/docs/insights/release_notes). Any budget
+ * at or under 120s therefore re-creates the bug on exactly the pages Google
+ * raised the limit for; the buffer here covers request and transfer time on top
+ * of the analysis itself.
  *
  * This is not the visitor's wait for their report: the capture loads through an
  * `<img>`, so the report is already on screen and only this tile is pending.
- * The number that matters is whether a real site's render can ever COMPLETE —
- * an abandoned render stores nothing, so a domain that cannot finish inside the
- * budget stays blank forever, re-rendering and failing for every later visitor
- * alike, and taking the filmstrip and the free Lighthouse/CWV scores down with
- * it. Measured against prod: example.com answers in ~3s, while stripe.com and
- * notion.so both ran past 28s and were cut off. Waiting longer is close to free
- * — a timed-out render cost 4ms of CPU against 32s of wall, and wall time is
- * not billed — and one success caches for 24h. */
-const PSI_TIMEOUT_MS = 60_000;
+ * What the budget decides is whether a real site's render can ever COMPLETE —
+ * an abandoned render stores nothing, so a domain that cannot finish inside it
+ * stays blank forever, re-rendering and failing for every later visitor alike,
+ * and taking the filmstrip and the free Lighthouse/CWV scores down with it.
+ * Measured against prod: example.com answered in ~3s, while stripe.com and
+ * notion.so both ran past the previous 28s budget and were cut off.
+ *
+ * Waiting is close to free: a timed-out render cost 4ms of CPU against 32s of
+ * wall, wall time is not billed, Workers place no duration limit on a request
+ * or its subrequests, and one success caches for 24h. */
+export const PSI_TIMEOUT_MS = 130_000;
+
+/** PSI's own documented analysis ceiling — see PSI_TIMEOUT_MS. */
+export const PSI_MAX_ANALYSIS_MS = 120_000;
 
 const strategySchema = z.enum(["mobile", "desktop"]);
 

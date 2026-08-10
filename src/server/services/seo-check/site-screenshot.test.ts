@@ -65,7 +65,8 @@ vi.mock("./site-screenshot-store", () => ({
 
 // `handleSiteFilmstripRequest` is covered in site-screenshot-filmstrip.test.ts
 // (split for the per-file line cap).
-const { handleSiteScreenshotRequest } = await import("./site-screenshot");
+const { handleSiteScreenshotRequest, PSI_TIMEOUT_MS, PSI_MAX_ANALYSIS_MS } =
+  await import("./site-screenshot");
 
 const PAGE_URL = "https://kello.test/";
 
@@ -137,6 +138,17 @@ beforeEach(() => {
 });
 
 describe("handleSiteScreenshotRequest", () => {
+  it("gives PSI longer than PSI gives itself", async () => {
+    // The render deadline decides whether a heavy site can EVER be captured:
+    // an abandoned render stores nothing, so anything it cannot finish stays
+    // blank permanently and re-renders on every later view. A budget at or
+    // under PSI's own 120s analysis ceiling therefore reintroduces the bug on
+    // exactly the pages Google raised that ceiling for — which is how the
+    // previous 28s value went unnoticed. Pinned as an inequality, not a
+    // literal, so tuning the buffer stays free but crossing the line cannot.
+    expect(PSI_TIMEOUT_MS).toBeGreaterThan(PSI_MAX_ANALYSIS_MS);
+  });
+
   it("serves a fresh cached capture without rendering", async () => {
     getSiteScreenshotMock.mockResolvedValue(cachedObject(new Date()));
 
