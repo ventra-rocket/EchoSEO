@@ -101,11 +101,19 @@ export async function runCrawlPhase(
       maxPages,
     });
 
-    // CPU is billed per Workflow invocation (default raised to 5 min in
-    // wrangler.jsonc). A large crawl still accumulates parse cost across many
-    // batches in one invocation, so hibernate briefly every few batches: the
-    // resume is a fresh invocation with a fresh CPU budget, and every completed
-    // crawl-batch step replays from cache (no page is re-fetched or re-parsed).
+    // CPU is charged per Workflow invocation, and a large crawl accumulates
+    // parse cost across many batches within one, so hibernate briefly every few
+    // batches: the resume is a fresh invocation with a fresh CPU budget, and
+    // every completed crawl-batch step replays from cache (no page is
+    // re-fetched or re-parsed).
+    //
+    // The budget this cadence has to fit inside is the Worker's per-invocation
+    // CPU limit — 30s by default on Workers Paid, since `limits.cpu_ms` is
+    // deliberately unset (see wrangler.jsonc for why). Five batches is 125
+    // pages, so this branch has never run in production: the largest crawl to
+    // date finished at 103 pages, inside a single invocation. Re-measure the
+    // real per-page parse cost before trusting this cadence on a site large
+    // enough to reach it.
     if (crawlBatchIndex % 5 === 0 && queue.length > 0) {
       await step.sleep(`cpu-budget-break-${crawlBatchIndex}`, "10 seconds");
     }
