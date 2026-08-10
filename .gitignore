@@ -65,7 +65,11 @@ docs/screenshots/
 .claude-plugin/
 ak-engineer/
 
-# Local agent-runner drops land inside .agents/skills/. The product's own skills
-# are the SKILL.md files; everything else under a skill directory is local.
+# Local agent-runner drops land inside .agents/skills/ alongside the product's
+# own skills, and the two are indistinguishable by path. Ignoring everything is
+# what keeps a stray `git add -A` from committing dozens of a developer's local
+# tools into a public repository; the shipped skills are unaffected because git
+# keeps honouring files it already tracks.
+#
+# Adding a NEW product skill therefore needs `git add -f .agents/skills/<name>/SKILL.md`.
 .agents/skills/*/*
-!.agents/skills/*/SKILL.md

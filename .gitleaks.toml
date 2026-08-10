@@ -17,3 +17,13 @@ regexes = [
   '''abcdef0123456789abcdef0123456789''',
   '''GEqD0QcIISUHCDhQXqm18K9Hm4Fixm8RMbDxz3nUXsw''',
 ]
+
+# The BYO DataForSEO key test needs a credential shaped like a real one to
+# exercise "validate before storing", so it uses the base64 of the literal string
+# `login:password`. Scoped to that one test file rather than allowlisted by value,
+# so a genuine key committed anywhere else still trips the scan.
+[[allowlists]]
+description = "Unit-test fixture: base64 of the literal string login:password"
+paths = [
+  '''src/server/features/seo-credentials/DataforseoKeyService\.test\.ts''',
+]
