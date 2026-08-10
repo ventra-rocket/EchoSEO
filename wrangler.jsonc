@@ -7,10 +7,12 @@
   "observability": {
     "enabled": true,
   },
-  // NOTE: no `limits.cpu_ms` — this account is on the Free plan, which rejects
-  // custom CPU limits (API code 100328). The site-audit crawl instead stays
-  // under the default per-invocation CPU budget by rotating onto fresh
-  // invocations via step.sleep every few batches (see runCrawlPhase).
+  // NOTE: no `limits.cpu_ms`. Leaving it unset is the one setting that deploys
+  // on either plan — a Free-plan account cannot set this field at all (the API
+  // rejects it with code 100328), while Workers Paid defaults to 30s of CPU per
+  // invocation, already far more than any single request here needs. The
+  // site-audit crawl does not lean on that budget either way: it rotates onto
+  // fresh invocations via step.sleep every few batches (see runCrawlPhase).
   // Public SaaS: customer identity is handled by Better Auth sessions, not a
   // Cloudflare Access OTP in front of the product routes.
   "vars": {
