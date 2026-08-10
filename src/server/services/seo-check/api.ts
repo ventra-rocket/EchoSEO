@@ -28,9 +28,13 @@ export async function handleFreeSeoCheckRequest(
   request: Request,
 ): Promise<Response> {
   if (request.method !== "POST") {
-    return new Response("Method not allowed", {
+    // JSON, like every other reply from this endpoint: the client reads a
+    // non-JSON body as "the request never reached the app" and says so, which
+    // would mislabel a plain method mismatch. Built inline rather than through
+    // `jsonResponse` because a 405 must carry `Allow`.
+    return new Response(JSON.stringify({ error: "METHOD_NOT_ALLOWED" }), {
       status: 405,
-      headers: { Allow: "POST" },
+      headers: { "Content-Type": "application/json", Allow: "POST" },
     });
   }
 

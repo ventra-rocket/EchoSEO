@@ -134,6 +134,17 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
         body: JSON.stringify(payload),
       });
 
+      // This API answers JSON on every path it controls, its own errors
+      // included. An HTML reply means the request died before reaching any
+      // handler and the edge answered instead — which is what a Worker killed
+      // mid-check looks like from here. That is not the transient blip
+      // `errorDefault` describes: it recurs on every attempt at the same URL,
+      // so it gets a message that does not send the visitor round in circles.
+      if (!response.headers.get("content-type")?.includes("application/json")) {
+        failWith(copy.errorUnfinished);
+        return;
+      }
+
       const body: CheckResponse | CheckErrorResponse = await response.json();
 
       if (!response.ok || "error" in body) {

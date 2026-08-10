@@ -121,6 +121,9 @@ export interface LandingCopy {
   /** API error code → message; falls back to `errorDefault`. */
   errors: Record<string, string>;
   errorDefault: string;
+  /** Shown when the reply is not the JSON this API always answers with — the
+   * request died before reaching any handler, so no error code exists. */
+  errorUnfinished: string;
   intro: string;
   /**
    * Mono uppercase kickers over each editorial section heading — the h2 tier is
@@ -235,6 +238,14 @@ const EN: LandingCopy = {
       "That site is behind a login, so we can't check its pages.",
   },
   errorDefault: "Something went wrong — please try again.",
+  // Names both causes because this branch cannot tell them apart: the request
+  // never reached our code, so there is no error code to read. A heavy page
+  // fails this way on every attempt, but so does a brief edge outage that a
+  // retry would clear — promising either outcome alone would be a guess, and
+  // guessing "just try again" at a page that can never finish is the exact
+  // dead end this message exists to avoid.
+  errorUnfinished:
+    "We couldn't finish checking that page. It may be too large for the free check, or the service may be briefly unavailable — try a lighter page, or try this one again shortly.",
   intro:
     "Paste a URL and get an instant, plain-language read on its on-page SEO — " +
     "then a fix for each issue that points at Google's own guidance, not a guess.",
@@ -404,6 +415,8 @@ const VI: LandingCopy = {
       "Trang đó nằm sau lớp đăng nhập nên chúng tôi không kiểm tra được.",
   },
   errorDefault: "Đã có lỗi xảy ra — vui lòng thử lại.",
+  errorUnfinished:
+    "Chúng tôi chưa kiểm tra xong trang này. Có thể trang quá lớn so với bản kiểm tra miễn phí, hoặc dịch vụ đang tạm gián đoạn — hãy thử một trang nhẹ hơn, hoặc thử lại trang này sau ít phút.",
   intro:
     "Dán một URL và nhận ngay đánh giá SEO on-page bằng ngôn ngữ dễ hiểu — kèm " +
     "cách khắc phục cho từng lỗi, dẫn thẳng tới tài liệu chính thức của Google " +

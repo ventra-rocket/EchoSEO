@@ -94,6 +94,11 @@ describe("landing copy", () => {
         copy.footerHomeAria,
         copy.intro,
         copy.faqHeading,
+        // Both are last-resort messages, shown only when something already went
+        // wrong — an empty one would leave the visitor staring at a failed
+        // check with no explanation at all, and nothing else would notice.
+        copy.errorDefault,
+        copy.errorUnfinished,
         copy.samplePreview.label,
         copy.samplePreview.heading,
         copy.samplePreview.scoreCaption,
