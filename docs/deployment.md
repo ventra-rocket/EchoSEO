@@ -3,7 +3,13 @@
 ## Platform
 
 Cloudflare Workers, deployed as the `open-seo` Worker on the
-`echoseo.ventrarocket.vn` custom domain.
+`app.echoseo.ventrarocket.vn` custom domain.
+
+The apex, `echoseo.ventrarocket.vn`, belongs to a **separate** Worker
+(`echoseo-landing`, built from `web/`) that serves the marketing site. Keep the
+apex out of this Worker's `routes`: a deploy that lists it takes the hostname
+away from the landing Worker, and the marketing site disappears until someone
+notices. Old apex links to app paths are redirected in `web/public/_redirects`.
 
 ## Production deploy
 
@@ -50,8 +56,24 @@ After deploying, check `/sign-up` and `/sign-in` over HTTPS. For Google OAuth,
 the registered redirect URI must exactly match:
 
 ```text
-https://echoseo.ventrarocket.vn/api/auth/callback/google
+https://app.echoseo.ventrarocket.vn/api/auth/callback/google
 ```
+
+Connecting Search Console goes through a second provider, so its callback has to
+be registered as well:
+
+```text
+https://app.echoseo.ventrarocket.vn/api/auth/oauth2/callback/google-search-console
+```
+
+Both must sit on the same host as `BETTER_AUTH_URL`, which is the origin Better
+Auth trusts and builds its callbacks from. Move the app to another hostname and
+these three change together, or sign-in fails with `Invalid origin` and Search
+Console with `redirect_uri_mismatch`.
+
+The Google button on the sign-in page is a separate matter: it is compiled in
+from `GOOGLE_AUTH_ENABLED` at **build** time, so it must be set in the build
+environment (for example `.env.local`), not only in `wrangler.jsonc`.
 
 ## Rollback
 
