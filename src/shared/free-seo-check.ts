@@ -156,15 +156,23 @@ export function isPublicSsrPath(pathname: string): boolean {
 }
 
 /**
- * Absolute origin of the public site, for canonical/OG links that must be
- * absolute URLs. Baked in at build time so `head()` can use it during both server
- * and client render; overridable for forks via `VITE_PUBLIC_ORIGIN`, defaulting
- * to the production domain. Background Worker code (the report email) reads the
- * runtime `FREE_CHECK_PUBLIC_ORIGIN` var for the same value — a different
- * mechanism because a Worker binding is not readable from a client render.
+ * Absolute origin of THIS app, for the canonical, OG, sitemap, and robots links
+ * that must be absolute. Baked in at build time so `head()` can use it during
+ * both server and client render; overridable for forks via `VITE_PUBLIC_ORIGIN`.
+ * Background Worker code (the report email) reads the runtime
+ * `FREE_CHECK_PUBLIC_ORIGIN` var for the same value — a different mechanism
+ * because a Worker binding is not readable from a client render.
+ *
+ * This is the app's own host, not the brand's. The apex serves the marketing
+ * site from another Worker and only redirects app paths here, so pointing these
+ * links at the apex told crawlers that every public page's real home was a URL
+ * that redirects, and pointed robots.txt at the marketing site's sitemap instead
+ * of this one — leaving the free checker's pages effectively undeclared. Keep
+ * this in step with the app's hostname; see MARKETING_SITE_ORIGIN below for the
+ * brand home, which is deliberately a different origin.
  */
 const PUBLIC_ORIGIN =
-  import.meta.env.VITE_PUBLIC_ORIGIN ?? "https://echoseo.ventrarocket.vn";
+  import.meta.env.VITE_PUBLIC_ORIGIN ?? "https://app.echoseo.ventrarocket.vn";
 
 /** Absolute URL for a public path, e.g. canonical/OG/sitemap entries. */
 export function publicUrl(pathname: string): string {
