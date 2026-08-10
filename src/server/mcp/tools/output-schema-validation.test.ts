@@ -4,7 +4,10 @@ import {
 } from "@modelcontextprotocol/sdk/server/zod-compat.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type { ToolExtra } from "@/server/mcp/context";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+// Type-only, so it is erased at compile time and the module is still loaded
+// exactly once, at run time, by the hook below.
+import type * as DataForSeoResearchTools from "./dataforseo-research-tools";
 import { MCP_AUTH_CONTEXT_PROP } from "@/server/mcp/context";
 
 const mocks = vi.hoisted(() => ({
@@ -103,6 +106,17 @@ beforeEach(() => {
 });
 
 describe("DataForSEO research tool output schemas", () => {
+  // Loaded once, up front. Inside the first `it.each` case this cold import of
+  // the whole tool module graph ran against that one case's own timeout and
+  // intermittently blew it — the run then failed on the case that happened to
+  // go first, reading as a schema defect rather than the module-load cost it
+  // was. A hook has a longer budget and is charged once for every case.
+  let researchTools: typeof DataForSeoResearchTools;
+
+  beforeAll(async () => {
+    researchTools = await import("./dataforseo-research-tools");
+  });
+
   // Every tool that streams provider rows straight to structuredContent.
   it.each([
     ["find_serp_competitors", "competitors"],
@@ -113,8 +127,9 @@ describe("DataForSEO research tool output schemas", () => {
   ])(
     "%s accepts typed (non-plain-object) provider rows",
     async (toolName, field) => {
-      const tools = await import("./dataforseo-research-tools");
-      const tool = Object.values(tools).find((t) => t.name === toolName);
+      const tool = Object.values(researchTools).find(
+        (t) => t.name === toolName,
+      );
       if (!tool) throw new Error(`tool ${toolName} not found`);
 
       const schema = normalizeObjectSchema(tool.config.outputSchema);
