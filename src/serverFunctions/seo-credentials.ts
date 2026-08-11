@@ -10,6 +10,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getAuthMode } from "@/lib/auth-mode";
 import { DataforseoKeyService } from "@/server/features/seo-credentials/DataforseoKeyService";
+import { isHostedAccessOpen } from "@/server/lib/runtime-env";
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 
 const saveDataforseoKeyInputSchema = z.object({
@@ -18,12 +19,13 @@ const saveDataforseoKeyInputSchema = z.object({
 
 export const getDataforseoKeyStatus = createServerFn({ method: "GET" })
   .middleware(requireAuthenticatedContext)
-  .handler(({ context }) =>
+  .handler(async ({ context }) =>
     DataforseoKeyService.getStatus({
       userId: context.userId,
       organizationId: context.organizationId,
       authMode: getAuthMode(env.AUTH_MODE),
       globalApiKey: env.DATAFORSEO_API_KEY,
+      hostedAccessOpen: await isHostedAccessOpen(),
     }),
   );
 

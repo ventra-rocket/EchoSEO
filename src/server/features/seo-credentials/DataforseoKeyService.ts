@@ -18,6 +18,7 @@ import {
   encryptDataforseoKey,
   OrganizationSeoCredentialRepository,
 } from "@/server/features/seo-credentials/OrganizationSeoCredentialRepository";
+import { resolveDataforseoCredentialAccess } from "@/server/lib/dataforseo/credential-access-policy";
 import { AppError } from "@/server/lib/errors";
 
 /**
@@ -50,12 +51,16 @@ interface ActorContext {
 
 /**
  * Resolve the credential status without decrypting the stored key: an org row
- * wins as "org", else a configured global env key is "global", else "none".
- * `canManage` reflects the caller's workspace role so the UI can hide the control
- * from viewers; the server stays the real gate on every write.
+ * wins as "org"; an operator global key is shown only where runtime policy
+ * authorizes its spend; otherwise the status is "none" so the setup CTA invites
+ * a BYO key. `canManage` reflects the caller's workspace role so the UI can hide
+ * the control from viewers; the server stays the real gate on every write.
  */
 async function getStatus(
-  input: ActorContext & { globalApiKey: string | null | undefined },
+  input: ActorContext & {
+    globalApiKey: string | null | undefined;
+    hostedAccessOpen: boolean;
+  },
 ): Promise<DataforseoKeyStatus> {
   const [row, role] = await Promise.all([
     OrganizationSeoCredentialRepository.getEncrypted(input.organizationId),
@@ -70,8 +75,18 @@ async function getStatus(
   if (row) {
     return { configured: true, source: "org", last4: row.keyLast4, canManage };
   }
-  if (input.globalApiKey?.trim()) {
-    return { configured: true, source: "global", last4: null, canManage };
+  const globalApiKey = input.globalApiKey?.trim();
+  if (globalApiKey) {
+    const access = await resolveDataforseoCredentialAccess(
+      { apiKey: globalApiKey, source: "global" },
+      {
+        hosted: input.authMode === "hosted",
+        openAccess: input.hostedAccessOpen,
+      },
+    );
+    if (access !== "unavailable") {
+      return { configured: true, source: "global", last4: null, canManage };
+    }
   }
   return { configured: false, source: "none", last4: null, canManage };
 }

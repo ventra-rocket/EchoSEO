@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { env } from "cloudflare:workers";
+import { getAuthMode } from "@/lib/auth-mode";
 import { AuditIssueService } from "@/server/features/audit/services/AuditIssueService";
 import { AuditService } from "@/server/features/audit/services/AuditService";
 import { GscService } from "@/server/features/gsc/services/GscService";
@@ -8,7 +9,8 @@ import { hasSelfHostedGscConfig } from "@/server/features/gsc/oauth-config";
 import { ProjectService } from "@/server/features/projects/services/ProjectService";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { OrganizationSeoCredentialRepository } from "@/server/features/seo-credentials/OrganizationSeoCredentialRepository";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { hasUsableDataforseoCredentials } from "@/server/lib/dataforseo/credential-access-policy";
+import { isHostedAccessOpen } from "@/server/lib/runtime-env";
 import {
   buildCommandCenterActions,
   type CommandCenterAudit,
@@ -58,37 +60,41 @@ export const getProjectCommandCenter = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .inputValidator((data: unknown) => inputSchema.parse(data))
   .handler(async ({ context }) => {
+    const authMode = getAuthMode(env.AUTH_MODE);
     const project = await ProjectService.getProjectForOrganization(
       context.organizationId,
       context.projectId,
     );
 
-    const [gsc, audits, rankTrackers, orgSeoKey] = await Promise.all([
-      readSource(async () => {
-        const [connection, currentUserHasGrant, hosted, configured] =
-          await Promise.all([
-            GscService.getConnection(context.projectId),
-            GscService.userHasGrant(context.userId),
-            isHostedServerAuthMode(),
-            hasSelfHostedGscConfig(),
-          ]);
-        return {
-          connected: Boolean(connection),
-          currentUserHasGrant,
-          googleOAuthConfigured: hosted || configured,
-          siteUrl: connection?.siteUrl ?? null,
-        };
-      }),
-      readSource(() => AuditService.getCommandCenterAudits(context.projectId)),
-      readSource(() =>
-        RankTrackingRepository.getConfigSummaries(context.projectId),
-      ),
-      // A transient credential-store read must not break the whole home page;
-      // fall back to global-env detection below when it fails.
-      OrganizationSeoCredentialRepository.getEncrypted(
-        context.organizationId,
-      ).catch(() => null),
-    ]);
+    const [gsc, audits, rankTrackers, orgSeoKey, hostedAccessOpen] =
+      await Promise.all([
+        readSource(async () => {
+          const [connection, currentUserHasGrant, configured] =
+            await Promise.all([
+              GscService.getConnection(context.projectId),
+              GscService.userHasGrant(context.userId),
+              hasSelfHostedGscConfig(),
+            ]);
+          return {
+            connected: Boolean(connection),
+            currentUserHasGrant,
+            googleOAuthConfigured: authMode === "hosted" || configured,
+            siteUrl: connection?.siteUrl ?? null,
+          };
+        }),
+        readSource(() =>
+          AuditService.getCommandCenterAudits(context.projectId),
+        ),
+        readSource(() =>
+          RankTrackingRepository.getConfigSummaries(context.projectId),
+        ),
+        // A transient credential-store read must not break the whole home page;
+        // fall back to global-env detection below when it fails.
+        OrganizationSeoCredentialRepository.getEncrypted(
+          context.organizationId,
+        ).catch(() => null),
+        isHostedAccessOpen(),
+      ]);
 
     const latestAudit = audits.data?.latest ?? null;
     const latestCompletedAudit = audits.data?.latestCompleted ?? null;
@@ -118,12 +124,19 @@ export const getProjectCommandCenter = createServerFn({ method: "POST" })
         lastRunStatus: tracker.lastRunStatus,
         lastRunCompletedAt: tracker.lastRunCompletedAt,
       })) ?? [];
+    const dataForSeoConfigured = await hasUsableDataforseoCredentials({
+      hasOrganizationKey: orgSeoKey != null,
+      globalApiKey: env.DATAFORSEO_API_KEY,
+      runtime: {
+        hosted: authMode === "hosted",
+        openAccess: hostedAccessOpen,
+      },
+    });
 
     return {
       project,
       readiness: {
-        dataForSeoConfigured:
-          orgSeoKey != null || Boolean(env.DATAFORSEO_API_KEY?.trim()),
+        dataForSeoConfigured,
         gsc: gsc.data,
       },
       audit: {

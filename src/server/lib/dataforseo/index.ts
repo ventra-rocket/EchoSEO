@@ -18,7 +18,6 @@ export {
 } from "@/server/lib/dataforseo/google-ads";
 
 export {
-  fetchRankCheckTaskResult,
   MAX_TASKS_PER_POST,
   type SerpLiveItem,
   type RankCheckResult,

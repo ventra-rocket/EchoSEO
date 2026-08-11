@@ -220,6 +220,7 @@ describe("DataforseoKeyService.getStatus", () => {
       organizationId: ORG_ID,
       authMode: "hosted",
       globalApiKey: undefined,
+      hostedAccessOpen: false,
     });
 
     expect(status).toEqual({
@@ -238,11 +239,31 @@ describe("DataforseoKeyService.getStatus", () => {
       organizationId: ORG_ID,
       authMode: "hosted",
       globalApiKey: "platform-default",
+      hostedAccessOpen: false,
     });
 
     expect(status).toEqual({
       configured: true,
       source: "global",
+      last4: null,
+      canManage: true,
+    });
+  });
+
+  it("invites hosted open-access organizations to add their own key", async () => {
+    await seedMember("owner1", "owner");
+
+    const status = await DataforseoKeyService.getStatus({
+      userId: "owner1",
+      organizationId: ORG_ID,
+      authMode: "hosted",
+      globalApiKey: "platform-default",
+      hostedAccessOpen: true,
+    });
+
+    expect(status).toEqual({
+      configured: false,
+      source: "none",
       last4: null,
       canManage: true,
     });
@@ -264,6 +285,7 @@ describe("DataforseoKeyService.getStatus", () => {
       authMode: "hosted",
       // Even with a global key present, the org key wins.
       globalApiKey: "platform-default",
+      hostedAccessOpen: true,
     });
 
     expect(status).toEqual({
@@ -282,6 +304,7 @@ describe("DataforseoKeyService.getStatus", () => {
       organizationId: ORG_ID,
       authMode: "hosted",
       globalApiKey: undefined,
+      hostedAccessOpen: false,
     });
 
     expect(status.canManage).toBe(false);

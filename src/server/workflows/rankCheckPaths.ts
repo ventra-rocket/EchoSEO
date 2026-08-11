@@ -1,9 +1,6 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
-import {
-  fetchRankCheckTaskResult,
-  MAX_TASKS_PER_POST,
-} from "@/server/lib/dataforseo";
+import { MAX_TASKS_PER_POST } from "@/server/lib/dataforseo";
 import type {
   PostedRankCheckTask,
   RankCheckResult,
@@ -200,7 +197,7 @@ async function collectQueuedRound(
     const chunk = tasks.slice(i, i + TASK_GET_CONCURRENCY);
     const settled = await Promise.allSettled(
       chunk.map((task) =>
-        fetchRankCheckTaskResult({
+        ctx.client.serp.rankCheckTaskGet({
           taskId: task.taskId,
           keywordId: task.keywordId,
           keyword: task.keyword,
