@@ -12,7 +12,7 @@
  */
 import type { AuthMode } from "@/lib/auth-mode";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { customerHasManagedAccess } from "@/server/billing/subscription";
+import { orgMayUseManagedFeatures } from "@/server/billing/subscription";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
 import { AuditReferringDomainRepository } from "@/server/features/audit/repositories/AuditReferringDomainRepository";
@@ -25,7 +25,6 @@ import { normalizeBacklinksTarget } from "@/server/lib/dataforseo";
 import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { getOrigin } from "@/server/lib/audit/url-utils";
 import { AppError } from "@/server/lib/errors";
-import { isHostedAccessOpen } from "@/server/lib/runtime-env";
 
 const PROVIDER = "dataforseo";
 // The summary query includes subdomains (see backlinks buildCommonPayload), so
@@ -171,13 +170,13 @@ async function refreshSnapshot(input: {
   }
 
   // Hosted deployments run on our managed, metered provider key; gate the spend
-  // on plan access, mirroring the crawl launch gate. Open-access mode has no
-  // billing provider to check, so it skips the gate (the provider key — global
-  // or a workspace's own — carries its own cost).
+  // on plan access, mirroring the crawl launch gate. This asks the shared
+  // policy rather than composing its own predicate — it used to be the only
+  // gate that remembered `HOSTED_ACCESS_OPEN`, and three others that spelled
+  // the rule out by hand quietly diverged from it.
   if (
     input.authMode === "hosted" &&
-    !(await isHostedAccessOpen()) &&
-    !(await customerHasManagedAccess(input.organizationId))
+    !(await orgMayUseManagedFeatures(input.organizationId))
   ) {
     throw new AppError(
       "PAYMENT_REQUIRED",
