@@ -37,6 +37,7 @@ import {
   fetchLiveSerp,
   fetchLocalSerp,
   fetchRankCheckSerp,
+  fetchRankCheckTaskResult,
   postRankCheckTasks,
 } from "@/server/lib/dataforseo/serp";
 import { fetchLighthouseResult } from "@/server/lib/dataforseo/lighthouse";
@@ -57,11 +58,8 @@ import {
   resolveDataforseoCredentials,
   type ResolvedDataforseoCredentials,
 } from "@/server/lib/dataforseo/resolve-credentials";
+import { resolveDataforseoCredentialAccess } from "@/server/lib/dataforseo/credential-access-policy";
 import { AppError } from "@/server/lib/errors";
-import {
-  isHostedAccessOpen,
-  isHostedServerAuthMode,
-} from "@/server/lib/runtime-env";
 
 export { mapDataforseoPathToCreditFeature };
 
@@ -100,6 +98,15 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
         input.creditFeature ?? defaultFeature,
       );
 
+  // task_get collection is free (task_post was already charged), but it must
+  // still pass through the same credential policy and BYO key context as every
+  // paid request. Otherwise an async workflow can escape the client boundary
+  // and fall back to the operator global key.
+  const unmetered =
+    <I, T>(fetcher: (input: I) => Promise<T>) =>
+    (input: I): Promise<T> =>
+      runUnmeteredDataforseoCall(getCredentials, () => fetcher(input));
+
   return {
     business: {
       businessListings: meter(fetchBusinessListingsSearch, "local_seo"),
@@ -132,6 +139,7 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
       // whole batch (DataForSEO bills task_post at post time, collection is
       // free).
       rankCheckTaskPost: meter(postRankCheckTasks, "rank_tracking"),
+      rankCheckTaskGet: unmetered(fetchRankCheckTaskResult),
       local: meter(fetchLocalSerp, "local_seo"),
     },
     labs: {
@@ -160,40 +168,14 @@ async function meterDataforseoCall<T>(
   execute: () => Promise<DataforseoApiResponse<T>>,
   creditFeature?: CreditFeature,
 ): Promise<T> {
-  const credentials = await getCredentials();
+  const { credentialAccess, run } = await prepareDataforseoCall(
+    getCredentials,
+    execute,
+  );
 
-  // No key at all (no BYO org key, no global operator key). Surface a typed
-  // "connect a key" error the client maps to the setup CTA, instead of the bare
-  // env-missing Error that core.ts would otherwise throw as an unmapped 500.
-  if (credentials.source === "none") {
-    throw new AppError(
-      "DATAFORSEO_KEY_MISSING",
-      "No DataForSEO API key configured for this organization",
-    );
-  }
-
-  // Thread the organization's own key into the SDK fetch only when the org
-  // brought one; `global`/`none` set no ambient resolver, so `core.ts` keeps
-  // reading the global operator env key exactly as before (old tests stay
-  // green). A self-paid BYO key also bypasses Autumn entirely.
-  const usesOwnKey = credentials.source === "org";
-  const run =
-    credentials.source === "org"
-      ? () =>
-          runWithDataforseoKey(
-            () => Promise.resolve(credentials.apiKey),
-            execute,
-          )
-      : execute;
-
-  // Autumn is exercised only on the operator-billed path: hosted mode, not
-  // open-access, and not a self-paid org key. Open-access and BYO-key orgs
-  // execute directly without ever touching the billing provider.
-  const isHostedMode = await isHostedServerAuthMode();
-  const billingActive =
-    isHostedMode && !usesOwnKey && !(await isHostedAccessOpen());
-
-  if (!billingActive) {
+  // Only `global-metered` may spend the operator key in hosted mode. BYO and
+  // self-host calls execute directly; hosted-open/global was rejected above.
+  if (credentialAccess !== "global-metered") {
     const result = await run();
     return result.data;
   }
@@ -229,6 +211,46 @@ async function meterDataforseoCall<T>(
   });
 
   return result.data;
+}
+
+async function runUnmeteredDataforseoCall<T>(
+  getCredentials: () => Promise<ResolvedDataforseoCredentials>,
+  execute: () => Promise<T>,
+): Promise<T> {
+  const { run } = await prepareDataforseoCall(getCredentials, execute);
+  return run();
+}
+
+async function prepareDataforseoCall<T>(
+  getCredentials: () => Promise<ResolvedDataforseoCredentials>,
+  execute: () => Promise<T>,
+) {
+  const credentials = await getCredentials();
+  const credentialAccess = await resolveDataforseoCredentialAccess(credentials);
+
+  // Missing credentials and the deliberately blocked hosted-open/global path
+  // share the setup CTA. Do not reveal that an operator key exists: from this
+  // organization's perspective no spend-authorized key is configured.
+  if (credentialAccess === "unavailable") {
+    throw new AppError(
+      "DATAFORSEO_KEY_MISSING",
+      "No DataForSEO API key configured for this organization",
+    );
+  }
+
+  // Thread the organization's own key into the SDK fetch. Global credentials
+  // deliberately set no ambient resolver, so core.ts reads the configured env
+  // key in self-host and metered hosted modes.
+  const run =
+    credentials.source === "org"
+      ? () =>
+          runWithDataforseoKey(
+            () => Promise.resolve(credentials.apiKey),
+            execute,
+          )
+      : execute;
+
+  return { credentialAccess, run };
 }
 
 async function trackDataforseoCost(args: {
