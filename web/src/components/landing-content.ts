@@ -29,10 +29,15 @@ export const URLS = {
   features: "/features",
   mcp: "/features/mcp",
   searchConsoleMcp: "/google-search-console-mcp",
-  privacy: "/privacy",
-  terms: "/terms-and-conditions",
-  // Upstream MIT project EchoSEO is built on. Framed as attribution, never as
-  // "our repo" — the EchoSEO repository itself is private.
+  // The app owns the legal text. There is exactly one copy of it, because two
+  // copies of a binding document drift and only one of them can be the one the
+  // OAuth consent screen links to.
+  privacy: `${APP}/privacy`,
+  terms: `${APP}/terms-and-conditions`,
+  /** EchoSEO's own repository — public, and where "show me the code" belongs. */
+  repo: "https://github.com/ventra-rocket/EchoSEO",
+  /** The upstream MIT project EchoSEO is built on. Kept as attribution, which
+   * MIT requires and which is honest; never presented as EchoSEO's own repo. */
   upstreamRepo: "https://github.com/every-app/open-seo",
 } as const;
 
@@ -374,9 +379,13 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
         "Bring your own DataForSEO and Google keys",
         "Fork, audit, and extend the MIT open-seo core",
       ],
+      // "Own your SEO stack" has to be able to end on EchoSEO's own source.
+      // The upstream credit is in the copy above and in the footer; sending the
+      // one "show me the code" click to someone else's repository is what makes
+      // an open-core claim ring hollow.
       cta: {
-        label: "Built on the open-seo project",
-        href: URLS.upstreamRepo,
+        label: "View EchoSEO on GitHub",
+        href: URLS.repo,
         external: true,
       },
     },
@@ -453,13 +462,14 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
         {
           title: "Project",
           links: [
+            { label: "EchoSEO on GitHub", href: URLS.repo, external: true },
             {
               label: "Built on open-seo",
               href: URLS.upstreamRepo,
               external: true,
             },
-            { label: "Privacy", href: URLS.privacy },
-            { label: "Terms", href: URLS.terms },
+            { label: "Privacy", href: URLS.privacy, external: true },
+            { label: "Terms", href: URLS.terms, external: true },
           ],
         },
       ],
@@ -699,8 +709,8 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
         "Fork, kiểm tra, mở rộng lõi open-seo (MIT)",
       ],
       cta: {
-        label: "Xây trên dự án open-seo",
-        href: URLS.upstreamRepo,
+        label: "Xem EchoSEO trên GitHub",
+        href: URLS.repo,
         external: true,
       },
     },
@@ -775,13 +785,14 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
         {
           title: "Dự án",
           links: [
+            { label: "EchoSEO trên GitHub", href: URLS.repo, external: true },
             {
               label: "Xây trên open-seo",
               href: URLS.upstreamRepo,
               external: true,
             },
-            { label: "Quyền riêng tư", href: URLS.privacy },
-            { label: "Điều khoản", href: URLS.terms },
+            { label: "Quyền riêng tư", href: URLS.privacy, external: true },
+            { label: "Điều khoản", href: URLS.terms, external: true },
           ],
         },
       ],
