@@ -1,111 +1,77 @@
 ---
-title: The Future of SEO Software Is Open Source
-description: Open source puts the power into the hands of the users. It forces companies to price their services fairly and act in the best interest of the community.
+title: Open-Source SEO Software You Control | EchoSEO
+description: Self-host EchoSEO, bring your own keys, and keep control of your SEO stack and data. See what ships today, what still costs money, and how to get started.
 ---
 
-Open source is the future of the internet.
+SEO software should not decide where your data lives, which provider you must use, or how much access you keep when a subscription changes.
 
-Open source means that the code for an application is freely available. Anyone can use the code how they wish.
+Open source gives you another option: run the software yourself, inspect how it works, and adapt it to your workflow. EchoSEO brings that model to SEO with a self-hostable, Cloudflare-native platform and bring-your-own-key access to paid competitive data.
 
-Historically, SEO tools have been able to raise prices and let the user experience degrade because people had no other options. Open source forces companies to do what's best for the community. Otherwise, angry users can fork the codebase and provide a better service.
+That does not make every SEO workflow free. It makes the costs and trade-offs easier to see—and puts more of the decisions in your hands.
 
-Open source puts the power in the hands of the users.
+## What open source changes for SEO teams
 
-## Benefits of open source SEO
+### You control the deployment
 
-### Self-hosting benefits
+EchoSEO can be self-hosted on your own Cloudflare account. You choose the environment, configure the integrations you need, and keep control of the deployment instead of depending entirely on a closed SaaS product.
 
-If you already self-host open source products, you already know the many benefits including:
+Self-hosting still comes with operational work. You are responsible for configuration, updates, and the infrastructure you use. For developers, technical marketers, and small teams that value control, that trade-off can be worthwhile.
 
-- It's fun
-- Learning
-- Saving money
-- Privacy and controlling your own data
+### You bring the data credentials
 
-### Why does open source matter even if you're using OpenSEO's SaaS?
+Competitive SEO data is expensive to collect and maintain. Open-source application code does not remove that underlying cost.
 
-#### Open source products are higher quality
+EchoSEO's inherited keyword, rank-tracking, backlink, and competitor surfaces use your own [DataForSEO](https://dataforseo.com/) credentials. You pay the provider for the queries you run rather than buying access to the same data through a large fixed software bundle. First-party Google Search Console data can also be connected for your own properties.
 
-Open source products can be much higher quality than closed source alternatives.
+This separation matters: the application, the deployment, and the data provider are not treated as one inseparable subscription.
 
-Most apps suffer from "paper cuts", or small annoying bugs that are not worth it for the company to fix. If a user encounters one of these problems, they can fix the code themselves and contribute back to the application.
+### You can inspect and extend the workflow
 
-#### Open source puts the user first
+Readable source code makes behavior easier to examine and gives teams a path to modify the product for their own needs. It also makes upstream contributions possible when a change would help other users.
 
-A company open sourcing their code puts a flag in the sand saying, "We are going to be the best place to use this software even though users have other options." This mentality creates a healthy pressure which has lots of benefits for users.
+Transparency is not an automatic security or quality guarantee. It creates the opportunity to review, test, and improve the software. Teams should still evaluate the code, configuration, dependencies, and deployment practices for their own requirements.
 
-##### Fair pricing
+## What EchoSEO includes today
 
-Anyone can [self-host OpenSEO](https://github.com/every-app/open-seo) and use it at cost for themselves.
+EchoSEO is in alpha, so it is important to separate available features from the roadmap.
 
-Since our code is open source, other companies could try to provide the same service for cheaper. This is a check, so we cannot just keep charging more and more. We need to offer the hosted service at a fair price so that customers are happy to pay for it because it gives them so much value.
+Shipped EchoSEO surfaces include:
 
-##### Transparency
+- A free public SEO checker with an instant Lite check and an email-gated, bounded Deep check.
+- A professional site audit with private crawl snapshots, issue evidence, guided remediation, exports, and re-crawl verification.
+- Audit history and search-signal context from Google Search Console or explicitly enabled DataForSEO snapshots, with data provenance kept visible.
 
-Anyone can read the code. This keeps the company in check to make sure it is prioritizing things like security.
+EchoSEO also inherits several working surfaces from its upstream base. With your own DataForSEO key, these include keyword research, global rank tracking, backlink analysis, and competitor or domain overview. These inherited features are present but are still being dogfooded and hardened as EchoSEO.
 
-##### Community driven
+An [18-tool MCP server](/docs/mcp) and portable agent skills support **assisted** SEO workflows. An agent can help research and work with SEO data through MCP, while you remain responsible for reviewing decisions and actions.
 
-The best ideas from the community will bubble back into the application for everyone to benefit.
+Two boundaries are explicit:
 
-## Build a custom SEO tool on top of OpenSEO
+- Managed billing is not launched. A managed cloud billing model is planned and remains subject to provider terms and product validation.
+- Autonomous read-write workflows are not available. The planned loop for drafting, publishing, monitoring, and refreshing content still requires a defined publishing surface, guardrails, and evaluation.
 
-Now that AI agents like Claude are making coding more accessible and inexpensive, many SEO agencies are deciding to build custom SEO tools for their companies' use cases.
+## Build on an existing SEO foundation
 
-This allows them to save money and tailor the tool to their own workflows. Many are building these from scratch.
+Teams building internal SEO software often need the same foundations: provider integrations, keyword and SERP data, rank tracking, backlink analysis, site audits, authentication, and agent access.
 
-I propose that they should instead build on top of OpenSEO. Here's why:
+Starting from EchoSEO can reduce the amount of commodity infrastructure you need to recreate. You can keep the parts that match your workflow, change the parts that do not, and focus engineering effort on the logic that is specific to your business.
 
-### Don't re-invent the wheel
-
-There is no point in rebuilding keyword research, backlinks, or rank tracking from scratch. Even if you want to change something about our product, making those changes will be easier than starting from zero.
-
-### Software engineering best practices
-
-Coding agents do best when they have good examples to reference. There are many patterns in place to make it easier to add new features. You will not need to reinvent the wheel and go through the same months of QA, tweaking, and debugging that we have.
-
-We have built systems to verify that features work and are high quality, which you can benefit from.
-
-### Security
-
-Since we have a hosted product, we take great care to ensure every change is secure. You get to benefit from this and reference our documentation for how to self-host your custom tool securely too.
+EchoSEO is a friendly fork of the MIT-licensed [every-app/open-seo](https://github.com/every-app/open-seo) project. The upstream team built the base platform, including its DataForSEO integration, core dashboard surfaces, MCP server, and agent skills. EchoSEO preserves that credit and extends the foundation with its public checker, professional audit and verification loop, bilingual surfaces, and other product work.
 
 ## Does open source mean free?
 
-In SEO, data quality is extremely important. It is very expensive to store historical data to see trends for the whole internet or to run computers all over the world to see what position a page ranks for on Google.
+The short answer is: the code can be open while running the product still costs money.
 
-Because of this, many SEO workflows require data that costs money. Otherwise, the SEO tool would not be very useful.
+Depending on the features you enable, a self-hosted deployment may use Cloudflare resources and third-party services such as DataForSEO, OpenRouter, Google PageSpeed Insights, Resend, and Turnstile. Their usage and terms are separate from EchoSEO's MIT-licensed core.
 
-But, since the code for the application is open source, it means that you are not locked into a single data provider. If a better, more affordable data provider comes along, the project can switch.
+The public SEO checker is available as a free entry point. Self-hosting gives you control over the rest of the stack and lets you decide which paid data or AI services are worth enabling.
 
-## Where does OpenSEO get its data?
+## Who benefits most from open SEO software?
 
-OpenSEO uses [DataForSEO](https://dataforseo.com/) as its main data source. They have been in business for almost 10 years and are considered the gold standard for pay-by-usage SEO data. They have quality SEO data for almost every workflow and they are very reliable.
+EchoSEO is designed first for indie SEOs, founders, technical marketers, and developers who want useful SEO workflows without surrendering control of their deployment or provider accounts. It can also serve as a foundation for teams that need to tailor SEO tooling to internal processes.
 
-There are other data providers for more specific tasks like SERP, or search engine results page, which we may support in the future, but for simplicity's sake, DataForSEO is our main provider right now.
+If an existing closed platform already fits your workflow and budget, switching may not be necessary. Open source is most valuable when ownership, extensibility, transparent data provenance, or bring-your-own-key economics materially improve how you work.
 
-## Can you really replace your SEO tool with OpenSEO?
+That is the practical promise of open-source SEO: not that every cost disappears, and not that software becomes trustworthy by default, but that you have a real choice in how the system is run, verified, and extended.
 
-It depends.
-
-### For beginners
-
-If you're new to SEO, OpenSEO should definitely be the first tool you select. Good design means the tool is approachable to both beginners and experts. When you connect OpenSEO with an AI agent, it can help coach you through the basics. OpenSEO will grow with you.
-
-### For experts
-
-If you love your current solution, you should probably just stick with that. But, if you think your current tool is bloated, poorly designed, or too expensive, OpenSEO is striving to be an all-in-one replacement for tools like [Semrush](https://www.semrush.com/) and [Ahrefs](https://ahrefs.com/).
-
-## AI native: More than a replacement for other SEO tools
-
-OpenSEO is both open source and more affordable than alternatives. But, we do not plan for these to be the only things different about the product.
-
-Many AI-native SEO tools strive to automate SEO as a job function. This is hype. SEO is about coming up with a better strategy than your competitors. If every company is using the same AI agent product, there is no edge.
-
-OpenSEO aims to be the best way to collaborate with your AI agent on SEO tasks. OpenSEO was created after AI agents became powerful. The product is not bogged down by features and workflows that only make sense in a pre-AI world.
-
-Right now, this means OpenSEO has an [MCP server](/docs/mcp) which you can use with any other AI product like Claude, Codex, or OpenClaw. For example, you can ask your agent to do keyword research. But instead of blindly trusting its judgment, you can ask it for a link to view the data in OpenSEO.
-
-In the future, this collaboration will get even more powerful. You will be able to ask your agent to create a custom dashboard for your business or client with the specific data that you value. Or, you will be able to create bespoke, reusable workflows for routine tasks.
-
-While AI and SEO is very noisy right now, it is definitely the future. We're going to do everything we can to cut through the noise and empower SEOs and entrepreneurs with simple, powerful tools to pursue their SEO strategies.
+[Try the free SEO checker](https://echoseo.ventrarocket.vn/free-seo-check), or follow the [Cloudflare self-hosting guide](https://github.com/ventra-rocket/EchoSEO/blob/main/docs/SELF_HOSTING_CLOUDFLARE.md) to run EchoSEO in your own account.
