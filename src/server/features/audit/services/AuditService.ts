@@ -15,10 +15,12 @@ import {
 } from "@/server/features/audit/authz/target-verification";
 import { GscConnectionRepository } from "@/server/features/gsc/repositories/GscConnectionRepository";
 import {
+  MAX_AUDIT_PAGES,
   MAX_USER_AUDIT_USAGE,
   clampAuditMaxPages,
   getEstimatedAuditCapacity,
 } from "@/server/features/audit/services/audit-capacity";
+import { assertAuditLaunchWithinThrottle } from "@/server/features/audit/services/audit-launch-throttle";
 import { AppError } from "@/server/lib/errors";
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import {
@@ -29,6 +31,7 @@ import {
 import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
 import { getOrigin } from "@/server/lib/audit/url-utils";
 import { resolveDataforseoCredentials } from "@/server/lib/dataforseo/resolve-credentials";
+import { resolveDataforseoCredentialAccess } from "@/server/lib/dataforseo/credential-access-policy";
 
 async function startAudit(input: {
   actorUserId: string;
@@ -53,28 +56,31 @@ async function startAudit(input: {
   const startUrl = await normalizeAndValidateStartUrl(input.startUrl);
   const origin = getOrigin(startUrl);
 
-  // Bind the run to the project's audit target (created on first use). The
-  // target caps crawl size, so requested pages are clamped to its limit.
-  const target = await AuditTargetRepository.getOrCreateTarget({
-    projectId: input.projectId,
-    organizationId: input.billingCustomer.organizationId,
+  // Read an existing target without creating state yet. A new target uses the
+  // crawler's own 5,000-page ceiling, which is stricter than the schema default
+  // (10,000); existing targets may lower it further.
+  const existingTarget = await AuditTargetRepository.getByProjectAndOrigin(
+    input.projectId,
     origin,
-  });
+  );
   const maxPages = Math.min(
     clampAuditMaxPages(input.maxPages),
-    target.maxPagesLimit,
+    existingTarget?.maxPagesLimit ?? MAX_AUDIT_PAGES,
   );
   // Audit Lighthouse runs through DataForSEO (dataforseo.lighthouse.live), not
   // free PSI. With no key available for this org, force it off rather than
   // firing a metered call that spends (BYO key) or returns null rows
-  // (open-access, no global key). The launch UI also disables the checkbox, but
-  // gate here too so a direct API caller can't opt back in.
+  // (open-access, where the operator global key is intentionally unavailable).
+  // The launch UI also disables the checkbox, but gate here too so a direct API
+  // caller can't opt back in.
   let lighthouseStrategy = input.lighthouseStrategy ?? "auto";
   if (lighthouseStrategy !== "none") {
     const credentials = await resolveDataforseoCredentials(
       input.billingCustomer.organizationId,
     );
-    if (credentials.source === "none") {
+    if (
+      (await resolveDataforseoCredentialAccess(credentials)) === "unavailable"
+    ) {
       lighthouseStrategy = "none";
     }
   }
@@ -135,6 +141,23 @@ async function startAudit(input: {
   if (currentUsage + reservation.total > MAX_USER_AUDIT_USAGE) {
     throw new AppError("AUDIT_CAPACITY_REACHED");
   }
+
+  // Count only launches that already passed role, target, verification,
+  // baseline and capacity validation. The counter intentionally precedes the
+  // row/workflow creation boundary so a blocked launch creates no state.
+  await assertAuditLaunchWithinThrottle({
+    authMode: input.authMode,
+    organizationId: input.billingCustomer.organizationId,
+  });
+
+  // Create the project/domain target only after the hosted launch budget is
+  // admitted. A blocked request therefore cannot fill D1 with arbitrary origin
+  // rows; get-or-create still converges concurrent first launches safely.
+  await AuditTargetRepository.getOrCreateTarget({
+    projectId: input.projectId,
+    organizationId: input.billingCustomer.organizationId,
+    origin,
+  });
 
   const auditId = crypto.randomUUID();
   const config: AuditConfig = { maxPages, lighthouseStrategy };

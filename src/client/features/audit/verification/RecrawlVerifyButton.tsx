@@ -3,6 +3,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { getAuditAccess, startAudit } from "@/serverFunctions/audit";
 import type { AuditResultsData } from "@/client/features/audit/results/types";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 /**
  * Re-crawls this audit's target to verify fixes, recording the current audit as
@@ -48,9 +49,7 @@ export function RecrawlVerifyButton({
     },
     onError: (error) => {
       toast.error(
-        error instanceof Error && error.message
-          ? error.message
-          : "Could not start the re-crawl.",
+        getStandardErrorMessage(error, "Could not start the re-crawl."),
       );
     },
   });
