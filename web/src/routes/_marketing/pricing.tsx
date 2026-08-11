@@ -21,19 +21,29 @@ export const Route = createFileRoute("/_marketing/pricing")({
   component: Pricing,
 });
 
+/**
+ * Each list below is what a BRAND-NEW hosted account can actually run today —
+ * not what the product contains. Three server functions still refuse an org
+ * that is neither allowlisted nor on a paid plan (`startAudit`,
+ * `triggerRankCheck`, and the AI Visibility handlers), and `HOSTED_ACCESS_OPEN`
+ * does not reach them, so advertising those as free would send a new signup
+ * into a paywall that cannot be cleared while billing is deferred. Move them up
+ * here the day those gates honour the flag — not before.
+ */
 const FREE_FEATURES = [
-  "Free SEO checker — on-page, technical, and Core Web Vitals",
-  "Professional site audit, AI-search readiness, and IndexNow submission",
+  "Free SEO checker — on-page, technical, and Core Web Vitals, no account",
+  "Keyword research and search volume",
+  "Backlinks and referring domains",
   "Google Search Console integration and MCP server",
   "Agent skills for Claude, Cursor, and Codex",
-  "Self-host on Cloudflare Workers, or use the hosted app",
 ];
 
-const BYO_FEATURES = [
-  "Keyword research and search volume",
-  "Rank tracking",
-  "Backlinks and referring domains",
-  "Competitor and domain overview",
+/** Self-hosting gates nothing: every check above is `authMode === "hosted"`. */
+const SELF_HOST_FEATURES = [
+  "Professional site audit and AI-search readiness",
+  "Rank tracking and scheduled checks",
+  "AI brand visibility and the search-prompt explorer",
+  "IndexNow submission",
 ];
 
 function Bullet({ children }: { children: React.ReactNode }) {
@@ -105,12 +115,27 @@ function Pricing() {
           <p className="max-w-2xl text-sm leading-6 text-[var(--color-brand-muted)]">
             Competitive data has to come from somewhere, and nobody but Google
             and the big aggregators holds that index. Add your own DataForSEO
-            key and EchoSEO uses it for the features below. DataForSEO bills you
-            at their rates — we do not resell it, and there is no credit system
-            in between.
+            key and the research features run on it. DataForSEO bills you at
+            their rates — we do not resell it, and there is no credit system in
+            between.
+          </p>
+        </div>
+      </section>
+
+      {/* What the hosted app does not open yet */}
+      <section className="mt-12">
+        <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
+          Self-host to unlock the rest
+        </h2>
+        <div className="mt-6 rounded-xl border border-[var(--color-border-subtle)] bg-white p-6">
+          <p className="max-w-2xl text-sm leading-6 text-[var(--color-brand-muted)]">
+            These run today on a deployment you own. On our hosted app they are
+            still limited to invited workspaces while billing is being sorted
+            out — we would rather say so here than let you sign up and hit a
+            wall.
           </p>
           <ul className="mt-4 space-y-2">
-            {BYO_FEATURES.map((item) => (
+            {SELF_HOST_FEATURES.map((item) => (
               <Bullet key={item}>{item}</Bullet>
             ))}
           </ul>
@@ -149,10 +174,11 @@ function Pricing() {
               What does EchoSEO cost?
             </dt>
             <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              Nothing. There is no subscription and no paywall on the hosted
-              app. The only money involved is what you choose to spend with a
-              data provider such as DataForSEO, and they bill you for it, not
-              us.
+              Nothing — there is no subscription to buy. The only money involved
+              is what you choose to spend with a data provider such as
+              DataForSEO, and they bill you for it, not us. Some features are
+              not open on the hosted app yet; that is a launch limit, not a
+              price. Self-hosting has no limits at all.
             </dd>
           </div>
           <div className="p-5">
@@ -160,10 +186,10 @@ function Pricing() {
               Which features need my own key?
             </dt>
             <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              Keyword research, rank tracking, backlinks, and competitor and
-              domain overview. Everything else — the free SEO checker, the site
-              audit, AI-search readiness, IndexNow, and the Search Console
-              integration and MCP server — runs without one.
+              The ones that query a search index: keyword research, backlinks,
+              referring domains, and rank tracking. The free SEO checker, the
+              site audit, AI-search readiness, IndexNow, and the Search Console
+              integration and MCP server need no provider key at all.
             </dd>
           </div>
           <div className="p-5">
