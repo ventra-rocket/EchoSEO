@@ -66,6 +66,16 @@ variables for a single deployment, but must match the sender/domain you own.
 Use Workers secrets for all credentials. See the dedicated
 [Search Console guide](SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md) for OAuth setup.
 
+> **Hosted safeguards:** when `AUTH_MODE=hosted` and
+> `HOSTED_ACCESS_OPEN=true`, EchoSEO intentionally does not use the operator's
+> global `DATAFORSEO_API_KEY`. Public organizations must add their own key in
+> Settings. This prevents a future global key from silently becoming an
+> unmetered operator-funded credential while billing and entitlements are
+> bypassed. Non-hosted auth modes and hosted deployments with open access off
+> retain the global-key behavior described above. In hosted mode, EchoSEO also
+> limits Site Audit launches to 10 per organization per hour; `local_noauth`
+> and `cloudflare_access` modes do not use this operator-protection throttle.
+
 ### 3) Optional: add an R2 lifecycle rule
 
 DataForSEO API responses are cached in R2 under the `dataforseo-cache/` prefix. This step is optional, but recommended to automatically clean up expired cache objects:
