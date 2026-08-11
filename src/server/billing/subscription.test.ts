@@ -9,11 +9,13 @@ const {
   getOrCreateMock,
   isAutumnConfiguredMock,
   getOptionalEnvValueMock,
+  isHostedAccessOpenMock,
 } = vi.hoisted(() => ({
   checkMock: vi.fn(),
   getOrCreateMock: vi.fn(),
   isAutumnConfiguredMock: vi.fn(),
   getOptionalEnvValueMock: vi.fn(),
+  isHostedAccessOpenMock: vi.fn(),
 }));
 
 vi.mock("@/server/billing/autumn", () => ({
@@ -32,6 +34,7 @@ vi.mock("@/server/lib/runtime-env", () => ({
   isHostedServerAuthMode: vi.fn(),
   isAutumnConfigured: isAutumnConfiguredMock,
   getOptionalEnvValue: getOptionalEnvValueMock,
+  isHostedAccessOpen: isHostedAccessOpenMock,
 }));
 
 // subscription.ts imports posthog (for trackUsageCreditSpend); stub it so the
@@ -56,6 +59,10 @@ describe("subscription billing", () => {
     // override to exercise the degrade / allowlist branches.
     isAutumnConfiguredMock.mockResolvedValue(true);
     getOptionalEnvValueMock.mockResolvedValue(undefined);
+    // Closed by default so the allowlist and entitlement branches below are
+    // actually reached — an open-access default would answer every policy
+    // question `true` and quietly stop testing them.
+    isHostedAccessOpenMock.mockResolvedValue(false);
   });
 
   it("checks the paid plan entitlement", async () => {
@@ -152,5 +159,38 @@ describe("subscription billing", () => {
       customerId: "org_123",
       featureId: AUTUMN_MANAGED_ACCESS_FEATURE_ID,
     });
+  });
+
+  // HOSTED_ACCESS_OPEN means "let people in while billing is deferred". It used
+  // to be honoured at one call site out of four, so an org the flag was meant
+  // to admit still met PAYMENT_REQUIRED — with no plan on sale to clear it.
+  // Both policies are pinned because they gate different features and drifted
+  // apart once already.
+  it("admits any org for managed features while open access is on", async () => {
+    isHostedAccessOpenMock.mockResolvedValue(true);
+    getOptionalEnvValueMock.mockResolvedValue(undefined);
+
+    await expect(orgMayUseManagedFeatures("org_stranger")).resolves.toBe(true);
+    expect(checkMock).not.toHaveBeenCalled();
+  });
+
+  it("admits any org for paid features while open access is on", async () => {
+    isHostedAccessOpenMock.mockResolvedValue(true);
+    getOptionalEnvValueMock.mockResolvedValue(undefined);
+
+    await expect(orgMayUsePaidFeatures("org_stranger")).resolves.toBe(true);
+    expect(checkMock).not.toHaveBeenCalled();
+  });
+
+  // The flag opens ACCESS, not the wallet: spending still needs a provider
+  // credential, which is a separate axis. If closing the flag ever stopped
+  // restoring the paywall, the deployment could not be locked down again.
+  it("restores the paywall for a stranger once open access is off", async () => {
+    isHostedAccessOpenMock.mockResolvedValue(false);
+    isAutumnConfiguredMock.mockResolvedValue(false);
+    getOptionalEnvValueMock.mockResolvedValue(undefined);
+
+    await expect(orgMayUseManagedFeatures("org_stranger")).resolves.toBe(false);
+    await expect(orgMayUsePaidFeatures("org_stranger")).resolves.toBe(false);
   });
 });

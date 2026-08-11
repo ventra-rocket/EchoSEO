@@ -15,6 +15,7 @@ import { AppError } from "@/server/lib/errors";
 import {
   getOptionalEnvValue,
   isAutumnConfigured,
+  isHostedAccessOpen,
 } from "@/server/lib/runtime-env";
 
 /**
@@ -114,26 +115,43 @@ export async function isOrgAllowlisted(
 
 /**
  * POLICY: may this org use MANAGED (Workers-compute) features like Site Audit?
- * Allowlisted (founder + invited, billing deferred) OR actually holds the
- * managed-access entitlement. Kept distinct from {@link orgMayUsePaidFeatures}
- * on purpose: the two gate on DIFFERENT Autumn features, so collapsing them
- * would silently downgrade one once billing is configured.
+ * Open access is on OR allowlisted (founder + invited, billing deferred) OR the
+ * org actually holds the managed-access entitlement. Kept distinct from
+ * {@link orgMayUsePaidFeatures} on purpose: the two gate on DIFFERENT Autumn
+ * features, so collapsing them would silently downgrade one once billing is
+ * configured.
+ *
+ * `HOSTED_ACCESS_OPEN` belongs HERE rather than at each call site. It already
+ * meant "let people in while billing is deferred", but only one of the four
+ * call sites checked it, so a signup that the flag was supposed to admit still
+ * met PAYMENT_REQUIRED with nothing available to buy. Deciding it once is what
+ * stops the next gate from forgetting.
  */
 export async function orgMayUseManagedFeatures(
   organizationId: string,
 ): Promise<boolean> {
+  if (await isHostedAccessOpen()) return true;
   if (await isOrgAllowlisted(organizationId)) return true;
   return customerHasManagedAccess(organizationId);
 }
 
 /**
  * POLICY: may this org use PAID DataForSEO-fanout features (AI Visibility, rank
- * checks)? Allowlisted OR holds the paid-plan entitlement. See
- * {@link orgMayUseManagedFeatures} for why the two policies stay separate.
+ * checks)? Open access is on OR allowlisted OR holds the paid-plan entitlement.
+ * See {@link orgMayUseManagedFeatures} for why the two policies stay separate,
+ * and for why the flag is read here rather than at the call sites.
+ *
+ * Opening this axis does not open the wallet, because it is not the axis that
+ * spends: fetching data still requires a provider credential, and this
+ * deployment has no global `DATAFORSEO_API_KEY`, so an org without its own key
+ * gets a "configure a key" failure rather than a bill. That separation between
+ * access(billing) and capability(data-provider) is exactly what makes it safe
+ * to answer this question generously — keep them orthogonal.
  */
 export async function orgMayUsePaidFeatures(
   organizationId: string,
 ): Promise<boolean> {
+  if (await isHostedAccessOpen()) return true;
   if (await isOrgAllowlisted(organizationId)) return true;
   return customerHasPaidPlan(organizationId);
 }
