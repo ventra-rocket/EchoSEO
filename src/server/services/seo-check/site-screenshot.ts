@@ -179,28 +179,6 @@ export async function handleSiteScreenshotRequest(
       throw new AppError("NOT_FOUND", "Screenshots are paused");
     }
 
-    // Single-flight per (domain, strategy), claimed BEFORE the global ceiling
-    // so a stampede cannot spend the day's slots on one domain. Nothing else
-    // stops concurrent cold misses from each starting their own render of the
-    // same page, and the render deadline is how long that window stays open —
-    // so the longer the deadline, the more duplicates a popular report invites.
-    //
-    // A fixed window is a deliberate fit here, not an approximation of a lock.
-    // A render that SUCCEEDS caches for 24h, so nothing needs the lease back
-    // early; a render that FAILS should not be retried immediately anyway,
-    // because the usual reason is a page PSI cannot analyse at all. Losing the
-    // claim is not an error: those requests fall through to the same stale-or-
-    // -404 answer the ceiling already gives them.
-    const renderLease = await checkIpRateLimit(
-      env.RATE_LIMIT_DO,
-      `screenshot-render:${domain}:${strategy}`,
-      { limit: 1, windowMs: PSI_TIMEOUT_MS },
-    );
-    if (!renderLease.allowed) {
-      if (cached) return imageResponse(cachedType(cached), cached.body);
-      throw new AppError("NOT_FOUND", "A capture is already rendering");
-    }
-
     const renderAllowance = await checkIpRateLimit(
       env.RATE_LIMIT_DO,
       "screenshot-render-global",

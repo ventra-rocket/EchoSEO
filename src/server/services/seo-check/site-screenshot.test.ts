@@ -380,49 +380,9 @@ describe("handleSiteScreenshotRequest", () => {
     expect(fetchPageSpeedMock).not.toHaveBeenCalled();
   });
 
-  it("claims a per-(domain, strategy) render lease before spending a slot", async () => {
-    // Concurrent cold misses on one page would otherwise each start their own
-    // render of it, and the render deadline is how long that window stays
-    // open. Losing the claim must cost nothing further: no PSI call, and — the
-    // point of ordering it first — no bite out of the shared daily ceiling.
-    checkIpRateLimitMock
-      .mockResolvedValueOnce({ allowed: true }) // per-IP read
-      .mockResolvedValueOnce({ allowed: false }); // render lease
-
-    const response = await handleSiteScreenshotRequest(makeRequest());
-
-    expect(response.status).toBe(404);
-    expect(fetchPageSpeedMock).not.toHaveBeenCalled();
-    expect(checkIpRateLimitMock).toHaveBeenCalledWith(
-      {},
-      "screenshot-render:kello.test:desktop",
-      expect.objectContaining({ limit: 1 }),
-    );
-    expect(checkIpRateLimitMock).not.toHaveBeenCalledWith(
-      {},
-      "screenshot-render-global",
-      expect.anything(),
-    );
-  });
-
-  it("serves a stale capture rather than 404 when the lease is held", async () => {
-    getSiteScreenshotMock.mockResolvedValue(
-      cachedObject(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),
-    );
-    checkIpRateLimitMock
-      .mockResolvedValueOnce({ allowed: true })
-      .mockResolvedValueOnce({ allowed: false });
-
-    const response = await handleSiteScreenshotRequest(makeRequest());
-
-    expect(response.status).toBe(200);
-    expect(fetchPageSpeedMock).not.toHaveBeenCalled();
-  });
-
   it("stops rendering once the global daily ceiling is hit", async () => {
-    // Calls in order: per-IP read, per-page render lease, global allowance.
+    // First call = per-IP read (allowed); second = global render allowance.
     checkIpRateLimitMock
-      .mockResolvedValueOnce({ allowed: true })
       .mockResolvedValueOnce({ allowed: true })
       .mockResolvedValueOnce({ allowed: false });
 
