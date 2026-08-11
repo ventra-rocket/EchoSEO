@@ -53,8 +53,11 @@ vi.mock(
     resolveBacklinksProviderAccess: providerAccessMock,
   }),
 );
+// The service asks the shared POLICY (which folds in open-access and the
+// allowlist), not the raw Autumn fact — mocking the fact would let the service
+// drift away from the policy again without a test noticing.
 vi.mock("@/server/billing/subscription", () => ({
-  customerHasManagedAccess: managedAccessMock,
+  orgMayUseManagedFeatures: managedAccessMock,
 }));
 
 const { AuditReferringDomainsService } =
