@@ -1,7 +1,7 @@
 ---
 title: "The Best Open Source SEO Tools in 2026"
-description: "Open source SEO tools in 2026: OpenSEO, SerpBear, SEONaut, LibreCrawl, and SEOMachine — what each one does, what it costs to run, and how to self-host."
-author: "OpenSEO Team"
+description: "Open source SEO tools in 2026: EchoSEO, OpenSEO, SerpBear, SEONaut, LibreCrawl, and SEOMachine — what each one does, what it costs to run, and how to self-host."
+author: "EchoSEO Team"
 date: "2026-06-05"
 ---
 
@@ -9,12 +9,13 @@ There are a lot of open source SEO projects on GitHub, but only a handful are ma
 
 In the past, open source SEO tools struggled because they lacked quality data. Beyond auditing, most SEO tasks have a cost, so most of the projects in this guide aren't totally free. For example, rank tracking requires SERP results from around the world. Coming up with a content strategy means you need accurate search volumes and backlink indexes. Most of the tools in this list rely on paid third-party services, but they still cost far less than the equivalent legacy SaaS tools.
 
-Note: OpenSEO publishes this guide, and OpenSEO is one of the tools listed, as the project has 2,000+ stars on GitHub. We have tried to make this useful even if you never touch it. We love open source and think it's the future of SEO tools: [openseo.so/open-source-seo](/open-source-seo).
+Note: EchoSEO publishes this guide, and EchoSEO is one of the tools listed — as is open-seo, the MIT project EchoSEO is built on, which is a genuine option in its own right. We have tried to make this useful even if you never touch either. We love open source and think it's the future of SEO tools: [why open source matters](/open-source-seo).
 
 ## The main tools at a glance
 
 | Tool                                                       | Stars | What it does                                                                       | Cost to run                                        | Self-hosting                       |
 | ---------------------------------------------------------- | ----- | ---------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
+| [EchoSEO](https://github.com/ventra-rocket/EchoSEO)        | new   | All-in-one, plus a free on-page checker, AI-search readiness, and bilingual EN/VI  | Free; paid data on your own DataForSEO key         | Cloudflare Workers or Docker       |
 | [OpenSEO](https://github.com/every-app/open-seo)           | 2.1k  | All-in-one: keyword research, rank tracking, backlinks, site audits, AI visibility | DataForSEO usage (your own API key, pay-as-you-go) | Docker or Cloudflare Workers       |
 | [SerpBear](https://github.com/towfiqi/serpbear)            | 2.0k  | Rank tracking                                                                      | SERP API usage (provider of your choice)           | Docker                             |
 | [SEONaut](https://github.com/StJudeWasHere/seonaut)        | 717   | Technical SEO and site audits                                                      | Free                                               | Docker                             |
@@ -23,13 +24,21 @@ Note: OpenSEO publishes this guide, and OpenSEO is one of the tools listed, as t
 
 _Star counts are updated monthly. Last updated June 5, 2026._
 
+## EchoSEO
+
+EchoSEO is an open source alternative to Semrush and Ahrefs, built to be the only SEO tool a company or small agency needs. It covers keyword research, rank tracking, backlinks, site audits, AI brand visibility, and an AI search prompt explorer. See them all on the [features page](/features).
+
+Two things set it apart from the rest of this list. There is a [free on-page SEO checker](https://app.echoseo.ventrarocket.vn/free-seo-check) that needs no account at all and cites Google's own documentation for every fix it suggests, and the whole product ships in both English and Vietnamese.
+
+The tools that need competitive data use [DataForSEO](https://dataforseo.com), the gold standard for SEO data, on your own key — so you pay them at their pay-as-you-go rates and EchoSEO takes no cut. Everything else, including the site audit and the Search Console integration, is free.
+
+EchoSEO also has an [MCP server](/docs/mcp) and AI skills, so you can use Claude Code, Codex, or Cursor to handle tedious SEO work like a first pass of keyword research, then dig into the results in the EchoSEO UI. That is different from pointing an agent at DataForSEO's MCP directly. You can save data to your EchoSEO account through the MCP, like tags for clustering keywords, and you can ask the agent for a link to view its research in EchoSEO instead of trusting whatever it reports back.
+
 ## OpenSEO
 
-OpenSEO is an open source alternative to Semrush and Ahrefs, built to be the only SEO tool that companies or small agencies need. It covers keyword research, rank tracking, backlinks, site audits, AI brand visibility, and an AI search prompt explorer. See them all on the [features page](/features).
+OpenSEO is the MIT-licensed project EchoSEO is built on, and it remains a solid choice in its own right — the older, larger community of the two. It covers keyword research, rank tracking, backlinks, site audits, and AI visibility, and relies on DataForSEO with your own API key. Self-host it with Docker or Cloudflare Workers, or use its maintainer's hosted version.
 
-It relies on [DataForSEO](https://dataforseo.com), a paid service, which is the gold standard for SEO data with pay-as-you-go pricing. Many features cost money to run, but far less than a legacy SaaS seat, and the [pricing is published in the repo](https://github.com/every-app/open-seo#seo-api-cost-reference).
-
-OpenSEO also has an [MCP server](/docs/mcp) and AI skills, so you can use Claude Code, Codex, or OpenClaw to handle tedious SEO work like a first pass of keyword research, then dig into the results in the OpenSEO UI. That is different from pointing an agent at DataForSEO's MCP directly. You can save data to your OpenSEO account through the MCP, like tags for clustering keywords, and you can ask the agent for a link to view its research in OpenSEO instead of trusting whatever it reports back.
+If you want the feature set without the free checker or the bilingual UI, start [here](https://github.com/every-app/open-seo).
 
 ## SerpBear
 
@@ -67,8 +76,8 @@ These have fewer stars, or fill a narrower niche, than the main tools above. We 
 
 One clarification, since it shows up on other lists: seojuice.com is not open source. They publish open source SDKs for their APIs, but the core product is closed.
 
-## Try OpenSEO, and tell us what we missed
+## Try EchoSEO, and tell us what we missed
 
-If you want one open source tool that covers most of SEO, start with OpenSEO. Self-host it with Docker or Cloudflare Workers, or use the hosted version at [openseo.so](https://openseo.so) if you would rather not run it yourself.
+If you want one open source tool that covers most of SEO, start with EchoSEO. Run the [free SEO checker](https://app.echoseo.ventrarocket.vn/free-seo-check) without signing up for anything, use the [hosted app](https://app.echoseo.ventrarocket.vn) for free, or self-host it on Cloudflare Workers or Docker.
 
-We will keep this guide current. If there is an open source SEO project you love that we did not cover, email us at ben@openseo.so and we will test it and consider adding it.
+We will keep this guide current. If there is an open source SEO project you love that we did not cover, [open an issue](https://github.com/ventra-rocket/EchoSEO/issues) and we will test it and consider adding it.
