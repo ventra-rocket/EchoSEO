@@ -1,18 +1,51 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MoneyBackGuarantee } from "@/components/money-back-guarantee";
 import { buildPageSeo } from "@/lib/seo";
 
+/**
+ * What this page may claim is bounded by what the deployment actually does.
+ * EchoSEO runs with no paywall today, and the paid data features are reached
+ * with the customer's OWN DataForSEO key — so there is no subscription, no
+ * usage credit, and no refund window to describe. A price here before billing
+ * exists would be a promise the product cannot keep, and this page inherited
+ * exactly that from the upstream project it was forked from.
+ */
 export const Route = createFileRoute("/_marketing/pricing")({
   head: () =>
     buildPageSeo({
       title: "Pricing",
       description:
-        "OpenSEO is free to self-host. The managed service is $10/month with a 30-day money-back guarantee.",
+        "EchoSEO is free to use and free to self-host. Paid SEO data runs on your own DataForSEO key, billed by them at cost.",
       path: "/pricing",
-      titleSuffix: "OpenSEO",
+      titleSuffix: "EchoSEO",
     }),
   component: Pricing,
 });
+
+const FREE_FEATURES = [
+  "Free SEO checker — on-page, technical, and Core Web Vitals",
+  "Professional site audit, AI-search readiness, and IndexNow submission",
+  "Google Search Console integration and MCP server",
+  "Agent skills for Claude, Cursor, and Codex",
+  "Self-host on Cloudflare Workers, or use the hosted app",
+];
+
+const BYO_FEATURES = [
+  "Keyword research and search volume",
+  "Rank tracking",
+  "Backlinks and referring domains",
+  "Competitor and domain overview",
+];
+
+function Bullet({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2.5 text-sm text-neutral-700">
+      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-brand-accent)]">
+        <span className="sr-only">Included:</span>
+      </span>
+      {children}
+    </li>
+  );
+}
 
 function Pricing() {
   return (
@@ -21,107 +54,81 @@ function Pricing() {
         Pricing
       </p>
       <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-neutral-950 md:text-6xl">
-        Start small, scale by usage
+        Free to use. Free to own.
       </h1>
       <p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--color-brand-muted)]">
-        Use the managed app for $10/month, or self-host OpenSEO with your own
-        API keys.
+        EchoSEO costs nothing to use and nothing to self-host. The features that
+        need paid search data run on your own provider key, so you pay the
+        provider directly — at their price, with no markup from us.
       </p>
 
-      {/* Managed */}
+      {/* Free */}
       <section className="mt-12">
         <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
-          Managed
+          Free
         </h2>
         <div className="mt-6 overflow-hidden rounded-xl border border-[var(--color-border-subtle)] bg-white">
-          {/* Base Plan */}
           <div className="p-6">
             <div className="flex items-baseline justify-between gap-4">
-              <p className="font-semibold text-neutral-950">Base Plan</p>
+              <p className="font-semibold text-neutral-950">Everything below</p>
               <p className="text-xl font-semibold tabular-nums text-neutral-950">
-                $10/month
+                $0
               </p>
             </div>
             <ul className="mt-3 space-y-2">
-              {[
-                "Keyword research, backlinks, rank tracking, and site audits",
-                "MCP server and agent skills for Claude, Cursor, and ChatGPT",
-                "Search Console integration that never uses credits",
-                "Includes $10.00 of Usage Credits each billing cycle",
-              ].map((item) => (
-                <li
-                  key={item}
-                  className="flex gap-2.5 text-sm text-neutral-700"
-                >
-                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-brand-accent)]">
-                    <span className="sr-only">Included:</span>
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Usage Credits — add-on, visually connected to Base Plan */}
-          <div className="border-t border-dashed border-[var(--color-border-subtle)] bg-[#fbfaf8] p-6">
-            <div className="flex items-baseline gap-3">
-              <p className="text-sm font-semibold text-neutral-950">
-                Usage Credits
-              </p>
-              <span className="text-xs font-medium text-[var(--color-brand-muted)]">
-                add-on
-              </span>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-[var(--color-brand-muted)]">
-              Credits are consumed as you use the app. We use powerful providers
-              for AI and SEO data. We bill based on usage of those APIs and
-              charge a small premium.
-            </p>
-            <ul className="mt-3 space-y-2">
-              {[
-                "Purchase top-up credits if you use up your monthly credits",
-                "Top-up credits roll over and don't expire",
-              ].map((item) => (
-                <li
-                  key={item}
-                  className="flex gap-2.5 text-sm text-neutral-700"
-                >
-                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-brand-accent)]">
-                    <span className="sr-only">Included:</span>
-                  </span>
-                  {item}
-                </li>
+              {FREE_FEATURES.map((item) => (
+                <Bullet key={item}>{item}</Bullet>
               ))}
             </ul>
           </div>
         </div>
         <a
-          href="https://app.openseo.so/sign-up"
+          href="https://app.echoseo.ventrarocket.vn/sign-up"
           className="mt-4 inline-flex items-center justify-center rounded-lg bg-neutral-950 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
         >
-          Get Started{" "}
+          Get started{" "}
           <span aria-hidden="true" className="ml-1.5">
             &rarr;
           </span>
         </a>
         <p className="mt-3 text-xs text-neutral-500">
-          <MoneyBackGuarantee />.
+          No card, and no trial clock — there is nothing to bill yet.
         </p>
+      </section>
+
+      {/* Bring your own key */}
+      <section className="mt-12">
+        <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
+          Bring your own SEO data key
+        </h2>
+        <div className="mt-6 rounded-xl border border-[var(--color-border-subtle)] bg-white p-6">
+          <p className="max-w-2xl text-sm leading-6 text-[var(--color-brand-muted)]">
+            Competitive data has to come from somewhere, and nobody but Google
+            and the big aggregators holds that index. Add your own DataForSEO
+            key and EchoSEO uses it for the features below. DataForSEO bills you
+            at their rates — we do not resell it, and there is no credit system
+            in between.
+          </p>
+          <ul className="mt-4 space-y-2">
+            {BYO_FEATURES.map((item) => (
+              <Bullet key={item}>{item}</Bullet>
+            ))}
+          </ul>
+        </div>
       </section>
 
       {/* Self-hosted */}
       <section className="mt-12 rounded-xl border border-[var(--color-border-subtle)] bg-white p-6">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
-            Self-hosted
-          </h2>
-        </div>
+        <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
+          Self-hosted
+        </h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-brand-muted)]">
-          Deploy OpenSEO yourself via Docker or Cloudflare Workers. Bring your
-          own API keys and pay DataForSEO and other API providers directly.
+          Deploy EchoSEO yourself on Cloudflare Workers or Docker. Bring your
+          own API keys, keep your data on your own infrastructure, and pay every
+          provider directly. The source is MIT-licensed.
         </p>
         <a
-          href="https://github.com/every-app/open-seo"
+          href="https://github.com/ventra-rocket/EchoSEO"
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-neutral-950 transition-colors hover:text-[var(--color-brand-accent)]"
@@ -139,63 +146,70 @@ function Pricing() {
         <dl className="mt-5 divide-y divide-[var(--color-border-subtle)] rounded-xl border border-[var(--color-border-subtle)] bg-white">
           <div className="p-5">
             <dt className="text-sm font-medium text-neutral-950">
-              Is there a free trial?
+              What does EchoSEO cost?
             </dt>
             <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              No — instead, every subscription comes with a 30-day money-back
-              guarantee. If OpenSEO isn&apos;t for you, email ben@openseo.so
-              within 30 days of your first charge and we&apos;ll refund it. You
-              can also self-host the open-source version for free.
+              Nothing. There is no subscription and no paywall on the hosted
+              app. The only money involved is what you choose to spend with a
+              data provider such as DataForSEO, and they bill you for it, not
+              us.
             </dd>
           </div>
           <div className="p-5">
             <dt className="text-sm font-medium text-neutral-950">
-              What if I use all my included credits?
+              Which features need my own key?
             </dt>
             <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              You'll never have unexpected costs or bills. If you use all your
-              credits, you'll see errors when you try to do tasks. You can
-              purchase more top up credits at any time.
+              Keyword research, rank tracking, backlinks, and competitor and
+              domain overview. Everything else — the free SEO checker, the site
+              audit, AI-search readiness, IndexNow, and the Search Console
+              integration and MCP server — runs without one.
             </dd>
           </div>
           <div className="p-5">
             <dt className="text-sm font-medium text-neutral-950">
-              What features use credits?
+              Can EchoSEO charge me unexpectedly?
             </dt>
             <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              Credits are consumed by features that query DataForSEO's API —
-              backlinks, keyword volume, competitor data, and site audits. Your
-              projects, settings, and any data already fetched don't cost
-              credits.
+              No, because EchoSEO never charges you at all. Provider spend sits
+              in your own DataForSEO account, where you set the limits and can
+              see every call.
             </dd>
           </div>
           <div className="p-5">
             <dt className="text-sm font-medium text-neutral-950">
-              Do unused credits roll over?
+              Will there be a paid plan?
             </dt>
             <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              Top-up credits roll over indefinitely. The Usage Credits included
-              with your Base Plan reset each billing cycle.
+              A managed tier is planned, for teams that would rather not hold
+              their own provider keys. It does not exist yet, and this page will
+              say so plainly on the day it does. Self-hosting stays free.
             </dd>
           </div>
           <div className="p-5">
             <dt className="text-sm font-medium text-neutral-950">
-              Can I cancel anytime?
+              Is it really open source?
             </dt>
             <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              Yes. Cancel from your billing portal at any time. Your access
-              continues through the end of the current billing period. Within
-              your first 30 days, you can email ben@openseo.so for a full
-              refund.{" "}
-            </dd>
-          </div>
-          <div className="p-5">
-            <dt className="text-sm font-medium text-neutral-950">
-              Do I need a subscription or just usage credits?
-            </dt>
-            <dd className="mt-1.5 text-sm leading-6 text-[var(--color-brand-muted)]">
-              While top-up Usage Credits roll over and don't expire, you need an
-              active subscription in order to use OpenSEO.
+              Yes — MIT, on{" "}
+              <a
+                href="https://github.com/ventra-rocket/EchoSEO"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-neutral-950 underline underline-offset-2"
+              >
+                GitHub
+              </a>
+              . EchoSEO is built on the MIT-licensed{" "}
+              <a
+                href="https://github.com/every-app/open-seo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-neutral-950 underline underline-offset-2"
+              >
+                open-seo
+              </a>{" "}
+              project, and that credit stays.
             </dd>
           </div>
         </dl>

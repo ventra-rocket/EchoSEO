@@ -12,7 +12,7 @@ type Column = {
 };
 
 const COLUMNS: Column[] = [
-  { name: "OpenSEO", highlight: true },
+  { name: "EchoSEO", highlight: true },
   { name: "DIY open-source repos" },
   { name: "Data-pipeline tools" },
 ];
@@ -38,7 +38,7 @@ const ROWS: { label: string; cells: Cell[] }[] = [
     label: "Cost to run",
     cells: [
       {
-        text: "Included in the $10/mo plan, zero credits (free to self-host)",
+        text: "Free — Search Console data costs nothing, hosted or self-hosted",
         tone: "positive",
       },
       { text: "Free (your time + your own quota)" },

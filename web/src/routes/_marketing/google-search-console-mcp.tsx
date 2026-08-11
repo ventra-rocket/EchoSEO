@@ -12,26 +12,22 @@ const PATH = "/google-search-console-mcp";
 const softwareApplicationLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "OpenSEO Google Search Console MCP",
+  name: "EchoSEO Google Search Console MCP",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: toCanonicalUrl(PATH),
   description: frontmatter.description,
+  // Machine-readable, and therefore the copy most likely to outlive a wrong
+  // number: this is what Google quotes in a rich result. It has to match the
+  // page, and the page is free — there is no subscription to price.
   offers: {
     "@type": "Offer",
-    price: "10.00",
+    price: "0",
     priceCurrency: "USD",
-    priceSpecification: {
-      "@type": "UnitPriceSpecification",
-      price: "10.00",
-      priceCurrency: "USD",
-      billingDuration: 1,
-      unitCode: "MON",
-    },
   },
   provider: {
     "@type": "Organization",
-    name: "OpenSEO",
+    name: "EchoSEO",
     url: SITE_URL,
   },
 };
@@ -42,7 +38,7 @@ export const Route = createFileRoute("/_marketing/google-search-console-mcp")({
       title: "Google Search Console MCP Server: No Google Cloud Setup",
       description: frontmatter.description,
       path: PATH,
-      titleSuffix: "OpenSEO",
+      titleSuffix: "EchoSEO",
       ogType: "article",
     }),
   component: GoogleSearchConsoleMcpPage,
@@ -65,7 +61,7 @@ function GoogleSearchConsoleMcpPage() {
         ) : null}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <a
-            href="https://app.openseo.so/sign-up"
+            href="https://app.echoseo.ventrarocket.vn/sign-up"
             className="inline-flex h-10 items-center justify-center rounded-lg bg-neutral-950 px-5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
           >
             Get started
@@ -75,8 +71,8 @@ function GoogleSearchConsoleMcpPage() {
           </a>
         </div>
         <p className="mt-3 text-xs text-neutral-500">
-          $10/month, 30-day money-back guarantee. Search Console tools never use
-          credits.
+          Free — no subscription, and no card. Search Console data costs nothing
+          to read.
         </p>
       </header>
 
@@ -111,7 +107,7 @@ function GoogleSearchConsoleMcpCta() {
       </p>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <a
-          href="https://app.openseo.so/sign-up"
+          href="https://app.echoseo.ventrarocket.vn/sign-up"
           className="inline-flex h-10 items-center justify-center rounded-lg bg-neutral-950 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
         >
           Get started
@@ -120,7 +116,7 @@ function GoogleSearchConsoleMcpCta() {
           </span>
         </a>
         <a
-          href="https://github.com/every-app/open-seo"
+          href="https://github.com/ventra-rocket/EchoSEO"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--color-border-subtle)] bg-white px-4 text-sm font-medium text-neutral-950 transition-colors hover:border-neutral-950"
