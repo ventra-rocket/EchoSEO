@@ -81,6 +81,29 @@ function DataforseoApiKeyHelpPage() {
             </p>
           </div>
         </div>
+
+        <div className="card bg-base-100 border border-base-300">
+          <div className="card-body gap-2 text-sm text-base-content/75">
+            <h2 className="card-title text-base">
+              A new account may not answer straight away
+            </h2>
+            <p>
+              A brand-new DataForSEO account can take about a day before its API
+              starts answering, even once you have finished the email
+              verification step. Until it does, every data request comes back as{" "}
+              <code>40104</code> —{" "}
+              <em>Please verify your account before using the API</em> — while
+              the DataForSEO dashboard shows nothing wrong.
+            </p>
+            <p>
+              This is not a problem with your key, and there is nothing to fix
+              on the EchoSEO side. Saving the key in Settings tells you which
+              state you are in: a wrong key is rejected outright, while a good
+              key on an account that is not serving yet is saved with a note
+              saying so. Try again later.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
