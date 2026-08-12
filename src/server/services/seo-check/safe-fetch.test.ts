@@ -18,13 +18,22 @@ function redirectTo(location: string): Response {
 
 let pageResponses: Response[];
 
-const fetchMock = vi.fn((input: RequestInfo | URL) => {
-  const url =
-    typeof input === "string"
-      ? input
-      : input instanceof URL
-        ? input.toString()
-        : input.url;
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  return input instanceof URL ? input.toString() : input.url;
+}
+
+/** Every call the code under test makes except the DoH lookups the URL policy
+ * performs — i.e. the actual page fetches, one per redirect hop. */
+function pageCalls() {
+  return fetchMock.mock.calls.filter(
+    ([input]) => !requestUrl(input).includes(DOH_HOST),
+  );
+}
+
+const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+  void init;
+  const url = requestUrl(input);
   if (url.includes(DOH_HOST)) return Promise.resolve(dohEmpty());
   const next = pageResponses.shift();
   if (!next) throw new Error(`unexpected page fetch: ${url}`);
@@ -49,6 +58,37 @@ describe("safeFetch", () => {
 
     expect(response.status).toBe(200);
     expect(finalUrl).toBe("https://start.test/page");
+  });
+
+  /** A missing User-Agent is not neutral: CloudFront and similar WAFs answer it
+   * with 403 while accepting any value, which made reachable sites look like
+   * they were blocking the checker. */
+  it("identifies itself with a User-Agent on every hop", async () => {
+    pageResponses = [
+      redirectTo("https://other.test/next"),
+      new Response("<html></html>", { status: 200 }),
+    ];
+
+    await safeFetch("https://start.test/");
+
+    const calls = pageCalls();
+    expect(calls).toHaveLength(2);
+    for (const [, init] of calls) {
+      expect(new Headers(init?.headers).get("User-Agent")).toMatch(
+        /^EchoSEO-Checker\//,
+      );
+    }
+  });
+
+  it("lets a caller override the User-Agent", async () => {
+    pageResponses = [new Response("<html></html>", { status: 200 })];
+
+    await safeFetch("https://start.test/", {
+      init: { headers: { "User-Agent": "Custom/9.9" } },
+    });
+
+    const [, init] = pageCalls()[0];
+    expect(new Headers(init?.headers).get("User-Agent")).toBe("Custom/9.9");
   });
 
   it("follows a public redirect and re-validates the hop", async () => {
