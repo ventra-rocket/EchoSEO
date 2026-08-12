@@ -15,6 +15,8 @@ import { FreePlanAlert } from "./FreePlanAlert";
 import { RankTrackingDetailHeader } from "./RankTrackingDetailHeader";
 import { RankTrackingOverview } from "./RankTrackingOverview";
 import { RankTrackingTable } from "./RankTrackingTable";
+import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
+import { isProviderAuthFailureMessage } from "@/shared/provider-failure";
 import {
   countMatrixRuns,
   RankTrackingHistoryMatrix,
@@ -156,7 +158,7 @@ function RankTrackingDomainDetailInner({
       `${result.added} keyword${result.added !== 1 ? "s" : ""} added`,
     );
     if (!result.checkTriggered && result.added > 0) {
-      toast.info("Use 'Check Now' to check these keywords");
+      toast.info('Use "Check rankings" in the ⋯ menu to check these keywords');
     }
   };
 
@@ -230,13 +232,20 @@ function RankTrackingDomainDetailInner({
 
       {/* Surface any other failed-run reason (e.g. missing DataForSEO key,
           workflow error) instead of leaving the failure invisible. The
-          insufficient-credits case has its own friendlier alert above. */}
+          insufficient-credits case has its own friendlier alert above. When the
+          provider is what refused, the user has no rank data at all, so name
+          the free alternative rather than leaving them at the error. */}
       {latestRun?.status === "failed" &&
         latestRun.errorMessage &&
         config.lastSkipReason !== "insufficient_credits" && (
-          <div className="alert alert-error text-sm py-2">
-            <AlertTriangle className="size-4" />
-            <span>Last check failed: {latestRun.errorMessage}</span>
+          <div className="alert alert-error text-sm py-2 items-start">
+            <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <span>Last check failed: {latestRun.errorMessage}</span>
+              {isProviderAuthFailureMessage(latestRun.errorMessage) && (
+                <RankTrackingSearchPerformanceHint projectId={projectId} />
+              )}
+            </div>
           </div>
         )}
 
@@ -308,7 +317,14 @@ function RankTrackingDomainDetailInner({
           }}
           onCheckNow={() => {
             const count = costEstimate?.keywordCount ?? rows?.length ?? 0;
-            if (count > 0) requestCheck(count);
+            // Falling through silently on zero is indistinguishable from a hang:
+            // the click produces no request, no toast and no disabled state, so
+            // the user cannot tell whether the product is broken or the input is.
+            if (count === 0) {
+              toast.info('Add keywords first — use "Add Keywords" above.');
+              return;
+            }
+            requestCheck(count);
           }}
           onRefreshMetrics={refreshMetrics}
           metricsRefreshing={metricsRefreshing}

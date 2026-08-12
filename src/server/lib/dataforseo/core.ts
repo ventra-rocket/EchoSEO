@@ -7,6 +7,7 @@ import {
   OnPageApi,
   SerpApi,
 } from "dataforseo-client";
+import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
 import { getDataforseoKeyResolver } from "@/server/lib/dataforseo/credential-context";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
@@ -32,6 +33,50 @@ export type DataforseoErrorClassifier = (
   details: string,
   path: string,
 ) => AppError | null;
+
+// Enough for DataForSEO's own explanation without letting a long upstream
+// message dominate the log line; the untruncated body stays in `responseBody`.
+const MAX_DATAFORSEO_STATUS_MESSAGE_LENGTH = 200;
+
+/**
+ * DataForSEO answers every failure with its own `status_code` and
+ * `status_message` in the body — the actual reason, where the HTTP status only
+ * says which category it falls into. A 403, for instance, is `40104` ("verify
+ * your account") or `40200` (out of funds) or a suspension, and those need
+ * completely different responses from the operator.
+ *
+ * That distinction used to be captured into error metadata and then dropped
+ * before anything logged it, so production tail showed only
+ * `DataForSEO HTTP 403 on <path>` — the category, never the reason. Lifting the
+ * pair into the message means every existing log and error surface carries it
+ * without each one having to know about DataForSEO's envelope.
+ */
+const dataforseoErrorEnvelopeSchema = z.object({
+  status_code: z.number(),
+  status_message: z.string().optional(),
+});
+
+function formatDataforseoStatusSuffix(rawText: string): string {
+  let json: unknown;
+  try {
+    json = JSON.parse(rawText);
+  } catch {
+    return "";
+  }
+
+  const parsed = dataforseoErrorEnvelopeSchema.safeParse(json);
+  if (!parsed.success) return "";
+
+  const { status_code: statusCode, status_message: statusMessage } =
+    parsed.data;
+  if (!statusMessage) return ` (${statusCode})`;
+
+  const message =
+    statusMessage.length > MAX_DATAFORSEO_STATUS_MESSAGE_LENGTH
+      ? `${statusMessage.slice(0, MAX_DATAFORSEO_STATUS_MESSAGE_LENGTH)}...`
+      : statusMessage;
+  return ` (${statusCode}: ${message})`;
+}
 
 function formatDataforseoErrorPayload(value: unknown): string {
   const text =
@@ -104,12 +149,18 @@ function createAuthenticatedFetch(classify?: DataforseoErrorClassifier) {
           ? "UPSTREAM_UNAVAILABLE"
           : response.status === 429
             ? "RATE_LIMITED"
-            : response.status === 401
+            : // 401 is a rejected credential; 403 is a credential DataForSEO
+              // accepts attached to an account it will not serve yet — an
+              // unverified account, exhausted funds, a suspension. Both are the
+              // operator's DataForSEO account to fix, so both belong to the
+              // actionable auth-failure surface rather than to INTERNAL_ERROR,
+              // which reads as "EchoSEO broke" and tells the user nothing.
+              response.status === 401 || response.status === 403
               ? "DATAFORSEO_AUTH_FAILED"
               : "INTERNAL_ERROR";
       const error = new AppError(
         code,
-        `DataForSEO HTTP ${response.status} on ${path}`,
+        `DataForSEO HTTP ${response.status} on ${path}${formatDataforseoStatusSuffix(rawText)}`,
         {
           provider: "dataforseo",
           providerStatus: String(response.status),

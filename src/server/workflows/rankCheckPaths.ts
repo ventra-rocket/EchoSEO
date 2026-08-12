@@ -1,5 +1,6 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
+import { firstRejectionMessage } from "@/server/features/rank-tracking/services/rankCheckRunStatus";
 import { MAX_TASKS_PER_POST } from "@/server/lib/dataforseo";
 import type {
   PostedRankCheckTask,
@@ -69,15 +70,23 @@ function expandToTaskInputs(
 // not touch any mutable state outside their arguments.
 // ---------------------------------------------------------------------------
 
+interface LiveBatchOutcome {
+  /** Snapshots written for this batch. */
+  written: number;
+  /** First per-call failure, or null when every call succeeded. */
+  failureReason: string | null;
+}
+
 /**
  * Check keyword/device pairs against the live endpoint and persist snapshots.
  * Per-call failures are logged and skipped (the metered client already charged
- * or refused each call individually). Returns the snapshot count written.
+ * or refused each call individually), but the first reason is handed back so
+ * finalization can say why rather than only how many.
  */
 async function checkBatchLive(
   ctx: CheckContext,
   tasks: RankCheckTaskInput[],
-): Promise<number> {
+): Promise<LiveBatchOutcome> {
   const settled = await Promise.allSettled(
     tasks.map((task) =>
       ctx.client.serp
@@ -109,7 +118,10 @@ async function checkBatchLive(
       mapResultsToSnapshotRows(ctx.runId, results),
     );
   }
-  return results.length;
+  return {
+    written: results.length,
+    failureReason: firstRejectionMessage(settled),
+  };
 }
 
 /**
@@ -121,26 +133,34 @@ async function checkBatchLive(
 export async function runLiveCheck(
   step: WorkflowStep,
   ctx: CheckContext,
-): Promise<void> {
+): Promise<string | null> {
+  let failureReason: string | null = null;
+
   for (let i = 0; i < ctx.keywords.length; i += KEYWORDS_PER_BATCH) {
     const keywordBatch = ctx.keywords.slice(i, i + KEYWORDS_PER_BATCH);
     const batchTasks = expandToTaskInputs(keywordBatch, ctx.devices);
     const batchIndex = Math.floor(i / KEYWORDS_PER_BATCH);
     const keywordsChecked = i + keywordBatch.length;
 
-    await step.do(
+    const batchOutcome = await step.do(
       `live-batch-${batchIndex}`,
       SINGLE_ATTEMPT_STEP_CONFIG,
       async () => {
-        const written = await checkBatchLive(ctx, batchTasks);
+        const outcome = await checkBatchLive(ctx, batchTasks);
         // Progress for the UI; finalize recounts from the DB anyway.
         await RankTrackingRepository.updateRun(ctx.runId, {
           keywordsChecked,
         });
-        return written;
+        return outcome;
       },
     );
+
+    // Keep the first reason seen. Later batches usually fail the same way, and
+    // the earliest one is the closest to what actually went wrong.
+    failureReason ??= batchOutcome.failureReason;
   }
+
+  return failureReason;
 }
 
 // Poll cadence for queued tasks. Standard-priority tasks complete in ~5
@@ -366,11 +386,12 @@ export async function runQueuedCheck(
     const batch = stragglers.slice(i, i + KEYWORDS_PER_BATCH);
     const batchIndex = Math.floor(i / KEYWORDS_PER_BATCH);
 
-    stats.fallbackChecked += await step.do(
+    const outcome = await step.do(
       `fallback-batch-${batchIndex}`,
       SINGLE_ATTEMPT_STEP_CONFIG,
       () => checkBatchLive(ctx, batch),
     );
+    stats.fallbackChecked += outcome.written;
   }
 
   return stats;

@@ -22,8 +22,11 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
     "AI Optimization is not enabled for the connected DataForSEO account yet.",
   AI_SEARCH_BILLING_ISSUE:
     "The connected DataForSEO account has a billing or balance issue.",
+  // Covers 401 and 403 alike: the key may be wrong, or it may be a good key on
+  // an account DataForSEO will not serve yet. Naming only the first was wrong
+  // for every 403 and sent people to re-check a key that was already correct.
   DATAFORSEO_AUTH_FAILED:
-    "DataForSEO rejected the API key. Check that DATAFORSEO_API_KEY is the base64 of your DataForSEO login:password.",
+    "DataForSEO refused the request. Either the API key is wrong, or the DataForSEO account behind it cannot fetch data yet — check both in Settings.",
   DATAFORSEO_KEY_MISSING:
     "Add your DataForSEO API key in Settings to load keyword, backlink, domain, and rank data.",
   RATE_LIMITED: "Too many requests. Please wait and try again.",

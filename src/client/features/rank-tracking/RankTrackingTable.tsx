@@ -20,6 +20,7 @@ import { removeTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import { useRankTrackingColumns } from "./RankTrackingColumns";
+import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
 import { buildRankTrackingExport } from "./RankTrackingTableParts";
 import {
   KeywordTrendModal,
@@ -155,9 +156,20 @@ export function RankTrackingTable({
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-base-300 p-10 text-center text-sm text-base-content/55">
-        {totalCount === 0
-          ? 'No rank data yet. Click "Check Now" to run your first check.'
-          : "No keywords match your search."}
+        {totalCount === 0 ? (
+          <div className="space-y-3">
+            {/* No keywords, so a check has nothing to check. Name the action
+                that actually moves the user forward, and name it as the UI
+                labels it. */}
+            <p>
+              No keywords tracked yet. Use &quot;Add Keywords&quot; to start,
+              then run a check.
+            </p>
+            <RankTrackingSearchPerformanceHint projectId={projectId} />
+          </div>
+        ) : (
+          "No keywords match your search."
+        )}
       </div>
     );
   }
