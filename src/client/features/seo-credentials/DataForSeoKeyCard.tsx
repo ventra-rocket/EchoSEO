@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useIntl } from "react-intl";
 import { toast } from "sonner";
 import { getErrorCode } from "@/client/lib/error-messages";
@@ -12,12 +13,42 @@ import {
 const STATUS_KEY = ["dataforseoKeyStatus"];
 const GET_KEY_URL = "https://dataforseo.com/";
 
+/** What the save probes established about the account behind the key. */
+type KeyReadiness = Awaited<ReturnType<typeof saveDataforseoKey>>["readiness"];
+
+/** Toast wording per readiness. Only `ready` is a plain success: the other two
+ * are the states the old single-probe save used to report as success anyway. */
+const READINESS_TOAST: Record<
+  KeyReadiness,
+  { messageId: string; notify: (message: string) => void }
+> = {
+  ready: { messageId: "seoProvider.toast.saved", notify: toast.success },
+  not_serving: {
+    messageId: "seoProvider.toast.savedNotServing",
+    notify: toast.warning,
+  },
+  unknown: {
+    messageId: "seoProvider.toast.savedReadinessUnknown",
+    notify: toast.warning,
+  },
+};
+
+const READINESS_NOTICE_MESSAGE_ID: Record<KeyReadiness, string | null> = {
+  ready: null,
+  not_serving: "seoProvider.notice.notServing",
+  unknown: "seoProvider.notice.readinessUnknown",
+};
+
 /** Map a failed save/remove to a localized toast: a rejected or malformed key is
  * shown as invalid, an authorization failure as forbidden, everything else as a
  * generic error. */
 function mutationErrorMessageId(error: unknown): string {
   switch (getErrorCode(error)) {
+    // Not folded in with VALIDATION_ERROR: the auth probe raises this for a 403
+    // too, and telling someone with a correct key to re-check their base64
+    // sends them to fix the one thing that is not broken.
     case "DATAFORSEO_AUTH_FAILED":
+      return "seoProvider.toast.authFailed";
     case "VALIDATION_ERROR":
       return "seoProvider.toast.invalidKey";
     case "FORBIDDEN":
@@ -38,6 +69,10 @@ export function DataForSeoKeyCard() {
   const intl = useIntl();
   const queryClient = useQueryClient();
   const [apiKey, setApiKey] = React.useState("");
+  // Held only for this session: readiness is time-varying (an account that
+  // refuses today can start answering tomorrow on its own), so persisting it
+  // would just replace one stale claim with another.
+  const [readiness, setReadiness] = React.useState<KeyReadiness | null>(null);
 
   const statusQuery = useQuery({
     queryKey: STATUS_KEY,
@@ -55,8 +90,10 @@ export function DataForSeoKeyCard() {
 
   const saveMutation = useMutation({
     mutationFn: (key: string) => saveDataforseoKey({ data: { apiKey: key } }),
-    onSuccess: () => {
-      toast.success(intl.formatMessage({ id: "seoProvider.toast.saved" }));
+    onSuccess: (result) => {
+      const { messageId, notify } = READINESS_TOAST[result.readiness];
+      notify(intl.formatMessage({ id: messageId }));
+      setReadiness(result.readiness);
       setApiKey("");
       invalidate();
     },
@@ -68,6 +105,7 @@ export function DataForSeoKeyCard() {
     mutationFn: () => deleteDataforseoKey(),
     onSuccess: () => {
       toast.success(intl.formatMessage({ id: "seoProvider.toast.removed" }));
+      setReadiness(null);
       invalidate();
     },
     onError: (error) =>
@@ -185,8 +223,35 @@ export function DataForSeoKeyCard() {
             </form>
           )}
         </div>
+
+        {readiness ? <ReadinessNotice readiness={readiness} /> : null}
       </div>
     </section>
+  );
+}
+
+/**
+ * What the save actually proved, kept on the card rather than only in a toast
+ * that vanishes. Silent when the account answered — a working key needs no
+ * explanation.
+ */
+function ReadinessNotice({ readiness }: { readiness: KeyReadiness }) {
+  const intl = useIntl();
+  const messageId = READINESS_NOTICE_MESSAGE_ID[readiness];
+  if (!messageId) return null;
+
+  return (
+    <div className="border-t border-warning/30 bg-warning/10 px-5 py-4 sm:px-6">
+      <p className="text-sm text-base-content/80">
+        {intl.formatMessage({ id: messageId })}
+      </p>
+      <Link
+        to="/help/dataforseo-api-key"
+        className="mt-1 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        {intl.formatMessage({ id: "seoProvider.notice.helpLink" })}
+      </Link>
+    </div>
   );
 }
 

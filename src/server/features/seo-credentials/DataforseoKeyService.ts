@@ -3,12 +3,14 @@
  * credential: compute a non-secret status, and — for owner/admin callers only —
  * validate a pasted key live against DataForSEO before storing it encrypted, or
  * remove it. The raw key is never logged and never returned to the client; the
- * caller receives only a masked last-4 and the resolved source.
+ * caller receives only a masked last-4, the resolved source, and what the save
+ * probes could actually establish about the DataForSEO account behind the key.
  *
  * Kept free of the TanStack request / Cloudflare runtime so the authorization
  * and validation contract stays unit-testable against a real SQLite database,
  * mirroring the audit service layer.
  */
+import { z } from "zod";
 import type { AuthMode } from "@/lib/auth-mode";
 import {
   canManageTarget,
@@ -29,9 +31,70 @@ import { AppError } from "@/server/lib/errors";
 const DATAFORSEO_USER_DATA_URL =
   "https://api.dataforseo.com/v3/appendix/user_data";
 
+/**
+ * The readiness probe, and why there are two probes instead of one.
+ *
+ * `/v3/appendix/user_data` is free, and DataForSEO answers it on an account it
+ * will not actually serve — so authenticating there proves the credential is
+ * real and nothing more. Saving on that evidence alone is what let the product
+ * report success and then fail every data request with 403 / `40104` ("verify
+ * your account"). Only a *billable* endpoint returns that refusal, so only a
+ * billable endpoint can separate "your key is wrong" from "your account cannot
+ * fetch yet".
+ *
+ * This one is a live database lookup — no crawl behind it, answers instantly,
+ * ~$0.0101 per call. Host and payload are both fixed, so a pasted key can never
+ * steer the request at an attacker-chosen URL.
+ */
+const DATAFORSEO_READINESS_PROBE_URL =
+  "https://api.dataforseo.com/v3/dataforseo_labs/google/domain_rank_overview/live";
+
+/** Smallest well-formed task the readiness probe can ask for. The result is
+ * discarded; only the account's willingness to answer is being measured. */
+const READINESS_PROBE_PAYLOAD = [
+  { target: "example.com", location_code: 2840, language_code: "en" },
+];
+
+/**
+ * The DataForSEO statuses that mean "this account cannot fetch data until
+ * someone acts", listed one by one rather than as a 401xx/402xx range.
+ *
+ * The range looked tidier and was wrong: `40202` (rate limit), `40205`/`40206`
+ * (duplicate-task limits) and `40209` (too many simultaneous queries) sit
+ * inside it and are transient. Reporting those as a broken account would be the
+ * same overreach as the bug this probe exists to fix — and the duplicate-task
+ * pair is a live risk here, because every save sends the identical payload.
+ * Anything not listed falls through to `unknown`.
+ */
+const ACCOUNT_REFUSAL_STATUSES = new Set([
+  40100, // not authorized
+  40104, // account not verified yet — the one that prompted this probe
+  40200, // payment required, balance exhausted
+  40201, // account suspended
+  40203, // daily cost limit exceeded
+  40207, // caller IP not whitelisted
+  40210, // insufficient funds for this request
+]);
+
+/** A hung provider must not hold a save open indefinitely. Shorter than the
+ * 60s ceiling on data calls: this is one small lookup with a user waiting. */
+const READINESS_PROBE_TIMEOUT_MS = 15_000;
+
 /** Reject anything that is not canonical base64, which also blocks any control
  * character (newline, space) that could smuggle an extra header line. */
 const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+
+/**
+ * What the account behind an authenticated key can currently do.
+ *
+ * `unknown` is not padding: a probe that fails on a network blip or a 5xx says
+ * nothing about the account, and reporting it as either of the other two would
+ * repeat the exact overreach this probe exists to end.
+ *
+ * Not exported: it reaches the client through `save`'s inferred return type, so
+ * a second declaration would be a second thing to keep in sync.
+ */
+type DataforseoKeyReadiness = "ready" | "not_serving" | "unknown";
 
 /** Non-secret view of an organization's DataForSEO credential state. */
 interface DataforseoKeyStatus {
@@ -94,16 +157,26 @@ async function getStatus(
 /**
  * Validate a pasted key live against DataForSEO, then store it encrypted for the
  * organization. Owner/admin only. Returns the masked last-4 so the UI can
- * confirm without ever handling the raw key again.
+ * confirm without ever handling the raw key again, plus what the probes could
+ * actually establish about the account.
+ *
+ * A key whose account is not serving yet is still stored: the credential is
+ * genuine, the refusal is temporary (a new account can start answering a day
+ * later on its own), and refusing the save would strand the owner. The caller's
+ * job is to report the state, not to hide it behind a bare "saved".
  */
-async function save(
-  input: ActorContext & { apiKey: string },
-): Promise<{ source: "org"; last4: string }> {
+async function save(input: ActorContext & { apiKey: string }): Promise<{
+  source: "org";
+  last4: string;
+  readiness: DataforseoKeyReadiness;
+}> {
   await assertCanManage(input);
 
   const apiKey = input.apiKey.trim();
   assertValidKeyFormat(apiKey);
   await validateKeyWithDataforseo(apiKey);
+  // Ordered so nothing billable is spent on a malformed or rejected key.
+  const readiness = await probeAccountReadiness(apiKey);
 
   const last4 = apiKey.slice(-4);
   await OrganizationSeoCredentialRepository.upsert({
@@ -112,7 +185,7 @@ async function save(
     keyLast4: last4,
     createdByUserId: input.userId,
   });
-  return { source: "org", last4 };
+  return { source: "org", last4, readiness };
 }
 
 /** Remove the organization's stored key, falling back to the global env key (or
@@ -177,6 +250,69 @@ async function validateKeyWithDataforseo(apiKey: string): Promise<void> {
       `DataForSEO key validation failed (${response.status})`,
     );
   }
+}
+
+/** DataForSEO reports a task-level status inside a 200 as well as at the top
+ * level, so both are worth reading before calling an account ready. */
+const readinessEnvelopeSchema = z.object({
+  status_code: z.number(),
+  tasks: z
+    .array(z.object({ status_code: z.number().optional() }))
+    .nullable()
+    .optional(),
+});
+
+function isAccountRefusalStatus(status: number | undefined): boolean {
+  return status !== undefined && ACCOUNT_REFUSAL_STATUSES.has(status);
+}
+
+/**
+ * Ask DataForSEO whether it will serve billable data for this account. Never
+ * throws: the key has already authenticated by this point, so a probe that
+ * cannot reach a verdict must degrade to `unknown` rather than fail the save.
+ */
+async function probeAccountReadiness(
+  apiKey: string,
+): Promise<DataforseoKeyReadiness> {
+  let response: Response;
+  try {
+    response = await fetch(DATAFORSEO_READINESS_PROBE_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(READINESS_PROBE_PAYLOAD),
+      signal: AbortSignal.timeout(READINESS_PROBE_TIMEOUT_MS),
+    });
+  } catch {
+    return "unknown";
+  }
+
+  // 403 is DataForSEO accepting the credential and refusing the account. 401
+  // cannot normally reach here — the auth probe ran first — but it is the same
+  // refusal if it does.
+  if (response.status === 401 || response.status === 403) return "not_serving";
+  if (!response.ok) return "unknown";
+
+  const body: unknown = await response.json().catch(() => null);
+  const parsed = readinessEnvelopeSchema.safeParse(body);
+  if (!parsed.success) return "unknown";
+
+  const taskStatus = parsed.data.tasks?.[0]?.status_code;
+  if (
+    parsed.data.status_code === 20000 &&
+    (taskStatus === undefined || taskStatus === 20000)
+  ) {
+    return "ready";
+  }
+  if (
+    isAccountRefusalStatus(parsed.data.status_code) ||
+    isAccountRefusalStatus(taskStatus)
+  ) {
+    return "not_serving";
+  }
+  return "unknown";
 }
 
 export const DataforseoKeyService = {
