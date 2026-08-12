@@ -342,7 +342,12 @@ export class RankCheckWorkflow extends WorkflowEntrypoint<
         if (trigger === "scheduled") {
           queueStats = await runQueuedCheck(step, checkContext);
         } else {
-          await runLiveCheck(step, checkContext);
+          // A live batch swallows per-call failures on purpose, so nothing is
+          // thrown for the catch below to read. Take the reason it hands back
+          // instead: without it, a run where every call was refused records
+          // only a count and the cause never reaches the row, the alert, or
+          // the provider-failure surfaces that key off it.
+          batchError = await runLiveCheck(step, checkContext);
         }
       } catch (error) {
         // Batch failure — snapshots for completed batches are already
