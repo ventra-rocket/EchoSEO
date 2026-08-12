@@ -156,7 +156,7 @@ function RankTrackingDomainDetailInner({
       `${result.added} keyword${result.added !== 1 ? "s" : ""} added`,
     );
     if (!result.checkTriggered && result.added > 0) {
-      toast.info("Use 'Check Now' to check these keywords");
+      toast.info('Use "Check rankings" in the ⋯ menu to check these keywords');
     }
   };
 
@@ -308,7 +308,14 @@ function RankTrackingDomainDetailInner({
           }}
           onCheckNow={() => {
             const count = costEstimate?.keywordCount ?? rows?.length ?? 0;
-            if (count > 0) requestCheck(count);
+            // Falling through silently on zero is indistinguishable from a hang:
+            // the click produces no request, no toast and no disabled state, so
+            // the user cannot tell whether the product is broken or the input is.
+            if (count === 0) {
+              toast.info('Add keywords first — use "Add Keywords" above.');
+              return;
+            }
+            requestCheck(count);
           }}
           onRefreshMetrics={refreshMetrics}
           metricsRefreshing={metricsRefreshing}
