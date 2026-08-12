@@ -7,6 +7,7 @@ import { NonRetryableError } from "cloudflare:workflows";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { failRunIfActive } from "@/server/features/rank-tracking/services/rankCheckRunGuards";
+import { resolveRankCheckRunStatus } from "@/server/features/rank-tracking/services/rankCheckRunStatus";
 import {
   runLiveCheck,
   runQueuedCheck,
@@ -171,9 +172,15 @@ async function finalizeRankCheckRun(input: {
   }
 
   // Flipping status away from 'pending'/'running' is what releases the
-  // partial-index slot for the next run.
+  // partial-index slot for the next run. See resolveRankCheckRunStatus for why
+  // a total loss must not be recorded as a completion.
+  const runStatus = resolveRankCheckRunStatus({
+    keywordsChecked,
+    keywordsTotal,
+  });
+
   await RankTrackingRepository.updateRun(input.runId, {
-    status: "completed",
+    status: runStatus,
     keywordsChecked,
     completedAt: nowIso,
     ...(errorMessage ? { errorMessage } : {}),
@@ -197,7 +204,7 @@ async function finalizeRankCheckRun(input: {
     ? ` error="${errorMessage.replace(/\s+/g, " ").slice(0, 200)}"`
     : "";
   console.log(
-    `[rank-check] ${input.runId} completed org=${input.billingCustomer.organizationId} project=${input.projectId} trigger=${input.trigger} keywords=${keywordsChecked}/${keywordsTotal}${queueSummary}${errorSummary}`,
+    `[rank-check] ${input.runId} ${runStatus} org=${input.billingCustomer.organizationId} project=${input.projectId} trigger=${input.trigger} keywords=${keywordsChecked}/${keywordsTotal}${queueSummary}${errorSummary}`,
   );
 
   await captureServerEvent({
@@ -206,7 +213,7 @@ async function finalizeRankCheckRun(input: {
     organizationId: input.billingCustomer.organizationId,
     properties: {
       project_id: input.projectId,
-      status: "completed",
+      status: runStatus,
       trigger: input.trigger,
       keywords_checked: keywordsChecked,
       ...(input.queueStats
