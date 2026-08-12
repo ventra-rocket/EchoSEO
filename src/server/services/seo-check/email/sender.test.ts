@@ -1,8 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+/** Shape of a single sendViaResend call, typed so assertions on its args
+ * (below) never need an `any`-derived cast. */
+interface ResendCallArgs {
+  apiKey: string;
+  from: string;
+  replyTo?: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  idempotencyKey: string;
+}
+
 const { getOptionalEnvValueMock, sendViaResendMock } = vi.hoisted(() => ({
-  getOptionalEnvValueMock: vi.fn(),
-  sendViaResendMock: vi.fn(),
+  getOptionalEnvValueMock:
+    vi.fn<(name: string) => Promise<string | undefined>>(),
+  sendViaResendMock: vi.fn<(input: ResendCallArgs) => Promise<void>>(),
 }));
 
 vi.mock("@/server/lib/runtime-env", () => ({
@@ -29,9 +43,13 @@ const DEV_ENV = {
   FREE_CHECK_EMAIL_FROM: "EchoSEO <reports@mail.example.test>",
 };
 
-function env(values: Record<string, string | null>) {
+function env(values: Record<string, string>) {
+  // Matches getOptionalEnvValue's real contract (`string | undefined`, never
+  // `null`) so a missing key resolves to `undefined` here too — that
+  // distinction matters for asserting an optional field like replyTo is
+  // truly *absent* from a call, not just falsy.
   getOptionalEnvValueMock.mockImplementation((name: string) =>
-    Promise.resolve(values[name] ?? null),
+    Promise.resolve(values[name]),
   );
 }
 
@@ -100,5 +118,40 @@ describe("getEmailSender", () => {
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("FREE_CHECK_EMAIL_FROM"),
     );
+  });
+
+  it("passes replyTo through to Resend when FREE_CHECK_EMAIL_REPLY_TO is set", async () => {
+    env({
+      RESEND_API_KEY: "re_test",
+      FREE_CHECK_EMAIL_FROM: "EchoSEO <reports@mail.example.test>",
+      FREE_CHECK_EMAIL_REPLY_TO: "team@example.test",
+    });
+
+    await (await getEmailSender()).send(MESSAGE);
+
+    expect(sendViaResendMock).toHaveBeenCalledWith({
+      apiKey: "re_test",
+      from: "EchoSEO <reports@mail.example.test>",
+      replyTo: "team@example.test",
+      ...MESSAGE,
+    });
+  });
+
+  it("omits replyTo when FREE_CHECK_EMAIL_REPLY_TO is not set", async () => {
+    // No hardcoded fallback: an unconfigured deployment sends with no
+    // Reply-To at all, never a made-up mailbox nobody reads.
+    env({
+      RESEND_API_KEY: "re_test",
+      FREE_CHECK_EMAIL_FROM: "EchoSEO <reports@mail.example.test>",
+    });
+
+    await (await getEmailSender()).send(MESSAGE);
+
+    expect(sendViaResendMock).toHaveBeenCalledWith({
+      apiKey: "re_test",
+      from: "EchoSEO <reports@mail.example.test>",
+      ...MESSAGE,
+    });
+    expect(sendViaResendMock.mock.calls[0]?.[0]?.replyTo).toBeUndefined();
   });
 });
