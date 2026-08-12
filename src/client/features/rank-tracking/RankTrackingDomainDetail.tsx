@@ -15,6 +15,8 @@ import { FreePlanAlert } from "./FreePlanAlert";
 import { RankTrackingDetailHeader } from "./RankTrackingDetailHeader";
 import { RankTrackingOverview } from "./RankTrackingOverview";
 import { RankTrackingTable } from "./RankTrackingTable";
+import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
+import { isProviderAuthFailureMessage } from "@/shared/provider-failure";
 import {
   countMatrixRuns,
   RankTrackingHistoryMatrix,
@@ -230,13 +232,20 @@ function RankTrackingDomainDetailInner({
 
       {/* Surface any other failed-run reason (e.g. missing DataForSEO key,
           workflow error) instead of leaving the failure invisible. The
-          insufficient-credits case has its own friendlier alert above. */}
+          insufficient-credits case has its own friendlier alert above. When the
+          provider is what refused, the user has no rank data at all, so name
+          the free alternative rather than leaving them at the error. */}
       {latestRun?.status === "failed" &&
         latestRun.errorMessage &&
         config.lastSkipReason !== "insufficient_credits" && (
-          <div className="alert alert-error text-sm py-2">
-            <AlertTriangle className="size-4" />
-            <span>Last check failed: {latestRun.errorMessage}</span>
+          <div className="alert alert-error text-sm py-2 items-start">
+            <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <span>Last check failed: {latestRun.errorMessage}</span>
+              {isProviderAuthFailureMessage(latestRun.errorMessage) && (
+                <RankTrackingSearchPerformanceHint projectId={projectId} />
+              )}
+            </div>
           </div>
         )}
 
