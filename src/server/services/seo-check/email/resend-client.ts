@@ -44,6 +44,34 @@ function isDeploymentWideStatus(status: number): boolean {
   return status === 401 || status === 403 || status === 429;
 }
 
+/**
+ * Pulls `user@host` out of a `"Display Name <user@host>"` From value (or
+ * returns the value as-is if it has no `<...>` wrapper). `from` is always an
+ * operator-set config value already trusted enough to send real mail through
+ * Resend, so this stays a plain extraction rather than a validator.
+ */
+function extractMailboxAddress(from: string): string {
+  const angleMatch = /<([^>]+)>/.exec(from);
+  return (angleMatch?.[1] ?? from).trim();
+}
+
+/**
+ * Gmail's bulk-sender rules — and spam filters generally — expect every
+ * automated message to carry a way to opt out; the missing header is itself a
+ * negative signal, even for double opt-in transactional mail like this one.
+ *
+ * There is no unsubscribe route or token anywhere in this codebase (checked
+ * leads-repository.ts, the routes tree, and every `unsubscribe` reference —
+ * there are none) and building one is out of scope here. So this is the
+ * `mailto:` form, not the URL + one-click form: it reuses the funnel's own
+ * verified sending mailbox as the reply target, which needs no new
+ * infrastructure. `List-Unsubscribe-Post: List-Unsubscribe=One-Click` only
+ * applies to the URL form (RFC 8058), so it is deliberately not sent.
+ */
+function listUnsubscribeHeader(from: string): string {
+  return `<mailto:${extractMailboxAddress(from)}?subject=unsubscribe>`;
+}
+
 interface ResendSendInput {
   apiKey: string;
   from: string;
@@ -58,11 +86,26 @@ interface ResendSendInput {
    * exactly like a failure, and the retry mails the visitor twice.
    */
   idempotencyKey: string;
+  /**
+   * Monitored reply mailbox, or absent when the deployment has none configured
+   * (see sender.ts — it is never invented). A From nobody can reply to is a
+   * mild negative signal to spam filters. Resend has a dedicated `reply_to`
+   * body field for exactly this, so it goes there rather than into the
+   * catch-all `headers` object below.
+   */
+  replyTo?: string;
 }
 
 export async function sendViaResend(input: ResendSendInput): Promise<void> {
-  const { apiKey, from, to, subject, text, html, idempotencyKey } = input;
+  const { apiKey, from, to, subject, text, html, idempotencyKey, replyTo } =
+    input;
 
+  // Idempotency-Key is a transport header — it tells Resend's API how to
+  // treat *this HTTP request*, so it belongs in `fetch`'s `headers`. List-
+  // Unsubscribe and Reply-To describe the *outgoing email message* instead,
+  // so they belong in the JSON body (as `reply_to` and `headers` respectively)
+  // — putting them in the HTTP request headers would compile and send fine
+  // while silently doing nothing to the actual message.
   const response = await fetch(RESEND_SEND_URL, {
     method: "POST",
     headers: {
@@ -70,7 +113,19 @@ export async function sendViaResend(input: ResendSendInput): Promise<void> {
       Authorization: `Bearer ${apiKey}`,
       "Idempotency-Key": idempotencyKey,
     },
-    body: JSON.stringify({ from, to, subject, text, html }),
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      text,
+      html,
+      // Dropped by JSON.stringify when undefined, so an unconfigured
+      // deployment sends with no Reply-To at all rather than an empty one.
+      reply_to: replyTo,
+      headers: {
+        "List-Unsubscribe": listUnsubscribeHeader(from),
+      },
+    }),
   });
 
   if (response.ok) return;
