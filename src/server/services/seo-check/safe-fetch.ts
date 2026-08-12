@@ -3,6 +3,22 @@ import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
 
 const MAX_REDIRECTS = 5;
 const DEFAULT_TIMEOUT_MS = 8_000;
+
+/**
+ * Sent on every checker fetch, because sending none is not the neutral choice
+ * it looks like.
+ *
+ * Observed on `thehourglass.com`: CloudFront answers **403** to a request with
+ * a missing or empty `User-Agent`, and **200** to the same request carrying any
+ * value at all — even a single letter. The checker sent none, so a perfectly
+ * reachable site failed with "the site may block automated checkers", blaming
+ * the site for a header we had left off.
+ *
+ * Naming ourselves is also the courteous default: it lets a site owner see who
+ * is calling in their logs and allowlist the checker rather than guess.
+ */
+const CHECKER_USER_AGENT =
+  "EchoSEO-Checker/1.0 (+https://echoseo.ventrarocket.vn)";
 /** Caps memory/CPU cost of a single crawled page — including decompression bombs. */
 const DEFAULT_MAX_BODY_BYTES = 2 * 1024 * 1024;
 
@@ -40,11 +56,20 @@ export async function safeFetch(
 ): Promise<SafeFetchResult> {
   let url = await normalizeAndValidateStartUrl(inputUrl);
 
+  // Built once and reused across hops. `Headers` rather than an object spread so
+  // any shape a caller passes (object, array, Headers) merges correctly, and a
+  // caller that sets its own agent still wins.
+  const headers = new Headers(init.headers);
+  if (!headers.has("User-Agent")) {
+    headers.set("User-Agent", CHECKER_USER_AGENT);
+  }
+
   for (let hop = 0; hop <= maxRedirects; hop++) {
     let response: Response;
     try {
       response = await fetch(url, {
         ...init,
+        headers,
         redirect: "manual",
         signal: AbortSignal.timeout(timeoutMs),
       });
