@@ -84,6 +84,7 @@ vi.mock("@/server/lib/dataforseo/labs", () => ({
 vi.mock("@/server/lib/dataforseo/serp", () => ({
   fetchLiveSerp: vi.fn(),
   fetchRankCheckSerp: vi.fn(),
+  fetchRankCheckTaskResult: vi.fn(),
   postRankCheckTasks: vi.fn(),
   fetchLocalSerp: vi.fn(),
 }));
@@ -116,6 +117,7 @@ import {
 import { DataforseoChargedTaskError } from "@/server/lib/dataforseo/envelope";
 import { getDataforseoKeyResolver } from "@/server/lib/dataforseo/credential-context";
 import { fetchBacklinksSummary } from "@/server/lib/dataforseo/backlinks";
+import { fetchRankCheckTaskResult } from "@/server/lib/dataforseo/serp";
 
 const billingCustomer = {
   organizationId: "org_123",
@@ -382,15 +384,67 @@ describe("per-organization key threading and open-access", () => {
     expect(trackMock).toHaveBeenCalled();
   });
 
-  it("bypasses Autumn under open-access even with the global key", async () => {
+  it("rejects the operator global key under hosted open-access", async () => {
     isHostedServerAuthModeMock.mockResolvedValue(true);
     isHostedAccessOpenMock.mockResolvedValue(true);
     mockDataforseoResult(0.05);
 
     const client = createDataforseoClient(billingCustomer);
-    const result = await client.backlinks.summary(backlinksInput);
+    await expect(
+      client.backlinks.summary(backlinksInput),
+    ).rejects.toMatchObject({ code: "DATAFORSEO_KEY_MISSING" });
 
-    expect(result).toEqual({ rank: 42 });
+    expect(fetchBacklinksSummary).not.toHaveBeenCalled();
+    expect(getOrCreateMock).not.toHaveBeenCalled();
+    expect(checkMock).not.toHaveBeenCalled();
+    expect(trackMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps BYO DataForSEO available under hosted open-access", async () => {
+    isHostedServerAuthModeMock.mockResolvedValue(true);
+    isHostedAccessOpenMock.mockResolvedValue(true);
+    resolveCredentialsMock.mockResolvedValue({
+      apiKey: "org-key-A",
+      source: "org",
+    });
+    const observed = captureAmbientKey();
+
+    const client = createDataforseoClient(billingCustomer);
+    await expect(client.backlinks.summary(backlinksInput)).resolves.toEqual({
+      rank: 7,
+    });
+
+    expect(observed.key).toBe("org-key-A");
+    expect(getOrCreateMock).not.toHaveBeenCalled();
+    expect(checkMock).not.toHaveBeenCalled();
+    expect(trackMock).not.toHaveBeenCalled();
+  });
+
+  it("threads the BYO key into unmetered queued-task collection", async () => {
+    isHostedServerAuthModeMock.mockResolvedValue(true);
+    isHostedAccessOpenMock.mockResolvedValue(true);
+    resolveCredentialsMock.mockResolvedValue({
+      apiKey: "org-key-A",
+      source: "org",
+    });
+    let observedKey: string | null = null;
+    vi.mocked(fetchRankCheckTaskResult).mockImplementation(async () => {
+      const resolver = getDataforseoKeyResolver();
+      observedKey = resolver ? await resolver() : null;
+      return { status: "pending" };
+    });
+
+    const client = createDataforseoClient(billingCustomer);
+    await expect(
+      client.serp.rankCheckTaskGet({
+        taskId: "task-1",
+        keywordId: "keyword-1",
+        keyword: "example",
+        targetDomain: "example.com",
+      }),
+    ).resolves.toEqual({ status: "pending" });
+
+    expect(observedKey).toBe("org-key-A");
     expect(getOrCreateMock).not.toHaveBeenCalled();
     expect(checkMock).not.toHaveBeenCalled();
     expect(trackMock).not.toHaveBeenCalled();

@@ -76,7 +76,7 @@ export function buildDimensionColumns(
     }),
     dimensionHelper.accessor("position", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Position" align="right" />
+        <SortableHeader column={column} label="Avg position" align="right" />
       ),
       cell: ({ getValue }) => formatPosition(getValue()),
       meta: rightAligned,
@@ -138,7 +138,7 @@ export function buildStrikingColumns(
     }),
     strikingHelper.accessor("position", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Position" align="right" />
+        <SortableHeader column={column} label="Avg position" align="right" />
       ),
       cell: ({ getValue }) => formatPosition(getValue()),
       meta: rightAligned,

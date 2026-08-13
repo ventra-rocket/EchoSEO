@@ -44,6 +44,70 @@ describe("sendViaResend", () => {
       subject: INPUT.subject,
       text: INPUT.text,
       html: INPUT.html,
+      // Unconditional: every free-checker email carries an opt-out signal,
+      // whether or not a Reply-To mailbox is configured.
+      headers: {
+        "List-Unsubscribe":
+          "<mailto:reports@mail.example.test?subject=unsubscribe>",
+      },
+    });
+  });
+
+  it("puts List-Unsubscribe and Reply-To in the JSON body, never the HTTP request headers", async () => {
+    const fetchMock = mockFetch(new Response('{"id":"x"}', { status: 200 }));
+
+    await sendViaResend({ ...INPUT, replyTo: "team@example.test" });
+
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+
+    // The transport headers are what Resend's API itself reads (auth,
+    // idempotency) — a header meant for the outgoing email would silently do
+    // nothing if it landed here instead of in the body.
+    const httpHeaders = new Headers(init?.headers);
+    expect(httpHeaders.has("list-unsubscribe")).toBe(false);
+    expect(httpHeaders.has("reply-to")).toBe(false);
+
+    const body: unknown = JSON.parse(
+      typeof init?.body === "string" ? init.body : "null",
+    );
+    expect(body).toMatchObject({
+      reply_to: "team@example.test",
+      headers: {
+        "List-Unsubscribe":
+          "<mailto:reports@mail.example.test?subject=unsubscribe>",
+      },
+    });
+  });
+
+  it("omits reply_to from the body when the sender has no Reply-To configured", async () => {
+    const fetchMock = mockFetch(new Response('{"id":"x"}', { status: 200 }));
+
+    await sendViaResend(INPUT);
+
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    const body: unknown = JSON.parse(
+      typeof init?.body === "string" ? init.body : "null",
+    );
+    expect(body).not.toHaveProperty("reply_to");
+  });
+
+  it("builds List-Unsubscribe's mailto from the From address, ignoring the display name", async () => {
+    const fetchMock = mockFetch(new Response('{"id":"x"}', { status: 200 }));
+
+    await sendViaResend({
+      ...INPUT,
+      from: "EchoSEO Reports <notify@mail.example.test>",
+    });
+
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    const body: unknown = JSON.parse(
+      typeof init?.body === "string" ? init.body : "null",
+    );
+    expect(body).toMatchObject({
+      headers: {
+        "List-Unsubscribe":
+          "<mailto:notify@mail.example.test?subject=unsubscribe>",
+      },
     });
   });
 

@@ -12,6 +12,7 @@ import {
   orgMayUsePaidFeatures,
 } from "@/server/billing/subscription";
 import { resolveDataforseoCredentials } from "@/server/lib/dataforseo/resolve-credentials";
+import { resolveDataforseoCredentialAccess } from "@/server/lib/dataforseo/credential-access-policy";
 import {
   isAutumnConfigured,
   isHostedServerAuthMode,
@@ -398,7 +399,10 @@ export default {
         const credentials = await resolveDataforseoCredentials(
           config.organizationId,
         );
-        if (credentials.source === "none") {
+        if (
+          (await resolveDataforseoCredentialAccess(credentials)) ===
+          "unavailable"
+        ) {
           console.log(
             `[cron] Skipping config ${config.id} (${config.domain}) — no DataForSEO key for org ${config.organizationId}`,
           );

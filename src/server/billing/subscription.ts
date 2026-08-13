@@ -142,10 +142,11 @@ export async function orgMayUseManagedFeatures(
  * and for why the flag is read here rather than at the call sites.
  *
  * Opening this axis does not open the wallet, because it is not the axis that
- * spends: fetching data still requires a provider credential, and this
- * deployment has no global `DATAFORSEO_API_KEY`, so an org without its own key
- * gets a "configure a key" failure rather than a bill. That separation between
- * access(billing) and capability(data-provider) is exactly what makes it safe
+ * spends: fetching data still requires a spend-authorized provider credential.
+ * The shared DataForSEO credential policy rejects an operator global key while
+ * hosted open-access bypasses billing, so an org without its own key gets the
+ * "configure a key" path rather than an operator bill. That separation between
+ * access (billing) and capability (data provider) is exactly what makes it safe
  * to answer this question generously — keep them orthogonal.
  */
 export async function orgMayUsePaidFeatures(

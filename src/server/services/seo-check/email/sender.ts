@@ -46,10 +46,14 @@ const noopEmailSender: EmailSender = {
   },
 };
 
-function resendEmailSender(apiKey: string, from: string): EmailSender {
+function resendEmailSender(
+  apiKey: string,
+  from: string,
+  replyTo: string | undefined,
+): EmailSender {
   return {
     async send(message: EmailMessage): Promise<void> {
-      await sendViaResend({ apiKey, from, ...message });
+      await sendViaResend({ apiKey, from, replyTo, ...message });
     },
   };
 }
@@ -69,12 +73,18 @@ function resendEmailSender(apiKey: string, from: string): EmailSender {
  * from is always someone's mistake and always worth saying out loud.
  */
 export async function getEmailSender(): Promise<EmailSender> {
-  const [apiKey, from] = await Promise.all([
+  const [apiKey, from, replyTo] = await Promise.all([
     getOptionalEnvValue("RESEND_API_KEY"),
     getOptionalEnvValue("FREE_CHECK_EMAIL_FROM"),
+    // Optional and deliberately never hardcoded: there is no mailbox this
+    // funnel's mail is actually monitored at today. A From nobody can reply
+    // to is a mild negative signal to spam filters, but a Reply-To pointed at
+    // an address nobody reads would be worse than no Reply-To at all — so
+    // this stays absent until an operator sets one, same as RESEND_API_KEY.
+    getOptionalEnvValue("FREE_CHECK_EMAIL_REPLY_TO"),
   ]);
 
-  if (apiKey && from) return resendEmailSender(apiKey, from);
+  if (apiKey && from) return resendEmailSender(apiKey, from, replyTo);
 
   if (apiKey && !from) {
     console.error(
