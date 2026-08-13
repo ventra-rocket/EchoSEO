@@ -32,7 +32,9 @@ test.describe("the Lite result state", () => {
     await expect(page.getByText("pass", { exact: true }).first()).toBeVisible();
   });
 
-  test("opens every fix and folds the passing checks away", async ({ page }) => {
+  test("opens every fix and folds the passing checks away", async ({
+    page,
+  }) => {
     await page.goto(FIXTURE);
 
     // Severity order, not rule-definition order. The fixture's only failure
