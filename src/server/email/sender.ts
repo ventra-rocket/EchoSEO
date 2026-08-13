@@ -25,6 +25,16 @@ export interface EmailMessage {
    * just a second message.
    */
   idempotencyKey: string;
+  /**
+   * Absolute https URL that unsubscribes the recipient in one request.
+   *
+   * Set it for periodic mail — a weekly report is bulk under Gmail's and
+   * Yahoo's sender rules, and bulk senders must honour a one-click opt-out
+   * (RFC 8058), which only the URL form of List-Unsubscribe can express.
+   * Transactional mail leaves it unset and keeps the `mailto:` form, which is
+   * all a double-opt-in one-off needs and costs no new infrastructure.
+   */
+  unsubscribeUrl?: string;
 }
 
 export interface EmailSender {
