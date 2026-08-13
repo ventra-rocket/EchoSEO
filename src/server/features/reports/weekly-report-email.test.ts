@@ -116,6 +116,53 @@ describe("buildWeeklyReportEmail", () => {
     expect(issuesAt).toBeLessThan(searchAt);
   });
 
+  it("orders the technical block new, then fixed, then regressed", () => {
+    const message = buildWeeklyReportEmail({
+      to: "seo@example.com",
+      subscriptionId: "sub-1",
+      data: data({
+        issues: {
+          state: "ok",
+          current: {
+            auditId: "audit-2",
+            sealedAt: "2026-08-14 03:00:00",
+            pagesCrawled: 84,
+          },
+          baseline: {
+            auditId: "audit-1",
+            sealedAt: "2026-08-07 03:00:00",
+            pagesCrawled: 82,
+          },
+          newIssues: [issue()],
+          regressedIssues: [issue({ url: "https://example.com/back" })],
+          fixedCount: 3,
+          fixedRules: [
+            {
+              ruleId: "meta-title",
+              label: "Title tag present",
+              resolvedCount: 3,
+            },
+          ],
+          criticalCount: 1,
+        },
+      }),
+    });
+
+    // Credit sits between the two demands on the reader's attention, not after
+    // both of them.
+    const newAt = message.html.indexOf("New issues found this week");
+    const fixedAt = message.html.indexOf("Fixed since last week");
+    const regressedAt = message.html.indexOf("Issues that came back");
+    expect(newAt).toBeGreaterThan(-1);
+    expect(fixedAt).toBeGreaterThan(newAt);
+    expect(regressedAt).toBeGreaterThan(fixedAt);
+
+    const textFixedAt = message.text.indexOf("3 issues are gone");
+    const textRegressedAt = message.text.indexOf("Issues that came back");
+    expect(textFixedAt).toBeGreaterThan(-1);
+    expect(textRegressedAt).toBeGreaterThan(textFixedAt);
+  });
+
   it("carries the fix steps and the Google citation", () => {
     const message = buildWeeklyReportEmail({
       to: "seo@example.com",

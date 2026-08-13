@@ -153,6 +153,10 @@ describe("buildWeeklyIssueReport", () => {
       "https://x/b",
     ]);
     expect(result.criticalCount).toBe(1);
+    // The alert says "critical issues the previous crawl did not have". There is
+    // no previous crawl, so a baseline must not fire one — the weekly report
+    // carries these, and it says outright that it is a first crawl.
+    expect(newCriticalIssues(result)).toEqual([]);
   });
 
   it("files a returning issue as regressed, never as new", async () => {

@@ -9,7 +9,7 @@
  * `sent_at` is only ever written by this module, in ISO, and compared against an
  * ISO bound. Never add a window query over a defaulted column.
  */
-import { and, count, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { and, count, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { reportSends, reportSubscriptions } from "@/db/schema";
 
@@ -103,6 +103,19 @@ async function upsert(input: {
   return row;
 }
 
+/**
+ * Pause or resume from inside the app.
+ *
+ * Resuming will not touch a row whose `unsubscribedAt` is set. A footer
+ * one-click opt-out is the recipient's decision, and Gmail's and Yahoo's
+ * bulk-sender rules require it to stick — an admin pressing "resume" must not
+ * silently put that address back on the list. `upsert` is the documented way
+ * back, because it means someone deliberately re-entered the address.
+ *
+ * Returns null when nothing was updated, which is either "no subscription" or
+ * "this one opted out"; the caller distinguishes them, since only the second
+ * has anything to explain to the user.
+ */
 async function setEnabled(
   targetId: string,
   enabled: boolean,
@@ -110,7 +123,12 @@ async function setEnabled(
   const [row] = await db
     .update(reportSubscriptions)
     .set({ enabled, updatedAt: new Date().toISOString() })
-    .where(eq(reportSubscriptions.targetId, targetId))
+    .where(
+      and(
+        eq(reportSubscriptions.targetId, targetId),
+        enabled ? isNull(reportSubscriptions.unsubscribedAt) : undefined,
+      ),
+    )
     .returning();
   return row ?? null;
 }

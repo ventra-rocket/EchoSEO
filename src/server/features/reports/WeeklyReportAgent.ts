@@ -166,7 +166,7 @@ export class WeeklyReportAgent extends Agent<
     });
 
     if (!auditId) {
-      await this.finishPendingRun();
+      await this.finishPendingRun(undefined);
       return;
     }
     await this.schedule(POLL_INTERVAL_SECONDS, "pollScan", {
@@ -187,7 +187,7 @@ export class WeeklyReportAgent extends Agent<
     // failures, so a sealed snapshot alone does not mean there is anything to
     // compare — wait for the materialization marker too.
     if (snapshot?.issuesMaterializedAt) {
-      await this.finishPendingRun();
+      await this.finishPendingRun(payload.auditId);
       return;
     }
 
@@ -195,7 +195,12 @@ export class WeeklyReportAgent extends Agent<
       console.warn(
         `[weekly-report] crawl ${payload.auditId} did not finish in time; reporting on the previous snapshot`,
       );
-      await this.finishPendingRun();
+      // Deliberately not `payload.auditId`. That crawl has not sealed, so
+      // reporting on it finds no snapshot, mails "no crawl to report on", and
+      // then stamps the claim — locking the whole ISO week out of a retry.
+      // Passing nothing falls back to the newest sealed snapshot, which is the
+      // previous crawl, and is what the warning above promises.
+      await this.finishPendingRun(undefined);
       return;
     }
     await this.schedule(POLL_INTERVAL_SECONDS, "pollScan", {
@@ -217,7 +222,7 @@ export class WeeklyReportAgent extends Agent<
     if (pending?.auditId === auditId) {
       // The weekly mail leads with the criticals and says so in its subject, so
       // firing an alert about the same crawl would just be a duplicate.
-      await this.finishPendingRun();
+      await this.finishPendingRun(auditId);
       return;
     }
 
@@ -234,11 +239,17 @@ export class WeeklyReportAgent extends Agent<
   /**
    * Send the report for the claimed period and clear the claim.
    *
+   * `reportOnAuditId` names the crawl to describe, and every caller states it
+   * explicitly: the crawl it just watched seal, or `undefined` for "whatever
+   * sealed most recently" when this run has no usable crawl of its own.
+   *
    * On anything but success the claim row is released, so the period stays open
    * for a retry instead of being permanently marked as handled by a send that
    * never happened.
    */
-  private async finishPendingRun(): Promise<void> {
+  private async finishPendingRun(
+    reportOnAuditId: string | undefined,
+  ): Promise<void> {
     const pending = this.state.pending;
     if (!pending) return;
 
@@ -257,7 +268,7 @@ export class WeeklyReportAgent extends Agent<
       target,
       period: pending.period,
       sendId: pending.sendId,
-      auditId: pending.auditId ?? undefined,
+      auditId: reportOnAuditId,
     });
     if (outcome !== "sent") {
       await ReportSendRepository.release(pending.sendId);

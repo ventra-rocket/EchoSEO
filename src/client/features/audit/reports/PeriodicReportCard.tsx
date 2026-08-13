@@ -85,6 +85,10 @@ export function PeriodicReportCard({
 
   const busy = save.isPending || toggle.isPending;
   const emailIsValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  // A footer one-click unsubscribe belongs to the recipient, so there is no
+  // "resume" for it. The only way back is deliberately re-entering the address,
+  // which is what `save` does.
+  const optedOut = Boolean(subscription?.unsubscribedAt);
 
   return (
     <div className="card border border-base-300 bg-base-100">
@@ -139,10 +143,14 @@ export function PeriodicReportCard({
             {save.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : null}
-            {subscription ? "Save" : "Turn on weekly report"}
+            {subscription
+              ? optedOut
+                ? "Ask again"
+                : "Save"
+              : "Turn on weekly report"}
           </button>
 
-          {subscription ? (
+          {subscription && !optedOut ? (
             <button
               type="button"
               className="btn btn-sm btn-outline gap-2"
@@ -159,9 +167,11 @@ export function PeriodicReportCard({
 
         {subscription ? (
           <p className="text-xs text-base-content/60">
-            {subscription.enabled
-              ? `Active · crawls up to ${subscription.maxPages} pages each run`
-              : "Paused · no crawl and no email until you resume"}
+            {optedOut
+              ? `${subscription.recipientEmail} unsubscribed on ${new Date(subscription.unsubscribedAt ?? "").toLocaleDateString()} · re-enter the address above and save to ask again`
+              : subscription.enabled
+                ? `Active · crawls up to ${subscription.maxPages} pages each run`
+                : "Paused · no crawl and no email until you resume"}
             {subscription.lastSentAt
               ? ` · last sent ${new Date(subscription.lastSentAt).toLocaleDateString()}`
               : null}

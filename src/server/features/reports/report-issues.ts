@@ -322,18 +322,19 @@ export async function buildWeeklyIssueReport(input: {
  * Critical issues that appeared in this crawl and were absent in the previous
  * one — the set that justifies breaking the weekly cadence with an alert.
  *
+ * Only a comparison can say something *appeared*, so a target's first sealed
+ * crawl (`no_baseline`) alerts on nothing: it labels its whole finding set as
+ * new by definition, and the alert copy would claim a previous crawl that does
+ * not exist. Those criticals still reach the owner in the weekly report, which
+ * says outright that it is a first crawl.
+ *
  * Reads the capped lists on purpose: an alert naming a hundred criticals has
  * already made its point, and `criticalCount` carries the true total.
  */
 export function newCriticalIssues(report: WeeklyIssueReport): ReportIssue[] {
-  if (report.state === "no_audit" || report.state === "not_comparable") {
-    return [];
-  }
+  if (report.state !== "ok") return [];
 
-  const issues =
-    report.state === "no_baseline"
-      ? report.newIssues
-      : [...report.newIssues, ...report.regressedIssues];
-
-  return issues.filter((issue) => issue.severity === "critical");
+  return [...report.newIssues, ...report.regressedIssues].filter(
+    (issue) => issue.severity === "critical",
+  );
 }

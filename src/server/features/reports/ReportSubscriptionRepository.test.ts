@@ -154,6 +154,30 @@ describe("ReportSubscriptionRepository", () => {
       null,
     );
   });
+
+  it("refuses to resume a recipient who used the one-click link", async () => {
+    const created = await ReportSubscriptionRepository.upsert(baseInput);
+    await ReportSubscriptionRepository.markUnsubscribed(
+      created.unsubscribeToken,
+    );
+
+    // Bulk-sender rules require the footer opt-out to stick, so "resume" in the
+    // app must not put that address back on the list.
+    const resumed = await ReportSubscriptionRepository.setEnabled(
+      "target1",
+      true,
+    );
+
+    expect(resumed).toBe(null);
+    const row = await ReportSubscriptionRepository.getByTargetId("target1");
+    expect(row?.enabled).toBe(false);
+    // Pausing an already-opted-out row is still allowed: it changes nothing the
+    // recipient decided, and refusing it would report a missing subscription.
+    expect(
+      (await ReportSubscriptionRepository.setEnabled("target1", false))
+        ?.enabled,
+    ).toBe(false);
+  });
 });
 
 describe("ReportSendRepository", () => {

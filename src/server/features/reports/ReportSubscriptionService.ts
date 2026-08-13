@@ -73,6 +73,12 @@ type ReportSubscriptionView = {
   locale: "en" | "vi";
   maxPages: number;
   lastSentAt: string | null;
+  /**
+   * When the recipient used the one-click unsubscribe link. Non-null makes the
+   * panel drop "resume" and ask for the address again, because that opt-out is
+   * the recipient's and only a deliberate re-entry may undo it.
+   */
+  unsubscribedAt: string | null;
 } | null;
 
 function toView(
@@ -85,6 +91,7 @@ function toView(
     locale: subscription.locale,
     maxPages: subscription.maxPages,
     lastSentAt: subscription.lastSentAt,
+    unsubscribedAt: subscription.unsubscribedAt,
   };
 }
 
@@ -134,7 +141,22 @@ async function setEnabled(
     target.id,
     input.enabled,
   );
-  if (!subscription) throw new AppError("NOT_FOUND");
+  if (!subscription) {
+    // The repository will not resume a recipient who used the one-click
+    // unsubscribe link, so null here is either "no subscription" or "that
+    // address opted out". The second one has something to say, and only
+    // re-entering the address through `save` can undo it.
+    const existing = await ReportSubscriptionRepository.getByTargetId(
+      target.id,
+    );
+    if (existing?.unsubscribedAt) {
+      throw new AppError(
+        "CONFLICT",
+        "This recipient unsubscribed from the report. Re-enter their address and save to ask again.",
+      );
+    }
+    throw new AppError("NOT_FOUND");
+  }
 
   const agent = await getAgentByName(env.WEEKLY_REPORT, target.id);
   if (input.enabled) {

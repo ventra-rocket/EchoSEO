@@ -88,14 +88,17 @@ function buildText(
       );
       for (const step of issue.fixSteps) lines.push(`    * ${step}`);
     }
+    // Order is fixed by the requirement: what is new (with its fix steps),
+    // then what got fixed, then what came back. Credit lands between the two
+    // demands on the reader's time rather than after both.
+    if (issues.state === "ok" && issues.fixedCount > 0) {
+      lines.push("", copy.fixedIntro(issues.fixedCount));
+    }
     if (regressed.length > 0) {
       lines.push("", copy.regressedTitle);
       for (const issue of regressed.slice(0, DETAILED_ISSUE_LIMIT)) {
         lines.push(`- ${issue.label} — ${issue.url}`);
       }
-    }
-    if (issues.state === "ok" && issues.fixedCount > 0) {
-      lines.push("", copy.fixedIntro(issues.fixedCount));
     }
     lines.push("");
   }
@@ -175,17 +178,9 @@ function buildIssuesHtml(data: WeeklyReportData, copy: Copy): string {
       issueBlock(copy.newIssuesTitle, null, newIssues, newIssues.length, copy),
     );
   }
-  if (regressed.length > 0) {
-    blocks.push(
-      issueBlock(
-        copy.regressedTitle,
-        copy.regressedIntro,
-        regressed,
-        regressed.length,
-        copy,
-      ),
-    );
-  }
+  // New first (that is what the fix steps are for), then resolved, then
+  // regressed — the order the phase requires, and the reason the whole block
+  // renders above the Search Console numbers.
   if (issues.state === "ok" && issues.fixedCount > 0) {
     const rows: EmailCell[][] = issues.fixedRules.map((rule) => [
       { text: rule.label },
@@ -205,6 +200,17 @@ function buildIssuesHtml(data: WeeklyReportData, copy: Copy): string {
         ]
           .filter(Boolean)
           .join("\n"),
+      ),
+    );
+  }
+  if (regressed.length > 0) {
+    blocks.push(
+      issueBlock(
+        copy.regressedTitle,
+        copy.regressedIntro,
+        regressed,
+        regressed.length,
+        copy,
       ),
     );
   }
