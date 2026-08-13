@@ -67,7 +67,7 @@ function page(
     imagesMissingAlt: 0,
     images: [],
     internalLinks,
-    externalLinks: [],
+    externalLinkCount: 0,
     hasStructuredData: false,
     hreflangTags: [],
     hasMixedContent: false,

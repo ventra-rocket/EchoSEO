@@ -22,10 +22,32 @@ export interface RobotsResult {
 }
 
 /**
- * Fetch and parse robots.txt for a given origin.
- * Returns a helper to check if URLs are allowed + discovered sitemap URLs.
+ * The serializable half of a robots.txt read.
+ *
+ * `RobotsResult` carries a closure, so it can never be the return value of a
+ * Workflow step. This can: a step caches the body, and `parseRobotsTxt` rebuilds
+ * the same matcher from it on every replay. Without that split the crawler has
+ * to fetch robots.txt outside any step, and a retry can pick up a different file
+ * and flip allow/deny decisions half way through a crawl.
  */
-export async function fetchRobotsTxt(origin: string): Promise<RobotsResult> {
+export interface RobotsTxtBody {
+  /** The robots.txt URL the rules are parsed against. */
+  robotsUrl: string;
+  /** Body as served, or null when there is no usable robots.txt. */
+  text: string | null;
+}
+
+/**
+ * Fetch robots.txt and return its body verbatim. The only side-effecting half,
+ * and the only half a Workflow step needs to wrap.
+ *
+ * An unreachable or non-OK robots.txt yields `text: null`, which
+ * `parseRobotsTxt` reads as "everything allowed" — the same behaviour this had
+ * before the split, now cacheable.
+ */
+export async function fetchRobotsTxtBody(
+  origin: string,
+): Promise<RobotsTxtBody> {
   const robotsUrl = `${origin}/robots.txt`;
   try {
     const response = await fetch(robotsUrl, {
@@ -34,27 +56,39 @@ export async function fetchRobotsTxt(origin: string): Promise<RobotsResult> {
     });
 
     if (!response.ok) {
-      // No robots.txt = everything allowed
-      return {
-        isAllowed: () => true,
-        sitemapUrls: [],
-      };
+      return { robotsUrl, text: null };
     }
-
-    const text = await response.text();
-    const robots = robotsParser(robotsUrl, text);
-
-    return {
-      isAllowed: (url: string) => robots.isAllowed(url) ?? true,
-      sitemapUrls: robots.getSitemaps(),
-    };
+    return { robotsUrl, text: await response.text() };
   } catch (error) {
     console.warn("Failed to fetch robots.txt:", error);
-    return {
-      isAllowed: () => true,
-      sitemapUrls: [],
-    };
+    return { robotsUrl, text: null };
   }
+}
+
+/**
+ * Build the allow matcher from an already-fetched body. Pure, so two calls on
+ * one body agree — which is what makes a replayed crawl reach the same allow
+ * decisions as the original.
+ */
+export function parseRobotsTxt(body: RobotsTxtBody): RobotsResult {
+  if (body.text === null) {
+    // No robots.txt = everything allowed.
+    return { isAllowed: () => true, sitemapUrls: [] };
+  }
+
+  const robots = robotsParser(body.robotsUrl, body.text);
+  return {
+    isAllowed: (url: string) => robots.isAllowed(url) ?? true,
+    sitemapUrls: robots.getSitemaps(),
+  };
+}
+
+/**
+ * Fetch and parse robots.txt in one call, for callers already inside a step (or
+ * outside a Workflow entirely) that just need the matcher.
+ */
+export async function fetchRobotsTxt(origin: string): Promise<RobotsResult> {
+  return parseRobotsTxt(await fetchRobotsTxtBody(origin));
 }
 
 /**

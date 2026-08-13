@@ -187,7 +187,7 @@ async function batchWriteResults(
         imagesMissingAlt: page.imagesMissingAlt,
         imagesJson: JSON.stringify(page.images),
         internalLinkCount: page.internalLinks.length,
-        externalLinkCount: page.externalLinks.length,
+        externalLinkCount: page.externalLinkCount,
         hasStructuredData: page.hasStructuredData,
         hreflangTagsJson: JSON.stringify(page.hreflangTags),
         isIndexable: page.isIndexable,
