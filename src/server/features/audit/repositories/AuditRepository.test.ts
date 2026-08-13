@@ -216,6 +216,10 @@ describe("AuditRepository snapshot + link graph", () => {
       pagesCrawled: 2,
       edgeCount: 3,
       lighthouseCount: 4,
+      pagesRedirected: 1,
+      pagesBroken: 5,
+      pagesBlocked: 7,
+      pagesNoindex: 2,
     };
 
     await AuditRepository.sealSnapshot(seal);
@@ -230,6 +234,13 @@ describe("AuditRepository snapshot + link graph", () => {
     expect(rows[0]?.pagesCrawled).toBe(2);
     expect(rows[0]?.edgeCount).toBe(3);
     expect(rows[0]?.lighthouseCount).toBe(4);
+    // The crawl summary the Phase 03 card reads. `pages_blocked` in particular
+    // cannot be recomputed later: those URLs were never fetched, so they are
+    // absent from `audit_pages` entirely.
+    expect(rows[0]?.pagesRedirected).toBe(1);
+    expect(rows[0]?.pagesBroken).toBe(5);
+    expect(rows[0]?.pagesBlocked).toBe(7);
+    expect(rows[0]?.pagesNoindex).toBe(2);
     expect(rows[0]?.sealedAt).toBeTruthy();
   });
 

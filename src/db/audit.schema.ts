@@ -379,6 +379,20 @@ export const auditSnapshots = sqliteTable(
     pagesCrawled: integer("pages_crawled").notNull(),
     edgeCount: integer("edge_count").notNull(),
     lighthouseCount: integer("lighthouse_count").notNull(),
+    // Crawl summary counters. NULLABLE on purpose: snapshots sealed before these
+    // existed have no such number, and a reader shown "0 broken pages" for a
+    // crawl that never counted them has been told something false. Null means
+    // "not measured", which the UI renders as "—".
+    //
+    // `pages_blocked` counts DISTINCT same-origin URLs robots.txt disallowed —
+    // pages that were never fetched, so they are not in `audit_pages` at all and
+    // cannot be recomputed from it later. `pages_noindex` is separate because the
+    // two have different owners and different fixes: one robots.txt file versus
+    // per-page markup.
+    pagesRedirected: integer("pages_redirected"),
+    pagesBroken: integer("pages_broken"),
+    pagesBlocked: integer("pages_blocked"),
+    pagesNoindex: integer("pages_noindex"),
     sealedAt: text("sealed_at")
       .notNull()
       .default(sql`(current_timestamp)`),

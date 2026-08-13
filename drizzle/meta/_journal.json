@@ -288,6 +288,13 @@
       "when": 1786555333371,
       "tag": "0040_numerous_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1786601251498,
+      "tag": "0041_useful_vector",
+      "breakpoints": true
     }
   ]
 }

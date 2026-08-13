@@ -278,18 +278,20 @@ async function sealSnapshot(input: {
   pagesCrawled: number;
   edgeCount: number;
   lighthouseCount: number;
+  pagesRedirected: number;
+  pagesBroken: number;
+  pagesBlocked: number;
+  pagesNoindex: number;
 }) {
+  // Spread, not a field-by-field copy: `input` is exactly the row minus the
+  // generated id and `sealed_at`, so restating each key would only create a
+  // place for the two lists to drift apart.
   await db
     .insert(auditSnapshots)
-    .values({
-      id: crypto.randomUUID(),
-      auditId: input.auditId,
-      projectId: input.projectId,
-      targetId: input.targetId,
-      pagesCrawled: input.pagesCrawled,
-      edgeCount: input.edgeCount,
-      lighthouseCount: input.lighthouseCount,
-    })
+    .values({ id: crypto.randomUUID(), ...input })
+    // A re-seal keeps the first row. The counters derive from the same cached
+    // crawl steps, so a replay writes identical numbers anyway — and the
+    // snapshot is meant to be immutable.
     .onConflictDoNothing({ target: auditSnapshots.auditId });
 }
 

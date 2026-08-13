@@ -1,4 +1,5 @@
 import type { AuditResultsData } from "@/client/features/audit/results/types";
+import { classifyPageStatus, type PageStatusClass } from "@/shared/http-status";
 
 export type PageRow = AuditResultsData["pages"][number];
 type PerformanceResultRow = AuditResultsData["lighthouse"][number];
@@ -17,7 +18,7 @@ type LighthouseFailureFields = {
 
 export type PagesFilters = {
   query: string;
-  status: "all" | "ok" | "redirect" | "error" | "missing";
+  status: "all" | PageStatusClass;
   minWords: string;
   maxWords: string;
   minResponseMs: string;
@@ -140,11 +141,9 @@ function matchesStatus(
   status: PagesFilters["status"],
 ) {
   if (status === "all") return true;
-  if (status === "missing") return statusCode == null;
-  if (statusCode == null) return false;
-  if (status === "ok") return statusCode >= 200 && statusCode < 300;
-  if (status === "redirect") return statusCode >= 300 && statusCode < 400;
-  return statusCode >= 400;
+  // Shared with the crawl summary's redirect/broken counters, so the card and
+  // this table can never disagree about what a redirect is.
+  return classifyPageStatus(statusCode) === status;
 }
 
 function matchesRange(value: number | null, minRaw: string, maxRaw: string) {

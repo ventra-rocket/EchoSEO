@@ -22,6 +22,7 @@ import type {
   StepPageResult,
 } from "@/server/lib/audit/types";
 import { captureServerEvent } from "@/server/lib/posthog";
+import { classifyPageStatus } from "@/shared/http-status";
 import { runCrawlPhase } from "@/server/workflows/siteAuditWorkflowCrawl";
 
 const LIGHTHOUSE_URL_BATCH_SIZE = 10;
@@ -82,7 +83,7 @@ export async function runAuditPhases(
   const robots = parseRobotsTxt(
     await step.do("fetch-robots", () => fetchRobotsTxtBody(origin)),
   );
-  const allPages = await runCrawlPhase(step, {
+  const crawl = await runCrawlPhase(step, {
     auditId,
     workflowInstanceId,
     origin,
@@ -91,6 +92,7 @@ export async function runAuditPhases(
     robots,
     sitemapUrls: discovery.sitemapUrls,
   });
+  const allPages = crawl.pages;
   const lighthouseResults = await runLighthousePhase(step, {
     auditId,
     workflowInstanceId,
@@ -109,6 +111,7 @@ export async function runAuditPhases(
     origin,
     config,
     allPages,
+    blockedUrlCount: crawl.blockedUrls.length,
     lighthouseResults,
     sitemapUrls: discovery.sitemapUrls,
   });
@@ -314,6 +317,41 @@ async function runLighthouseBatch(params: {
   });
 }
 
+/**
+ * The four numbers a crawl summary is judged on.
+ *
+ * `blocked` and `noindex` are kept apart on purpose. Ahrefs shows one "Blocked"
+ * box, but the two have different owners and different fixes: robots.txt is one
+ * file the site controls, while `noindex` is per-page markup. Collapsing them
+ * would tell a reader to go look in the wrong place. A card is free to show the
+ * sum.
+ */
+type CrawlSummary = {
+  redirected: number;
+  broken: number;
+  blocked: number;
+  noindex: number;
+};
+
+function summarizeCrawl(
+  allPages: StepPageResult[],
+  blockedUrlCount: number,
+): CrawlSummary {
+  let redirected = 0;
+  let broken = 0;
+  let noindex = 0;
+  for (const page of allPages) {
+    if (page.redirectUrl !== null) redirected += 1;
+    // Shared with the results table's status filter, so the summary and the
+    // table it links to can never disagree about what "broken" means.
+    if (classifyPageStatus(page.statusCode) === "error") broken += 1;
+    // Only a page that was actually read can be said to carry a noindex; a
+    // failed fetch has `isIndexable: false` as a placeholder, not a finding.
+    if (page.isHtml && !page.isIndexable) noindex += 1;
+  }
+  return { redirected, broken, blocked: blockedUrlCount, noindex };
+}
+
 async function finalizeAudit(args: {
   step: WorkflowStep;
   auditId: string;
@@ -323,6 +361,7 @@ async function finalizeAudit(args: {
   origin: string;
   config: AuditConfig;
   allPages: StepPageResult[];
+  blockedUrlCount: number;
   lighthouseResults: LighthouseResult[];
   sitemapUrls: string[];
 }) {
@@ -335,9 +374,11 @@ async function finalizeAudit(args: {
     origin,
     config,
     allPages,
+    blockedUrlCount,
     lighthouseResults,
     sitemapUrls,
   } = args;
+  const summary = summarizeCrawl(allPages, blockedUrlCount);
 
   await step.do("finalize", async () => {
     await AuditRepository.updateAuditProgress(auditId, workflowInstanceId, {
@@ -362,6 +403,7 @@ async function finalizeAudit(args: {
       pagesCrawled: allPages.length,
       edgeCount: linkEdges.length,
       lighthouseCount: lighthouseResults.length,
+      summary,
     });
     await captureServerEvent({
       distinctId: billingCustomer.userId,
@@ -391,6 +433,7 @@ async function sealAuditSnapshot(input: {
   pagesCrawled: number;
   edgeCount: number;
   lighthouseCount: number;
+  summary: CrawlSummary;
 }) {
   const target = await AuditTargetRepository.getByProjectAndOrigin(
     input.projectId,
@@ -411,5 +454,9 @@ async function sealAuditSnapshot(input: {
     pagesCrawled: input.pagesCrawled,
     edgeCount: input.edgeCount,
     lighthouseCount: input.lighthouseCount,
+    pagesRedirected: input.summary.redirected,
+    pagesBroken: input.summary.broken,
+    pagesBlocked: input.summary.blocked,
+    pagesNoindex: input.summary.noindex,
   });
 }

@@ -1,4 +1,4 @@
-import type { WorkflowStep } from "cloudflare:workers";
+import type { WorkflowSleepDuration } from "cloudflare:workers";
 import type { RobotsResult } from "@/server/lib/audit/discovery";
 import type { StepPageResult } from "@/server/lib/audit/types";
 import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
@@ -8,19 +8,31 @@ import { crawlPage } from "@/server/workflows/site-audit-workflow-helpers";
 
 const CRAWL_CONCURRENCY = 25;
 
-function shouldQueueCrawlLink(
+/**
+ * The slice of `WorkflowStep` this phase uses — lets tests pass a plain fake,
+ * the same way `deep-seo-check-workflow.ts` does.
+ */
+interface CrawlStep {
+  do<T>(name: string, callback: () => Promise<T> | T): Promise<T>;
+  sleep(name: string, duration: WorkflowSleepDuration): Promise<void>;
+}
+
+/**
+ * Why a candidate link was not queued. `blocked` is the one worth counting: it
+ * is a statement about the site ("this is closed to crawlers"), where the others
+ * are statements about the crawl's own bookkeeping.
+ */
+function classifyCrawlLink(
   link: string,
   origin: string,
   robots: RobotsResult,
   visited: Set<string>,
   queued: Set<string>,
-): boolean {
-  return (
-    isSameOrigin(link, origin) &&
-    robots.isAllowed(link) &&
-    !visited.has(link) &&
-    !queued.has(link)
-  );
+): "queue" | "blocked" | "skip" {
+  if (!isSameOrigin(link, origin)) return "skip";
+  if (!robots.isAllowed(link)) return "blocked";
+  if (visited.has(link) || queued.has(link)) return "skip";
+  return "queue";
 }
 
 type CrawlPhaseParams = {
@@ -33,10 +45,22 @@ type CrawlPhaseParams = {
   sitemapUrls: string[];
 };
 
+type CrawlPhaseResult = {
+  pages: StepPageResult[];
+  /**
+   * Distinct same-origin URLs robots.txt refused, deduped across every place
+   * they surfaced — one blocked page linked from forty others is one blocked
+   * page, not forty. Rebuilt deterministically on replay because the matcher is
+   * derived from a step-cached body (see `fetch-robots` in the phases file); if
+   * robots were re-fetched mid-run this number would be meaningless.
+   */
+  blockedUrls: string[];
+};
+
 export async function runCrawlPhase(
-  step: WorkflowStep,
+  step: CrawlStep,
   params: CrawlPhaseParams,
-): Promise<StepPageResult[]> {
+): Promise<CrawlPhaseResult> {
   const {
     auditId,
     workflowInstanceId,
@@ -50,6 +74,7 @@ export async function runCrawlPhase(
   const queue: string[] = [];
   const queued = new Set<string>();
   const allPages: StepPageResult[] = [];
+  const blocked = new Set<string>();
 
   seedCrawlQueue({
     startUrl,
@@ -59,17 +84,19 @@ export async function runCrawlPhase(
     visited,
     queued,
     queue,
+    blocked,
   });
 
   let crawlBatchIndex = 0;
   while (queue.length > 0 && allPages.length < maxPages) {
-    const urlsToCrawl = selectNextCrawlBatch(
+    const urlsToCrawl = selectNextCrawlBatch({
       queue,
       queued,
       visited,
       robots,
-      maxPages - allPages.length,
-    );
+      remaining: maxPages - allPages.length,
+      blocked,
+    });
     if (urlsToCrawl.length === 0) continue;
 
     crawlBatchIndex += 1;
@@ -88,6 +115,7 @@ export async function runCrawlPhase(
       visited,
       origin,
       robots,
+      blocked,
     });
     await persistCrawlProgress({
       step,
@@ -119,7 +147,7 @@ export async function runCrawlPhase(
     }
   }
 
-  return allPages;
+  return { pages: allPages, blockedUrls: [...blocked] };
 }
 
 function seedCrawlQueue({
@@ -130,6 +158,7 @@ function seedCrawlQueue({
   visited,
   queued,
   queue,
+  blocked,
 }: {
   startUrl: string;
   origin: string;
@@ -138,34 +167,51 @@ function seedCrawlQueue({
   visited: Set<string>;
   queued: Set<string>;
   queue: string[];
+  blocked: Set<string>;
 }) {
   const normalizedStart = normalizeUrl(startUrl) ?? startUrl;
-  if (
-    robots.isAllowed(normalizedStart) &&
-    isSameOrigin(normalizedStart, origin)
-  ) {
-    queue.push(normalizedStart);
-    queued.add(normalizedStart);
+  if (isSameOrigin(normalizedStart, origin)) {
+    if (robots.isAllowed(normalizedStart)) {
+      queue.push(normalizedStart);
+      queued.add(normalizedStart);
+    } else {
+      // The site's own start URL being disallowed is the most consequential
+      // blocked page there is, so it counts like any other.
+      blocked.add(normalizedStart);
+    }
   }
 
   for (const sitemapUrl of sitemapUrls) {
     const normalized = normalizeUrl(sitemapUrl);
     if (!normalized) continue;
-    if (!shouldQueueCrawlLink(normalized, origin, robots, visited, queued)) {
+    const verdict = classifyCrawlLink(
+      normalized,
+      origin,
+      robots,
+      visited,
+      queued,
+    );
+    if (verdict === "blocked") {
+      // A URL the site itself advertises in its sitemap and then disallows in
+      // robots.txt is a contradiction worth surfacing, not a silent skip.
+      blocked.add(normalized);
       continue;
     }
+    if (verdict !== "queue") continue;
     queue.push(normalized);
     queued.add(normalized);
   }
 }
 
-function selectNextCrawlBatch(
-  queue: string[],
-  queued: Set<string>,
-  visited: Set<string>,
-  robots: RobotsResult,
-  remaining: number,
-) {
+function selectNextCrawlBatch(params: {
+  queue: string[];
+  queued: Set<string>;
+  visited: Set<string>;
+  robots: RobotsResult;
+  remaining: number;
+  blocked: Set<string>;
+}) {
+  const { queue, queued, visited, robots, remaining, blocked } = params;
   const batchSize = Math.min(CRAWL_CONCURRENCY, remaining);
   const urlsToCrawl: string[] = [];
 
@@ -173,7 +219,13 @@ function selectNextCrawlBatch(
     const url = queue.shift()!;
     queued.delete(url);
     if (visited.has(url)) continue;
-    if (!robots.isAllowed(url)) continue;
+    // Re-checked here as well as at queue time: a URL can be queued before its
+    // robots verdict is known in a replay-rebuilt queue, and this is the last
+    // gate before a fetch.
+    if (!robots.isAllowed(url)) {
+      blocked.add(url);
+      continue;
+    }
     visited.add(url);
     urlsToCrawl.push(url);
   }
@@ -182,7 +234,7 @@ function selectNextCrawlBatch(
 }
 
 async function runCrawlBatch(
-  step: WorkflowStep,
+  step: CrawlStep,
   crawlBatchIndex: number,
   urlsToCrawl: string[],
   origin: string,
@@ -207,12 +259,21 @@ function enqueueDiscoveredLinks(params: {
   visited: Set<string>;
   origin: string;
   robots: RobotsResult;
+  blocked: Set<string>;
 }) {
-  const { crawledBatch, queue, queued, visited, origin, robots } = params;
+  const { crawledBatch, queue, queued, visited, origin, robots, blocked } =
+    params;
   for (const pageResult of crawledBatch) {
-    for (const link of pageResult.internalLinks.filter((candidate) =>
-      shouldQueueCrawlLink(candidate, origin, robots, visited, queued),
-    )) {
+    for (const link of pageResult.internalLinks) {
+      const verdict = classifyCrawlLink(link, origin, robots, visited, queued);
+      if (verdict === "blocked") {
+        // A Set, so a page linked from forty others counts once. The old
+        // `shouldQueueCrawlLink` collapsed this case into "not queued" and the
+        // number was unrecoverable.
+        blocked.add(link);
+        continue;
+      }
+      if (verdict !== "queue") continue;
       queue.push(link);
       queued.add(link);
     }
@@ -220,7 +281,7 @@ function enqueueDiscoveredLinks(params: {
 }
 
 async function persistCrawlProgress(params: {
-  step: WorkflowStep;
+  step: CrawlStep;
   crawlBatchIndex: number;
   auditId: string;
   workflowInstanceId: string;
