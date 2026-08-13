@@ -9,7 +9,7 @@
  * Styling stays inline and minimal: `<style>` blocks are stripped by most
  * clients, and every extra flourish is one more thing to score against.
  */
-import { escapeHtml } from "../output-encode";
+import { escapeHtml } from "@/server/services/seo-check/output-encode";
 
 const BODY_STYLE = [
   "margin:0",

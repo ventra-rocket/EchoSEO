@@ -23,7 +23,7 @@ import { checkIpRateLimit } from "./rate-limit-do";
 import { createLeadWithReport } from "./leads-repository";
 import { recordCheckMetric } from "./metrics";
 import { isDisposableEmail, normalizeEmail } from "./disposable-email";
-import { getEmailSender } from "./email/sender";
+import { getEmailSender } from "@/server/email/sender";
 import { sendDeepCheckConfirmation } from "./email/deep-check-confirmation";
 import { isAuthInterstitialUrl } from "./auth-interstitial";
 import { safeFetch } from "./safe-fetch";

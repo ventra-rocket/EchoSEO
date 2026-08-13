@@ -15,8 +15,8 @@ import {
   getFreeCheckPublicOrigin,
   getRetentionWindows,
 } from "./deep-check-config";
-import { getEmailSender, type EmailSender } from "./email/sender";
-import { EmailSendError } from "./email/email-send-error";
+import { getEmailSender, type EmailSender } from "@/server/email/sender";
+import { EmailSendError } from "@/server/email/email-send-error";
 import { sendDeepReportReady } from "./email/deep-report-ready";
 import { resolveCanonicalRoot } from "./report-view";
 import {

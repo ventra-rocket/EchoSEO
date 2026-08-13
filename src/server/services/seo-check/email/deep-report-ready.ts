@@ -18,8 +18,8 @@
  * reaches the HTML body.
  */
 import { escapeHtml } from "../output-encode";
-import { emailHtmlDocument } from "./html-layout";
-import type { EmailMessage, EmailSender } from "./sender";
+import { emailHtmlDocument } from "@/server/email/html-layout";
+import type { EmailMessage, EmailSender } from "@/server/email/sender";
 import type { Locale } from "@/server/lib/seo-rules";
 
 interface DeepReportReadyInput {

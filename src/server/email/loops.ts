@@ -3,27 +3,14 @@ import {
   getContactNameParts,
   updateLoopsContact,
 } from "@/server/email/loops-client";
-import { sendViaResend } from "@/server/services/seo-check/email/resend-client";
+import { sendViaResend } from "./resend-client";
+import { escapeHtml } from "@/server/services/seo-check/output-encode";
 
 function getOptionalEnv(name: string) {
   const value: unknown = Reflect.get(env, name);
   const trimmed = typeof value === "string" ? value.trim() : "";
 
   return trimmed || null;
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => {
-    const entities: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    };
-
-    return entities[character];
-  });
 }
 
 function getRequiredEnv(name: string) {
