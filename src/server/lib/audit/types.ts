@@ -106,8 +106,23 @@ export interface StepPageResult {
   imagesTotal: number;
   imagesMissingAlt: number;
   images: Array<{ src: string | null; alt: string | null }>;
+  /**
+   * Same-origin links as written, kept as an array because two things need the
+   * URLs: the crawl frontier, and the persisted link graph.
+   */
   internalLinks: string[];
-  externalLinks: string[];
+  /**
+   * Off-origin links as a COUNT, not an array.
+   *
+   * Nothing has ever read the URLs — `AuditRepository` stores
+   * `external_link_count`, no rule consults them, and `snapshot-signals.ts`
+   * rebuilds signals with an empty array. Carrying them made every crawl-batch
+   * step return an unbounded second link list, and that return has a hard 1 MiB
+   * ceiling in Workflows: a nav-and-footer-heavy page can hold hundreds of
+   * outbound links, times 25 pages per batch. Counting at the source loses
+   * nothing and removes one of the two unbounded fields from the payload.
+   */
+  externalLinkCount: number;
   hasStructuredData: boolean;
   hreflangTags: string[];
   hasMixedContent: boolean;

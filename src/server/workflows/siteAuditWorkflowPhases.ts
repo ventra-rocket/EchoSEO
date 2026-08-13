@@ -1,6 +1,10 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import { discoverUrls, fetchRobotsTxt } from "@/server/lib/audit/discovery";
+import {
+  discoverUrls,
+  fetchRobotsTxtBody,
+  parseRobotsTxt,
+} from "@/server/lib/audit/discovery";
 import {
   fetchAndStoreLighthouseResult,
   selectLighthouseSample,
@@ -69,7 +73,15 @@ export async function runAuditPhases(
     origin,
     maxPages,
   );
-  const robots = await fetchRobotsTxt(origin);
+  // Read exactly once per audit and never re-read on replay. A Workflow retry
+  // that re-fetched robots.txt could get a different file and flip allow/deny
+  // half way through a crawl, which would silently change which pages the audit
+  // is even about — and make a "blocked by robots" counter a lie. Only the BODY
+  // goes through the step, because `RobotsResult` carries a matcher closure that
+  // a step return cannot serialize; the matcher is rebuilt from the cached text.
+  const robots = parseRobotsTxt(
+    await step.do("fetch-robots", () => fetchRobotsTxtBody(origin)),
+  );
   const allPages = await runCrawlPhase(step, {
     auditId,
     workflowInstanceId,
