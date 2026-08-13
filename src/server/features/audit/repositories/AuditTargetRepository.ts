@@ -5,7 +5,20 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { auditTargets } from "@/db/schema";
 
-type AuditTarget = typeof auditTargets.$inferSelect;
+export type AuditTarget = typeof auditTargets.$inferSelect;
+
+/**
+ * Load a target by its own id. Scheduled work (weekly reports) starts from a
+ * stored target id rather than a (project, origin) pair, and must never create
+ * one: a subscription pointing at a deleted target is a subscription to stop,
+ * not a target to resurrect.
+ */
+async function getById(targetId: string): Promise<AuditTarget | null> {
+  const row = await db.query.auditTargets.findFirst({
+    where: eq(auditTargets.id, targetId),
+  });
+  return row ?? null;
+}
 
 async function getByProjectAndOrigin(
   projectId: string,
@@ -69,6 +82,7 @@ async function setIndexNowKey(targetId: string, key: string): Promise<void> {
 }
 
 export const AuditTargetRepository = {
+  getById,
   getByProjectAndOrigin,
   getOrCreateTarget,
   setIndexNowKey,

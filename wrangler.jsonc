@@ -32,6 +32,12 @@
     // handlers read their own origin off the request; the Workflow and the email
     // cron have no request, so this is the only way they can know.
     "FREE_CHECK_PUBLIC_ORIGIN": "https://app.echoseo.ventrarocket.vn",
+    // Same origin, named for what it is. The periodic-report agent runs from a
+    // Durable Object alarm with no request, and its mail is mostly links (the
+    // audit view, the unsubscribe endpoint), so it refuses to send at all when
+    // neither this nor FREE_CHECK_PUBLIC_ORIGIN is set. Declared separately so
+    // a self-hoster who never enables the free checker still gets reports.
+    "APP_PUBLIC_ORIGIN": "https://app.echoseo.ventrarocket.vn",
     // Verified Resend sender (mail.echoseo.ventrarocket.vn, a subdomain so a
     // reputation problem here never reaches the apex). Paired with the
     // RESEND_API_KEY secret — without both, the checker logs mail instead of
@@ -81,10 +87,13 @@
       "class_name": "AuditExportWorkflow",
     },
   ],
-  // Durable Objects: onboarding chat (Agents SDK AIChatAgent, one instance per
-  // project) and the free SEO checker's per-IP rate limiter (one instance per
-  // IP, see src/server/services/seo-check/rate-limit-do.ts). Both are
-  // SQLite-backed, so their classes must be declared in `migrations` below.
+  // Durable Objects: onboarding chat and the assisted workspace (Agents SDK
+  // AIChatAgent), the per-target periodic-report scheduler (Agents SDK Agent,
+  // one instance per audit_targets.id — it owns its own weekly alarm instead of
+  // adding a fourth global cron, which the scheduled() handler would misroute),
+  // and the free SEO checker's per-IP rate limiter (one instance per IP, see
+  // src/server/services/seo-check/rate-limit-do.ts). All are SQLite-backed, so
+  // their classes must be declared in `migrations` below.
   "durable_objects": {
     "bindings": [
       {
@@ -94,6 +103,10 @@
       {
         "name": "ASSISTANT_WORKSPACE",
         "class_name": "AssistantWorkspaceAgent",
+      },
+      {
+        "name": "WEEKLY_REPORT",
+        "class_name": "WeeklyReportAgent",
       },
       {
         "name": "RATE_LIMIT_DO",
@@ -113,6 +126,10 @@
     {
       "tag": "v3",
       "new_sqlite_classes": ["AssistantWorkspaceAgent"],
+    },
+    {
+      "tag": "v4",
+      "new_sqlite_classes": ["WeeklyReportAgent"],
     },
   ],
   "triggers": {

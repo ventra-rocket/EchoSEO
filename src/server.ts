@@ -70,6 +70,11 @@ import {
   sweepReportReadyEmails,
 } from "@/server/services/seo-check/report-ready-email";
 import { parseAssistantWorkspaceName } from "@/shared/assistant-workspace";
+import {
+  REPORT_UNSUBSCRIBE_PATH,
+  WEEKLY_REPORT_AGENT_ROUTE_PREFIX,
+} from "@/shared/reports";
+import { handleReportUnsubscribeRequest } from "@/server/features/reports/unsubscribe-route";
 
 const appFetch = createStartHandler(defaultStreamHandler);
 const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
@@ -132,13 +137,23 @@ async function authorizeAssistantWorkspace(
   return project ? undefined : new Response("Forbidden", { status: 403 });
 }
 
-// Route /agents/* to the onboarding chat DO. Auth happens here (both the WS
-// upgrade and any HTTP message-history fetch), keeping it off the OAuth wrapper
-// and TanStack route guard below.
+// Route /agents/* to the chat DOs. Auth happens here (both the WS upgrade and
+// any HTTP message-history fetch), keeping it off the OAuth wrapper and
+// TanStack route guard below.
 async function routeOnboardingChatAgent(
   request: Request,
   env: Env,
 ): Promise<Response> {
+  // The periodic-report agent has no client surface: it is driven by its own
+  // alarms and by server-side RPC. `routeAgentRequest` would happily expose it
+  // under this prefix, where it would fall into the onboarding authorizer and
+  // be checked as if its instance name were a project id. Refuse it outright
+  // instead of relying on that mismatch to deny by accident.
+  if (
+    new URL(request.url).pathname.startsWith(WEEKLY_REPORT_AGENT_ROUTE_PREFIX)
+  ) {
+    return new Response("Not found", { status: 404 });
+  }
   const response = await routeAgentRequest(request, env, {
     onBeforeConnect: (req, lobby) =>
       new URL(req.url).pathname.startsWith("/agents/assistant-workspace/")
@@ -265,6 +280,15 @@ function fetch(
     return handleConfirmDeepCheckRequest(publicRequest);
   }
 
+  // Public in every AUTH_MODE, for the same reason as the confirm route above:
+  // the recipient of a periodic report need not be a signed-in member, and an
+  // RFC 8058 one-click POST arrives from the mail provider with no session at
+  // all. Placed before the hosted-mode OAuth wrapper, which would otherwise
+  // answer it with a redirect the provider reads as a refused opt-out.
+  if (pathname === REPORT_UNSUBSCRIBE_PATH) {
+    return handleReportUnsubscribeRequest(publicRequest);
+  }
+
   if (pathname === FREE_SEO_CHECK_REPORT_PATH) {
     return handleDeepReportRequest(publicRequest);
   }
@@ -324,6 +348,9 @@ export { AuditExportWorkflow } from "./server/workflows/AuditExportWorkflow";
 // Durable Object class for the onboarding strategy chat (Agents SDK).
 export { OnboardingChatAgent } from "./server/features/onboarding/OnboardingChatAgent";
 export { AssistantWorkspaceAgent } from "./server/features/assistant-workspace/AssistantWorkspaceAgent";
+// Durable Object class for the per-target periodic report scheduler; it holds
+// the weekly alarm, so it must be registered even though nothing routes to it.
+export { WeeklyReportAgent } from "./server/features/reports/WeeklyReportAgent";
 // Durable Object class for the free SEO checker's per-IP rate limiter.
 export { IpRateLimiterDO } from "./server/services/seo-check/rate-limit-do";
 

@@ -10,6 +10,7 @@ import { buildLinkEdges } from "@/server/lib/audit/link-graph";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
 import { AuditIssueService } from "@/server/features/audit/services/AuditIssueService";
+import { notifyReportAgentOfCompletedAudit } from "@/server/features/reports/audit-completion-hook";
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import type {
   AuditConfig,
@@ -101,6 +102,13 @@ export async function runAuditPhases(
   });
 
   await materializeIssues(step, auditId, projectId, billingCustomer);
+
+  // Runs after materialization so the agent compares issue sets that exist.
+  // Its own step: the notification is best-effort inside, but wrapping it keeps
+  // a replay of the phases from re-alerting on a crawl already announced.
+  await step.do("notify-report-subscribers", async () => {
+    await notifyReportAgentOfCompletedAudit(auditId);
+  });
 }
 
 /**
