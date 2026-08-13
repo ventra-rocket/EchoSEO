@@ -54,15 +54,76 @@ export interface IssueDelta {
   resolvedOnlyRules: ResolvedOnlyRule[];
 }
 
+/**
+ * The three buckets as lists rather than counts, for callers that must name the
+ * occurrences (the weekly report email lists them; `computeIssueDelta` only
+ * needs their cardinality).
+ */
+interface OccurrenceDiff {
+  added: OccurrenceKey[];
+  resolved: OccurrenceKey[];
+  persisting: OccurrenceKey[];
+}
+
 /** Same delimiter as the materialize dedupe, so the key semantics never drift. */
 function occurrenceKey(occurrence: OccurrenceKey): string {
   return `${occurrence.ruleId}\n${occurrence.url}`;
+}
+
+/**
+ * Set difference on the same `${ruleId}\n${url}` identity `computeIssueDelta`
+ * counts with, so a caller that lists occurrences and a caller that counts them
+ * can never disagree about what "new" means.
+ *
+ * `added`/`persisting` come back in `current` order and `resolved` in
+ * `baseline` order, so a presentation layer that re-sorts still starts from a
+ * run-to-run stable list. Duplicate keys within one side collapse to their
+ * first occurrence: the buckets are sets, and the DB's unique index on
+ * (auditId, ruleId, url) means a duplicate can only be a caller's own mistake.
+ */
+export function diffOccurrences(
+  current: OccurrenceKey[],
+  baseline: OccurrenceKey[],
+): OccurrenceDiff {
+  const currentKeys = new Set(current.map(occurrenceKey));
+  const baselineKeys = new Set(baseline.map(occurrenceKey));
+
+  const added: OccurrenceKey[] = [];
+  const persisting: OccurrenceKey[] = [];
+  const resolved: OccurrenceKey[] = [];
+
+  const seen = new Set<string>();
+  for (const occurrence of current) {
+    const key = occurrenceKey(occurrence);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (baselineKeys.has(key)) persisting.push(occurrence);
+    else added.push(occurrence);
+  }
+
+  seen.clear();
+  for (const occurrence of baseline) {
+    const key = occurrenceKey(occurrence);
+    if (currentKeys.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    resolved.push(occurrence);
+  }
+
+  return { added, resolved, persisting };
 }
 
 function emptyDelta(): RuleDelta {
   return { added: 0, resolved: 0, persisting: 0 };
 }
 
+/**
+ * Counts directly instead of measuring `diffOccurrences`' lists. Both share
+ * `occurrenceKey`, which is the only part that must never drift; materializing
+ * three arrays of occurrences on a tens-of-thousands-row crawl just to read
+ * their lengths would be pure waste, and `byRule`'s key insertion order (and
+ * its per-array counting) is observable in the comparison UI, so the traversal
+ * over `current` is kept as-is.
+ */
 export function computeIssueDelta(
   current: OccurrenceKey[],
   baseline: OccurrenceKey[],

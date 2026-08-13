@@ -15,6 +15,7 @@ import { ResultsView } from "@/client/features/audit/results/ResultsView";
 import { RecrawlVerifyButton } from "@/client/features/audit/verification/RecrawlVerifyButton";
 import { VerificationOutcomeBanner } from "@/client/features/audit/verification/VerificationOutcomeBanner";
 import { IndexNowCard } from "@/client/features/audit/indexnow/IndexNowCard";
+import { PeriodicReportCard } from "@/client/features/audit/reports/PeriodicReportCard";
 import { GoogleIndexStatusCard } from "@/client/features/audit/indexing/GoogleIndexStatusCard";
 import {
   buildCrawlEta,
@@ -238,6 +239,9 @@ function AuditDetail({
             />
             {accessQuery.data?.canManage && (
               <IndexNowCard projectId={projectId} auditId={auditId} />
+            )}
+            {accessQuery.data?.canManage && (
+              <PeriodicReportCard projectId={projectId} auditId={auditId} />
             )}
           </>
         )}

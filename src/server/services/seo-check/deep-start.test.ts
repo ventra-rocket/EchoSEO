@@ -83,7 +83,9 @@ vi.mock("@/server/lib/posthog", () => ({
 vi.mock("./leads-repository", () => ({
   createLeadWithReport: createLeadWithReportMock,
 }));
-vi.mock("./email/sender", () => ({ getEmailSender: getEmailSenderMock }));
+vi.mock("@/server/email/sender", () => ({
+  getEmailSender: getEmailSenderMock,
+}));
 vi.mock("./email/deep-check-confirmation", () => ({
   sendDeepCheckConfirmation: sendDeepCheckConfirmationMock,
 }));

@@ -11,7 +11,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { sendDeepCheckConfirmation } from "./deep-check-confirmation";
 import { sendDeepReportReady } from "./deep-report-ready";
-import type { EmailMessage } from "./sender";
+import type { EmailMessage } from "@/server/email/sender";
 
 async function capture(
   send: (sender: { send: (m: EmailMessage) => Promise<void> }) => Promise<void>,

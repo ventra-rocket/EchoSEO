@@ -101,7 +101,7 @@ vi.mock("./deep-check-config", () => ({
 vi.mock("./deep-check-quota", () => ({
   checkDeepCheckQuotas: () => Promise.resolve({ allowed: true }),
 }));
-vi.mock("./email/sender", () => ({
+vi.mock("@/server/email/sender", () => ({
   getEmailSender: () => Promise.resolve({}),
 }));
 vi.mock("./email/deep-check-confirmation", () => ({

@@ -1,10 +1,12 @@
 /**
  * Minimal Resend transport: one POST, no SDK.
  *
- * Follows the shape of `src/server/email/loops-client.ts` — bearer auth, log and
- * throw on a non-2xx — and adds the two things this funnel needs: a verdict on
- * whether a failure is worth retrying, and a guarantee that nothing it logs can
- * carry a visitor's address.
+ * Shared by every Resend-backed template in the app — the free checker's
+ * transactional mail, hosted-auth mail, and the periodic reports. Follows the
+ * shape of its sibling `loops-client.ts` — bearer auth, log and throw on a
+ * non-2xx — and adds the two things mail here needs: a verdict on whether a
+ * failure is worth retrying, and a guarantee that nothing it logs can carry a
+ * recipient's address.
  */
 import { EmailSendError } from "./email-send-error";
 
@@ -56,20 +58,81 @@ function extractMailboxAddress(from: string): string {
 }
 
 /**
- * Gmail's bulk-sender rules — and spam filters generally — expect every
- * automated message to carry a way to opt out; the missing header is itself a
- * negative signal, even for double opt-in transactional mail like this one.
+ * The `List-Unsubscribe` (and, when possible, `List-Unsubscribe-Post`) pair for
+ * one message.
  *
- * There is no unsubscribe route or token anywhere in this codebase (checked
- * leads-repository.ts, the routes tree, and every `unsubscribe` reference —
- * there are none) and building one is out of scope here. So this is the
- * `mailto:` form, not the URL + one-click form: it reuses the funnel's own
- * verified sending mailbox as the reply target, which needs no new
- * infrastructure. `List-Unsubscribe-Post: List-Unsubscribe=One-Click` only
- * applies to the URL form (RFC 8058), so it is deliberately not sent.
+ * Gmail's and Yahoo's bulk-sender rules — and spam filters generally — expect
+ * every automated message to carry a way to opt out; the missing header is
+ * itself a negative signal, even for double opt-in transactional mail.
+ *
+ * Which form is correct depends on what the message *is*, so the caller
+ * decides by supplying `unsubscribeUrl` or not:
+ *
+ * - **Periodic/bulk mail** (the weekly report) passes a URL. Bulk senders are
+ *   required to support one-click, and RFC 8058 defines one-click as a POST to
+ *   a URL — so `List-Unsubscribe-Post` is sent alongside it. Gmail will not
+ *   render its own unsubscribe affordance without the pair.
+ * - **Transactional mail** (the free checker's confirmation and report-ready
+ *   messages) passes nothing and gets the `mailto:` form, reusing the funnel's
+ *   own verified sending mailbox as the opt-out target. That form predates any
+ *   unsubscribe route in this codebase and needs no infrastructure;
+ *   `List-Unsubscribe-Post` is deliberately omitted because RFC 8058 one-click
+ *   applies to the URL form only, and claiming it over `mailto:` is a protocol
+ *   error receivers do notice.
  */
-function listUnsubscribeHeader(from: string): string {
-  return `<mailto:${extractMailboxAddress(from)}?subject=unsubscribe>`;
+function listUnsubscribeHeaders(
+  from: string,
+  unsubscribeUrl: string | undefined,
+): Record<string, string> {
+  if (unsubscribeUrl === undefined) {
+    return {
+      "List-Unsubscribe": `<mailto:${extractMailboxAddress(from)}?subject=unsubscribe>`,
+    };
+  }
+
+  assertOneClickUnsubscribeUrl(unsubscribeUrl);
+
+  return {
+    "List-Unsubscribe": `<${unsubscribeUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
+/**
+ * Rejects an unsubscribe URL that would poison the header, before anything is
+ * sent.
+ *
+ * Refusing to send is the lesser harm here. A malformed or non-http header
+ * value does not bounce — the message is accepted, receivers quietly downgrade
+ * or spam-file it, and the failure only surfaces weeks later as a reputation
+ * problem nobody can trace. A thrown error surfaces on the first send instead.
+ *
+ * `http:` is allowed for localhost only: `pnpm dev` has no TLS, and forcing
+ * https there would mean the one code path that builds these headers is never
+ * exercised outside production. Anywhere else, plain http in a header mail
+ * clients POST to is a downgrade the recipient never agreed to.
+ *
+ * Not deploymentWide: the URL is built per subscription, so a bad one says
+ * nothing about the next recipient's, and stopping the batch would withhold
+ * everyone else's report over one row.
+ */
+function assertOneClickUnsubscribeUrl(unsubscribeUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(unsubscribeUrl);
+  } catch {
+    throw new EmailSendError("Unsubscribe URL is not an absolute URL", false);
+  }
+
+  const isLocalhost =
+    parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  if (parsed.protocol === "https:") return;
+  if (parsed.protocol === "http:" && isLocalhost) return;
+
+  throw new EmailSendError(
+    `Unsubscribe URL must be https (got ${parsed.protocol})`,
+    false,
+  );
 }
 
 interface ResendSendInput {
@@ -94,11 +157,31 @@ interface ResendSendInput {
    * catch-all `headers` object below.
    */
   replyTo?: string;
+  /**
+   * Absolute https URL that unsubscribes the recipient in one request, for
+   * periodic/bulk mail. Absent for transactional mail, which keeps the
+   * `mailto:` form — see `listUnsubscribeHeaders`.
+   */
+  unsubscribeUrl?: string;
 }
 
 export async function sendViaResend(input: ResendSendInput): Promise<void> {
-  const { apiKey, from, to, subject, text, html, idempotencyKey, replyTo } =
-    input;
+  const {
+    apiKey,
+    from,
+    to,
+    subject,
+    text,
+    html,
+    idempotencyKey,
+    replyTo,
+    unsubscribeUrl,
+  } = input;
+
+  // Validated before the request is built, not after: a rejected URL must cost
+  // nothing and, in particular, must not burn `idempotencyKey` on a send that
+  // Resend would then replay for 24h.
+  const messageHeaders = listUnsubscribeHeaders(from, unsubscribeUrl);
 
   // Idempotency-Key is a transport header — it tells Resend's API how to
   // treat *this HTTP request*, so it belongs in `fetch`'s `headers`. List-
@@ -122,9 +205,7 @@ export async function sendViaResend(input: ResendSendInput): Promise<void> {
       // Dropped by JSON.stringify when undefined, so an unconfigured
       // deployment sends with no Reply-To at all rather than an empty one.
       reply_to: replyTo,
-      headers: {
-        "List-Unsubscribe": listUnsubscribeHeader(from),
-      },
+      headers: messageHeaders,
     }),
   });
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReportRow } from "./seo-reports-repository";
-import type { EmailMessage } from "./email/sender";
-import { EmailSendError } from "./email/email-send-error";
+import type { EmailMessage } from "@/server/email/sender";
+import { EmailSendError } from "@/server/email/email-send-error";
 
 const {
   getFreeCheckPublicOriginMock,
@@ -29,7 +29,9 @@ vi.mock("./deep-check-config", () => ({
   getFreeCheckPublicOrigin: getFreeCheckPublicOriginMock,
   getRetentionWindows: getRetentionWindowsMock,
 }));
-vi.mock("./email/sender", () => ({ getEmailSender: getEmailSenderMock }));
+vi.mock("@/server/email/sender", () => ({
+  getEmailSender: getEmailSenderMock,
+}));
 vi.mock("./report-view", () => ({
   resolveCanonicalRoot: resolveCanonicalRootMock,
 }));
