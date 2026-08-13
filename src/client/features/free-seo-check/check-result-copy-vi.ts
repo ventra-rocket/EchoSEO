@@ -232,4 +232,18 @@ export const CHECK_RESULT_COPY_VI: CheckResultCopy = {
       "tế từ người dùng.",
     capturedAt: (date) => `Đo ngày ${date}`,
   },
+  /* ——— provenance block — appended; keep at the end. ——— */
+  provenance: {
+    ownCrawler: "Crawler EchoSEO · tải trực tiếp trang này",
+    // "mobile throttle" giữ nguyên — thuật ngữ PSI, khớp bản EN.
+    psiMobile: "PageSpeed Insights API · máy chủ Google · mobile throttle",
+    psiDesktop: "PageSpeed Insights API · máy chủ Google · desktop throttle",
+    measuredAt: (date) => `đo ngày ${date}`,
+    localRunDiffers:
+      "Số này có thể khác Lighthouse chạy trên máy bạn. Tiện ích trình duyệt, " +
+      "cache và dữ liệu đã lưu (IndexedDB) làm sai lệch kết quả chạy local — " +
+      "chính Lighthouse cũng cảnh báo khi phát hiện. Bản đo này chạy trên máy " +
+      "chủ Google với cấu hình throttle chuẩn. Hai lần chạy sạch vẫn lệch được " +
+      "vài điểm.",
+  },
 };

@@ -151,12 +151,19 @@ export function LabPanel({
         </div>
       ) : null}
 
-      <p className="px-4 py-2.5 text-xs text-base-content/60">
-        {copy.labPanel.sourceLine}
-        {lab.capturedAt
-          ? ` · ${copy.labPanel.capturedAt(formatScanDate(lab.capturedAt, locale))}`
-          : null}
-      </p>
+      <div className="space-y-1.5 px-4 py-2.5 text-xs text-base-content/60">
+        <p>
+          {copy.provenance.psiMobile}
+          {lab.capturedAt
+            ? ` · ${copy.labPanel.capturedAt(formatScanDate(lab.capturedAt, locale))}`
+            : null}
+        </p>
+        <p>{copy.labPanel.sourceLine}</p>
+        {/* Always visible, never a tooltip: this is the answer to "why doesn't
+            this match the Lighthouse I just ran?", and a reader who cannot find
+            it discounts every number above it. */}
+        <p>{copy.provenance.localRunDiffers}</p>
+      </div>
     </section>
   );
 }

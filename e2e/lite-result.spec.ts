@@ -32,9 +32,7 @@ test.describe("the Lite result state", () => {
     await expect(page.getByText("pass", { exact: true }).first()).toBeVisible();
   });
 
-  test("leads with the worst finding and folds the passing checks away", async ({
-    page,
-  }) => {
+  test("opens every fix and folds the passing checks away", async ({ page }) => {
     await page.goto(FIXTURE);
 
     // Severity order, not rule-definition order. The fixture's only failure
@@ -42,16 +40,39 @@ test.describe("the Lite result state", () => {
     const rows = page.locator("[data-signal-status]");
     await expect(rows.first()).toHaveAttribute("data-signal-status", "fail");
 
-    // Its fix is already open — a reader who came for one answer should not
-    // have to guess which row holds it.
+    // EVERY non-passing row shows its fix, not just the worst one. The steps and
+    // Google's own words behind them are the part PageSpeed does not give you,
+    // and behind a click on each row they may as well not have existed — which
+    // is why the report read as "no different from Google PageSpeed".
+    const nonPassing = page.locator(
+      '[data-signal-status]:not([data-signal-status="pass"])',
+    );
+    await expect(nonPassing).toHaveCount(5);
+    await expect(
+      nonPassing.locator("details[open]", {
+        has: page.getByText("How to fix this"),
+      }),
+    ).toHaveCount(5);
     await expect(
       page.getByText("The page's visible text is thinner than", {
         exact: false,
       }),
     ).toBeVisible();
 
-    // Passing checks are folded behind one row, present but not crowding.
+    // Passing checks stay folded behind one row, present but not crowding.
     await expect(page.getByText("6 checks passed")).toBeVisible();
+  });
+
+  test("labels where the category scores came from and when", async ({
+    page,
+  }) => {
+    await page.goto(FIXTURE);
+
+    // These are the one cluster on the page that is not Google's. Unlabelled, a
+    // reader checks them against Lighthouse, finds different numbers, and stops
+    // believing the rest of the page.
+    await expect(page.getByText("EchoSEO crawler")).toBeVisible();
+    await expect(page.getByText(/measured \w/)).toBeVisible();
   });
 
   test("counts every verdict before the reader reads any of them", async ({

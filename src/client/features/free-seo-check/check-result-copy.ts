@@ -247,6 +247,19 @@ const EN: CheckResultCopy = {
       "visitors.",
     capturedAt: (date) => `Captured ${date}`,
   },
+  /* ——— provenance block — appended; keep at the end. ——— */
+  provenance: {
+    ownCrawler: "EchoSEO crawler · fetched this page directly",
+    psiMobile: "PageSpeed Insights API · Google servers · mobile throttle",
+    psiDesktop: "PageSpeed Insights API · Google servers · desktop throttle",
+    measuredAt: (date) => `measured ${date}`,
+    localRunDiffers:
+      "These can differ from a Lighthouse run on your own machine. Browser " +
+      "extensions, cache and stored data (IndexedDB) skew a local run — " +
+      "Lighthouse itself warns about it when it notices. This ran on Google's " +
+      "servers with a standard throttle. Even two clean runs differ by a few " +
+      "points.",
+  },
 };
 
 export const CHECK_RESULT_COPY: Record<Locale, CheckResultCopy> = {

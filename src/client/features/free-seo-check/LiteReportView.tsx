@@ -22,8 +22,8 @@ import { triageSignals } from "./triage";
  * maximum scroll depth.
  *
  * Now: score and triage first, then the evidence, then what needs attention
- * worst-first with the top finding already open, then passing checks folded
- * away, and only then the supporting material.
+ * worst-first with every finding's fix steps already open, then passing checks
+ * folded away, and only then the supporting material.
  *
  * At `lg` the score and its counts become a sticky rail beside the checks. A
  * single 672px column cannot carry a scannable table of findings, and the
@@ -83,6 +83,7 @@ export function LiteReportView({
 
         <CategoryScoreCards
           categoryScores={report.categoryScores}
+          fetchedAt={report.fetchedAt}
           locale={locale}
         />
       </div>
@@ -98,15 +99,8 @@ export function LiteReportView({
               {copy.triage.allClear}
             </p>
           ) : (
-            actionable.map((signal, index) => (
-              <SignalRow
-                key={signal.id}
-                signal={signal}
-                locale={locale}
-                // The worst finding opens itself. A reader who came for one
-                // answer should not have to guess which row holds it.
-                defaultOpen={index === 0}
-              />
+            actionable.map((signal) => (
+              <SignalRow key={signal.id} signal={signal} locale={locale} />
             ))
           )}
 

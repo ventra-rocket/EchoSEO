@@ -258,4 +258,34 @@ export interface CheckResultCopy {
     /** Trails `sourceLine` when the bundle carried a render timestamp. */
     capturedAt: (date: string) => string;
   };
+
+  /* ——— provenance block — appended; keep at the end. ——— */
+  /**
+   * Where a number came from and when it was measured.
+   *
+   * Readers compare these scores against a Lighthouse run in their own browser,
+   * get different numbers, and conclude the tool is wrong — when the local run
+   * is usually the less reliable of the two. Naming the source and the run time
+   * makes the two runs comparable instead of contradictory.
+   *
+   * Every line must describe exactly what is on screen: `pagespeed.ts:349-350`
+   * deliberately withholds field data from the free bundle because that bundle
+   * is labelled lab, and a label that overstates its source is worse than none.
+   */
+  provenance: {
+    /** Under the per-category scores: EchoSEO's own crawler produced them. */
+    ownCrawler: string;
+    /** Under a Lighthouse cluster: the API, whose machines, which throttle. */
+    psiMobile: string;
+    /** Same, for the desktop tab. */
+    psiDesktop: string;
+    /** Joins a source line to the instant it was measured. */
+    measuredAt: (date: string) => string;
+    /**
+     * Always visible beside a Lighthouse cluster — never a tooltip. The
+     * question it answers ("why doesn't this match my own run?") is the one
+     * that costs the reader their trust in every other number on the page.
+     */
+    localRunDiffers: string;
+  };
 }
