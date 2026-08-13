@@ -24,18 +24,22 @@ const STATUS_ICON: Record<SignalStatus, LucideIcon> = {
  * badge. Non-passing signals expand to a console-style fix block and the
  * Google-cited guidance behind the rule.
  *
+ * That block starts OPEN. It used to open only for the single worst finding,
+ * which is why the report read as "no different from Google PageSpeed": the one
+ * thing PageSpeed does not give you — the steps, and Google's own words behind
+ * them — was behind a click on every other row. Passing rows still render no
+ * block at all, so the page only grows by what the reader actually has to fix.
+ * The disclosure stays a `<details>`, so anything read can be folded away.
+ *
  * Lite and Deep signals differ only in how wide their `category` enum is, which
  * this row never reads — so it renders either.
  */
 export function SignalRow({
   signal,
   locale,
-  defaultOpen = false,
 }: {
   signal: Signal | DeepSignal;
   locale: Locale;
-  /** Opens this row's fix on first paint — used for the worst finding. */
-  defaultOpen?: boolean;
 }) {
   const copy = CHECK_RESULT_COPY[locale].signal;
   const outlineCopy = CHECK_RESULT_COPY[locale].headingOutline;
@@ -124,7 +128,7 @@ export function SignalRow({
       ) : null}
 
       {signal.status !== "pass" ? (
-        <details className="group mt-2" open={defaultOpen}>
+        <details className="group mt-2" open>
           <summary className="fsc-summary flex cursor-pointer items-center gap-1 py-1 text-sm text-base-content/60">
             <ChevronRight
               className="size-3.5 transition-transform group-open:rotate-90"

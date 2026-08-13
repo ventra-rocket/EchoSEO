@@ -48,8 +48,8 @@ export function DeepReportView({
 }) {
   const copy = CHECK_RESULT_COPY[locale].deepReport;
   const triageCopy = CHECK_RESULT_COPY[locale].triage;
-  // Same ordering the Lite result uses: worst first, top finding open, passing
-  // checks folded. Burying the failures costs more here, not less.
+  // Same ordering the Lite result uses: worst first, every finding's fix steps
+  // open, passing checks folded. Burying the failures costs more here, not less.
   const primary = triageSignals(report.signals);
   const checksEyebrow = `${copy.checksHeading}${
     report.crawl.pagesCrawled > 1 ? ` ${copy.primaryPageSuffix}` : ""
@@ -85,13 +85,8 @@ export function DeepReportView({
                   {triageCopy.allClear}
                 </p>
               ) : (
-                primary.actionable.map((signal, index) => (
-                  <SignalRow
-                    key={signal.id}
-                    signal={signal}
-                    locale={locale}
-                    defaultOpen={index === 0}
-                  />
+                primary.actionable.map((signal) => (
+                  <SignalRow key={signal.id} signal={signal} locale={locale} />
                 ))
               )}
 
@@ -120,12 +115,16 @@ export function DeepReportView({
             </div>
           </section>
 
+          {/* Above the page capture on purpose: these five rules are the clearest
+              proof that this report is not a Lighthouse reprint — Lighthouse has
+              no AI-search checks at all. Below a frame that spends ~30s loading,
+              the differentiator was the last thing anyone saw. */}
+          {report.geo ? <GeoSection geo={report.geo} locale={locale} /> : null}
+
           {/* Below the findings, as on the Lite result: it loads from a live
               capture service and can spend ~30s empty; above them it pushed
               every finding below the fold. */}
           <SiteScreenshot pageUrl={report.finalUrl} locale={locale} />
-
-          {report.geo ? <GeoSection geo={report.geo} locale={locale} /> : null}
 
           {report.pages.length > 1 ? (
             <section className="space-y-3">

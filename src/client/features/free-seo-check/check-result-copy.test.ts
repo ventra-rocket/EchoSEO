@@ -181,3 +181,68 @@ describe("the Deep pitch after the free lab panel", () => {
     expect(vi).toContain("người dùng Chrome thực");
   });
 });
+
+describe("score provenance copy", () => {
+  it("carries non-empty strings in every locale", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale].provenance;
+      for (const value of [
+        copy.ownCrawler,
+        copy.psiMobile,
+        copy.psiDesktop,
+        copy.measuredAt("Aug 3, 2026"),
+        copy.localRunDiffers,
+      ]) {
+        expect(value.trim(), locale).not.toBe("");
+      }
+    }
+  });
+
+  it("is translated rather than copied from English", () => {
+    // A silent fallback to English is the failure this catches: the whole point
+    // of the line is that a Vietnamese reader believes the number.
+    const en = CHECK_RESULT_COPY.en.provenance;
+    const vi = CHECK_RESULT_COPY.vi.provenance;
+    expect(vi.ownCrawler).not.toBe(en.ownCrawler);
+    expect(vi.localRunDiffers).not.toBe(en.localRunDiffers);
+    expect(vi.measuredAt("2026")).not.toBe(en.measuredAt("2026"));
+  });
+
+  it("names the API, the host and the throttle for each form factor", () => {
+    // The reader has to be able to reproduce the run. Dropping any of the three
+    // makes the comparison against their own Lighthouse unfalsifiable.
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale].provenance;
+      for (const line of [copy.psiMobile, copy.psiDesktop]) {
+        expect(line, locale).toContain("PageSpeed Insights API");
+        expect(line, locale).toContain("Google");
+      }
+      expect(copy.psiMobile, locale).toContain("mobile");
+      expect(copy.psiDesktop, locale).toContain("desktop");
+      expect(copy.psiMobile).not.toBe(copy.psiDesktop);
+    }
+  });
+
+  it("explains a local Lighthouse run without hiding behind a tooltip", () => {
+    // The two causes Lighthouse itself warns about are the ones a reader can
+    // act on, so both are named rather than summarised as "your setup".
+    for (const locale of SUPPORTED_LOCALES) {
+      const note = CHECK_RESULT_COPY[locale].provenance.localRunDiffers;
+      expect(note, locale).toContain("Lighthouse");
+      expect(note, locale).toContain("IndexedDB");
+      expect(note.length, locale).toBeGreaterThan(80);
+    }
+  });
+
+  it("keeps the crawler line off Google's numbers", () => {
+    // `pagespeed.ts:349-350` withholds field data from the free bundle because
+    // the bundle is labelled lab. Same discipline: our crawler's line must never
+    // read as a PageSpeed measurement.
+    for (const locale of SUPPORTED_LOCALES) {
+      const copy = CHECK_RESULT_COPY[locale].provenance;
+      expect(copy.ownCrawler, locale).toContain("EchoSEO");
+      expect(copy.ownCrawler, locale).not.toContain("PageSpeed");
+      expect(copy.ownCrawler, locale).not.toContain("Lighthouse");
+    }
+  });
+});

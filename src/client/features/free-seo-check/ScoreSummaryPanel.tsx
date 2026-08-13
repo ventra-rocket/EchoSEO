@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { DeepReport } from "@/server/services/seo-check/deep-types";
 import type { Locale } from "@/client/i18n/config";
 import { CHECK_RESULT_COPY } from "./check-result-copy";
+import { formatScanDate } from "./report-format";
 import { BAND_COLOR_VAR, BAND_TEXT, scoreBand } from "./score-presentation";
 import { CWV_METRICS, metricTone, scoreCellBorders } from "./score-summary";
 
@@ -76,6 +77,15 @@ export function ScoreSummaryPanel({
               );
             })}
           </div>
+          {/* The one cluster here that is not Google's. Unlabelled, a reader
+              checks it against Lighthouse, finds different numbers, and stops
+              believing the rest of the page. */}
+          <p className="mt-3 text-xs text-base-content/60">
+            {copy.provenance.ownCrawler} ·{" "}
+            {copy.provenance.measuredAt(
+              formatScanDate(report.fetchedAt, locale),
+            )}
+          </p>
         </div>
       ) : null}
 
