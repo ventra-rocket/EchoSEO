@@ -60,14 +60,38 @@ export function SiteFooter({ className }: { className?: string }) {
           <p className="font-semibold text-neutral-900">Project</p>
           <div className="mt-2 flex flex-col gap-1.5">
             <a
+              href="https://github.com/ventra-rocket/EchoSEO"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              EchoSEO on GitHub
+            </a>
+            {/* Upstream credit, kept: MIT requires the notice and the fork is
+                real. It sits BELOW EchoSEO's own repo so the first GitHub link
+                a reader takes is this project's. */}
+            <a
               href="https://github.com/every-app/open-seo"
               target="_blank"
               rel="noopener noreferrer"
             >
               Built on open-seo
             </a>
-            <Link to="/privacy">Privacy</Link>
-            <Link to="/terms-and-conditions">Terms</Link>
+            {/* The app serves the one copy of the legal text — see URLS in
+                landing-content.ts for why there is only one. */}
+            <a
+              href="https://app.echoseo.ventrarocket.vn/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Privacy
+            </a>
+            <a
+              href="https://app.echoseo.ventrarocket.vn/terms-and-conditions"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Terms
+            </a>
           </div>
         </div>
       </div>

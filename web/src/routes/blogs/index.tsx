@@ -4,12 +4,12 @@ import { BlogLayout } from "@/components/blog-layout";
 import { getBlogPosts } from "@/lib/content.functions";
 import { buildPageSeo } from "@/lib/seo";
 
-const blogIndexDescription = "SEO articles and guides from OpenSEO.";
+const blogIndexDescription = "SEO articles and guides from EchoSEO.";
 
 export const Route = createFileRoute("/blogs/")({
   head: () =>
     buildPageSeo({
-      title: "OpenSEO Blog",
+      title: "EchoSEO Blog",
       description: blogIndexDescription,
       path: "/blogs",
     }),

@@ -32,7 +32,7 @@ export function baseOptions(): BaseLayoutProps {
       },
       {
         text: "GitHub",
-        url: "https://github.com/every-app/open-seo",
+        url: "https://github.com/ventra-rocket/EchoSEO",
         external: true,
       },
     ],

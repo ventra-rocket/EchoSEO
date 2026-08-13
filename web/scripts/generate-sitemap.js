@@ -12,14 +12,20 @@ const DIST_DIR = join(__dirname, "../dist/client");
 const BLOG_CONTENT_DIR = join(__dirname, "../content/blogs");
 const DOCS_CONTENT_DIR = join(__dirname, "../content/docs");
 
-const DEFAULT_SITE_URL = "https://openseo.so";
+// Must match `SITE_URL` in src/lib/seo.ts, which every canonical and og:url is
+// built from. A sitemap on one origin listing pages on another does not merely
+// fail to help — it hands Google a set of URLs this site does not own and never
+// submits the ones it does. Inherited from the upstream fork, where the default
+// was that project's own domain.
+const DEFAULT_SITE_URL = "https://echoseo.ventrarocket.vn";
 const SITE_URL = (process.env.SITE_URL ?? DEFAULT_SITE_URL).replace(/\/+$/, "");
 
+// /privacy and /terms-and-conditions are deliberately absent: the app holds the
+// only copy of the legal text and the apex 301s to it (see public/_redirects),
+// so listing them here would submit a redirect as if it were a page.
 const STATIC_PATHS = [
   "/",
   "/pricing",
-  "/privacy",
-  "/terms-and-conditions",
   "/blogs",
   "/docs",
   "/features",
