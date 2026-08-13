@@ -1,8 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { waitUntil } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import { z } from "zod";
+import { getAuthMode } from "@/lib/auth-mode";
+import { orgMayUseManagedFeatures } from "@/server/billing/subscription";
 import { GscService } from "@/server/features/gsc/services/GscService";
+import {
+  GscSiteImportService,
+  MAX_IMPORT_SITES,
+} from "@/server/features/gsc/services/GscSiteImportService";
 import { hasSelfHostedGscConfig } from "@/server/features/gsc/oauth-config";
 import { createSelfHostedGscAuthorizationUrl } from "@/server/features/gsc/selfHostedOAuth";
 import { captureServerEvent } from "@/server/lib/posthog";
@@ -18,6 +24,11 @@ const setSiteSchema = projectScopedSchema.extend({
 });
 const startSelfHostedLinkSchema = z.object({
   callbackURL: z.string().min(1),
+});
+const importGscSitesSchema = z.object({
+  siteUrls: z.array(z.string().min(1)).min(1).max(MAX_IMPORT_SITES),
+  /** Launch a first crawl per imported site. Off unless asked for. */
+  startAudits: z.boolean().optional().default(false),
 });
 
 // Account-level grant check (no project needed) for surfaces like onboarding
@@ -123,4 +134,68 @@ export const startSelfHostedGscLink = createServerFn({ method: "POST" })
     });
 
     return { url };
+  });
+
+/**
+ * Every verified property on the caller's grant, annotated with whether it can be
+ * imported. Account-level, not project-scoped: the import creates the projects.
+ */
+export const listGscImportCandidates = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .handler(async ({ context }) =>
+    GscSiteImportService.listCandidates({
+      actorUserId: context.userId,
+      authMode: getAuthMode(env.AUTH_MODE),
+      organizationId: context.organizationId,
+    }),
+  );
+
+/**
+ * Import the selected properties, one project each.
+ *
+ * The managed-access gate is resolved here, once, exactly as the audit launch
+ * resolves it — so an unsubscribed org still gets its sites imported and every
+ * row says its crawl could not start, instead of the whole import failing on a
+ * billing state that has nothing to do with the import itself.
+ */
+export const importGscSites = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .inputValidator((data: unknown) => importGscSitesSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const authMode = getAuthMode(env.AUTH_MODE);
+    const auditsAllowed =
+      authMode !== "hosted" ||
+      (await orgMayUseManagedFeatures(context.organizationId));
+
+    const result = await GscSiteImportService.importSites({
+      actorUserId: context.userId,
+      authMode,
+      organizationId: context.organizationId,
+      userEmail: context.userEmail,
+      billingCustomer: context,
+      siteUrls: data.siteUrls,
+      startAudits: data.startAudits,
+      auditsAllowed,
+    });
+
+    waitUntil(
+      captureServerEvent({
+        distinctId: context.userId,
+        event: "gsc:sites_import",
+        organizationId: context.organizationId,
+        properties: {
+          requested: data.siteUrls.length,
+          created: result.rows.filter((row) => row.outcome === "created")
+            .length,
+          skipped: result.rows.filter(
+            (row) => row.outcome === "skipped_duplicate",
+          ).length,
+          failed: result.rows.filter((row) => row.outcome === "failed").length,
+          audits_started: result.rows.filter((row) => row.audit === "started")
+            .length,
+        },
+      }),
+    );
+
+    return result;
   });
