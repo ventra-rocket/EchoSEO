@@ -5,10 +5,14 @@ import { AuditService } from "@/server/features/audit/services/AuditService";
 import { AuditVerificationService } from "@/server/features/audit/services/AuditVerificationService";
 import { IndexNowService } from "@/server/features/audit/services/IndexNowService";
 import { AuditIndexStatusService } from "@/server/features/audit/services/AuditIndexStatusService";
+import { SiteCardService } from "@/server/features/audit/services/SiteCardService";
 import { orgMayUseManagedFeatures } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
-import { requireProjectContext } from "@/serverFunctions/middleware";
+import {
+  requireAuthenticatedContext,
+  requireProjectContext,
+} from "@/serverFunctions/middleware";
 import {
   deleteAuditSchema,
   getAuditAccessSchema,
@@ -68,6 +72,18 @@ export const startAudit = createServerFn({ method: "POST" })
 
     return result;
   });
+
+/**
+ * One card per audit target in the workspace, for the Projects page.
+ *
+ * Account-level rather than project-scoped: the page lists every site, and a
+ * per-project round trip would make it cost more the more sites a customer has.
+ */
+export const getSiteCards = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .handler(async ({ context }) =>
+    SiteCardService.listForOrganization(context.organizationId),
+  );
 
 export const getAuditAccess = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)

@@ -1,17 +1,19 @@
 import * as React from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Download, Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   getArchivedProjects,
   getProjects,
   restoreProject,
 } from "@/serverFunctions/projects";
+import { getSiteCards } from "@/serverFunctions/audit";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getLastProjectId } from "@/client/lib/active-project";
 import { CreateProjectModal } from "@/client/features/projects/CreateProjectModal";
 import { GscImportModal } from "@/client/features/gsc/GscImportModal";
+import { SiteCard } from "@/client/features/audit/cards/SiteCard";
 
 export const Route = createFileRoute("/_app/projects")({
   component: ProjectsPage,
@@ -32,10 +34,16 @@ function ProjectsPage() {
     queryFn: () => getProjects(),
   });
   const projects = projectsQuery.data ?? [];
+  // Its own query, not part of `getProjects`: the crawl summary is heavier than
+  // the project list and the list must render before it arrives.
+  const cardsQuery = useQuery({
+    queryKey: ["siteCards"],
+    queryFn: () => getSiteCards(),
+  });
 
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
-      <div className="mx-auto w-full max-w-2xl space-y-6">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         {/* Wraps: two buttons and the description do not fit one 390px row, and
             a `shrink-0` group there clipped "New project" off the viewport
             entirely rather than merely making it narrow. */}
@@ -75,31 +83,22 @@ function ProjectsPage() {
             <span className="loading loading-spinner loading-md" />
           </div>
         ) : (
-          <ul className="divide-y divide-base-300 overflow-hidden rounded-lg border border-base-300">
+          <ul className="space-y-3">
             {projects.map((project) => (
               <li key={project.id}>
-                <Link
-                  to="/p/$projectId/settings"
-                  params={{ projectId: project.id }}
-                  className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-base-200/40"
-                >
-                  <span className="flex min-w-0 flex-col">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate font-medium">
-                        {project.name}
-                      </span>
-                      {project.id === currentProjectId ? (
-                        <span className="shrink-0 rounded-full bg-base-300 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-base-content/60">
-                          Current
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="truncate text-xs text-base-content/50">
-                      {project.domain ?? "No domain set"}
-                    </span>
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-base-content/40" />
-                </Link>
+                <SiteCard
+                  projectId={project.id}
+                  projectName={project.name}
+                  domain={project.domain}
+                  // A project with no audit target has no card row at all; the
+                  // component renders the "run the first audit" state for it.
+                  card={
+                    cardsQuery.data?.find(
+                      (entry) => entry.projectId === project.id,
+                    ) ?? null
+                  }
+                  isCurrent={project.id === currentProjectId}
+                />
               </li>
             ))}
           </ul>
