@@ -42,6 +42,24 @@ async function upsert(input: {
   return row;
 }
 
+/**
+ * Every property this organization already has bound to a project.
+ *
+ * The importer's duplicate check: a property is "already imported" when some
+ * project in the org is connected to it, which is stricter and more truthful
+ * than matching on project name or on the derived origin — two different
+ * properties (`https://example.com/` and `sc-domain:example.com`) can derive the
+ * same origin, and they are still two distinct imports.
+ */
+async function listByOrganization(
+  organizationId: string,
+): Promise<GscConnection[]> {
+  return db
+    .select()
+    .from(gscConnections)
+    .where(eq(gscConnections.organizationId, organizationId));
+}
+
 async function deleteByProjectId(projectId: string): Promise<void> {
   await db
     .delete(gscConnections)
@@ -60,6 +78,7 @@ async function existsForConnector(userId: string): Promise<boolean> {
 
 export const GscConnectionRepository = {
   getByProjectId,
+  listByOrganization,
   upsert,
   deleteByProjectId,
   existsForConnector,

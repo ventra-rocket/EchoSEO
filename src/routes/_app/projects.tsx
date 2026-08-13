@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Download, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   getArchivedProjects,
@@ -11,6 +11,7 @@ import {
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getLastProjectId } from "@/client/lib/active-project";
 import { CreateProjectModal } from "@/client/features/projects/CreateProjectModal";
+import { GscImportModal } from "@/client/features/gsc/GscImportModal";
 
 export const Route = createFileRoute("/_app/projects")({
   component: ProjectsPage,
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/_app/projects")({
 
 function ProjectsPage() {
   const [creating, setCreating] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
   // Read after mount to keep SSR/first render stable.
   const [currentProjectId, setCurrentProjectId] = React.useState<string | null>(
     null,
@@ -34,7 +36,10 @@ function ProjectsPage() {
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
       <div className="mx-auto w-full max-w-2xl space-y-6">
-        <div className="flex items-start justify-between gap-4">
+        {/* Wraps: two buttons and the description do not fit one 390px row, and
+            a `shrink-0` group there clipped "New project" off the viewport
+            entirely rather than merely making it narrow. */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
             <p className="mt-1 text-sm text-base-content/60">
@@ -42,14 +47,27 @@ function ProjectsPage() {
               rank tracking, and audits.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm shrink-0"
-            onClick={() => setCreating(true)}
-          >
-            <Plus className="size-4" />
-            New project
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {/* Ahrefs' own onboarding is this button. A user who has connected
+                Google should not have to retype domains this app can already
+                read from their verified properties. */}
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setImporting(true)}
+            >
+              <Download className="size-4" />
+              Import from Search Console
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setCreating(true)}
+            >
+              <Plus className="size-4" />
+              New project
+            </button>
+          </div>
         </div>
 
         {projectsQuery.isLoading ? (
@@ -92,6 +110,9 @@ function ProjectsPage() {
 
       {creating ? (
         <CreateProjectModal onClose={() => setCreating(false)} />
+      ) : null}
+      {importing ? (
+        <GscImportModal onClose={() => setImporting(false)} />
       ) : null}
     </div>
   );
