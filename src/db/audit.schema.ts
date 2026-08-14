@@ -453,3 +453,73 @@ export const auditCompetitors = sqliteTable(
     index("audit_competitors_project_idx").on(table.projectId),
   ],
 );
+
+// One matched page pair, plus the latest comparison of it.
+//
+// Two things are deliberately fused: the PAIRING (durable operator intent) and
+// the LAST RESULT (a cached measurement of it). The pair is keyed on `our_url`
+// rather than an `audit_pages.id` because page ids belong to one crawl and the
+// retention sweep deletes them, while "my /brand/rolex against their
+// /en/rolex/discover" is a judgement that should outlive every crawl it was
+// measured on.
+//
+// Competitor pages are NOT written to `audit_pages`. That table's rows are the
+// definition of "pages of this site": `audit_snapshots.pages_crawled`, the
+// health score, and every issue rollup count read from it. A stranger's URLs in
+// there would silently inflate all of them, and their broken page would be
+// reported as ours.
+export const auditCompetitorPages = sqliteTable(
+  "audit_competitor_pages",
+  {
+    id: text("id").primaryKey(),
+    competitorId: text("competitor_id")
+      .notNull()
+      .references(() => auditCompetitors.id, { onDelete: "cascade" }),
+    // Denormalized so "every pair for this target" is one read without joining
+    // through the competitor table.
+    targetId: text("target_id")
+      .notNull()
+      .references(() => auditTargets.id, { onDelete: "cascade" }),
+    ourUrl: text("our_url").notNull(),
+    theirUrl: text("their_url").notNull(),
+    matchSource: text("match_source", { enum: ["auto", "manual"] })
+      .notNull()
+      .default("auto"),
+    // Path similarity that produced an auto match, 0..1. Null for a manual
+    // match: a human decision has no confidence score, and storing 1.0 would
+    // later read as "the matcher was certain" when it never ran.
+    matchConfidence: real("match_confidence"),
+    // Which crawl of OUR site the stored comparison was measured against. A
+    // plain pointer, not a foreign key, for the same reason as
+    // `audits.baseline_audit_id`: retention deletes old audits, and a deleted
+    // crawl must degrade this row to "needs re-running" rather than cascade away
+    // the operator's pairing.
+    lastRunAuditId: text("last_run_audit_id"),
+    // The competitor page's rule verdicts as the shared engine returned them
+    // (`Issue[]`), so the diff table's right-hand column is exactly what the
+    // rules said. Our side is NOT stored here: it is re-evaluated from the
+    // stored page row through the same rules at read time, which keeps one
+    // source of truth and keeps "this rule never ran" distinguishable from
+    // "this rule passed".
+    theirIssuesJson: text("their_issues_json"),
+    theirStatusCode: integer("their_status_code"),
+    theirTitle: text("their_title"),
+    // Why a comparison produced nothing: robots.txt disallowed the URL, the page
+    // 404ed, the host refused us. Surfaced verbatim — a competitor blocking us is
+    // a fact about the run, and an empty column would read as "they have no
+    // issues".
+    failureReason: text("failure_reason"),
+    comparedAt: text("compared_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // One pair per (competitor, our page); makes a re-run an overwrite.
+    uniqueIndex("audit_competitor_pages_unique_idx").on(
+      table.competitorId,
+      table.ourUrl,
+    ),
+    index("audit_competitor_pages_target_idx").on(table.targetId),
+  ],
+);

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Loader2, Swords, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   addAuditCompetitor,
   listAuditCompetitors,
@@ -9,10 +10,6 @@ import {
 } from "@/serverFunctions/audit";
 
 const MAX_COMPETITORS = 3;
-
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
 
 function hostOf(origin: string): string {
   try {
@@ -70,7 +67,9 @@ export function CompetitorsCard({
       void invalidate();
     },
     onError: (error) =>
-      toast.error(errorMessage(error, "Could not add that competitor.")),
+      toast.error(
+        getStandardErrorMessage(error, "Could not add that competitor."),
+      ),
   });
 
   const remove = useMutation({
@@ -81,7 +80,9 @@ export function CompetitorsCard({
       void invalidate();
     },
     onError: (error) =>
-      toast.error(errorMessage(error, "Could not remove that competitor.")),
+      toast.error(
+        getStandardErrorMessage(error, "Could not remove that competitor."),
+      ),
   });
 
   const busy = add.isPending || remove.isPending;

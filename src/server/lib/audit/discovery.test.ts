@@ -39,6 +39,7 @@ describe("fetchRobotsTxtBody", () => {
     await expect(fetchRobotsTxtBody("https://example.com")).resolves.toEqual({
       robotsUrl: "https://example.com/robots.txt",
       text: "User-agent: *\nDisallow: /admin\n",
+      status: 200,
     });
   });
 
@@ -53,14 +54,28 @@ describe("fetchRobotsTxtBody", () => {
     expect(JSON.parse(JSON.stringify(body))).toEqual(body);
   });
 
-  it("reduces an unreachable robots.txt to text: null rather than throwing", async () => {
-    // A crawl must not fail because robots.txt timed out; the pre-split code
-    // swallowed this too, and the step now caches the swallowed outcome.
+  it("distinguishes an unavailable robots.txt from an unreachable one", async () => {
+    // A crawl must not fail because robots.txt timed out. But the two cases are
+    // not the same fact and RFC 9309 treats them oppositely — 4xx means there
+    // are no rules, no response means rules may exist and cannot be read — so
+    // the status travels with the body and each caller decides. Our own crawl
+    // stays permissive; the competitor crawl refuses.
     stubFetch(new Error("connect ETIMEDOUT"));
 
     await expect(fetchRobotsTxtBody("https://example.com")).resolves.toEqual({
       robotsUrl: "https://example.com/robots.txt",
       text: null,
+      status: null,
+    });
+  });
+
+  it("reports the status of a served error", async () => {
+    stubFetch(new Response("upstream down", { status: 503 }));
+
+    await expect(fetchRobotsTxtBody("https://example.com")).resolves.toEqual({
+      robotsUrl: "https://example.com/robots.txt",
+      text: null,
+      status: 503,
     });
   });
 });
@@ -68,6 +83,7 @@ describe("fetchRobotsTxtBody", () => {
 describe("parseRobotsTxt", () => {
   const body: RobotsTxtBody = {
     robotsUrl: "https://example.com/robots.txt",
+    status: 200,
     text: [
       "User-agent: *",
       "Disallow: /admin",
@@ -114,6 +130,7 @@ describe("parseRobotsTxt", () => {
     const robots = parseRobotsTxt({
       robotsUrl: "https://example.com/robots.txt",
       text: null,
+      status: 404,
     });
 
     expect(robots.isAllowed("https://example.com/admin")).toBe(true);
@@ -126,6 +143,7 @@ describe("parseRobotsTxt", () => {
     const robots = parseRobotsTxt({
       robotsUrl: "https://example.com/robots.txt",
       text: "User-agent: Googlebot-News\nDisallow: /\n",
+      status: 200,
     });
 
     expect(robots.isAllowed("https://example.com/anything")).toBe(true);

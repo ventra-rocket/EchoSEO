@@ -35,6 +35,19 @@ export interface RobotsTxtBody {
   robotsUrl: string;
   /** Body as served, or null when there is no usable robots.txt. */
   text: string | null;
+  /**
+   * HTTP status observed, or null when the request never produced one (network
+   * error, timeout, DNS failure).
+   *
+   * `text: null` alone cannot tell those apart, and RFC 9309 treats them
+   * oppositely: an unavailable robots.txt (4xx) means everything is allowed,
+   * while an *unreachable* one (5xx or no response) means a crawler should
+   * assume complete disallow. Our own site is crawled on the operator's
+   * instruction so the permissive reading is right there; a third party's site
+   * is not, and the competitor crawl reads this field to refuse rather than
+   * guess.
+   */
+  status: number | null;
 }
 
 /**
@@ -56,12 +69,12 @@ export async function fetchRobotsTxtBody(
     });
 
     if (!response.ok) {
-      return { robotsUrl, text: null };
+      return { robotsUrl, text: null, status: response.status };
     }
-    return { robotsUrl, text: await response.text() };
+    return { robotsUrl, text: await response.text(), status: response.status };
   } catch (error) {
     console.warn("Failed to fetch robots.txt:", error);
-    return { robotsUrl, text: null };
+    return { robotsUrl, text: null, status: null };
   }
 }
 
