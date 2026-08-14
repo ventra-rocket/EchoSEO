@@ -17,6 +17,7 @@ import { AuditSearchSignalsPanel } from "@/client/features/audit/search/AuditSea
 import { AuditReferringDomainsPanel } from "@/client/features/audit/search/AuditReferringDomainsPanel";
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import type { AuditTab } from "@/types/schemas/audit";
+import { AlertTriangle } from "lucide-react";
 
 type ResultsTab = AuditTab;
 
@@ -72,6 +73,13 @@ export function ResultsView({
         averageResponseMs={stats.averageResponseMs}
         lighthouseSummary={stats.lighthouseSummary}
       />
+
+      {audit.pagesCrawled >= audit.config.maxPages && (
+        <TruncatedCrawlNotice
+          limit={audit.config.maxPages}
+          startUrl={audit.startUrl}
+        />
+      )}
 
       <div className="card bg-base-100 border border-base-300">
         <div className="card-body gap-3">
@@ -144,6 +152,48 @@ export function ResultsView({
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * Says out loud that the crawl stopped at its limit.
+ *
+ * Without this the report is a quiet lie by omission: a 30,000-page site returns
+ * a page count and no indication that most of it was never looked at, and the
+ * reader concludes the site is small or the tool is thorough. Both wrong.
+ *
+ * It also explains the two missing checks. A partial crawl switches off
+ * orphan-page and sitemap-coverage detection (`cross-page-signals.ts`), because a
+ * page nothing appears to link to may simply not have been reached yet — and
+ * "orphan" is an accusation worth being sure about.
+ */
+function TruncatedCrawlNotice({
+  limit,
+  startUrl,
+}: {
+  limit: number;
+  startUrl: string;
+}) {
+  return (
+    <div className="alert alert-warning items-start" role="status">
+      <AlertTriangle className="size-5 shrink-0" />
+      <div className="space-y-1 text-sm">
+        <p className="font-medium">
+          This crawl stopped at {limit.toLocaleString()} pages.
+        </p>
+        <p>
+          Your site has more than that, so this report covers the{" "}
+          {limit.toLocaleString()} pages reached first from {startUrl}.
+          Everything shown is measured; what is missing is the rest of the site,
+          not a clean bill of health for it.
+        </p>
+        <p className="text-base-content/70">
+          Orphan-page and sitemap-coverage checks are switched off for a partial
+          crawl: a page nothing seems to link to may simply not have been
+          reached.
+        </p>
+      </div>
+    </div>
   );
 }
 

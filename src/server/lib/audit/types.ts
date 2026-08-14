@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { jsonCodec } from "@/shared/json";
+import { AUDIT_MIN_PAGES } from "@/shared/audit-limits";
 
 export type LighthouseStrategy = "auto" | "all" | "manual" | "none";
 
@@ -12,8 +13,14 @@ export interface AuditConfig {
   lighthouseStrategy: LighthouseStrategy;
 }
 
+// Bounds a STORED config, so the lower bound is the shared minimum but the upper
+// one is deliberately looser than `AUDIT_MAX_PAGES`: rows written before the
+// ceiling was measured down to 5,000 must still parse, or the report page throws
+// INTERNAL_ERROR on history it cannot change. New launches are clamped to the
+// shared maximum on the way in (`clampAuditMaxPages`), which is where the limit
+// belongs.
 const auditConfigSchema = z.object({
-  maxPages: z.number().int().min(10).max(10_000),
+  maxPages: z.number().int().min(AUDIT_MIN_PAGES).max(10_000),
   lighthouseStrategy: z.enum(["auto", "all", "manual", "none"]),
 });
 

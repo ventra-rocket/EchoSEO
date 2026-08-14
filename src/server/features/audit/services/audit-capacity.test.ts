@@ -7,7 +7,8 @@ import {
 
 describe("audit capacity helpers", () => {
   it("clamps max pages into the supported range", () => {
-    expect(clampAuditMaxPages()).toBe(50);
+    // No page count means crawl the site, not crawl fifty pages of it.
+    expect(clampAuditMaxPages()).toBe(5_000);
     expect(clampAuditMaxPages(1)).toBe(10);
     expect(clampAuditMaxPages(500)).toBe(500);
     expect(clampAuditMaxPages(20_000)).toBe(5_000);
