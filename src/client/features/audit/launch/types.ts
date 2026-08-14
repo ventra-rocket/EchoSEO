@@ -1,5 +1,7 @@
-export const MIN_PAGES = 10;
-export const MAX_PAGES_LIMIT = 5_000;
+import { AUDIT_MAX_PAGES, AUDIT_MIN_PAGES } from "@/shared/audit-limits";
+
+export const MIN_PAGES = AUDIT_MIN_PAGES;
+export const MAX_PAGES_LIMIT = AUDIT_MAX_PAGES;
 
 export type LaunchFormValues = {
   url: string;
@@ -9,6 +11,6 @@ export type LaunchFormValues = {
 
 export const DEFAULT_LAUNCH_FORM_VALUES: LaunchFormValues = {
   url: "",
-  maxPagesInput: "50",
+  maxPagesInput: String(AUDIT_MAX_PAGES),
   runLighthouse: false,
 };
