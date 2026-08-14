@@ -2,10 +2,7 @@
  * Shared fixtures for the audit issue materialization tests.
  */
 import { buildOccurrences } from "../materialize";
-import {
-  addEdgesToLinkGraph,
-  createLinkGraph,
-} from "@/server/features/audit/issues/cross-page-signals";
+import { buildLinkGraph } from "@/server/features/audit/issues/cross-page-signals";
 import type { AuditPageRow } from "../snapshot-signals";
 import type { auditLighthouseResults } from "@/db/audit.schema";
 
@@ -89,10 +86,38 @@ export function occurrencesFor(input: {
   startUrl?: string;
   crawlWasTruncated?: boolean;
 }) {
-  // Folds through the same two calls production uses, in one chunk. A fixture
-  // that built the graph its own way would stop proving the streaming path.
-  const graph = createLinkGraph(input.pages);
-  addEdgesToLinkGraph(graph, input.edges ?? []);
+  // Derives the aggregates the way the two SQL queries do, so these tests keep
+  // exercising the production contract rather than a friendlier one: inbound is
+  // `count(distinct source_url) group by target_url`, and broken edges are only
+  // those whose target resolves to a 4xx crawled page.
+  const edges = input.edges ?? [];
+  const sourcesByTarget = new Map<string, Set<string>>();
+  for (const e of edges) {
+    const set = sourcesByTarget.get(e.targetUrl) ?? new Set<string>();
+    set.add(e.sourceUrl);
+    sourcesByTarget.set(e.targetUrl, set);
+  }
+  const inboundCounts = [...sourcesByTarget].map(([targetUrl, sources]) => ({
+    targetUrl,
+    sources: sources.size,
+  }));
+  const brokenTargets = new Set(
+    input.pages
+      .filter(
+        (page) =>
+          page.statusCode !== null &&
+          page.statusCode >= 400 &&
+          page.statusCode < 500 &&
+          ![401, 403, 429].includes(page.statusCode),
+      )
+      .map((page) => page.url),
+  );
+  const brokenEdges = edges.filter((e) => brokenTargets.has(e.targetUrl));
+  const graph = buildLinkGraph({
+    pages: input.pages,
+    inboundCounts,
+    brokenEdges,
+  });
 
   return buildOccurrences({
     pages: input.pages,

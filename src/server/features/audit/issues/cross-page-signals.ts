@@ -16,12 +16,9 @@
  *   inbound link, which is why orphan detection is switched off entirely for
  *   crawls that cannot be trusted (see `orphanDetectionReliable`).
  */
-import type { auditLinkEdges } from "@/db/audit.schema";
 import { urlEquivalenceKey } from "@/server/lib/audit/url-identity";
 import type { CrossPageSignals } from "@/server/lib/audit/rules/cross-page";
 import type { AuditPageRow } from "@/server/features/audit/issues/snapshot-signals";
-
-type LinkEdgeRow = typeof auditLinkEdges.$inferSelect;
 
 /**
  * Statuses that make a link genuinely broken. Restricted to 4xx, which is what
@@ -47,67 +44,82 @@ interface CrossPageSignalsForPage {
 }
 
 /**
- * The two aggregates the cross-page rules actually need from the link graph,
- * plus the page index both are keyed against.
+ * The two aggregates the cross-page rules need from the link graph.
  *
- * Built incrementally on purpose. The graph is by far the largest thing a crawl
- * produces — a 5,000-page crawl of a nav-heavy site stores ~500,000 edges — and
- * loading them all to compute two small tables put ~120 MB in a 128 MB isolate.
- * Measured on production 14/08: at ~106,000 edges materialization succeeded, at
- * ~500,000 it died inside the step's own try/catch, so the crawl sealed with
- * `issues_materialized_at` left null and the audit had no findings at all.
- *
- * Both aggregates are bounded by page count, not edge count: inbound sources are
- * one entry per target page, and broken targets only exist for edges pointing at
- * a 4xx page. So the caller can feed edges in chunks and hold only one chunk.
+ * Built from SQL aggregates rather than from the edge list. A 5,000-page crawl of
+ * a nav-heavy site stores ~500,000 edges; both of these are bounded by page count.
+ * Measured on production 14/08: reading all edges put ~120 MB in a 128 MB isolate
+ * and the materialize step died in 4 seconds, so the crawl sealed with
+ * `issues_materialized_at` null and the audit had no findings at all. Streaming in
+ * 25,000-row pages survived the memory and then lost the step anyway after 54
+ * seconds of round trips.
  */
 export interface LinkGraph {
   pageByKey: Map<string, AuditPageRow>;
-  /** Distinct source pages per target key. */
-  inboundSourcesByKey: Map<string, Set<string>>;
+  /** Inbound source count per target key, summed across URL spellings. */
+  inboundByKey: Map<string, number>;
   /** Target URLs, as written, that resolve to a 4xx page, per source key. */
   brokenBySourceKey: Map<string, string[]>;
 }
 
-export function createLinkGraph(pages: AuditPageRow[]): LinkGraph {
+function buildPageIndex(pages: AuditPageRow[]): Map<string, AuditPageRow> {
   const pageByKey = new Map<string, AuditPageRow>();
   for (const page of pages) {
     const key = urlEquivalenceKey(page.url);
     if (key) pageByKey.set(key, page);
   }
-  return {
-    pageByKey,
-    inboundSourcesByKey: new Map(),
-    brokenBySourceKey: new Map(),
-  };
+  return pageByKey;
 }
 
-/** Fold one chunk of edges into the graph. Safe to call repeatedly. */
-export function addEdgesToLinkGraph(
-  graph: LinkGraph,
-  edges: LinkEdgeRow[],
-): void {
-  for (const edge of edges) {
+/** The crawled pages that returned a status the broken-link rule counts. */
+export function brokenPageUrls(pages: AuditPageRow[]): string[] {
+  return pages
+    .filter((page) => isBrokenStatus(page.statusCode))
+    .map((page) => page.url);
+}
+
+/**
+ * Fold the SQL aggregates into the shape the rules read.
+ *
+ * `inboundCounts` is one row per raw target URL, so two spellings of one document
+ * arrive separately and are summed here. Summing can over-count a source that
+ * links the same document twice under different spellings — safe only because the
+ * value is consumed as zero-versus-non-zero (`rules/cross-page.ts:101`) and shown
+ * in evidence only on the orphan rule, where it is zero by definition.
+ *
+ * `brokenEdges` is already restricted to edges whose target resolves to a 4xx
+ * page, so every row here becomes a broken-link finding on its source.
+ */
+export function buildLinkGraph(input: {
+  pages: AuditPageRow[];
+  inboundCounts: Array<{ targetUrl: string; sources: number }>;
+  brokenEdges: Array<{ sourceUrl: string; targetUrl: string }>;
+}): LinkGraph {
+  const pageByKey = buildPageIndex(input.pages);
+
+  const inboundByKey = new Map<string, number>();
+  for (const row of input.inboundCounts) {
+    const targetKey = urlEquivalenceKey(row.targetUrl);
+    if (!targetKey) continue;
+    inboundByKey.set(
+      targetKey,
+      (inboundByKey.get(targetKey) ?? 0) + row.sources,
+    );
+  }
+
+  const brokenBySourceKey = new Map<string, string[]>();
+  for (const edge of input.brokenEdges) {
     const sourceKey = urlEquivalenceKey(edge.sourceUrl);
     const targetKey = urlEquivalenceKey(edge.targetUrl);
     if (!sourceKey || !targetKey) continue;
-
-    // A link to a different spelling of the same document is not an inbound
-    // link, and is not a broken one either.
+    // A link to a different spelling of the same document is not a broken link.
     if (sourceKey === targetKey) continue;
-
-    const sources =
-      graph.inboundSourcesByKey.get(targetKey) ?? new Set<string>();
-    sources.add(sourceKey);
-    graph.inboundSourcesByKey.set(targetKey, sources);
-
-    const targetPage = graph.pageByKey.get(targetKey);
-    if (targetPage && isBrokenStatus(targetPage.statusCode)) {
-      const targets = graph.brokenBySourceKey.get(sourceKey) ?? [];
-      targets.push(edge.targetUrl);
-      graph.brokenBySourceKey.set(sourceKey, targets);
-    }
+    const targets = brokenBySourceKey.get(sourceKey) ?? [];
+    targets.push(edge.targetUrl);
+    brokenBySourceKey.set(sourceKey, targets);
   }
+
+  return { pageByKey, inboundByKey, brokenBySourceKey };
 }
 
 export function buildCrossPageSignals(input: {
@@ -117,7 +129,7 @@ export function buildCrossPageSignals(input: {
   /** The crawl stopped because it hit its page cap, so the graph is partial. */
   crawlWasTruncated: boolean;
 }): CrossPageSignalsForPage[] {
-  const { pageByKey, inboundSourcesByKey, brokenBySourceKey } = input.graph;
+  const { pageByKey, inboundByKey, brokenBySourceKey } = input.graph;
 
   const startKey = urlEquivalenceKey(input.startUrl);
   // If the start URL never matched a crawled page it path-redirected somewhere
@@ -140,9 +152,7 @@ export function buildCrossPageSignals(input: {
         isIndexable: page.isIndexable,
         inSitemap: page.inSitemap,
         isCrawlEntryPoint: key !== null && key === startKey,
-        inboundInternalLinks: key
-          ? (inboundSourcesByKey.get(key)?.size ?? 0)
-          : 0,
+        inboundInternalLinks: key ? (inboundByKey.get(key) ?? 0) : 0,
         brokenLinkTargets: key ? (brokenBySourceKey.get(key) ?? []) : [],
         orphanDetectionReliable,
         sitemapAvailable,

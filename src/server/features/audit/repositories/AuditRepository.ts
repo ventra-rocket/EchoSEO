@@ -23,7 +23,11 @@ import {
   getLatestAuditByProject,
   getLatestCompletedAuditByProject,
 } from "./command-center-audit-queries";
-import { getPagesByUrls, listLinkEdgePage } from "./audit-page-queries";
+import {
+  getPagesByUrls,
+  listEdgesToTargets,
+  listInboundCountsByTarget,
+} from "./audit-page-queries";
 
 const DB_BATCH_SIZE = 100;
 const EDGE_ROWS_PER_STATEMENT = 30;
@@ -466,7 +470,8 @@ export const AuditRepository = {
   listSealedSnapshotsForTarget,
   getPageFactsForAudit,
   getPagesByUrls,
-  listLinkEdgePage,
+  listEdgesToTargets,
+  listInboundCountsByTarget,
   markSnapshotIssuesMaterialized,
   clearSnapshotIssuesMaterialized,
   getAuditForProject,
