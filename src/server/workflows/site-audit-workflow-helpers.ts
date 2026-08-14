@@ -2,9 +2,22 @@ import { analyzeHtml } from "@/server/lib/audit/page-analyzer";
 import type { StepPageResult } from "@/server/lib/audit/types";
 import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
 
+/**
+ * Fetch and parse one page.
+ *
+ * `includeAnalysis` returns the parsed `PageAnalysis` alongside the row-shaped
+ * result. It is opt-in and off by default because the main crawl returns these
+ * from a Workflow step in batches of 25, and a step's return payload is capped
+ * at 1 MiB — carrying a second copy of every page's facts through that boundary
+ * would shrink the largest crawl that can complete. The competitor comparison
+ * asks for it because the rule engine scores a `PageAnalysis`, and scoring their
+ * page through anything other than the function that scores ours would make the
+ * comparison unfair in a way no reader could see.
+ */
 export async function crawlPage(
   url: string,
   crawlOrigin: string,
+  options: { includeAnalysis?: boolean } = {},
 ): Promise<StepPageResult | null> {
   const startTime = Date.now();
 
@@ -48,6 +61,7 @@ export async function crawlPage(
     const h6Count = analysis.headingOrder.filter((h) => h === 6).length;
 
     return {
+      ...(options.includeAnalysis ? { analysis } : {}),
       id: crypto.randomUUID(),
       url: finalUrl,
       statusCode,

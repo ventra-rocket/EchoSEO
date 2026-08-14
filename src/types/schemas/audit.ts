@@ -200,6 +200,30 @@ export const removeAuditCompetitorSchema = z.object({
   competitorId: z.string().min(1),
 });
 
+// Run / read the page-level competitor comparison, and override one pairing.
+// `theirUrl` is normalized and SSRF-checked server-side before it is fetched.
+export const auditComparisonRequestSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
+// `pageId` repoints an existing pair; `ourUrl` creates one for a page the matcher
+// found no candidate for. Exactly one is required — a competitor may genuinely
+// have no counterpart to /pricing, and "no candidate" must not mean "no way to
+// pair it".
+export const setCompetitorPageUrlSchema = z
+  .object({
+    projectId: z.string().min(1),
+    auditId: z.string().min(1),
+    competitorId: z.string().min(1),
+    pageId: z.string().min(1).nullish(),
+    ourUrl: z.string().min(1).max(2048).nullish(),
+    theirUrl: z.string().min(1).max(2048),
+  })
+  .refine((value) => Boolean(value.pageId) !== Boolean(value.ourUrl), {
+    message: "Pass either pageId or ourUrl",
+  });
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues", "search"] as const;

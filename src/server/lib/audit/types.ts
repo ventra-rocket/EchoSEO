@@ -134,4 +134,18 @@ export interface StepPageResult {
    */
   isHtml: boolean;
   responseTimeMs: number;
+  /**
+   * The parsed page facts, present only when the caller asked for them
+   * (`crawlPage(..., { includeAnalysis: true })`).
+   *
+   * Absent by default, and that default matters: the crawl returns these from a
+   * Workflow step in batches of 25 against a hard 1 MiB payload ceiling, so a
+   * second copy of every page's facts would lower the largest crawl that can
+   * finish. The competitor comparison opts in because the rule engine scores a
+   * `PageAnalysis` — `evaluateLiteSignals(analysis)` is provably the same
+   * verdict as `evaluateLiteSignals(toOnPageSignals(row))` (see
+   * `issues/materialize.test.ts`) — and scoring their page through a different
+   * function than ours would tilt the comparison invisibly.
+   */
+  analysis?: PageAnalysis;
 }

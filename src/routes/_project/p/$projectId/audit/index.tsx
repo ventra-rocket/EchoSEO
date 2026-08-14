@@ -18,6 +18,7 @@ import { IndexNowCard } from "@/client/features/audit/indexnow/IndexNowCard";
 import { PeriodicReportCard } from "@/client/features/audit/reports/PeriodicReportCard";
 import { GoogleIndexStatusCard } from "@/client/features/audit/indexing/GoogleIndexStatusCard";
 import { CompetitorsCard } from "@/client/features/audit/competitors/CompetitorsCard";
+import { ComparisonTable } from "@/client/features/audit/competitors/ComparisonTable";
 import {
   buildCrawlEta,
   extractHostname,
@@ -241,6 +242,11 @@ function AuditDetail({
             {accessQuery.data?.canManage && (
               <CompetitorsCard projectId={projectId} auditId={auditId} />
             )}
+            <ComparisonTable
+              projectId={projectId}
+              auditId={auditId}
+              canManage={accessQuery.data?.canManage ?? false}
+            />
             {accessQuery.data?.canManage && (
               <IndexNowCard projectId={projectId} auditId={auditId} />
             )}

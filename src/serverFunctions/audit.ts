@@ -7,6 +7,7 @@ import { IndexNowService } from "@/server/features/audit/services/IndexNowServic
 import { AuditIndexStatusService } from "@/server/features/audit/services/AuditIndexStatusService";
 import { SiteCardService } from "@/server/features/audit/services/SiteCardService";
 import { CompetitorAuditService } from "@/server/features/audit/services/CompetitorAuditService";
+import { CompetitorComparisonService } from "@/server/features/audit/services/CompetitorComparisonService";
 import { orgMayUseManagedFeatures } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
@@ -16,6 +17,7 @@ import {
 } from "@/serverFunctions/middleware";
 import {
   addAuditCompetitorSchema,
+  auditComparisonRequestSchema,
   deleteAuditSchema,
   getAuditAccessSchema,
   getAuditHistorySchema,
@@ -28,6 +30,7 @@ import {
   inspectAuditUrlSchema,
   listAuditCompetitorsSchema,
   removeAuditCompetitorSchema,
+  setCompetitorPageUrlSchema,
   startAuditSchema,
 } from "@/types/schemas/audit";
 
@@ -267,6 +270,58 @@ export const removeAuditCompetitor = createServerFn({ method: "POST" })
       projectId: context.projectId,
       auditId: data.auditId,
       competitorId: data.competitorId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
+    return { success: true };
+  });
+
+export const getCompetitorComparison = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => auditComparisonRequestSchema.parse(data))
+  .handler(async ({ data, context }) =>
+    CompetitorComparisonService.get({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    }),
+  );
+
+/**
+ * Runs the comparison inline rather than through a Workflow.
+ *
+ * It is at most five sequential requests per competitor with a one-second pause
+ * between them, so the ceiling is a handful of seconds and the operator is
+ * waiting for the result. A Workflow would add a state machine, a polling
+ * endpoint and a progress UI to a click that already finishes.
+ */
+export const runCompetitorComparison = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => auditComparisonRequestSchema.parse(data))
+  .handler(async ({ data, context }) =>
+    CompetitorComparisonService.run({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    }),
+  );
+
+export const setCompetitorPageUrl = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => setCompetitorPageUrlSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await CompetitorComparisonService.setPairUrl({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      competitorId: data.competitorId,
+      pageId: data.pageId ?? null,
+      ourUrl: data.ourUrl ?? null,
+      theirUrl: data.theirUrl,
       actorUserId: context.userId,
       organizationId: context.organizationId,
       authMode: getAuthMode(env.AUTH_MODE),
