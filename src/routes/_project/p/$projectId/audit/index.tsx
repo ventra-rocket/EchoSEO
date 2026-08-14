@@ -17,6 +17,7 @@ import { VerificationOutcomeBanner } from "@/client/features/audit/verification/
 import { IndexNowCard } from "@/client/features/audit/indexnow/IndexNowCard";
 import { PeriodicReportCard } from "@/client/features/audit/reports/PeriodicReportCard";
 import { GoogleIndexStatusCard } from "@/client/features/audit/indexing/GoogleIndexStatusCard";
+import { CompetitorsCard } from "@/client/features/audit/competitors/CompetitorsCard";
 import {
   buildCrawlEta,
   extractHostname,
@@ -237,6 +238,9 @@ function AuditDetail({
               auditId={auditId}
               canInspect={accessQuery.data?.canLaunch ?? false}
             />
+            {accessQuery.data?.canManage && (
+              <CompetitorsCard projectId={projectId} auditId={auditId} />
+            )}
             {accessQuery.data?.canManage && (
               <IndexNowCard projectId={projectId} auditId={auditId} />
             )}

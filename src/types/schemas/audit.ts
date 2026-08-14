@@ -176,6 +176,30 @@ export const auditScreenshotRequestSchema = z.object({
   url: z.string().min(1).max(2048),
 });
 
+// Competitor declaration for one audit target, keyed off the audit whose report
+// the operator is looking at — the same addressing IndexNow and periodic reports
+// use, and the server derives the target from it. `domain` is whatever was
+// typed — bare host, host with path, either scheme — and is normalized and
+// SSRF-checked server-side before anything fetches it, so nothing beyond a sane
+// length is enforced here.
+export const listAuditCompetitorsSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+});
+
+export const addAuditCompetitorSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  domain: z.string().min(1).max(253),
+  label: z.string().max(120).optional(),
+});
+
+export const removeAuditCompetitorSchema = z.object({
+  projectId: z.string().min(1),
+  auditId: z.string().min(1),
+  competitorId: z.string().min(1),
+});
+
 // ─── URL search params schema for /p/$projectId/audit ────────────────────────
 
 const auditTabs = ["pages", "performance", "issues", "search"] as const;

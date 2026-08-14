@@ -6,6 +6,7 @@ import { AuditVerificationService } from "@/server/features/audit/services/Audit
 import { IndexNowService } from "@/server/features/audit/services/IndexNowService";
 import { AuditIndexStatusService } from "@/server/features/audit/services/AuditIndexStatusService";
 import { SiteCardService } from "@/server/features/audit/services/SiteCardService";
+import { CompetitorAuditService } from "@/server/features/audit/services/CompetitorAuditService";
 import { orgMayUseManagedFeatures } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
@@ -14,6 +15,7 @@ import {
   requireProjectContext,
 } from "@/serverFunctions/middleware";
 import {
+  addAuditCompetitorSchema,
   deleteAuditSchema,
   getAuditAccessSchema,
   getAuditHistorySchema,
@@ -24,6 +26,8 @@ import {
   getCrawlProgressSchema,
   indexNowRequestSchema,
   inspectAuditUrlSchema,
+  listAuditCompetitorsSchema,
+  removeAuditCompetitorSchema,
   startAuditSchema,
 } from "@/types/schemas/audit";
 
@@ -220,6 +224,49 @@ export const deleteAudit = createServerFn({ method: "POST" })
     await AuditService.remove({
       auditId: data.auditId,
       projectId: context.projectId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    });
+    return { success: true };
+  });
+
+export const listAuditCompetitors = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => listAuditCompetitorsSchema.parse(data))
+  .handler(async ({ data, context }) =>
+    CompetitorAuditService.list({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    }),
+  );
+
+export const addAuditCompetitor = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => addAuditCompetitorSchema.parse(data))
+  .handler(async ({ data, context }) =>
+    CompetitorAuditService.add({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      domain: data.domain,
+      label: data.label ?? null,
+      actorUserId: context.userId,
+      organizationId: context.organizationId,
+      authMode: getAuthMode(env.AUTH_MODE),
+    }),
+  );
+
+export const removeAuditCompetitor = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => removeAuditCompetitorSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await CompetitorAuditService.remove({
+      projectId: context.projectId,
+      auditId: data.auditId,
+      competitorId: data.competitorId,
       actorUserId: context.userId,
       organizationId: context.organizationId,
       authMode: getAuthMode(env.AUTH_MODE),
