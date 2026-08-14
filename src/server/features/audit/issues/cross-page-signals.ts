@@ -46,33 +46,48 @@ interface CrossPageSignalsForPage {
   signals: CrossPageSignals;
 }
 
-export function buildCrossPageSignals(input: {
-  pages: AuditPageRow[];
-  edges: LinkEdgeRow[];
-  startUrl: string;
-  /** The crawl stopped because it hit its page cap, so the graph is partial. */
-  crawlWasTruncated: boolean;
-}): CrossPageSignalsForPage[] {
+/**
+ * The two aggregates the cross-page rules actually need from the link graph,
+ * plus the page index both are keyed against.
+ *
+ * Built incrementally on purpose. The graph is by far the largest thing a crawl
+ * produces — a 5,000-page crawl of a nav-heavy site stores ~500,000 edges — and
+ * loading them all to compute two small tables put ~120 MB in a 128 MB isolate.
+ * Measured on production 14/08: at ~106,000 edges materialization succeeded, at
+ * ~500,000 it died inside the step's own try/catch, so the crawl sealed with
+ * `issues_materialized_at` left null and the audit had no findings at all.
+ *
+ * Both aggregates are bounded by page count, not edge count: inbound sources are
+ * one entry per target page, and broken targets only exist for edges pointing at
+ * a 4xx page. So the caller can feed edges in chunks and hold only one chunk.
+ */
+export interface LinkGraph {
+  pageByKey: Map<string, AuditPageRow>;
+  /** Distinct source pages per target key. */
+  inboundSourcesByKey: Map<string, Set<string>>;
+  /** Target URLs, as written, that resolve to a 4xx page, per source key. */
+  brokenBySourceKey: Map<string, string[]>;
+}
+
+export function createLinkGraph(pages: AuditPageRow[]): LinkGraph {
   const pageByKey = new Map<string, AuditPageRow>();
-  for (const page of input.pages) {
+  for (const page of pages) {
     const key = urlEquivalenceKey(page.url);
     if (key) pageByKey.set(key, page);
   }
+  return {
+    pageByKey,
+    inboundSourcesByKey: new Map(),
+    brokenBySourceKey: new Map(),
+  };
+}
 
-  const startKey = urlEquivalenceKey(input.startUrl);
-  // If the start URL never matched a crawled page it path-redirected somewhere
-  // the key cannot follow, so the graph has no known root and the real entry
-  // page would be reported as an orphan.
-  const entryPointFound = startKey !== null && pageByKey.has(startKey);
-  const orphanDetectionReliable = !input.crawlWasTruncated && entryPointFound;
-  const sitemapAvailable = input.pages.some((page) => page.inSitemap);
-
-  // Distinct source pages per target, so one source linking through two
-  // spellings still counts once.
-  const inboundSourcesByKey = new Map<string, Set<string>>();
-  const brokenBySourceKey = new Map<string, string[]>();
-
-  for (const edge of input.edges) {
+/** Fold one chunk of edges into the graph. Safe to call repeatedly. */
+export function addEdgesToLinkGraph(
+  graph: LinkGraph,
+  edges: LinkEdgeRow[],
+): void {
+  for (const edge of edges) {
     const sourceKey = urlEquivalenceKey(edge.sourceUrl);
     const targetKey = urlEquivalenceKey(edge.targetUrl);
     if (!sourceKey || !targetKey) continue;
@@ -81,17 +96,36 @@ export function buildCrossPageSignals(input: {
     // link, and is not a broken one either.
     if (sourceKey === targetKey) continue;
 
-    const sources = inboundSourcesByKey.get(targetKey) ?? new Set<string>();
+    const sources =
+      graph.inboundSourcesByKey.get(targetKey) ?? new Set<string>();
     sources.add(sourceKey);
-    inboundSourcesByKey.set(targetKey, sources);
+    graph.inboundSourcesByKey.set(targetKey, sources);
 
-    const targetPage = pageByKey.get(targetKey);
+    const targetPage = graph.pageByKey.get(targetKey);
     if (targetPage && isBrokenStatus(targetPage.statusCode)) {
-      const targets = brokenBySourceKey.get(sourceKey) ?? [];
+      const targets = graph.brokenBySourceKey.get(sourceKey) ?? [];
       targets.push(edge.targetUrl);
-      brokenBySourceKey.set(sourceKey, targets);
+      graph.brokenBySourceKey.set(sourceKey, targets);
     }
   }
+}
+
+export function buildCrossPageSignals(input: {
+  pages: AuditPageRow[];
+  graph: LinkGraph;
+  startUrl: string;
+  /** The crawl stopped because it hit its page cap, so the graph is partial. */
+  crawlWasTruncated: boolean;
+}): CrossPageSignalsForPage[] {
+  const { pageByKey, inboundSourcesByKey, brokenBySourceKey } = input.graph;
+
+  const startKey = urlEquivalenceKey(input.startUrl);
+  // If the start URL never matched a crawled page it path-redirected somewhere
+  // the key cannot follow, so the graph has no known root and the real entry
+  // page would be reported as an orphan.
+  const entryPointFound = startKey !== null && pageByKey.has(startKey);
+  const orphanDetectionReliable = !input.crawlWasTruncated && entryPointFound;
+  const sitemapAvailable = input.pages.some((page) => page.inSitemap);
 
   return input.pages.map((page) => {
     const key = urlEquivalenceKey(page.url);

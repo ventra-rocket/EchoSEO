@@ -13,8 +13,11 @@ import {
   CROSS_PAGE_RULES,
   type CrossPageSignals,
 } from "@/server/lib/audit/rules/cross-page";
-import { buildCrossPageSignals } from "@/server/features/audit/issues/cross-page-signals";
-import type { auditLighthouseResults, auditLinkEdges } from "@/db/audit.schema";
+import {
+  buildCrossPageSignals,
+  type LinkGraph,
+} from "@/server/features/audit/issues/cross-page-signals";
+import type { auditLighthouseResults } from "@/db/audit.schema";
 import {
   getIssueGroup,
   type AuditIssueGroup,
@@ -31,7 +34,6 @@ import {
 } from "@/server/features/audit/issues/snapshot-signals";
 
 type AuditLighthouseRow = typeof auditLighthouseResults.$inferSelect;
-type AuditLinkEdgeRow = typeof auditLinkEdges.$inferSelect;
 
 export interface OccurrenceInput {
   pageId: string | null;
@@ -218,7 +220,13 @@ function buildCrossPageOccurrences(
 export function buildOccurrences(input: {
   pages: AuditPageRow[];
   lighthouse: AuditLighthouseRow[];
-  edges: AuditLinkEdgeRow[];
+  /**
+   * The pre-folded link graph, not the edge list. The caller streams edges into
+   * it in chunks — a 5,000-page crawl of a nav-heavy site stores ~500,000 edges,
+   * and holding them all to compute two page-sized tables was measured putting
+   * ~120 MB in a 128 MB isolate on 14/08.
+   */
+  graph: LinkGraph;
   startUrl: string;
   crawlWasTruncated: boolean;
 }): OccurrenceInput[] {
@@ -228,7 +236,7 @@ export function buildOccurrences(input: {
 
   const crossPageOccurrences = buildCrossPageSignals({
     pages: input.pages,
-    edges: input.edges,
+    graph: input.graph,
     startUrl: input.startUrl,
     crawlWasTruncated: input.crawlWasTruncated,
   }).flatMap(({ page, signals }) =>

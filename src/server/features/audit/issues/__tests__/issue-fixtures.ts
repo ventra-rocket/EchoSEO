@@ -2,6 +2,10 @@
  * Shared fixtures for the audit issue materialization tests.
  */
 import { buildOccurrences } from "../materialize";
+import {
+  addEdgesToLinkGraph,
+  createLinkGraph,
+} from "@/server/features/audit/issues/cross-page-signals";
 import type { AuditPageRow } from "../snapshot-signals";
 import type { auditLighthouseResults } from "@/db/audit.schema";
 
@@ -85,10 +89,15 @@ export function occurrencesFor(input: {
   startUrl?: string;
   crawlWasTruncated?: boolean;
 }) {
+  // Folds through the same two calls production uses, in one chunk. A fixture
+  // that built the graph its own way would stop proving the streaming path.
+  const graph = createLinkGraph(input.pages);
+  addEdgesToLinkGraph(graph, input.edges ?? []);
+
   return buildOccurrences({
     pages: input.pages,
     lighthouse: input.lighthouse ?? [],
-    edges: input.edges ?? [],
+    graph,
     startUrl: input.startUrl ?? "https://example.com/",
     crawlWasTruncated: input.crawlWasTruncated ?? false,
   });
