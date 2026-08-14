@@ -408,3 +408,48 @@ export const auditSnapshots = sqliteTable(
     index("audit_snapshots_project_idx").on(table.projectId, table.sealedAt),
   ],
 );
+
+// A competitor domain declared for one audit target. The comparison this feeds
+// is page-level: not "their domain scores X", but "your /brand/rolex loses to
+// their /rolex/discover on these rules".
+//
+// `source` exists from the first migration on purpose. Auto-discovery of
+// competitors is blocked on a SERP data source, not on code — when it lands it
+// adds rows with source "auto" and needs no schema change, so the manual half
+// shipped today is not a design that has to be redone.
+export const auditCompetitors = sqliteTable(
+  "audit_competitors",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    targetId: text("target_id")
+      .notNull()
+      .references(() => auditTargets.id, { onDelete: "cascade" }),
+    // Canonical origin, e.g. "https://cortinawatch.com" — same shape as
+    // `audit_targets.origin` so both sides of a comparison normalize identically.
+    origin: text("origin").notNull(),
+    // Display name the operator recognises ("Cortina Holdings"); null falls back
+    // to the host.
+    label: text("label"),
+    source: text("source", { enum: ["manual", "auto"] })
+      .notNull()
+      .default("manual"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // One row per competitor per target; makes re-adding the same domain an
+    // update rather than a duplicate column in the comparison table.
+    uniqueIndex("audit_competitors_target_origin_idx").on(
+      table.targetId,
+      table.origin,
+    ),
+    index("audit_competitors_project_idx").on(table.projectId),
+  ],
+);
