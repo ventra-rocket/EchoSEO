@@ -23,7 +23,7 @@ import {
   getLatestAuditByProject,
   getLatestCompletedAuditByProject,
 } from "./command-center-audit-queries";
-import { getPagesByUrls } from "./audit-page-queries";
+import { getPagesByUrls, listLinkEdgePage } from "./audit-page-queries";
 
 const DB_BATCH_SIZE = 100;
 const EDGE_ROWS_PER_STATEMENT = 30;
@@ -319,18 +319,6 @@ async function getPageFactsForAudit(auditId: string) {
     .where(eq(auditPages.auditId, auditId));
 }
 
-/** The crawl's internal-link edges, used by the cross-page rules. */
-async function getLinkEdgesForAudit(auditId: string) {
-  return db
-    .select()
-    .from(auditLinkEdges)
-    .where(eq(auditLinkEdges.auditId, auditId));
-}
-
-/**
- * Record that issues have been materialized for a sealed snapshot. Readers use
- * this to tell "no issues found" apart from "not materialized".
- */
 async function markSnapshotIssuesMaterialized(auditId: string) {
   await db
     .update(auditSnapshots)
@@ -478,7 +466,7 @@ export const AuditRepository = {
   listSealedSnapshotsForTarget,
   getPageFactsForAudit,
   getPagesByUrls,
-  getLinkEdgesForAudit,
+  listLinkEdgePage,
   markSnapshotIssuesMaterialized,
   clearSnapshotIssuesMaterialized,
   getAuditForProject,

@@ -4,9 +4,9 @@
  * audit data layer and has a 400-line ceiling, so a read with a single caller
  * lives beside it rather than inside it.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { auditPages } from "@/db/schema";
+import { auditLinkEdges, auditPages } from "@/db/schema";
 
 /** D1 rejects a statement over 100 bound parameters. */
 const MAX_BOUND_PARAMS = 90;
@@ -38,3 +38,36 @@ export async function getPagesByUrls(auditId: string, urls: string[]) {
   }
   return rows;
 }
+
+/**
+ * One page of the crawl's internal-link edges, ordered by id.
+ *
+ * Paged rather than returned whole, and keyset rather than OFFSET. The link graph
+ * is the largest artefact a crawl produces — a 5,000-page crawl of a nav-heavy
+ * site stores ~500,000 rows — and reading them in one statement put roughly
+ * 120 MB into a 128 MB isolate: measured on production 14/08, materialization
+ * succeeded at ~106,000 edges and died inside its own try/catch at ~500,000,
+ * leaving the crawl sealed with no findings at all.
+ *
+ * `afterId` is exclusive. The caller loops until fewer than `limit` rows come
+ * back.
+ */
+export async function listLinkEdgePage(
+  auditId: string,
+  afterId: number,
+  limit: number,
+) {
+  return db
+    .select()
+    .from(auditLinkEdges)
+    .where(
+      and(eq(auditLinkEdges.auditId, auditId), gt(auditLinkEdges.id, afterId)),
+    )
+    .orderBy(asc(auditLinkEdges.id))
+    .limit(limit);
+}
+
+/**
+ * Record that issues have been materialized for a sealed snapshot. Readers use
+ * this to tell "no issues found" apart from "not materialized".
+ */
