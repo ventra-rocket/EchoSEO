@@ -11,8 +11,8 @@ import {
   buildRollups,
 } from "@/server/features/audit/issues/materialize";
 import {
-  addEdgesToLinkGraph,
-  createLinkGraph,
+  brokenPageUrls,
+  buildLinkGraph,
 } from "@/server/features/audit/issues/cross-page-signals";
 import { getIssueFixText } from "@/server/features/audit/issues/issue-fix-text";
 import type { IssueEvidence } from "@/server/features/audit/issues/issue-evidence";
@@ -29,13 +29,6 @@ const MAX_ISSUE_PAGE_SIZE = 100;
  * Reads only a **sealed** snapshot: a running or failed crawl has no baseline
  * and must never produce findings.
  */
-/**
- * Edges read per statement while folding the link graph. 25,000 rows is roughly
- * 6 MB held at once, which leaves the isolate's 128 MB budget to the page rows
- * and the occurrence list rather than to a graph nobody keeps.
- */
-const LINK_EDGE_PAGE_SIZE = 25_000;
-
 async function materializeForAudit(input: {
   auditId: string;
   projectId: string;
@@ -54,24 +47,17 @@ async function materializeForAudit(input: {
     return { materialized: false, occurrenceCount: 0 };
   }
 
-  // Fold the link graph in pages rather than loading it. The two aggregates the
-  // cross-page rules need are bounded by page count; the edge list is not, and
-  // reading it whole put ~120 MB in a 128 MB isolate for a link-dense 5,000-page
-  // crawl — measured on production 14/08, where materialization then died inside
-  // this function's own try/catch and left the audit with no findings.
-  const graph = createLinkGraph(pages);
-  let afterId = 0;
-  for (;;) {
-    const chunk = await AuditRepository.listLinkEdgePage(
-      input.auditId,
-      afterId,
-      LINK_EDGE_PAGE_SIZE,
-    );
-    if (chunk.length === 0) break;
-    addEdgesToLinkGraph(graph, chunk);
-    afterId = chunk[chunk.length - 1].id;
-    if (chunk.length < LINK_EDGE_PAGE_SIZE) break;
-  }
+  // Two bounded queries instead of the edge list. Measured on production 14/08:
+  // reading all ~500,000 edges of a link-dense 5,000-page crawl put ~120 MB in a
+  // 128 MB isolate and died in 4 seconds; paging them in 25,000-row chunks
+  // survived the memory and still lost the step after 54 seconds of round trips.
+  // The aggregates the rules actually read are bounded by page count.
+  const brokenTargets = brokenPageUrls(pages);
+  const [inboundCounts, brokenEdges] = await Promise.all([
+    AuditRepository.listInboundCountsByTarget(input.auditId),
+    AuditRepository.listEdgesToTargets(input.auditId, brokenTargets),
+  ]);
+  const graph = buildLinkGraph({ pages, inboundCounts, brokenEdges });
 
   // A crawl that stopped at its page cap has an incomplete link graph: pages
   // that would have linked to the ones it did fetch were never fetched

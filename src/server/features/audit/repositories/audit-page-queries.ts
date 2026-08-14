@@ -4,7 +4,7 @@
  * audit data layer and has a 400-line ceiling, so a read with a single caller
  * lives beside it rather than inside it.
  */
-import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLinkEdges, auditPages } from "@/db/schema";
 
@@ -40,31 +40,67 @@ export async function getPagesByUrls(auditId: string, urls: string[]) {
 }
 
 /**
- * One page of the crawl's internal-link edges, ordered by id.
+ * Inbound link counts per target URL, aggregated in SQL.
  *
- * Paged rather than returned whole, and keyset rather than OFFSET. The link graph
- * is the largest artefact a crawl produces — a 5,000-page crawl of a nav-heavy
- * site stores ~500,000 rows — and reading them in one statement put roughly
- * 120 MB into a 128 MB isolate: measured on production 14/08, materialization
- * succeeded at ~106,000 edges and died inside its own try/catch at ~500,000,
- * leaving the crawl sealed with no findings at all.
+ * Replaces reading the edge list. The link graph is the largest thing a crawl
+ * produces — a 5,000-page crawl of a nav-heavy site stores ~500,000 edges — and
+ * the two aggregates the cross-page rules need are both far smaller than that.
+ * Measured on production 14/08: loading all edges put ~120 MB in a 128 MB isolate
+ * and died in 4 seconds; streaming them in 25,000-row pages survived the memory
+ * but spent 54 seconds on twenty round trips and still lost the step. This
+ * returns one row per distinct target URL — thousands, not hundreds of thousands.
  *
- * `afterId` is exclusive. The caller loops until fewer than `limit` rows come
- * back.
+ * The count is `count(distinct source_url)` per *raw* target URL, so a document
+ * linked as both `/a` and `/a/` comes back as two rows the caller merges. Merging
+ * sums, which can over-count a source that links one document under two
+ * spellings — acceptable here and nowhere else, because `inboundInternalLinks` is
+ * consumed only as zero-versus-non-zero (`rules/cross-page.ts:101`, and the
+ * evidence field on the orphan rule where the value is zero by definition).
+ * Summing cannot turn a zero into a non-zero or the reverse.
  */
-export async function listLinkEdgePage(
-  auditId: string,
-  afterId: number,
-  limit: number,
-) {
+export async function listInboundCountsByTarget(auditId: string) {
   return db
-    .select()
+    .select({
+      targetUrl: auditLinkEdges.targetUrl,
+      sources: sql<number>`count(distinct ${auditLinkEdges.sourceUrl})`,
+    })
     .from(auditLinkEdges)
-    .where(
-      and(eq(auditLinkEdges.auditId, auditId), gt(auditLinkEdges.id, afterId)),
-    )
-    .orderBy(asc(auditLinkEdges.id))
-    .limit(limit);
+    .where(eq(auditLinkEdges.auditId, auditId))
+    .groupBy(auditLinkEdges.targetUrl);
+}
+
+/**
+ * The edges pointing at specific target URLs — used for the broken-link rule,
+ * which needs the actual target strings but only for targets that resolve to a
+ * 4xx page. Those are a small subset of the graph, so this stays bounded even on
+ * a site where many links are broken.
+ *
+ * Chunked at 90 bound parameters: D1 rejects a statement over 100.
+ */
+export async function listEdgesToTargets(
+  auditId: string,
+  targetUrls: string[],
+) {
+  if (targetUrls.length === 0) return [];
+  const rows: Array<{ sourceUrl: string; targetUrl: string }> = [];
+  for (let i = 0; i < targetUrls.length; i += MAX_BOUND_PARAMS) {
+    const chunk = targetUrls.slice(i, i + MAX_BOUND_PARAMS);
+    rows.push(
+      ...(await db
+        .select({
+          sourceUrl: auditLinkEdges.sourceUrl,
+          targetUrl: auditLinkEdges.targetUrl,
+        })
+        .from(auditLinkEdges)
+        .where(
+          and(
+            eq(auditLinkEdges.auditId, auditId),
+            inArray(auditLinkEdges.targetUrl, chunk),
+          ),
+        )),
+    );
+  }
+  return rows;
 }
 
 /**
