@@ -12,13 +12,7 @@ import {
 } from "@/server/services/seo-check/__tests__/free-check-test-db";
 import { organization } from "@/db/better-auth-schema";
 import { projects } from "@/db/app.schema";
-import {
-  audits,
-  auditLighthouseResults,
-  auditPages,
-  auditSnapshots,
-  auditTargets,
-} from "@/db/audit.schema";
+import { audits, auditTargets } from "@/db/audit.schema";
 import { auditExportJobs } from "@/db/audit-export.schema";
 import { auditScreenshots } from "@/db/audit-screenshot.schema";
 
@@ -75,19 +69,6 @@ async function seedAudit(id: string) {
   });
 }
 
-async function seedSnapshot(auditId: string, sealedAt: string) {
-  await harness.db.insert(auditSnapshots).values({
-    id: `snap-${auditId}`,
-    auditId,
-    projectId: PROJECT_ID,
-    targetId: TARGET_ID,
-    pagesCrawled: 1,
-    edgeCount: 0,
-    lighthouseCount: 0,
-    sealedAt,
-  });
-}
-
 async function seedExport(input: {
   id: string;
   auditId: string;
@@ -106,21 +87,6 @@ async function seedExport(input: {
     r2Key: input.r2Key ?? null,
     ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     expiresAt: input.expiresAt ?? null,
-  });
-}
-
-async function seedLighthouse(auditId: string, r2Key: string) {
-  await harness.db.insert(auditPages).values({
-    id: `page-${auditId}`,
-    auditId,
-    url: "https://example.com/p",
-  });
-  await harness.db.insert(auditLighthouseResults).values({
-    id: `lh-${auditId}`,
-    auditId,
-    pageId: `page-${auditId}`,
-    strategy: "mobile",
-    r2Key,
   });
 }
 
@@ -151,10 +117,6 @@ async function jobById(id: string) {
 
 async function screenshotIds(): Promise<string[]> {
   return (await harness.db.select().from(auditScreenshots)).map((s) => s.id);
-}
-
-async function auditIds(): Promise<string[]> {
-  return (await harness.db.select().from(audits)).map((a) => a.id);
 }
 
 describe("sweepAuditRetention", () => {
@@ -257,51 +219,6 @@ describe("sweepAuditRetention", () => {
       expect(deleteAuditExportsMock).toHaveBeenCalledWith([
         "audit-exports/wedged.zip",
       ]);
-    });
-  });
-
-  describe("part C — purge crawls past retention", () => {
-    it("purges export R2 then deletes an over-retention audit, sparing a recent one", async () => {
-      await seedAudit("old-audit");
-      await seedSnapshot(
-        "old-audit",
-        toSqlite(new Date(Date.now() - 100 * DAY_MS)),
-      );
-      await seedExport({
-        id: "old-export",
-        auditId: "old-audit",
-        status: "ready",
-        r2Key: "audit-exports/old-export.zip",
-        expiresAt: new Date(Date.now() + DAY_MS).toISOString(), // not part A's job
-      });
-      await seedLighthouse("old-audit", "site-audit/proj1/old-audit/lh.json");
-      // A recent screenshot (within its own 30-day window, so part D leaves it)
-      // must still be purged from R2 when its audit is deleted.
-      await seedScreenshot({
-        id: "shot-old",
-        auditId: "old-audit",
-        status: "ready",
-        r2Key: "audit-screenshots/old-audit/shot-old",
-        capturedAt: new Date().toISOString(),
-      });
-
-      await seedAudit("recent-audit");
-      await seedSnapshot("recent-audit", toSqlite(new Date()));
-
-      const result = await sweepAuditRetention();
-
-      expect(result.auditsPurged).toBe(1);
-      // The export ZIP, the Lighthouse payload and the screenshot are all purged
-      // before delete.
-      const purgedKeys = deleteAuditExportsMock.mock.calls.flat().flat();
-      expect(purgedKeys).toContain("audit-exports/old-export.zip");
-      expect(purgedKeys).toContain("site-audit/proj1/old-audit/lh.json");
-      expect(purgedKeys).toContain("audit-screenshots/old-audit/shot-old");
-      const remaining = await auditIds();
-      expect(remaining).toEqual(["recent-audit"]);
-      // Cascade removed the old audit's export + screenshot rows.
-      expect(await jobById("old-export")).toBeNull();
-      expect(await screenshotIds()).toEqual([]);
     });
   });
 

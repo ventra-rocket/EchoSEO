@@ -26,8 +26,14 @@ import { deleteAuditScreenshots } from "@/server/features/audit/evidence/audit-s
 const MAX_EXPORTS_PER_SWEEP = 500;
 /** Screenshots per run. Idempotent + daily, so a backlog drains over days. */
 const MAX_SCREENSHOTS_PER_SWEEP = 500;
-/** Audits per run — each delete cascades pages/issues/lighthouse/etc. */
-const MAX_AUDITS_PER_SWEEP = 200;
+/**
+ * Audits per run. Each one now unwinds in bounded batches — a link-dense
+ * 5,000-page crawl is ~500,000 edge rows and needed 32 statements when done by
+ * hand — so this is a wall-clock budget for the cron rather than a statement-size
+ * limit. Was 200. The sweep is idempotent and runs daily, so a backlog drains
+ * over days, which is the same bargain the export and screenshot sweeps make.
+ */
+const MAX_AUDITS_PER_SWEEP = 25;
 /** A build still queued/processing this long after it started is wedged. */
 const STALE_BUILD_HOURS = 1;
 /** An evidence screenshot is kept this long after it was captured. */
@@ -185,7 +191,21 @@ async function expireStaleScreenshots(now: Date): Promise<number> {
   return expired.length;
 }
 
-/** C: completed crawls older than their target's retention — purge R2, delete. */
+/**
+ * C: completed crawls older than their target's retention — purge R2, delete.
+ *
+ * One audit at a time, and each one's R2 objects immediately before its own rows.
+ * The previous version purged R2 for all 200 candidates and then deleted them in
+ * one statement per 90 ids, which fails: measured on production D1 on 14/08, a
+ * single 5,000-page crawl cascades ~500,000 edge rows and the delete returns
+ * `D1 DB exceeded its CPU time limit and was reset`. Because the R2 purge ran
+ * first and `part()` swallows the throw, that combination destroyed the Lighthouse
+ * payloads and screenshots for every candidate, kept all their rows, and logged a
+ * line identical to a night with nothing to do — repeating every night.
+ *
+ * Per audit, the blast radius of one failure is one audit instead of two hundred,
+ * and the sweep resumes from the same candidate list tomorrow.
+ */
 async function purgeAuditsPastRetention(): Promise<number> {
   const auditIds =
     await AuditRetentionRepository.findAuditIdsPastRetention(
@@ -193,24 +213,36 @@ async function purgeAuditsPastRetention(): Promise<number> {
     );
   if (auditIds.length === 0) return 0;
 
-  // The export ZIPs, the per-page Lighthouse payloads and the evidence
-  // screenshots all live in R2 and are only referenced by rows the cascade is
-  // about to remove — purge them first or they orphan permanently.
-  const [exportKeys, lighthouseKeys, screenshotKeys] = await Promise.all([
-    AuditRetentionRepository.findExportKeysForAudits(auditIds),
-    AuditRetentionRepository.findLighthouseKeysForAudits(auditIds),
-    AuditRetentionRepository.findScreenshotKeysForAudits(auditIds),
-  ]);
-  const keys = [...exportKeys, ...lighthouseKeys, ...screenshotKeys];
-  if (keys.length > 0) {
-    const orphaned = await deleteAuditExports(keys);
-    if (orphaned.length > 0) {
+  let purged = 0;
+  for (const auditId of auditIds) {
+    try {
+      // The export ZIPs, per-page Lighthouse payloads and evidence screenshots
+      // live in R2 and are only referenced by rows about to be deleted — purge
+      // them first or they orphan permanently.
+      const [exportKeys, lighthouseKeys, screenshotKeys] = await Promise.all([
+        AuditRetentionRepository.findExportKeysForAudits([auditId]),
+        AuditRetentionRepository.findLighthouseKeysForAudits([auditId]),
+        AuditRetentionRepository.findScreenshotKeysForAudits([auditId]),
+      ]);
+      const keys = [...exportKeys, ...lighthouseKeys, ...screenshotKeys];
+      if (keys.length > 0) {
+        const orphaned = await deleteAuditExports(keys);
+        if (orphaned.length > 0) {
+          console.error(
+            `[cron] audit retention: could not purge ${orphaned.length} R2 object(s) for audit ${auditId}: ${orphaned.join(", ")}`,
+          );
+        }
+      }
+
+      await AuditRetentionRepository.deleteAuditCascade(auditId);
+      purged += 1;
+    } catch (error) {
+      // Named, so a stuck audit is visible instead of hiding inside a zero.
       console.error(
-        `[cron] audit retention: could not purge ${orphaned.length} R2 object(s) for expired audit(s): ${orphaned.join(", ")}`,
+        `[cron] audit retention: failed to purge audit ${auditId}`,
+        error,
       );
     }
   }
-
-  await AuditRetentionRepository.deleteAuditsByIds(auditIds);
-  return auditIds.length;
+  return purged;
 }
