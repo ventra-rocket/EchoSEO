@@ -9,6 +9,7 @@ describe("shouldCaptureAppErrorCode", () => {
     "VALIDATION_ERROR",
     "RATE_LIMITED",
     "TARGET_BEHIND_AUTH",
+    "AUDIT_VERIFICATION_REQUIRED",
   ] as const)("skips expected %s errors", (code) => {
     expect(shouldCaptureAppErrorCode(code)).toBe(false);
   });

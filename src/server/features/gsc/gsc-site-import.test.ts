@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { originMatchesGscSiteUrl } from "@/server/features/audit/authz/target-verification";
+import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
 import { planGscSiteTarget } from "./gsc-site-import";
 
 /**

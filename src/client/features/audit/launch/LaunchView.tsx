@@ -1,4 +1,5 @@
 import { AuditHistorySection } from "@/client/features/audit/launch/AuditHistorySection";
+import { LargeCrawlConfirmModal } from "@/client/features/audit/launch/LargeCrawlConfirmModal";
 import { LaunchFormCard } from "@/client/features/audit/launch/LaunchFormCard";
 import { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
 
@@ -20,6 +21,8 @@ export function LaunchView({
           launchForm={controller.launchForm}
           commitMaxPagesInput={controller.commitMaxPagesInput}
           access={controller.accessQuery.data}
+          verificationGate={controller.verificationGate}
+          onUseVerificationLimit={controller.applyVerificationPageLimit}
         />
 
         <AuditHistorySection
@@ -29,6 +32,16 @@ export function LaunchView({
           onDelete={controller.deleteAudit}
           canDelete={controller.accessQuery.data?.canLaunch ?? true}
         />
+
+        {controller.pendingLaunch ? (
+          <LargeCrawlConfirmModal
+            maxPages={controller.pendingLaunch.maxPages}
+            startUrl={controller.pendingLaunch.startUrl}
+            isStarting={controller.isStarting}
+            onConfirm={() => void controller.confirmPendingLaunch()}
+            onCancel={controller.cancelPendingLaunch}
+          />
+        ) : null}
       </div>
     </div>
   );

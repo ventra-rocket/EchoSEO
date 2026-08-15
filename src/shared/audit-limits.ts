@@ -26,17 +26,24 @@ export const AUDIT_MIN_PAGES = 10;
  *
  * Raising this without re-measuring would recreate exactly what Phase 05 found:
  * a number in the code that nobody had ever run.
+ *
+ * The launch default is deliberately this same number, so it is not a separate
+ * constant. It was 50, which meant a 600-page site reported 50 pages with nothing
+ * anywhere saying it had been cut short — the tool looked weak at the one thing it
+ * is for. Sites under the ceiling finish naturally when the frontier empties, so
+ * for almost every real site "crawl up to the limit" means "crawl all of it", and
+ * it costs nothing extra in PageSpeed calls: the `auto` strategy is a flat 20
+ * checks regardless of page count (`audit-capacity.ts`).
  */
 export const AUDIT_MAX_PAGES = 5_000;
 
 /**
- * The default is deliberately the maximum, so it is not a separate constant.
+ * Above this crawl size a hosted-tier audit must run against a domain the
+ * connected Search Console property proves ownership of. Self-host / local stay
+ * permissive with an honest "unverified" label.
  *
- * It was 50, which meant a 600-page site reported 50 pages with nothing anywhere
- * saying it had been cut short — the tool looked weak at the one thing it is for.
- * Sites under the ceiling finish naturally when the frontier empties, so for
- * almost every real site "crawl up to the limit" means "crawl all of it".
- *
- * It costs nothing extra in PageSpeed calls: the `auto` strategy is a flat 20
- * checks regardless of page count (`audit-capacity.ts`).
+ * Lives here, beside the crawl ceiling, because the launch form has to name this
+ * number to the user before a crawl is refused for it — and the client cannot
+ * import the server authz module that enforces it.
  */
+export const AUDIT_VERIFICATION_PAGE_THRESHOLD = 100;

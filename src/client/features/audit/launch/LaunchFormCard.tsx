@@ -5,7 +5,11 @@ import {
   MIN_PAGES,
 } from "@/client/features/audit/launch/types";
 import type { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
+import type { LaunchVerificationGate } from "@/client/features/audit/launch/verification";
 import { getFieldError, getFormError } from "@/client/lib/forms";
+
+/** Referenced by the submit button, so a disabled launch states its own reason. */
+const VERIFICATION_NOTE_ID = "audit-launch-verification-note";
 
 type Props = {
   launchForm: ReturnType<typeof useLaunchController>["launchForm"];
@@ -20,7 +24,13 @@ export function LaunchFormCard({
   commitMaxPagesInput,
   launchForm,
   access,
-}: Props & { access: AuditAccess | undefined }) {
+  verificationGate,
+  onUseVerificationLimit,
+}: Props & {
+  access: AuditAccess | undefined;
+  verificationGate: LaunchVerificationGate | null;
+  onUseVerificationLimit: () => void;
+}) {
   // Until access resolves, assume the caller may launch: the server is the
   // authority and rejects a viewer anyway, and a flashing disabled button on
   // every load is worse than a request that fails for the rare read-only user.
@@ -75,7 +85,12 @@ export function LaunchFormCard({
               <button
                 type="submit"
                 className="btn btn-primary btn-sm w-full lg:col-span-3"
-                disabled={isSubmitting || !canLaunch}
+                disabled={
+                  isSubmitting || !canLaunch || verificationGate !== null
+                }
+                aria-describedby={
+                  verificationGate ? VERIFICATION_NOTE_ID : undefined
+                }
               >
                 {isSubmitting ? (
                   <>
@@ -97,7 +112,11 @@ export function LaunchFormCard({
           </div>
         </form>
 
-        <VerificationNote access={access} />
+        <VerificationNote
+          access={access}
+          gate={verificationGate}
+          onUseVerificationLimit={onUseVerificationLimit}
+        />
         <LaunchErrors launchForm={launchForm} />
       </div>
     </div>
@@ -193,20 +212,55 @@ function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
 }
 
 /**
- * Explains the ownership rule before a large crawl is rejected for it. Only
- * rendered where the rule applies — self-host deployments have no threshold.
+ * Explains the ownership rule before a large crawl is rejected for it, and names
+ * the typed domain once that rule is about to refuse the launch. Only rendered
+ * where the rule applies — self-host deployments have no threshold.
  */
-function VerificationNote({ access }: { access: AuditAccess | undefined }) {
+function VerificationNote({
+  access,
+  gate,
+  onUseVerificationLimit,
+}: {
+  access: AuditAccess | undefined;
+  gate: LaunchVerificationGate | null;
+  onUseVerificationLimit: () => void;
+}) {
   if (!access?.verificationPageThreshold) {
     return null;
   }
 
+  if (!gate) {
+    return (
+      <p id={VERIFICATION_NOTE_ID} className="text-xs text-base-content/60">
+        {access.verifiedSiteUrl
+          ? `Search Console property connected (${access.verifiedSiteUrl}). Crawls over ${access.verificationPageThreshold.toLocaleString()} pages are allowed on domains this property covers.`
+          : `Crawls over ${access.verificationPageThreshold.toLocaleString()} pages require a matching verified Search Console property for the domain.`}
+      </p>
+    );
+  }
+
+  const limit = gate.threshold.toLocaleString();
+
   return (
-    <p className="text-xs text-base-content/60">
-      {access.verifiedSiteUrl
-        ? `Search Console property connected (${access.verifiedSiteUrl}). Crawls over ${access.verificationPageThreshold.toLocaleString()} pages are allowed on domains this property covers.`
-        : `Crawls over ${access.verificationPageThreshold.toLocaleString()} pages require a matching verified Search Console property for the domain.`}
-    </p>
+    <div
+      id={VERIFICATION_NOTE_ID}
+      className="alert alert-warning items-start py-2"
+    >
+      <div className="space-y-2 text-sm">
+        <p>
+          {gate.verifiedSiteUrl
+            ? `${gate.domain} is not covered by the connected Search Console property (${gate.verifiedSiteUrl}), so it can be crawled up to ${limit} pages. Connect a property that covers ${gate.domain} to crawl more.`
+            : `No Search Console property is connected, so ${gate.domain} can be crawled up to ${limit} pages. Connect a matching property in Settings to crawl more.`}
+        </p>
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={onUseVerificationLimit}
+        >
+          Crawl {limit} pages
+        </button>
+      </div>
+    </div>
   );
 }
 

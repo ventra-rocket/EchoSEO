@@ -9,49 +9,10 @@
  * Google-facing authority.
  */
 import type { AuthMode } from "@/lib/auth-mode";
+import { AUDIT_VERIFICATION_PAGE_THRESHOLD } from "@/shared/audit-limits";
+import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
 
 type TargetVerification = "unverified" | "gsc_property";
-
-/**
- * Above this crawl size a hosted-tier audit must run against a verified domain.
- * Self-host / local stay permissive with an honest "unverified" label.
- */
-export const AUDIT_VERIFICATION_PAGE_THRESHOLD = 100;
-
-/**
- * Does a connected GSC `siteUrl` prove ownership of `origin`?
- * - `sc-domain:<domain>` — domain property covering the domain + all subdomains.
- * - `https://host/…` — URL-prefix property matching the same protocol + host.
- */
-export function originMatchesGscSiteUrl(
-  origin: string,
-  siteUrl: string,
-): boolean {
-  let originUrl: URL;
-  try {
-    originUrl = new URL(origin);
-  } catch {
-    return false;
-  }
-  const originHost = originUrl.hostname.toLowerCase();
-
-  const domainPrefix = "sc-domain:";
-  if (siteUrl.startsWith(domainPrefix)) {
-    const domain = siteUrl.slice(domainPrefix.length).trim().toLowerCase();
-    if (!domain) return false;
-    return originHost === domain || originHost.endsWith(`.${domain}`);
-  }
-
-  try {
-    const propertyUrl = new URL(siteUrl);
-    return (
-      propertyUrl.protocol === originUrl.protocol &&
-      propertyUrl.hostname.toLowerCase() === originHost
-    );
-  } catch {
-    return false;
-  }
-}
 
 export function evaluateTargetVerification(input: {
   origin: string;
