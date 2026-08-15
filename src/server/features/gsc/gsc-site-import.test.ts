@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
+import { propertyCoversOrigin } from "@/shared/gsc-property-match";
 import { planGscSiteTarget } from "./gsc-site-import";
 
 /**
- * The mapping's one load-bearing property, asserted against the REAL verification
- * matcher rather than a restatement of its rules: an imported target whose origin
- * the property cannot prove is a target whose large hosted crawls get refused,
- * and nothing surfaces that until someone launches one.
+ * The mapping's one load-bearing property, asserted against the REAL coverage
+ * predicate rather than a restatement of its rules: an imported target its own
+ * property does not cover is a target whose Search Console reads all return
+ * `property_mismatch`, and nothing surfaces that until someone opens a report.
  */
-describe("planGscSiteTarget keeps the origin provable by its property", () => {
+describe("planGscSiteTarget keeps the origin covered by its property", () => {
   it.each([
     "sc-domain:example.com",
     "sc-domain:EXAMPLE.com",
@@ -21,10 +21,9 @@ describe("planGscSiteTarget keeps the origin provable by its property", () => {
     const plan = planGscSiteTarget(siteUrl);
     expect(plan, siteUrl).not.toBeNull();
     if (!plan) return;
-    expect(
-      originMatchesGscSiteUrl(plan.origin, plan.siteUrl),
-      plan.origin,
-    ).toBe(true);
+    expect(propertyCoversOrigin(plan.origin, plan.siteUrl), plan.origin).toBe(
+      true,
+    );
   });
 });
 
@@ -62,13 +61,13 @@ describe("planGscSiteTarget", () => {
   });
 
   it("keeps a URL-prefix property's scheme instead of upgrading it", () => {
-    // The silent bug this exists to prevent: `originMatchesGscSiteUrl` compares
+    // The silent bug this exists to prevent: `propertyCoversOrigin` compares
     // protocol exactly for a URL-prefix property, so an http property rewritten
-    // to https produces a target the verification gate refuses.
+    // to https produces a target whose own search data is refused as a mismatch.
     const plan = planGscSiteTarget("http://example.com/");
     expect(plan?.origin).toBe("http://example.com");
     expect(
-      originMatchesGscSiteUrl("https://example.com", "http://example.com/"),
+      propertyCoversOrigin("https://example.com", "http://example.com/"),
     ).toBe(false);
   });
 

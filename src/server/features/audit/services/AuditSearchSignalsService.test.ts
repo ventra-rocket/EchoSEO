@@ -5,8 +5,8 @@
  * state, totals come from the exact date dimension while drops come from the
  * capped page dimension, and a mid-flight property switch is caught.
  *
- * The match logic itself (`originMatchesGscSiteUrl`) and the pure diffs are NOT
- * mocked — the gate is only trustworthy if the real matcher runs here.
+ * The coverage predicate itself (`propertyCoversOrigin`) and the pure diffs are
+ * NOT mocked — the gate is only trustworthy if the real predicate runs here.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

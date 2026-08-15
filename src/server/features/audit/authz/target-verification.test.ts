@@ -29,6 +29,23 @@ describe("evaluateTargetVerification", () => {
       }),
     ).toBe("unverified");
   });
+
+  it("accepts a subdomain of a URL-prefix property's host", () => {
+    // The gate asks who controls the site, not whose data covers the URL: the
+    // owner of `https://example.com/` was being capped on `blog.example.com`.
+    expect(
+      evaluateTargetVerification({
+        origin: "https://blog.example.com",
+        gscSiteUrl: "https://example.com/",
+      }),
+    ).toBe("gsc_property");
+    expect(
+      evaluateTargetVerification({
+        origin: "https://example.com.evil.com",
+        gscSiteUrl: "https://example.com/",
+      }),
+    ).toBe("unverified");
+  });
 });
 
 describe("hasGoogleFacingAuthority", () => {

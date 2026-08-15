@@ -233,7 +233,7 @@ function VerificationNote({
     return (
       <p id={VERIFICATION_NOTE_ID} className="text-xs text-base-content/60">
         {access.verifiedSiteUrl
-          ? `Search Console property connected (${access.verifiedSiteUrl}). Crawls over ${access.verificationPageThreshold.toLocaleString()} pages are allowed on domains this property covers.`
+          ? `Search Console property connected (${access.verifiedSiteUrl}). Crawls over ${access.verificationPageThreshold.toLocaleString()} pages are allowed on the domains it proves — that host and its subdomains.`
           : `Crawls over ${access.verificationPageThreshold.toLocaleString()} pages require a matching verified Search Console property for the domain.`}
       </p>
     );
@@ -249,7 +249,7 @@ function VerificationNote({
       <div className="space-y-2 text-sm">
         <p>
           {gate.verifiedSiteUrl
-            ? `${gate.domain} is not covered by the connected Search Console property (${gate.verifiedSiteUrl}), so it can be crawled up to ${limit} pages. Connect a property that covers ${gate.domain} to crawl more.`
+            ? `${gate.domain} is not proved by the connected Search Console property (${gate.verifiedSiteUrl}), so it can be crawled up to ${limit} pages. Connect a property covering ${gate.domain} — a Domain property covers every subdomain — to crawl more.`
             : `No Search Console property is connected, so ${gate.domain} can be crawled up to ${limit} pages. Connect a matching property in Settings to crawl more.`}
         </p>
         <button

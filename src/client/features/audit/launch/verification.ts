@@ -2,13 +2,13 @@
  * The launch form's copy of the domain-ownership rule, so a crawl the server will
  * refuse is explained in the form instead of failing after a round trip.
  *
- * It shares the matcher (`originMatchesGscSiteUrl`) with the server gate in
+ * It shares the predicate (`propertyProvesOwnership`) with the server gate in
  * `server/features/audit/authz/target-verification.ts` and takes the threshold
  * from the access query the same gate derives it from, so the two cannot drift.
  * The server stays the authority: this answers "will that be refused, and why",
  * never "is this allowed".
  */
-import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
+import { propertyProvesOwnership } from "@/shared/gsc-property-match";
 
 type AuditAccess = {
   verifiedSiteUrl: string | null;
@@ -67,7 +67,7 @@ export function evaluateLaunchVerificationGate(input: {
   if (!origin) return null;
 
   const verifiedSiteUrl = input.access?.verifiedSiteUrl ?? null;
-  if (verifiedSiteUrl && originMatchesGscSiteUrl(origin, verifiedSiteUrl)) {
+  if (verifiedSiteUrl && propertyProvesOwnership(origin, verifiedSiteUrl)) {
     return null;
   }
 

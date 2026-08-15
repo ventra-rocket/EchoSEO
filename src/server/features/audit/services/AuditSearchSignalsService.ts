@@ -10,7 +10,7 @@
  * `GSC` with an explicit window so they can never read as crawl facts.
  */
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
-import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
+import { propertyCoversOrigin } from "@/shared/gsc-property-match";
 import {
   GscNotConnectedError,
   GscService,
@@ -92,7 +92,7 @@ async function getSignals(input: {
   if (!connection) return { state: "not_connected" };
 
   // The isolation gate: only read a property that actually covers this target.
-  if (!originMatchesGscSiteUrl(origin, connection.siteUrl)) {
+  if (!propertyCoversOrigin(origin, connection.siteUrl)) {
     return { state: "property_mismatch", property: connection.siteUrl };
   }
 
