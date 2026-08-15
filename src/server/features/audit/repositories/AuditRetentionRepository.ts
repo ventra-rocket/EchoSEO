@@ -15,10 +15,15 @@
  * backlog would silently never drain.
  */
 import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import {
   audits,
+  auditIssueOccurrences,
+  auditIssueRollups,
   auditLighthouseResults,
+  auditLinkEdges,
+  auditPages,
   auditSnapshots,
   auditTargets,
 } from "@/db/audit.schema";
@@ -205,11 +210,89 @@ async function findScreenshotKeysForAudits(
   return keys;
 }
 
-/** Delete audits by id; cascade removes pages/issues/edges/lighthouse/snapshot/exports/screenshots. */
-async function deleteAuditsByIds(auditIds: string[]): Promise<void> {
-  for (const batch of chunk(auditIds, MAX_BOUND_PARAMS)) {
-    await db.delete(audits).where(inArray(audits.id, batch));
+/**
+ * Delete rows of one child table for one audit, `batch` at a time.
+ *
+ * Keyed on `rowid` rather than the primary key so it works for both the text-id
+ * tables and the integer-id edge table, and expressed as a subquery so the batch
+ * size never becomes a bound-parameter count.
+ *
+ * The iteration cap is a cron guard, not arithmetic: this runs unattended, and a
+ * loop that cannot make progress must stop and be visible rather than spin.
+ */
+const MAX_DELETE_ITERATIONS = 500;
+
+async function deleteByAuditIdBatched(
+  table: SQLiteTable,
+  auditId: string,
+  batch: number,
+): Promise<void> {
+  for (let i = 0; i < MAX_DELETE_ITERATIONS; i++) {
+    const result = await db.run(sql`
+      delete from ${table}
+      where rowid in (
+        select rowid from ${table} where audit_id = ${auditId} limit ${batch}
+      )
+    `);
+    if ((result.meta?.changes ?? 0) === 0) return;
   }
+  throw new Error(
+    `Retention delete for audit ${auditId} did not finish in ${MAX_DELETE_ITERATIONS} batches`,
+  );
+}
+
+/**
+ * Rows deleted per statement while unwinding one audit.
+ *
+ * Measured against production D1 on 14/08 while cleaning up the Phase 05
+ * measurement data: deleting ~500,000 link edges in one statement returned
+ * `D1 DB exceeded its CPU time limit and was reset` (code 7429), and so did 5,000
+ * page rows. 60,000 edges per statement went through; 1,000 page rows went
+ * through. These sit under both, because a page row carries JSON columns and is
+ * far heavier than an edge.
+ */
+const EDGE_DELETE_BATCH = 25_000;
+const ROW_DELETE_BATCH = 500;
+
+/**
+ * Delete one audit and everything hanging off it, in bounded statements.
+ *
+ * `DELETE FROM audits WHERE id IN (...)` and letting the cascade run is what this
+ * replaces. It reads as one small statement and is not: a 5,000-page crawl of a
+ * link-dense site cascades ~500,000 edge rows, and D1 resets the connection with
+ * a CPU-limit error long before that finishes. Proven by hand on 14/08 — the
+ * cleanup that motivated this needed 32 batched statements for the edges alone.
+ *
+ * Why it matters that this failed quietly: `sweepAuditRetention` wraps each part
+ * in a try/catch that logs and returns 0, and the R2 objects are purged BEFORE the
+ * rows. A failure therefore destroyed the Lighthouse payloads and screenshots,
+ * kept every D1 row, and printed a line indistinguishable from a night with
+ * nothing to sweep — every night, forever.
+ *
+ * Ordered children-first so a failure part-way leaves the audit row present and
+ * the sweep able to resume, rather than orphaning children whose parent is gone.
+ */
+async function deleteAuditCascade(auditId: string): Promise<void> {
+  await deleteByAuditIdBatched(auditLinkEdges, auditId, EDGE_DELETE_BATCH);
+  await deleteByAuditIdBatched(
+    auditIssueOccurrences,
+    auditId,
+    ROW_DELETE_BATCH,
+  );
+  await deleteByAuditIdBatched(auditIssueRollups, auditId, ROW_DELETE_BATCH);
+  await deleteByAuditIdBatched(
+    auditLighthouseResults,
+    auditId,
+    ROW_DELETE_BATCH,
+  );
+  await deleteByAuditIdBatched(auditScreenshots, auditId, ROW_DELETE_BATCH);
+  await deleteByAuditIdBatched(auditExportJobs, auditId, ROW_DELETE_BATCH);
+  // Pages last among the children: `audit_lighthouse_results` and
+  // `audit_issue_occurrences` both cascade from a page too, so clearing them
+  // first keeps each page delete cheap instead of dragging its own cascade.
+  await deleteByAuditIdBatched(auditPages, auditId, ROW_DELETE_BATCH);
+  await db.delete(auditSnapshots).where(eq(auditSnapshots.auditId, auditId));
+  await db.delete(audits).where(eq(audits.id, auditId));
 }
 
 export const AuditRetentionRepository = {
@@ -223,5 +306,5 @@ export const AuditRetentionRepository = {
   findExpiredScreenshots,
   deleteScreenshotsByIds,
   findScreenshotKeysForAudits,
-  deleteAuditsByIds,
+  deleteAuditCascade,
 } as const;
