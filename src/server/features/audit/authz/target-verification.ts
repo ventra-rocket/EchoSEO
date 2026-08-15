@@ -7,10 +7,15 @@
  * today; DNS proof is a reserved P12 seam. An IndexNow key is host-submission
  * proof only and is intentionally never an input here, so it can never grant
  * Google-facing authority.
+ *
+ * The predicate is `propertyProvesOwnership`, never the stricter
+ * `propertyCoversOrigin` the GSC reads use: this asks who controls the site, and
+ * the owner of `https://example.com/` controls `blog.example.com` whether or not
+ * a property reports on it.
  */
 import type { AuthMode } from "@/lib/auth-mode";
 import { AUDIT_VERIFICATION_PAGE_THRESHOLD } from "@/shared/audit-limits";
-import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
+import { propertyProvesOwnership } from "@/shared/gsc-property-match";
 
 type TargetVerification = "unverified" | "gsc_property";
 
@@ -20,7 +25,7 @@ export function evaluateTargetVerification(input: {
 }): TargetVerification {
   if (
     input.gscSiteUrl &&
-    originMatchesGscSiteUrl(input.origin, input.gscSiteUrl)
+    propertyProvesOwnership(input.origin, input.gscSiteUrl)
   ) {
     return "gsc_property";
   }

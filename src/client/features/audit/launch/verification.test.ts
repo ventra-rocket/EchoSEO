@@ -77,6 +77,19 @@ describe("evaluateLaunchVerificationGate", () => {
     ).toBeNull();
   });
 
+  it("allows any size on a subdomain of the connected property's host", () => {
+    // The reported friction: kello.ventrarocket.vn on a project whose property is
+    // the URL-prefix https://ventrarocket.vn/. The server accepts it, so the form
+    // must not disable the button in front of it.
+    expect(
+      evaluateLaunchVerificationGate({
+        urlInput: "kello.ventrarocket.vn",
+        maxPages: 5000,
+        access: HOSTED_ACCESS,
+      }),
+    ).toBeNull();
+  });
+
   it("still blocks a large crawl when no property is connected", () => {
     expect(
       evaluateLaunchVerificationGate({

@@ -18,7 +18,7 @@ import {
   canInvestigate,
   resolveWorkspaceRole,
 } from "@/server/features/audit/authz/workspace-role";
-import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
+import { propertyCoversOrigin } from "@/shared/gsc-property-match";
 import {
   GscNotConnectedError,
   GscService,
@@ -82,7 +82,7 @@ async function resolveMatchingProperty(input: {
   const connection = await GscService.getConnection(input.projectId);
   if (!connection) return { ok: false, result: { state: "not_connected" } };
 
-  if (!originMatchesGscSiteUrl(origin, connection.siteUrl)) {
+  if (!propertyCoversOrigin(origin, connection.siteUrl)) {
     return {
       ok: false,
       result: { state: "property_mismatch", property: connection.siteUrl },
@@ -155,7 +155,7 @@ async function inspectUrl(input: {
     });
     // Re-check the property the query actually resolved, guarding a setSite race
     // between the gate above and the call (mirrors AuditSearchSignalsService).
-    if (!originMatchesGscSiteUrl(resolved.origin, inspection.siteUrl)) {
+    if (!propertyCoversOrigin(resolved.origin, inspection.siteUrl)) {
       return { state: "property_mismatch", property: inspection.siteUrl };
     }
     const row = inspection.results[0];

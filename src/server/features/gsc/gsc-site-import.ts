@@ -9,13 +9,13 @@
  *   of the property's identity, so neither may be rewritten.
  *
  * The invariant every mapping here must hold: **the origin this derives must be
- * provable by the property it came from.** Ownership is checked at launch time by
- * `originMatchesGscSiteUrl`, which compares protocol and host exactly for a
- * URL-prefix property — so silently upgrading `http://` to `https://` would
- * produce a target the verification gate then refuses, and the failure would only
- * appear as a blocked crawl long after the import "succeeded". That is why
- * `gsc-site-import.test.ts` asserts the mapping against the real matcher rather
- * than restating these rules.
+ * covered by the property it came from.** Every Search Console read for the target
+ * runs through `propertyCoversOrigin`, which compares protocol and host exactly
+ * for a URL-prefix property — so silently upgrading `http://` to `https://` would
+ * produce a target whose own property reports `property_mismatch`, and the
+ * failure would only appear as missing search data long after the import
+ * "succeeded". That is why `gsc-site-import.test.ts` asserts the mapping against
+ * the real predicate rather than restating these rules.
  */
 
 const DOMAIN_PROPERTY_PREFIX = "sc-domain:";
@@ -33,8 +33,8 @@ type GscSiteTargetPlan = {
   /**
    * Path a URL-prefix property was scoped to, which the crawl origin drops.
    *
-   * Surfaced rather than swallowed: `originMatchesGscSiteUrl` compares host and
-   * protocol only, so `https://example.com/shop/` does verify the whole origin
+   * Surfaced rather than swallowed: `propertyCoversOrigin` compares host and
+   * protocol only, so `https://example.com/shop/` does report on the whole origin
    * and the crawl will legitimately reach beyond `/shop/`. The importer says so
    * instead of letting the user discover it in a crawl report.
    */
@@ -69,8 +69,8 @@ function planDomainProperty(siteUrl: string): GscSiteTargetPlan | null {
   if (!domain || /[\s/:?#]/.test(domain)) return null;
 
   // `https` is chosen, not assumed: a domain property covers both schemes, and
-  // `originMatchesGscSiteUrl` ignores protocol for this shape, so the crawl
-  // should start on the one the site is expected to serve.
+  // `propertyCoversOrigin` ignores protocol for this shape, so the crawl should
+  // start on the one the site is expected to serve.
   let parsed: URL;
   try {
     parsed = new URL(`https://${domain}`);
