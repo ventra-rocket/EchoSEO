@@ -10,7 +10,7 @@
  * `GSC` with an explicit window so they can never read as crawl facts.
  */
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
-import { originMatchesGscSiteUrl } from "@/server/features/audit/authz/target-verification";
+import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
 import {
   GscNotConnectedError,
   GscService,

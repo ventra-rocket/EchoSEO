@@ -1,4 +1,5 @@
 import { isErrorCode, type ErrorCode } from "@/shared/error-codes";
+import { AUDIT_VERIFICATION_PAGE_THRESHOLD } from "@/shared/audit-limits";
 
 const STANDARD_MESSAGES: Record<ErrorCode, string> = {
   UNAUTHENTICATED: "Please sign in and try again.",
@@ -12,6 +13,10 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
   NOT_FOUND: "The requested resource was not found.",
   AUDIT_CAPACITY_REACHED:
     "You've reached audit capacity for your account. Delete old audits from your projects to start a new one.",
+  // Names the rule and the way out. The generic FORBIDDEN sentence used to stand
+  // in here, which told a user who had simply asked for too many pages on a
+  // domain they don't own that they lacked access to the product.
+  AUDIT_VERIFICATION_REQUIRED: `Crawls over ${AUDIT_VERIFICATION_PAGE_THRESHOLD.toLocaleString()} pages need a Search Console property that covers this domain. Lower Max pages to ${AUDIT_VERIFICATION_PAGE_THRESHOLD.toLocaleString()}, or connect a matching property in Settings.`,
   VALIDATION_ERROR: "Please check your input and try again.",
   CRAWL_TARGET_BLOCKED: "This crawl target is blocked by security policy.",
   BACKLINKS_NOT_ENABLED:

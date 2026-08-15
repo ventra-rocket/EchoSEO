@@ -8,6 +8,7 @@ const ERROR_CODES = [
   "FORBIDDEN",
   "NOT_FOUND",
   "AUDIT_CAPACITY_REACHED",
+  "AUDIT_VERIFICATION_REQUIRED",
   "VALIDATION_ERROR",
   "CRAWL_TARGET_BLOCKED",
   "BACKLINKS_NOT_ENABLED",
@@ -43,6 +44,10 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   // The visitor asked us to check a site whose content is behind a login/SSO
   // gate — an expected "can't check this target" outcome, not a fault.
   "TARGET_BEHIND_AUTH",
+  // The crawl was larger than an unverified domain is allowed — a policy state
+  // the launch form explains and the user resolves by lowering the page limit or
+  // connecting a matching Search Console property. Not a fault to investigate.
+  "AUDIT_VERIFICATION_REQUIRED",
 ]);
 
 export function isErrorCode(value: string): value is ErrorCode {

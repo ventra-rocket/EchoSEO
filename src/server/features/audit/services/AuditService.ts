@@ -101,8 +101,11 @@ async function startAudit(input: {
       verification,
     })
   ) {
+    // A dedicated code, not FORBIDDEN: only the code survives `toClientError`, so
+    // a shared code means the client can only say "no access" for what is really
+    // "that crawl is too large for a domain you have not verified".
     throw new AppError(
-      "FORBIDDEN",
+      "AUDIT_VERIFICATION_REQUIRED",
       "Verify domain ownership in Search Console to run an audit of this size",
     );
   }

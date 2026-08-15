@@ -18,7 +18,7 @@ import {
   canInvestigate,
   resolveWorkspaceRole,
 } from "@/server/features/audit/authz/workspace-role";
-import { originMatchesGscSiteUrl } from "@/server/features/audit/authz/target-verification";
+import { originMatchesGscSiteUrl } from "@/shared/gsc-property-match";
 import {
   GscNotConnectedError,
   GscService,
