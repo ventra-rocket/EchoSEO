@@ -91,6 +91,24 @@ async function getRollupsForAudit(auditId: string) {
  * rule needs to describe itself. Deliberately excludes evidence and timestamps:
  * a snapshot comparison diffs two of these key sets and never renders a row, so
  * shipping the heavy columns would only inflate the read.
+ *
+ * **Unbounded on purpose — do not add a limit here.** Every other read that
+ * scales with a crawl is paged or capped (`listOccurrences`, the export's 50,000
+ * ceiling, the link-graph aggregates), and two of them had to be fixed on 14/08
+ * for loading too much at once. This one is different in kind: the callers compute
+ * a set difference, so a partial key set does not produce a smaller answer, it
+ * produces a WRONG one — every key past the cutoff would read as "resolved since
+ * the baseline". That is precisely the lie `AuditComparisonService`'s
+ * materialization gate exists to refuse.
+ *
+ * What keeps it safe is a real ceiling plus a loud failure, not a limit clause:
+ * occurrences are bounded by pages × rules (5,000 × 11 ≈ 55,000 worst case, and
+ * the largest real crawl holds 8,047), the comparison runs in a request where a
+ * failure is visible, and the weekly report returns `deferred` so the send is
+ * retried rather than silently skipped.
+ *
+ * If it ever does need to scale, the answer is to compute the difference in SQL
+ * between the two audits' key sets — never to truncate the input.
  */
 async function getOccurrenceKeysForAudit(auditId: string) {
   return db
