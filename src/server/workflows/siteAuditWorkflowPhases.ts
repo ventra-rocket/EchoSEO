@@ -1,10 +1,10 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import {
-  discoverUrls,
   fetchRobotsTxtBody,
   parseRobotsTxt,
 } from "@/server/lib/audit/discovery";
+import { getDiscoveredUrls } from "@/server/lib/audit/discovered-urls-store";
 import {
   fetchAndStoreLighthouseResult,
   selectLighthouseSample,
@@ -24,6 +24,7 @@ import type {
 import { captureServerEvent } from "@/server/lib/posthog";
 import { classifyPageStatus } from "@/shared/http-status";
 import { runCrawlPhase } from "@/server/workflows/siteAuditWorkflowCrawl";
+import { runDiscoveryPhase } from "@/server/workflows/siteAuditWorkflowDiscovery";
 
 const LIGHTHOUSE_URL_BATCH_SIZE = 10;
 
@@ -67,13 +68,18 @@ export async function runAuditPhases(
   const origin = getOrigin(startUrl);
   const maxPages = config.maxPages;
 
-  const discovery = await runDiscoveryPhase(
-    step,
+  await runDiscoveryPhase(step, {
     auditId,
     workflowInstanceId,
     origin,
     maxPages,
-  );
+  });
+  // Read outside a step on purpose: the object is written once by the discovery
+  // step and never mutated, so re-reading it on a resumed invocation is
+  // deterministic — and it is the payload that cannot cross a step boundary in
+  // the first place. Null means "no sitemap evidence", which finalize must keep
+  // distinct from "the sitemap was empty".
+  const sitemapUrls = await getDiscoveredUrls(auditId);
   // Read exactly once per audit and never re-read on replay. A Workflow retry
   // that re-fetched robots.txt could get a different file and flip allow/deny
   // half way through a crawl, which would silently change which pages the audit
@@ -90,7 +96,10 @@ export async function runAuditPhases(
     startUrl,
     maxPages,
     robots,
-    sitemapUrls: discovery.sitemapUrls,
+    // Seeds only. The queue can never consume more than `maxPages`, and holding
+    // 50,000 strings in it to throw away 45,000 is waste, not thoroughness.
+    // Membership below still uses the whole set.
+    sitemapUrls: (sitemapUrls ?? []).slice(0, maxPages),
   });
   const allPages = crawl.pages;
   const lighthouseResults = await runLighthousePhase(step, {
@@ -113,7 +122,7 @@ export async function runAuditPhases(
     allPages,
     blockedUrlCount: crawl.blockedUrls.length,
     lighthouseResults,
-    sitemapUrls: discovery.sitemapUrls,
+    sitemapUrls,
   });
 
   await materializeIssues(step, auditId, projectId, billingCustomer);
@@ -157,23 +166,6 @@ async function materializeIssues(
         properties: { project_id: projectId, audit_id: auditId },
       });
     }
-  });
-}
-
-async function runDiscoveryPhase(
-  step: WorkflowStep,
-  auditId: string,
-  workflowInstanceId: string,
-  origin: string,
-  maxPages: number,
-) {
-  return step.do("discover-urls", async () => {
-    const result = await discoverUrls(origin, maxPages);
-    await AuditRepository.updateAuditProgress(auditId, workflowInstanceId, {
-      pagesTotal: Math.min(result.urls.length + 1, maxPages),
-      currentPhase: "crawling",
-    });
-    return { sitemapUrls: result.urls };
   });
 }
 
@@ -363,7 +355,8 @@ async function finalizeAudit(args: {
   allPages: StepPageResult[];
   blockedUrlCount: number;
   lighthouseResults: LighthouseResult[];
-  sitemapUrls: string[];
+  /** Null when discovery left no readable evidence — see `discovered-urls-store`. */
+  sitemapUrls: string[] | null;
 }) {
   const {
     step,
@@ -389,7 +382,7 @@ async function finalizeAudit(args: {
       auditId,
       allPages,
       lighthouseResults,
-      new Set(sitemapUrls),
+      new Set(sitemapUrls ?? []),
     );
     await AuditRepository.batchWriteLinkEdges(auditId, linkEdges);
     await AuditRepository.completeAudit(auditId, workflowInstanceId, {

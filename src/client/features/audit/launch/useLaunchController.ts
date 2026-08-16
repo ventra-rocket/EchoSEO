@@ -58,6 +58,13 @@ export function useLaunchController({
   const historyQuery = useQuery({
     queryKey: ["audit-history", projectId],
     queryFn: () => getAuditHistory({ data: { projectId } }),
+    // Without this the table served a 5-minute-stale cache: it showed an audit as
+    // `Running` while its own detail page already showed `Failed`. The row is the
+    // same D1 row — only the client was behind.
+    refetchInterval: (query) =>
+      query.state.data?.some((audit) => audit.status === "running")
+        ? 5000
+        : false,
   });
   const accessQuery = useQuery({
     queryKey: ["audit-access", projectId],

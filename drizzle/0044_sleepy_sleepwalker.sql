@@ -1,0 +1,1 @@
+ALTER TABLE `audits` ADD `error_message` text;

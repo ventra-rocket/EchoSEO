@@ -49,6 +49,12 @@ export const audits = sqliteTable(
       .notNull()
       .default(sql`(current_timestamp)`),
     completedAt: text("completed_at"),
+    // Why a failed run failed, verbatim from the thrown error and truncated.
+    // Without it the only copy lived in the Workflows API, so the UI fell back to
+    // guessing — and guessed "anti-bot or firewall" at a site that was fine while
+    // the real cause was a 1 MiB step-output limit. Null for running and completed
+    // runs, and for audits that failed before this column existed.
+    errorMessage: text("error_message"),
   },
   (table) => [
     index("audits_project_id_idx").on(table.projectId),

@@ -21,6 +21,7 @@ import {
   deleteAuditExports,
 } from "@/server/features/audit/exports/audit-export-store";
 import { deleteAuditScreenshots } from "@/server/features/audit/evidence/audit-screenshot-store";
+import { discoveredUrlsKey } from "@/server/lib/audit/discovered-urls-store";
 
 /** Export artifacts per run. Idempotent + daily, so a backlog drains over days. */
 const MAX_EXPORTS_PER_SWEEP = 500;
@@ -218,13 +219,20 @@ async function purgeAuditsPastRetention(): Promise<number> {
     try {
       // The export ZIPs, per-page Lighthouse payloads and evidence screenshots
       // live in R2 and are only referenced by rows about to be deleted — purge
-      // them first or they orphan permanently.
+      // them first or they orphan permanently. The discovered-URL set has no row
+      // at all: its key is derived from the audit id, so this sweep is the only
+      // thing that will ever collect it.
       const [exportKeys, lighthouseKeys, screenshotKeys] = await Promise.all([
         AuditRetentionRepository.findExportKeysForAudits([auditId]),
         AuditRetentionRepository.findLighthouseKeysForAudits([auditId]),
         AuditRetentionRepository.findScreenshotKeysForAudits([auditId]),
       ]);
-      const keys = [...exportKeys, ...lighthouseKeys, ...screenshotKeys];
+      const keys = [
+        ...exportKeys,
+        ...lighthouseKeys,
+        ...screenshotKeys,
+        discoveredUrlsKey(auditId),
+      ];
       if (keys.length > 0) {
         const orphaned = await deleteAuditExports(keys);
         if (orphaned.length > 0) {

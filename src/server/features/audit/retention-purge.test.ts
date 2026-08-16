@@ -54,6 +54,10 @@ vi.mock("@/server/features/audit/evidence/audit-screenshot-store", () => ({
   deleteAuditScreenshots: deleteAuditScreenshotsMock,
 }));
 
+vi.mock("@/server/lib/audit/discovered-urls-store", () => ({
+  discoveredUrlsKey: (auditId: string) => `audit-discovery/${auditId}.json`,
+}));
+
 const { sweepAuditRetention } = await import("./retention");
 const { AuditRetentionRepository } =
   await import("./repositories/AuditRetentionRepository");

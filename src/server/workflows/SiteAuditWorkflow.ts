@@ -12,6 +12,7 @@ import {
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import type { AuditConfig } from "@/server/lib/audit/types";
+import { describeAuditFailure } from "@/server/lib/audit/failure-message";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { runAuditPhases } from "@/server/workflows/siteAuditWorkflowPhases";
 
@@ -53,7 +54,11 @@ export class SiteAuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
     } catch (error) {
       console.error(`Audit ${auditId} failed:`, error);
       await step.do("mark-failed", async () => {
-        await AuditRepository.failAudit(auditId, event.instanceId);
+        await AuditRepository.failAudit(
+          auditId,
+          event.instanceId,
+          describeAuditFailure(error),
+        );
 
         const latestAudit = await AuditRepository.getAuditForWorkflow(
           auditId,
