@@ -23,6 +23,7 @@ import {
 import { assertAuditLaunchWithinThrottle } from "@/server/features/audit/services/audit-launch-throttle";
 import { AppError } from "@/server/lib/errors";
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
+import { deleteDiscoveredUrls } from "@/server/lib/audit/discovered-urls-store";
 import {
   parseAuditConfig,
   type AuditConfig,
@@ -255,6 +256,9 @@ async function getStatus(auditId: string, projectId: string) {
     currentPhase: audit.currentPhase,
     startedAt: audit.startedAt,
     completedAt: audit.completedAt,
+    // Null unless the run failed. The banner explains a failure from this rather
+    // than from a guess about the site.
+    errorMessage: audit.errorMessage,
   };
 }
 
@@ -342,7 +346,7 @@ async function getCrawlProgress(auditId: string, projectId: string) {
     throw new AppError("NOT_FOUND");
   }
 
-  return AuditProgressKV.getCrawledUrls(auditId);
+  return AuditProgressKV.getProgress(auditId);
 }
 
 async function remove(input: {
@@ -390,6 +394,10 @@ async function remove(input: {
   }
 
   await AuditRepository.deleteAuditForProject(auditId, projectId);
+  // No row references it, so nothing else will ever collect it. Best-effort:
+  // a surviving object is waste, but keeping the audit row would be a lie.
+  await deleteDiscoveredUrls([auditId]);
+  await AuditProgressKV.clear(auditId);
 }
 
 export const AuditService = {

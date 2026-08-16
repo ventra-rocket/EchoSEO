@@ -311,6 +311,9 @@ async function persistCrawlProgress(params: {
         title: pageResult.title,
         crawledAt: Date.now(),
       })),
+      // Queue depth is what separates "slow site" from "stalled crawl" for
+      // someone watching a progress bar that has not moved.
+      { visited: visitedCount, queued: queueLength },
     );
   });
 

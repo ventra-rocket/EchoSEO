@@ -226,12 +226,27 @@ async function fetchSitemapDocumentWithRetry(sitemapUrl: string): Promise<{
 
 /**
  * Discover all page URLs from robots.txt + sitemaps for an origin.
- * Also tries the default /sitemap.xml if not listed in robots.txt.
+ *
+ * `urls` is sitemap EVIDENCE, not a crawl budget: every crawled page is judged
+ * against it (`buildSitemapMembership`), so it is collected well past `maxPages`
+ * and must not be truncated to the crawl size. It is far too large to cross a
+ * Workflow step boundary — see `discovered-urls-store.ts`.
+ *
+ * `stats` is reported rather than logged so the UI can say what discovery did
+ * during the seconds it takes on a large site.
  */
 export async function discoverUrls(
   origin: string,
   maxPages = 50,
-): Promise<{ urls: string[]; robots: RobotsResult; sitemapUrls: Set<string> }> {
+): Promise<{
+  urls: string[];
+  robots: RobotsResult;
+  stats: {
+    docsFetched: number;
+    docsFailed: number;
+    docsTimedOut: number;
+  };
+}> {
   const robots = await fetchRobotsTxt(origin);
 
   // Collect sitemap URLs: from robots.txt + default location
@@ -312,6 +327,10 @@ export async function discoverUrls(
   return {
     urls: Array.from(allUrls),
     robots,
-    sitemapUrls: allUrls,
+    stats: {
+      docsFetched: fetchedDocs,
+      docsFailed: failedDocs,
+      docsTimedOut: timedOutDocs,
+    },
   };
 }

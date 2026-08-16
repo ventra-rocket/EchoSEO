@@ -118,13 +118,18 @@ async function completeAudit(
     );
 }
 
-async function failAudit(auditId: string, workflowInstanceId: string) {
+async function failAudit(
+  auditId: string,
+  workflowInstanceId: string,
+  errorMessage?: string,
+) {
   await db
     .update(audits)
     .set({
       status: "failed",
       completedAt: new Date().toISOString(),
       currentPhase: "failed",
+      errorMessage: errorMessage ?? null,
     })
     .where(
       and(

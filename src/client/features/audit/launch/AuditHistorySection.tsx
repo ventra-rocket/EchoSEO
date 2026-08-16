@@ -55,7 +55,15 @@ export function AuditHistorySection({
                   <td>
                     <StatusBadge status={audit.status} />
                   </td>
-                  <td>{audit.pagesTotal || audit.pagesCrawled}</td>
+                  {/* `pagesTotal` is the requested ceiling until the crawl
+                      replaces it, so a run that fetched nothing used to
+                      advertise 5,000 pages. Report what was crawled; while it
+                      runs, show it against the current estimate. */}
+                  <td>
+                    {audit.status === "running"
+                      ? `${audit.pagesCrawled} / ${audit.pagesTotal}`
+                      : audit.pagesCrawled}
+                  </td>
                   <td>
                     {audit.ranLighthouse ? (
                       <span className="badge badge-ghost badge-xs">Yes</span>
