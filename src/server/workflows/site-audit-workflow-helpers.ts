@@ -1,7 +1,7 @@
 import { analyzeHtml } from "@/server/lib/audit/page-analyzer";
 import type { StepPageResult } from "@/server/lib/audit/types";
 import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
-import { classifyPageStatus } from "@/shared/http-status";
+import { classifyRefusal } from "@/server/lib/audit/crawl-retry";
 
 /**
  * Fetch and parse one page.
@@ -40,11 +40,12 @@ export async function crawlPage(
     const redirectUrl =
       response.redirected && response.url !== url ? response.url : null;
 
-    // A throttled response is not this page. Cloudflare's rate-limit block page
-    // is served as `text/html`, so parsing it would record the block page's
-    // title and word count as the page's own facts. Return the placeholder row
-    // and tell the caller how long to wait.
-    if (classifyPageStatus(statusCode) === "throttled") {
+    // A refusal is not this page. Cloudflare's rate-limit block page is served as
+    // `text/html`, so parsing it would record the block page's title and word
+    // count as the URL's own facts and let its links into the crawl frontier. The
+    // same is true of any error page we are about to ask for again. Return the
+    // placeholder row and tell the caller how long to wait, if it said.
+    if (classifyRefusal(statusCode)) {
       return {
         ...emptyPageResult(finalUrl, statusCode, redirectUrl, responseTimeMs),
         retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after")),

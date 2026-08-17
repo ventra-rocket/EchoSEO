@@ -55,7 +55,7 @@ export const CROSS_PAGE_RULES: Array<Rule<CrossPageSignals>> = [
     label: "URL responds to a crawl request",
     appliesWhen: (signals) => (signals.statusCode === 0 ? "fail" : "pass"),
     problem:
-      "The crawler got no response at all for this URL — the request failed, timed out, or the host did not resolve. Google treats this the same way, and an unreachable URL cannot stay in the index.",
+      "The crawler got no response for this URL on any attempt — it is retried before this is reported, so a single dropped connection does not land here. The request failed, timed out, or the host did not resolve. Google treats this the same way, and an unreachable URL cannot stay in the index.",
     fixSteps: [
       "Open the URL yourself and confirm whether the host resolves and the server responds.",
       "Check DNS records, firewall rules and rate limiting for anything blocking automated crawlers.",

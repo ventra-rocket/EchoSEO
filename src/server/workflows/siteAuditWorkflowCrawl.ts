@@ -5,7 +5,10 @@ import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import { crawlPage } from "@/server/workflows/site-audit-workflow-helpers";
-import { classifyPageStatus } from "@/shared/http-status";
+import {
+  classifyRefusal,
+  isCongestionSignal,
+} from "@/server/lib/audit/crawl-retry";
 
 const CRAWL_CONCURRENCY = 25;
 
@@ -34,12 +37,12 @@ const THROTTLE_BACKOFF_BASE_SECONDS = 5;
 const THROTTLE_BACKOFF_MAX_SECONDS = 60;
 
 /**
- * A throttled URL goes back on the queue instead of being recorded, because a
- * 429 is not a fact about the page. After this many refusals it is recorded as
- * throttled: the crawl has to terminate, and a page we could not read is worth
- * reporting as exactly that rather than dropping silently.
+ * A refused URL goes back on the queue instead of being recorded, because a
+ * refusal is not a fact about the page. After this many attempts it is recorded
+ * with the status it kept returning: the crawl has to terminate, and a URL that
+ * failed every time is a much stronger claim than one that failed once.
  */
-const MAX_THROTTLE_ATTEMPTS = 3;
+const MAX_RETRY_ATTEMPTS = 3;
 
 /**
  * Pages between CPU-budget hibernations, derived from the measured cost rather
@@ -86,47 +89,54 @@ function classifyCrawlLink(
  * Separate refusals from pages.
  *
  * `retry` is the URLs worth asking for again; `pages` keeps the rest, including
- * refusals that ran out of attempts — those stay as throttled rows so the report
- * can say "we could not read this" instead of the crawl quietly shrinking.
+ * refusals that ran out of attempts — those stay as refused rows so the report can
+ * say "we could not read this" instead of the crawl quietly shrinking. A URL that
+ * failed every attempt is much stronger evidence than one that failed once, which
+ * is the whole reason to retry before recording a finding against it.
  *
  * `retryAfterMs` is the longest wait any server in the batch asked for, or null
  * when none did (the usual case).
  */
-function partitionThrottledBatch(
+function partitionRefusedBatch(
   crawledBatch: StepPageResult[],
-  throttleAttempts: Map<string, number>,
+  retryAttempts: Map<string, number>,
 ): {
   pages: StepPageResult[];
   retry: string[];
   retryAfterMs: number | null;
-  throttledCount: number;
+  throttled: number;
+  unanswered: number;
 } {
   const pages: StepPageResult[] = [];
   const retry: string[] = [];
   let retryAfterMs: number | null = null;
-  let throttledCount = 0;
+  let throttled = 0;
+  let unanswered = 0;
 
   for (const page of crawledBatch) {
-    if (classifyPageStatus(page.statusCode) !== "throttled") {
+    const refusal = classifyRefusal(page.statusCode);
+    if (refusal === null) {
       pages.push(page);
       continue;
     }
 
-    throttledCount += 1;
+    if (refusal === "throttled") throttled += 1;
+    else unanswered += 1;
+
     if (page.retryAfterMs != null) {
       retryAfterMs = Math.max(retryAfterMs ?? 0, page.retryAfterMs);
     }
 
-    const attempts = (throttleAttempts.get(page.url) ?? 0) + 1;
-    throttleAttempts.set(page.url, attempts);
-    if (attempts < MAX_THROTTLE_ATTEMPTS) {
+    const attempts = (retryAttempts.get(page.url) ?? 0) + 1;
+    retryAttempts.set(page.url, attempts);
+    if (attempts < MAX_RETRY_ATTEMPTS) {
       retry.push(page.url);
     } else {
       pages.push(page);
     }
   }
 
-  return { pages, retry, retryAfterMs, throttledCount };
+  return { pages, retry, retryAfterMs, throttled, unanswered };
 }
 
 /**
@@ -205,7 +215,7 @@ export async function runCrawlPhase(
   let throttleWaits = 0;
   let consecutiveThrottledBatches = 0;
   let pagesAtLastCpuBreak = 0;
-  const throttleAttempts = new Map<string, number>();
+  const retryAttempts = new Map<string, number>();
 
   while (queue.length > 0 && allPages.length < maxPages) {
     const urlsToCrawl = selectNextCrawlBatch({
@@ -230,8 +240,8 @@ export async function runCrawlPhase(
     // Split before anything counts the batch: a refused request is not a page,
     // and requeueing it must undo the `visited` mark `selectNextCrawlBatch` set
     // before the fetch, or the URL can never be tried again.
-    const { pages, retry, retryAfterMs, throttledCount } =
-      partitionThrottledBatch(crawledBatch, throttleAttempts);
+    const { pages, retry, retryAfterMs, throttled, unanswered } =
+      partitionRefusedBatch(crawledBatch, retryAttempts);
     for (const url of retry) {
       visited.delete(url);
       queued.add(url);
@@ -253,8 +263,8 @@ export async function runCrawlPhase(
       crawlBatchIndex,
       auditId,
       workflowInstanceId,
-      // The whole batch, refusals included: someone watching the live feed
-      // should see the 429s. That feed is how this defect was found.
+      // The whole batch, refusals included: someone watching the live feed should
+      // see them. That feed is how this whole class of defect was found.
       crawledBatch,
       pagesCrawled: allPages.length,
       visitedCount: visited.size,
@@ -262,9 +272,16 @@ export async function runCrawlPhase(
       maxPages,
     });
 
-    // Counts refusals we gave up on too: a page recorded as throttled is still
-    // the site telling us to slow down.
-    if (throttledCount > 0) {
+    // Counts refusals we gave up on too: a row recorded as refused is still the
+    // site telling us something. An unanswered request only counts as a rate
+    // signal when it took most of the batch with it — see `isCongestionSignal`.
+    if (
+      isCongestionSignal({
+        throttled,
+        unanswered,
+        batchSize: crawledBatch.length,
+      })
+    ) {
       consecutiveThrottledBatches += 1;
       concurrency = Math.max(
         MIN_CRAWL_CONCURRENCY,
