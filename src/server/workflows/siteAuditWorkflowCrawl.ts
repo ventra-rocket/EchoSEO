@@ -20,11 +20,18 @@ const CRAWL_CONCURRENCY = 25;
  * So the rate is adaptive rather than a lower fixed number: halve on a throttled
  * batch, hibernate, and climb back once the site is answering again. A fixed low
  * concurrency would slow every well-provisioned site down to protect the few.
+ *
+ * The climb is **additive** — one more request per clean batch — because doubling
+ * it was measured overshooting. The first version doubled after three clean
+ * batches and a 5,000-page crawl of that same site averaged an effective
+ * concurrency of 4.5 out of 25: it kept sprinting back into the limit, losing a
+ * whole refused window each time, and spent most of the crawl at its floor. This
+ * is multiplicative-decrease / additive-increase for the same reason TCP is, and
+ * a batch is the round trip it climbs per.
  */
 const MIN_CRAWL_CONCURRENCY = 3;
 const THROTTLE_BACKOFF_BASE_SECONDS = 5;
 const THROTTLE_BACKOFF_MAX_SECONDS = 60;
-const CLEAN_BATCHES_BEFORE_SPEEDUP = 3;
 
 /**
  * A throttled URL goes back on the queue instead of being recorded, because a
@@ -33,6 +40,20 @@ const CLEAN_BATCHES_BEFORE_SPEEDUP = 3;
  * reporting as exactly that rather than dropping silently.
  */
 const MAX_THROTTLE_ATTEMPTS = 3;
+
+/**
+ * Pages between CPU-budget hibernations, derived from the measured cost rather
+ * than guessed at. `analyzeHtml` takes 6.0 ms on a real 118 KB product page (50
+ * runs), so 500 pages is about 3 s of parse CPU against the 30 s per-invocation
+ * budget — an order of magnitude of headroom for serialisation and everything
+ * else in a batch.
+ *
+ * It was every 5 batches, which is 125 pages, or 0.75 s of parse: 40 sleeps of 10 s
+ * on a 5,000-page crawl, 6.7 minutes of a 47-minute run spent deliberately idle to
+ * protect a budget that was never close. Counted in pages, not batches, because
+ * the batch size now moves with the adaptive rate.
+ */
+const PAGES_PER_CPU_BREAK = 500;
 
 /**
  * The slice of `WorkflowStep` this phase uses — lets tests pass a plain fake,
@@ -183,7 +204,7 @@ export async function runCrawlPhase(
   let concurrency = CRAWL_CONCURRENCY;
   let throttleWaits = 0;
   let consecutiveThrottledBatches = 0;
-  let cleanBatches = 0;
+  let pagesAtLastCpuBreak = 0;
   const throttleAttempts = new Map<string, number>();
 
   while (queue.length > 0 && allPages.length < maxPages) {
@@ -245,7 +266,6 @@ export async function runCrawlPhase(
     // the site telling us to slow down.
     if (throttledCount > 0) {
       consecutiveThrottledBatches += 1;
-      cleanBatches = 0;
       concurrency = Math.max(
         MIN_CRAWL_CONCURRENCY,
         Math.floor(concurrency / 2),
@@ -257,30 +277,25 @@ export async function runCrawlPhase(
       );
     } else {
       consecutiveThrottledBatches = 0;
-      cleanBatches += 1;
-      if (
-        cleanBatches >= CLEAN_BATCHES_BEFORE_SPEEDUP &&
-        concurrency < CRAWL_CONCURRENCY
-      ) {
-        concurrency = Math.min(CRAWL_CONCURRENCY, concurrency * 2);
-        cleanBatches = 0;
-      }
+      // One more per clean batch. Doubling here is what produced an effective
+      // concurrency of 4.5 out of 25 on a real crawl.
+      concurrency = Math.min(CRAWL_CONCURRENCY, concurrency + 1);
     }
 
-    // CPU is charged per Workflow invocation, and a large crawl accumulates
-    // parse cost across many batches within one, so hibernate briefly every few
-    // batches: the resume is a fresh invocation with a fresh CPU budget, and
-    // every completed crawl-batch step replays from cache (no page is
-    // re-fetched or re-parsed).
+    // CPU is charged per Workflow invocation, and a large crawl accumulates parse
+    // cost across many batches within one, so hibernate periodically: the resume
+    // is a fresh invocation with a fresh CPU budget, and every completed
+    // crawl-batch step replays from cache (no page is re-fetched or re-parsed).
     //
-    // The budget this cadence has to fit inside is the Worker's per-invocation
-    // CPU limit — 30s by default on Workers Paid, since `limits.cpu_ms` is
-    // deliberately unset (see wrangler.jsonc for why). Five batches is 125
-    // pages, so this branch has never run in production: the largest crawl to
-    // date finished at 103 pages, inside a single invocation. Re-measure the
-    // real per-page parse cost before trusting this cadence on a site large
-    // enough to reach it.
-    if (crawlBatchIndex % 5 === 0 && queue.length > 0) {
+    // The budget this cadence fits inside is the Worker's per-invocation CPU limit
+    // — 30s by default on Workers Paid, since `limits.cpu_ms` is deliberately
+    // unset (see wrangler.jsonc for why). See `PAGES_PER_CPU_BREAK` for the
+    // measurement behind the number.
+    if (
+      allPages.length - pagesAtLastCpuBreak >= PAGES_PER_CPU_BREAK &&
+      queue.length > 0
+    ) {
+      pagesAtLastCpuBreak = allPages.length;
       await step.sleep(`cpu-budget-break-${crawlBatchIndex}`, "10 seconds");
     }
   }
