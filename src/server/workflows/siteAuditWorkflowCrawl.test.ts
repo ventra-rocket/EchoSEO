@@ -307,6 +307,59 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     expect(sleeps[2]?.duration).toBe("20 seconds");
   });
 
+  it("climbs back one request at a time, not by doubling", async () => {
+    // Doubling was measured overshooting: it sprinted back into the site's limit,
+    // lost a whole refused window each time, and a real 5,000-page crawl averaged
+    // an effective concurrency of 4.5 out of 25. Additive increase settles just
+    // under the limit instead.
+    const seen = new Set<string>();
+    crawlPageMock.mockImplementation(async (url: string) => {
+      if (!seen.has(url)) {
+        seen.add(url);
+        return throttledPage(url);
+      }
+      return page(url);
+    });
+    const { step: recorder, batchSizes } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params({ maxPages: 200 }),
+      sitemapUrls: sitemapUrls(80),
+    });
+
+    // 25 refused → halved to 12, then +1 per clean batch. Doubling would read
+    // 12, 24 here.
+    expect(batchSizes.slice(0, 4)).toEqual([25, 12, 13, 14]);
+  });
+
+  it("hibernates on measured page cost, not every fifth batch", async () => {
+    // 6.0 ms/page of parse against a 30 s per-invocation budget: the old cadence
+    // slept every 125 pages, which cost 6.7 minutes of a 47-minute crawl to
+    // protect a budget that was never close.
+    crawlPageMock.mockImplementation(async (url: string) => page(url));
+    const { step: recorder, sleeps } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params({ maxPages: 600 }),
+      sitemapUrls: sitemapUrls(600),
+    });
+
+    const breaks = sleeps.filter((s) => s.name.startsWith("cpu-budget-break-"));
+    expect(breaks).toHaveLength(1);
+  });
+
+  it("does not hibernate at all on a crawl below the measured budget", async () => {
+    crawlPageMock.mockImplementation(async (url: string) => page(url));
+    const { step: recorder, sleeps } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params({ maxPages: 400 }),
+      sitemapUrls: sitemapUrls(400),
+    });
+
+    expect(sleeps).toEqual([]);
+  });
+
   it("waits exactly as long as a Retry-After header asked", async () => {
     crawlPageMock.mockImplementation(async (url: string) =>
       url === "https://example.com/" ? page(url) : throttledPage(url, 7_000),
