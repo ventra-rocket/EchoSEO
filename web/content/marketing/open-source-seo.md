@@ -1,5 +1,5 @@
 ---
-title: Open-Source SEO Software You Control | EchoSEO
+title: Open-Source SEO Software You Control
 description: Self-host EchoSEO, bring your own keys, and keep control of your SEO stack and data. See what ships today, what still costs money, and how to get started.
 ---
 

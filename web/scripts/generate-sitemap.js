@@ -23,8 +23,13 @@ const SITE_URL = (process.env.SITE_URL ?? DEFAULT_SITE_URL).replace(/\/+$/, "");
 // /privacy and /terms-and-conditions are deliberately absent: the app holds the
 // only copy of the legal text and the apex 301s to it (see public/_redirects),
 // so listing them here would submit a redirect as if it were a page.
+//
+// `/vi` is listed even though it is a translation of `/`: it self-canonicalizes
+// and the two are an hreflang pair, so leaving it out submits one half of a
+// cluster and asks Google to find the other half on its own.
 const STATIC_PATHS = [
   "/",
+  "/vi",
   "/pricing",
   "/blogs",
   "/docs",
