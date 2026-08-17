@@ -107,10 +107,29 @@ not the acceptance test.
 ## What Is Not Done
 
 The acceptance test for #73 — re-crawling `thehourglass.com` (1,210 × 0, 73 × 502) and
-comparing — has not run. Launching an audit requires the authenticated UI and the
-workstation display went to sleep; the MCP surface covers keywords, backlinks and rank
-tracking, not Site Audit, so there is no headless path to trigger one. The issue stays open
-with the claim explicitly marked unproven on a real site.
+comparing — has not run, and the reason turned out to be ownership rather than tooling. That
+audit lives in the **THG** project, whose workspace belongs to a different account; the
+workspace signed in here has no Search Console property proving `thehourglass.com`, so its
+launch is correctly refused at 5,000 pages. No local Chrome profile holds the owning account.
+The issue stays open with the claim explicitly marked unproven on a real site, and with the
+exact SQL and baseline written down so whoever has that account can produce the number.
+
+Attempting it did verify something else, on production, that I had only tested on the allowed
+path: the blocked launch now says _"www.thehourglass.com is not proved by the connected Search
+Console property (https://ventrarocket.vn/), so it can be crawled up to 100 pages"_ with a
+`Crawl 100 pages` button, where the old code said "You do not have access to this resource."
+
+### The probe that did not reproduce it, and what it proved anyway
+
+Probing `www.thehourglass.com` at fixed rates found **no 429 at all** up to 8 req/s, and a 502
+rate that does not climb with load (1 in 120 at both 4 and 8 req/s). It could not reproduce
+the failure because it hits one URL with a cache-busting query — the edge answers, the origin
+does nothing — while the crawl fetches 5,000 distinct uncached pages. Measuring the edge when
+you meant to measure the origin is easy to do and easy to miss.
+
+What it did establish is the failure _shape_: this site does not refuse with 429, it drops
+connections and returns 502. Which is exactly why #70's congestion signal missed this case —
+it looked only for 429, found none, and never slowed down.
 
 Also declined, with the reason recorded: collapsing the two per-batch progress writes into
 one durable step. It removes 200 steps from a 5,000-page crawl, but `pushCrawledUrls`
