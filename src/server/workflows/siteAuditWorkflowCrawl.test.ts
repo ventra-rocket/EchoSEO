@@ -6,7 +6,16 @@ const { crawlPageMock, updateAuditProgressMock, pushCrawledUrlsMock } =
   vi.hoisted(() => ({
     crawlPageMock: vi.fn(),
     updateAuditProgressMock: vi.fn(),
-    pushCrawledUrlsMock: vi.fn(),
+    // Typed so assertions on the live feed read the real entry shape instead of
+    // asserting their way out of `any`.
+    pushCrawledUrlsMock:
+      vi.fn<
+        (
+          auditId: string,
+          entries: Array<{ url: string; statusCode: number; title: string }>,
+          frontier: { visited: number; queued: number },
+        ) => Promise<void>
+      >(),
   }));
 
 vi.mock("@/server/workflows/site-audit-workflow-helpers", () => ({
@@ -200,5 +209,160 @@ describe("runCrawlPhase counts robots-blocked URLs", () => {
 
     expect(result.blockedUrls).toEqual([]);
     expect(result.pages).toHaveLength(2);
+  });
+});
+
+function throttledPage(url: string, retryAfterMs: number | null = null) {
+  return {
+    ...page(url),
+    statusCode: 429,
+    title: "",
+    wordCount: 0,
+    isHtml: false,
+    isIndexable: false,
+    retryAfterMs,
+  };
+}
+
+/**
+ * A step runner that records what the loop asked for: the size of each crawl
+ * batch and every sleep it took. Batch size is the observable form of the
+ * adaptive rate, and the sleeps are the politeness itself.
+ */
+function recordingStep() {
+  const batchSizes: number[] = [];
+  const sleeps: Array<{ name: string; duration: string }> = [];
+  return {
+    batchSizes,
+    sleeps,
+    step: {
+      do: async <T>(
+        name: string,
+        callback: () => Promise<T> | T,
+      ): Promise<T> => {
+        const before = crawlPageMock.mock.calls.length;
+        const result = await callback();
+        if (name.startsWith("crawl-batch-")) {
+          batchSizes.push(crawlPageMock.mock.calls.length - before);
+        }
+        return result;
+      },
+      // Wider than the caller's `WorkflowSleepDuration` on purpose: a parameter
+      // has to accept everything the real signature may pass.
+      sleep: async (name: string, duration: string | number) => {
+        sleeps.push({ name, duration: String(duration) });
+      },
+    },
+  };
+}
+
+/** `n` same-origin sitemap URLs, so a batch can be filled without link discovery. */
+function sitemapUrls(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `https://example.com/p${i}`);
+}
+
+describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
+  it("retries a throttled URL instead of recording it as a page", async () => {
+    // The reported bug: 1,894 of 5,000 pages recorded as 429 and reported as the
+    // site's broken pages. A refusal is not an observation, so the URL goes back
+    // on the queue and only the real answer is kept.
+    const attempts = new Map<string, number>();
+    crawlPageMock.mockImplementation(async (url: string) => {
+      const seen = (attempts.get(url) ?? 0) + 1;
+      attempts.set(url, seen);
+      if (url.endsWith("/a") && seen === 1) return throttledPage(url);
+      return page(url);
+    });
+    const { step: recorder } = recordingStep();
+
+    const result = await runCrawlPhase(recorder, {
+      ...params(),
+      sitemapUrls: ["https://example.com/a"],
+    });
+
+    expect(attempts.get("https://example.com/a")).toBe(2);
+    expect(result.pages.map((p) => p.statusCode)).toEqual([200, 200]);
+  });
+
+  it("slows down and hibernates after a throttled batch", async () => {
+    crawlPageMock.mockImplementation(async (url: string) => throttledPage(url));
+    const { step: recorder, batchSizes, sleeps } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params({ maxPages: 200 }),
+      sitemapUrls: sitemapUrls(40),
+    });
+
+    // 25 at a time until the site refuses, then halved for the retry.
+    expect(batchSizes[0]).toBe(25);
+    expect(batchSizes[1]).toBe(12);
+    expect(batchSizes[2]).toBe(6);
+    // Exponential while the refusals continue, since a 429 usually carries no
+    // Retry-After to follow.
+    expect(sleeps[0]).toEqual({
+      name: "throttle-backoff-1",
+      duration: "5 seconds",
+    });
+    expect(sleeps[1]?.duration).toBe("10 seconds");
+    expect(sleeps[2]?.duration).toBe("20 seconds");
+  });
+
+  it("waits exactly as long as a Retry-After header asked", async () => {
+    crawlPageMock.mockImplementation(async (url: string) =>
+      url === "https://example.com/" ? page(url) : throttledPage(url, 7_000),
+    );
+    const { step: recorder, sleeps } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params(),
+      sitemapUrls: ["https://example.com/a"],
+    });
+
+    expect(sleeps[0]?.duration).toBe("7 seconds");
+  });
+
+  it("records a page as throttled once it stops retrying, and terminates", async () => {
+    // The crawl has to end. A URL that is refused every time is reported as
+    // throttled rather than retried forever or dropped without trace.
+    crawlPageMock.mockImplementation(async (url: string) =>
+      url === "https://example.com/" ? page(url) : throttledPage(url),
+    );
+    const { step: recorder } = recordingStep();
+
+    const result = await runCrawlPhase(recorder, {
+      ...params(),
+      sitemapUrls: ["https://example.com/a"],
+    });
+
+    const throttled = result.pages.filter((p) => p.statusCode === 429);
+    expect(throttled).toHaveLength(1);
+    expect(throttled[0]?.url).toBe("https://example.com/a");
+    expect(
+      crawlPageMock.mock.calls.filter(
+        (call) => call[0] === "https://example.com/a",
+      ),
+    ).toHaveLength(3);
+  });
+
+  it("shows the refusals in the live feed rather than hiding the retry", async () => {
+    // The live page feed is how this defect was found; a silent retry would have
+    // made the crawl look merely slow.
+    let first = true;
+    crawlPageMock.mockImplementation(async (url: string) => {
+      if (url.endsWith("/a") && first) {
+        first = false;
+        return throttledPage(url);
+      }
+      return page(url);
+    });
+    const { step: recorder } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params(),
+      sitemapUrls: ["https://example.com/a"],
+    });
+
+    const pushed = pushCrawledUrlsMock.mock.calls.flatMap((call) => call[1]);
+    expect(pushed.filter((entry) => entry.statusCode === 429)).toHaveLength(1);
   });
 });

@@ -5,8 +5,34 @@ import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import { crawlPage } from "@/server/workflows/site-audit-workflow-helpers";
+import { classifyPageStatus } from "@/shared/http-status";
 
 const CRAWL_CONCURRENCY = 25;
+
+/**
+ * Politeness. Measured against a real Cloudflare-fronted site: 25 requests at a
+ * time is fine for two batches, then the zone's rate limit trips and returns 429
+ * for *every* request in the window — 100 of 100 in a probe — before recovering a
+ * few seconds later. The old loop kept firing at full rate straight through that
+ * window and recorded each refusal as one of the site's pages, which is how one
+ * audit reported 1,894 broken pages on a healthy site.
+ *
+ * So the rate is adaptive rather than a lower fixed number: halve on a throttled
+ * batch, hibernate, and climb back once the site is answering again. A fixed low
+ * concurrency would slow every well-provisioned site down to protect the few.
+ */
+const MIN_CRAWL_CONCURRENCY = 3;
+const THROTTLE_BACKOFF_BASE_SECONDS = 5;
+const THROTTLE_BACKOFF_MAX_SECONDS = 60;
+const CLEAN_BATCHES_BEFORE_SPEEDUP = 3;
+
+/**
+ * A throttled URL goes back on the queue instead of being recorded, because a
+ * 429 is not a fact about the page. After this many refusals it is recorded as
+ * throttled: the crawl has to terminate, and a page we could not read is worth
+ * reporting as exactly that rather than dropping silently.
+ */
+const MAX_THROTTLE_ATTEMPTS = 3;
 
 /**
  * The slice of `WorkflowStep` this phase uses — lets tests pass a plain fake,
@@ -33,6 +59,72 @@ function classifyCrawlLink(
   if (!robots.isAllowed(link)) return "blocked";
   if (visited.has(link) || queued.has(link)) return "skip";
   return "queue";
+}
+
+/**
+ * Separate refusals from pages.
+ *
+ * `retry` is the URLs worth asking for again; `pages` keeps the rest, including
+ * refusals that ran out of attempts — those stay as throttled rows so the report
+ * can say "we could not read this" instead of the crawl quietly shrinking.
+ *
+ * `retryAfterMs` is the longest wait any server in the batch asked for, or null
+ * when none did (the usual case).
+ */
+function partitionThrottledBatch(
+  crawledBatch: StepPageResult[],
+  throttleAttempts: Map<string, number>,
+): {
+  pages: StepPageResult[];
+  retry: string[];
+  retryAfterMs: number | null;
+  throttledCount: number;
+} {
+  const pages: StepPageResult[] = [];
+  const retry: string[] = [];
+  let retryAfterMs: number | null = null;
+  let throttledCount = 0;
+
+  for (const page of crawledBatch) {
+    if (classifyPageStatus(page.statusCode) !== "throttled") {
+      pages.push(page);
+      continue;
+    }
+
+    throttledCount += 1;
+    if (page.retryAfterMs != null) {
+      retryAfterMs = Math.max(retryAfterMs ?? 0, page.retryAfterMs);
+    }
+
+    const attempts = (throttleAttempts.get(page.url) ?? 0) + 1;
+    throttleAttempts.set(page.url, attempts);
+    if (attempts < MAX_THROTTLE_ATTEMPTS) {
+      retry.push(page.url);
+    } else {
+      pages.push(page);
+    }
+  }
+
+  return { pages, retry, retryAfterMs, throttledCount };
+}
+
+/**
+ * Exponential on how long the site has been refusing, because the common 429
+ * carries no `Retry-After` at all. A header, when present, wins: the server knows
+ * its own window better than our guess, and `parseRetryAfterMs` has already
+ * clamped it to something sane.
+ */
+function throttleBackoffSeconds(
+  consecutiveThrottledBatches: number,
+  retryAfterMs: number | null,
+): number {
+  if (retryAfterMs != null) {
+    return Math.max(1, Math.ceil(retryAfterMs / 1_000));
+  }
+  const seconds =
+    THROTTLE_BACKOFF_BASE_SECONDS *
+    2 ** Math.max(0, consecutiveThrottledBatches - 1);
+  return Math.min(seconds, THROTTLE_BACKOFF_MAX_SECONDS);
 }
 
 type CrawlPhaseParams = {
@@ -88,6 +180,12 @@ export async function runCrawlPhase(
   });
 
   let crawlBatchIndex = 0;
+  let concurrency = CRAWL_CONCURRENCY;
+  let throttleWaits = 0;
+  let consecutiveThrottledBatches = 0;
+  let cleanBatches = 0;
+  const throttleAttempts = new Map<string, number>();
+
   while (queue.length > 0 && allPages.length < maxPages) {
     const urlsToCrawl = selectNextCrawlBatch({
       queue,
@@ -96,6 +194,7 @@ export async function runCrawlPhase(
       robots,
       remaining: maxPages - allPages.length,
       blocked,
+      concurrency,
     });
     if (urlsToCrawl.length === 0) continue;
 
@@ -106,10 +205,21 @@ export async function runCrawlPhase(
       urlsToCrawl,
       origin,
     );
-    allPages.push(...crawledBatch);
+
+    // Split before anything counts the batch: a refused request is not a page,
+    // and requeueing it must undo the `visited` mark `selectNextCrawlBatch` set
+    // before the fetch, or the URL can never be tried again.
+    const { pages, retry, retryAfterMs, throttledCount } =
+      partitionThrottledBatch(crawledBatch, throttleAttempts);
+    for (const url of retry) {
+      visited.delete(url);
+      queued.add(url);
+      queue.unshift(url);
+    }
+    allPages.push(...pages);
 
     enqueueDiscoveredLinks({
-      crawledBatch,
+      crawledBatch: pages,
       queue,
       queued,
       visited,
@@ -122,12 +232,40 @@ export async function runCrawlPhase(
       crawlBatchIndex,
       auditId,
       workflowInstanceId,
+      // The whole batch, refusals included: someone watching the live feed
+      // should see the 429s. That feed is how this defect was found.
       crawledBatch,
       pagesCrawled: allPages.length,
       visitedCount: visited.size,
       queueLength: queue.length,
       maxPages,
     });
+
+    // Counts refusals we gave up on too: a page recorded as throttled is still
+    // the site telling us to slow down.
+    if (throttledCount > 0) {
+      consecutiveThrottledBatches += 1;
+      cleanBatches = 0;
+      concurrency = Math.max(
+        MIN_CRAWL_CONCURRENCY,
+        Math.floor(concurrency / 2),
+      );
+      throttleWaits += 1;
+      await step.sleep(
+        `throttle-backoff-${throttleWaits}`,
+        `${throttleBackoffSeconds(consecutiveThrottledBatches, retryAfterMs)} seconds`,
+      );
+    } else {
+      consecutiveThrottledBatches = 0;
+      cleanBatches += 1;
+      if (
+        cleanBatches >= CLEAN_BATCHES_BEFORE_SPEEDUP &&
+        concurrency < CRAWL_CONCURRENCY
+      ) {
+        concurrency = Math.min(CRAWL_CONCURRENCY, concurrency * 2);
+        cleanBatches = 0;
+      }
+    }
 
     // CPU is charged per Workflow invocation, and a large crawl accumulates
     // parse cost across many batches within one, so hibernate briefly every few
@@ -210,9 +348,12 @@ function selectNextCrawlBatch(params: {
   robots: RobotsResult;
   remaining: number;
   blocked: Set<string>;
+  /** The current adaptive rate — see `MIN_CRAWL_CONCURRENCY`. */
+  concurrency: number;
 }) {
-  const { queue, queued, visited, robots, remaining, blocked } = params;
-  const batchSize = Math.min(CRAWL_CONCURRENCY, remaining);
+  const { queue, queued, visited, robots, remaining, blocked, concurrency } =
+    params;
+  const batchSize = Math.min(concurrency, remaining);
   const urlsToCrawl: string[] = [];
 
   while (queue.length > 0 && urlsToCrawl.length < batchSize) {

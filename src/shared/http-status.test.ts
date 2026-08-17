@@ -19,6 +19,9 @@ describe("classifyPageStatus", () => {
     [404, "error"],
     [500, "error"],
     [503, "error"],
+    [429, "throttled"],
+    [401, "error"],
+    [403, "error"],
   ] as const)("classifies %i as %s", (statusCode, expected) => {
     expect(classifyPageStatus(statusCode)).toBe(expected);
   });
@@ -38,5 +41,19 @@ describe("classifyPageStatus", () => {
 
   it("does not report a 1xx as a proven page", () => {
     expect(classifyPageStatus(100)).toBe("missing");
+  });
+
+  it("does not report a rate-limited response as one of the site's errors", () => {
+    // The reported bug: a 5,000-page crawl outran a site's rate limit and 1,894
+    // refusals were counted as the site's broken pages. A 429 is about how fast
+    // we asked.
+    expect(classifyPageStatus(429)).toBe("throttled");
+  });
+
+  it("keeps 401 and 403 as errors a reader may need to act on", () => {
+    // Only 429 moves. A durable "you may not see this" is a real finding here;
+    // `cross-page-signals.ts` answers the separate question of broken *links*.
+    expect(classifyPageStatus(401)).toBe("error");
+    expect(classifyPageStatus(403)).toBe("error");
   });
 });

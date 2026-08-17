@@ -91,3 +91,91 @@ describe("crawlPage keeps the step payload bounded", () => {
     expect(page?.externalLinkCount).toBe(0);
   });
 });
+
+function stubResponse(
+  status: number,
+  body: string,
+  headers: Record<string, string>,
+  url = "https://example.com/page",
+) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      const response = new Response(body, { status, headers });
+      Object.defineProperty(response, "url", { value: url });
+      return response;
+    }),
+  );
+  return url;
+}
+
+describe("crawlPage does not mistake a refusal for the page", () => {
+  it("never reads a rate-limit block page as the page's own content", async () => {
+    // Cloudflare serves its 429 as `text/html`, so the old code parsed the block
+    // page and stored "Attention Required" as the page's title with the block
+    // page's word count. Those are facts about the block page, not the URL.
+    const url = stubResponse(
+      429,
+      "<!doctype html><html><head><title>Attention Required</title></head><body><p>Rate limited. Please try again later, this page has plenty of words in it.</p></body></html>",
+      { "content-type": "text/html; charset=utf-8" },
+    );
+
+    const page = await crawlPage(url, "https://example.com");
+
+    expect(page?.statusCode).toBe(429);
+    expect(page?.title).toBe("");
+    expect(page?.wordCount).toBe(0);
+    // `isHtml` is what the materializer and the diff read to decide whether any
+    // on-page fact was observed at all.
+    expect(page?.isHtml).toBe(false);
+  });
+
+  it("passes on a Retry-After delay in seconds", async () => {
+    const url = stubResponse(429, "", {
+      "content-type": "text/html",
+      "retry-after": "12",
+    });
+
+    const page = await crawlPage(url, "https://example.com");
+
+    expect(page?.retryAfterMs).toBe(12_000);
+  });
+
+  it("reads a Retry-After HTTP date as a delay from now", async () => {
+    const url = stubResponse(429, "", {
+      "content-type": "text/html",
+      "retry-after": new Date(Date.now() + 8_000).toUTCString(),
+    });
+
+    const page = await crawlPage(url, "https://example.com");
+
+    // Second granularity in the header, so the exact ms depends on when the
+    // request started; what matters is that a date is understood as a wait.
+    expect(page?.retryAfterMs).toBeGreaterThan(5_000);
+    expect(page?.retryAfterMs).toBeLessThanOrEqual(9_000);
+  });
+
+  it("ignores a Retry-After it cannot trust, leaving the caller its own backoff", async () => {
+    // Garbage, a past date, and an hour-long wait all mean "we have no usable
+    // instruction" — sleeping on any of them would be worse than backing off.
+    for (const header of ["soon", "-5", new Date(0).toUTCString()]) {
+      const url = stubResponse(429, "", {
+        "content-type": "text/html",
+        "retry-after": header,
+      });
+      const page = await crawlPage(url, "https://example.com");
+      expect(page?.retryAfterMs).toBeNull();
+    }
+  });
+
+  it("clamps an implausibly long Retry-After", async () => {
+    const url = stubResponse(429, "", {
+      "content-type": "text/html",
+      "retry-after": "3600",
+    });
+
+    const page = await crawlPage(url, "https://example.com");
+
+    expect(page?.retryAfterMs).toBe(60_000);
+  });
+});

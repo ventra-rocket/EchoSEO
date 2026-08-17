@@ -155,4 +155,12 @@ export interface StepPageResult {
    * function than ours would tilt the comparison invisibly.
    */
   analysis?: PageAnalysis;
+  /**
+   * How long the server told us to wait, from a `Retry-After` header on a 429.
+   * Transient like `analysis`: read by the crawl loop to size its backoff and
+   * never written to `audit_pages`. Null when the response carried no header,
+   * which is the common case — Cloudflare's rate limiting sends none, so the
+   * loop must be able to back off without being told.
+   */
+  retryAfterMs?: number | null;
 }
