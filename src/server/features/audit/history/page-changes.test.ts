@@ -193,6 +193,33 @@ describe("computePageChanges", () => {
     ]);
   });
 
+  it("does not report a rate-limited crawl as a site-wide status regression", () => {
+    // The reported bug: a crawl that outran a site's rate limit stored 429 for
+    // 1,894 pages. Compared against a clean baseline that reads as 1,894 status
+    // regressions, none of which happened to the site.
+    const result = computePageChanges(
+      [
+        page("https://x/a", { statusCode: 429, isHtml: false }),
+        page("https://x/b", { statusCode: 429, isHtml: false }),
+      ],
+      [page("https://x/a"), page("https://x/b")],
+    );
+
+    expect(result.totals.statusChanged).toBe(0);
+    expect(result.changes).toHaveLength(0);
+  });
+
+  it("does not report recovery from a throttled baseline as a change either", () => {
+    // The mirror case: last crawl was throttled, this one succeeded. Reporting
+    // "429 → 200" would credit the site with a fix it never made.
+    const result = computePageChanges(
+      [page("https://x/a")],
+      [page("https://x/a", { statusCode: 429, isHtml: false })],
+    );
+
+    expect(result.totals.statusChanged).toBe(0);
+  });
+
   it("suppresses removed-from-sitemap when the current crawl has no sitemap evidence", () => {
     // Current crawl's sitemap fetch failed → every row reads inSitemap:false.
     // Without suppression, every previously-listed URL false-positives as removed.

@@ -32,6 +32,7 @@ import {
   toOnPageSignals,
   type AuditPageRow,
 } from "@/server/features/audit/issues/snapshot-signals";
+import { classifyPageStatus } from "@/shared/http-status";
 
 type AuditLighthouseRow = typeof auditLighthouseResults.$inferSelect;
 
@@ -103,9 +104,16 @@ const DOCUMENT_RULE_IDS = new Set([
   "server-mixed-content",
 ]);
 
-/** A crawl that never got a response stores status 0 — no observation to judge. */
-function isUnreachable(page: AuditPageRow): boolean {
-  return (page.statusCode ?? 0) === 0;
+/**
+ * No observation to judge. Two ways that happens: the crawl never got a response
+ * (status 0), or the server refused this request to protect itself (429). Neither
+ * says anything about the page, and `server-status` is not a document rule, so
+ * without this gate every refused request produced a critical "does not respond
+ * with a healthy status code" issue against a page we never read.
+ */
+function isUnobserved(page: AuditPageRow): boolean {
+  const statusCode = page.statusCode ?? 0;
+  return statusCode === 0 || classifyPageStatus(statusCode) === "throttled";
 }
 
 function appliesToPage(ruleId: string, page: AuditPageRow): boolean {
@@ -115,11 +123,11 @@ function appliesToPage(ruleId: string, page: AuditPageRow): boolean {
 }
 
 function buildPageOccurrences(page: AuditPageRow): OccurrenceInput[] {
-  // An unreachable URL is a finding in its own right, but the catalog has no
-  // rule for it and the P02 release is frozen. Reporting it through the status
-  // rule would grade it milder than a 404, so it is deferred to the cross-page
-  // rule family rather than mis-graded here.
-  if (isUnreachable(page)) return [];
+  // An unobserved URL is a finding in its own right, but the catalog has no rule
+  // for it and the P02 release is frozen. Reporting it through the status rule
+  // would grade it milder than a 404, so it is deferred to the cross-page rule
+  // family rather than mis-graded here.
+  if (isUnobserved(page)) return [];
 
   const signals = toOnPageSignals(page);
 

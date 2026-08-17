@@ -18,6 +18,8 @@
  * Page-added / page-removed is deliberately out of scope.
  */
 
+import { classifyPageStatus } from "@/shared/http-status";
+
 /** The stored page facts this diff compares; a lean projection of audit_pages. */
 export interface PageFacts {
   url: string;
@@ -121,9 +123,16 @@ function isDocument(page: PageFacts): boolean {
   return page.isHtml && page.statusCode === 200;
 }
 
-/** A fetch that actually returned a status; 0 is the "fetch failed" sentinel. */
-function hasRealStatus(page: PageFacts): boolean {
-  return (page.statusCode ?? 0) > 0;
+/**
+ * A status that says something about the page, so two crawls can be compared on
+ * it. Excludes the 0 "fetch failed" sentinel and a 429, which is this crawl being
+ * rate-limited: without that, a crawl that outran a site's rate limit reported
+ * every refused page as a `200 → 429` regression.
+ */
+function hasComparableStatus(page: PageFacts): boolean {
+  const statusCode = page.statusCode ?? 0;
+  if (statusCode <= 0) return false;
+  return classifyPageStatus(statusCode) !== "throttled";
 }
 
 /**
@@ -144,12 +153,12 @@ function diffPage(
 ): PageFieldChange[] {
   const changes: PageFieldChange[] = [];
 
-  // Status is compared only between two real fetches. A stored 0 means the fetch
-  // failed, not that the page returned status 0, so a transient failure is never
-  // reported as "200 → 0"; a genuine 200 → 404 (both real) still is.
+  // Status is compared only between two crawls that saw the page. A stored 0
+  // means the fetch failed and a 429 means we were throttled, so neither is
+  // reported as a status change; a genuine 200 → 404 (both real) still is.
   if (
-    hasRealStatus(current) &&
-    hasRealStatus(baseline) &&
+    hasComparableStatus(current) &&
+    hasComparableStatus(baseline) &&
     current.statusCode !== baseline.statusCode
   ) {
     changes.push({

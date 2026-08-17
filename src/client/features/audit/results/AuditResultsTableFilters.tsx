@@ -34,6 +34,7 @@ export function PagesFilterBar({
             ["ok", "2xx"],
             ["redirect", "3xx"],
             ["error", "4xx/5xx"],
+            ["throttled", "Throttled"],
             ["missing", "Missing"],
           ]}
         />

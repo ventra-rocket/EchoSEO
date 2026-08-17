@@ -1,6 +1,7 @@
 import { analyzeHtml } from "@/server/lib/audit/page-analyzer";
 import type { StepPageResult } from "@/server/lib/audit/types";
 import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
+import { classifyPageStatus } from "@/shared/http-status";
 
 /**
  * Fetch and parse one page.
@@ -38,6 +39,18 @@ export async function crawlPage(
 
     const redirectUrl =
       response.redirected && response.url !== url ? response.url : null;
+
+    // A throttled response is not this page. Cloudflare's rate-limit block page
+    // is served as `text/html`, so parsing it would record the block page's
+    // title and word count as the page's own facts. Return the placeholder row
+    // and tell the caller how long to wait.
+    if (classifyPageStatus(statusCode) === "throttled") {
+      return {
+        ...emptyPageResult(finalUrl, statusCode, redirectUrl, responseTimeMs),
+        retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after")),
+      };
+    }
+
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("text/html")) {
       return emptyPageResult(finalUrl, statusCode, redirectUrl, responseTimeMs);
@@ -100,6 +113,31 @@ export async function crawlPage(
     console.warn(`Failed to crawl ${url}:`, error);
     return emptyPageResult(url, 0, null, responseTimeMs);
   }
+}
+
+/**
+ * `Retry-After` is either a delay in seconds or an HTTP date. Anything else — or
+ * a value so large it is really a refusal — reads as "no instruction", leaving
+ * the caller on its own exponential backoff rather than sleeping for an hour on
+ * a header we cannot vouch for.
+ */
+const MAX_RETRY_AFTER_MS = 60_000;
+
+function parseRetryAfterMs(header: string | null): number | null {
+  if (!header) return null;
+  const trimmed = header.trim();
+
+  const seconds = Number(trimmed);
+  if (Number.isFinite(seconds)) {
+    if (seconds <= 0) return null;
+    return Math.min(seconds * 1_000, MAX_RETRY_AFTER_MS);
+  }
+
+  const dateMs = Date.parse(trimmed);
+  if (Number.isNaN(dateMs)) return null;
+  const deltaMs = dateMs - Date.now();
+  if (deltaMs <= 0) return null;
+  return Math.min(deltaMs, MAX_RETRY_AFTER_MS);
 }
 
 function emptyPageResult(

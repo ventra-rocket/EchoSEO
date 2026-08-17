@@ -18,6 +18,7 @@ import { AuditReferringDomainsPanel } from "@/client/features/audit/search/Audit
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import type { AuditTab } from "@/types/schemas/audit";
 import { AlertTriangle } from "lucide-react";
+import { classifyPageStatus } from "@/shared/http-status";
 
 type ResultsTab = AuditTab;
 
@@ -73,6 +74,10 @@ export function ResultsView({
         averageResponseMs={stats.averageResponseMs}
         lighthouseSummary={stats.lighthouseSummary}
       />
+
+      {stats.throttledCount > 0 && (
+        <ThrottledCrawlNotice throttledCount={stats.throttledCount} />
+      )}
 
       {audit.pagesCrawled >= audit.config.maxPages && (
         <TruncatedCrawlNotice
@@ -197,6 +202,40 @@ function TruncatedCrawlNotice({
   );
 }
 
+/**
+ * Says out loud that part of the crawl never happened, and whose fault that is.
+ *
+ * Rendered from the rows themselves rather than a stored counter: the snapshot has
+ * no `pages_throttled` column, and deriving it here means the notice can never
+ * disagree with the `Throttled` filter beside it.
+ */
+function ThrottledCrawlNotice({ throttledCount }: { throttledCount: number }) {
+  return (
+    <div className="alert alert-warning items-start" role="status">
+      <AlertTriangle className="size-5 shrink-0" />
+      <div className="space-y-1 text-sm">
+        <p className="font-medium">
+          {throttledCount.toLocaleString()}{" "}
+          {throttledCount === 1 ? "page was" : "pages were"} not read because
+          the site rate-limited this crawl.
+        </p>
+        <p>
+          Those pages answered{" "}
+          <span className="font-mono">429 Too Many Requests</span>, which is
+          about how fast we asked, not about the pages. They are excluded from
+          the broken-page count and from every on-page check, and are listed
+          under the <em>Throttled</em> status filter.
+        </p>
+        <p className="text-base-content/70">
+          The crawler slows down and retries when this happens. If it keeps
+          recurring, allowing our crawler in the site&apos;s rate-limiting rules
+          will let the audit cover the whole site.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function useResultStats(
   pages: AuditResultsData["pages"],
   lighthouse: AuditResultsData["lighthouse"],
@@ -210,6 +249,15 @@ function useResultStats(
     );
     return Math.round(total / pages.length);
   }, [pages]);
+
+  const throttledCount = useMemo(
+    () =>
+      pages.filter(
+        (page: AuditResultsData["pages"][number]) =>
+          classifyPageStatus(page.statusCode) === "throttled",
+      ).length,
+    [pages],
+  );
 
   const lighthouseSummary = useMemo(() => {
     const failed = lighthouse.filter(
@@ -238,7 +286,7 @@ function useResultStats(
     };
   }, [lighthouse]);
 
-  return { averageResponseMs, lighthouseSummary };
+  return { averageResponseMs, lighthouseSummary, throttledCount };
 }
 
 function ResultsHeader({

@@ -203,6 +203,18 @@ describe("rows that are not judgeable documents", () => {
 
     expect(occurrences.map((o) => o.ruleId)).toEqual(["audit-unreachable-url"]);
   });
+
+  it("judges nothing on a page the site refused to serve us", () => {
+    // The reported bug: `server-status` is not a document rule, so every one of
+    // 1,894 rate-limited requests produced a critical "does not respond with a
+    // healthy status code" issue against a page that was never read. A 429 is
+    // about our request rate; there is no observation here to grade.
+    const occurrences = occurrencesFor({
+      pages: [pageRow({ statusCode: 429, title: null, h1Count: 0 })],
+    });
+
+    expect(occurrences).toEqual([]);
+  });
 });
 
 describe("duplicate final URLs", () => {

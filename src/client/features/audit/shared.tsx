@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { classifyPageStatus } from "@/shared/http-status";
 
 export function extractPathname(url: string): string {
   try {
@@ -95,12 +96,18 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/**
+ * Colour follows who owns the problem, not the numeric range: a 429 is our crawl
+ * being rate-limited, so it reads as a warning about the reading rather than an
+ * error found on the site. Same split the crawl summary and the status filter use.
+ */
 export function HttpStatusBadge({ code }: { code: number | null }) {
   if (!code) return <span className="badge badge-ghost badge-sm">-</span>;
-  if (code >= 200 && code < 300) {
+  const statusClass = classifyPageStatus(code);
+  if (statusClass === "ok") {
     return <span className="badge badge-success badge-sm">{code}</span>;
   }
-  if (code >= 300 && code < 400) {
+  if (statusClass === "redirect" || statusClass === "throttled") {
     return <span className="badge badge-warning badge-sm">{code}</span>;
   }
   return <span className="badge badge-error badge-sm">{code}</span>;
