@@ -360,6 +360,93 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     expect(sleeps).toEqual([]);
   });
 
+  it("retries a dropped connection without slowing the whole crawl down", async () => {
+    // A dead URL among 25 live ones is one dead URL, not congestion. It is still
+    // retried — a finding that says "no response on any attempt" has to be true.
+    const seen = new Set<string>();
+    crawlPageMock.mockImplementation(async (url: string) => {
+      if (url.endsWith("/p0") && !seen.has(url)) {
+        seen.add(url);
+        return { ...throttledPage(url), statusCode: 0 };
+      }
+      return page(url);
+    });
+    const { step: recorder, sleeps, batchSizes } = recordingStep();
+
+    const result = await runCrawlPhase(recorder, {
+      ...params({ maxPages: 200 }),
+      sitemapUrls: sitemapUrls(80),
+    });
+
+    expect(sleeps).toEqual([]);
+    // Still at the configured rate: a lone dead URL never halved it. Enough URLs
+    // are queued that the batch size reflects the rate, not an emptying queue.
+    expect(batchSizes[1]).toBe(25);
+    expect(result.pages.every((p) => p.statusCode === 200)).toBe(true);
+  });
+
+  it("slows down when dropped connections take most of the batch", async () => {
+    // The measured case: 1,210 of 5,000 requests died with no status and no 429
+    // anywhere to explain them. That is our own load, and it has to read as one.
+    crawlPageMock.mockImplementation(async (url: string) => ({
+      ...throttledPage(url),
+      statusCode: 0,
+    }));
+    const { step: recorder, batchSizes, sleeps } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params({ maxPages: 200 }),
+      sitemapUrls: sitemapUrls(40),
+    });
+
+    expect(batchSizes[0]).toBe(25);
+    expect(batchSizes[1]).toBe(12);
+    expect(sleeps[0]?.name).toBe("throttle-backoff-1");
+  });
+
+  it("records the status a URL kept returning once it stops retrying", async () => {
+    crawlPageMock.mockImplementation(async (url: string) =>
+      url === "https://example.com/"
+        ? page(url)
+        : { ...throttledPage(url), statusCode: 0 },
+    );
+    const { step: recorder } = recordingStep();
+
+    const result = await runCrawlPhase(recorder, {
+      ...params(),
+      sitemapUrls: ["https://example.com/a"],
+    });
+
+    // Still reported as unreachable — but now only after three failures, which is
+    // what makes `audit-unreachable-url` a claim rather than a guess.
+    const unreachable = result.pages.filter((p) => p.statusCode === 0);
+    expect(unreachable).toHaveLength(1);
+    expect(
+      crawlPageMock.mock.calls.filter(
+        (call) => call[0] === "https://example.com/a",
+      ),
+    ).toHaveLength(3);
+  });
+
+  it("treats a 503 as the server asking for a slower crawl", async () => {
+    // 503 is the canonical overload response and the one usually paired with
+    // Retry-After, so one is enough to act on — unlike a bare dropped connection.
+    crawlPageMock.mockImplementation(async (url: string) =>
+      url.endsWith("/p0")
+        ? { ...throttledPage(url, 4_000), statusCode: 503 }
+        : page(url),
+    );
+    const { step: recorder, sleeps, batchSizes } = recordingStep();
+
+    await runCrawlPhase(recorder, {
+      ...params({ maxPages: 60 }),
+      sitemapUrls: sitemapUrls(40),
+    });
+
+    expect(batchSizes[1]).toBe(12);
+    expect(sleeps[0]?.duration).toBe("4 seconds");
+  });
+
   it("waits exactly as long as a Retry-After header asked", async () => {
     crawlPageMock.mockImplementation(async (url: string) =>
       url === "https://example.com/" ? page(url) : throttledPage(url, 7_000),
