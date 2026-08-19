@@ -254,6 +254,86 @@ test.describe("challenge failure recovery", () => {
     );
     await expect(submit).toHaveText("Check my site");
   });
+
+  test("a challenge that renders but never answers releases the queued submit on its own deadline", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      // `render` returns an id and the challenge never answers: no token, no
+      // `error-callback`. This is the state the widget's render guard cannot
+      // see — an id means "rendered" to it — and where Cloudflare's own error
+      // callback took 44s in production.
+      const turnstile = {
+        render: (): string => "e2e-widget-silent",
+        remove: (): void => {},
+      };
+      Object.assign(window, { turnstile });
+    });
+    await stubCheckApi(page);
+    const checkPosts: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        request.url().endsWith("/api/free-seo-check")
+      ) {
+        checkPosts.push(request.url());
+      }
+    });
+    await gotoHydrated(page);
+
+    const submit = page.locator("button[type=submit]");
+    await page.getByPlaceholder("example.com").fill("example.com");
+    await submit.click();
+    await expect(submit).toContainText("Starting your check…");
+    // The wait is announced, not just drawn: a label swap inside a button is
+    // not announced, so without this mirror the wait is silent.
+    await expect(page.locator("span.sr-only[role=status]")).toHaveText(
+      "Starting your check…",
+    );
+
+    // The queue's own deadline, not Turnstile's timing.
+    await expect(page.locator(".alert-error")).toContainText(
+      "Couldn't load verification",
+      { timeout: 15_000 },
+    );
+    await expect(submit).toHaveText("Check my site");
+    expect(checkPosts).toHaveLength(0);
+  });
+
+  test("a token that lands before the deadline still runs the queued check", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      // Slow enough that the submit is definitely queued and the deadline is
+      // running, early enough that the check must still go through.
+      const turnstile = {
+        render: (
+          _el: HTMLElement,
+          opts: { callback: (token: string) => void },
+        ): string => {
+          setTimeout(() => opts.callback("e2e-turnstile-token"), 3_000);
+          return "e2e-widget-slow";
+        },
+        remove: (): void => {},
+      };
+      Object.assign(window, { turnstile });
+    });
+    await stubCheckApi(page);
+    await gotoHydrated(page);
+
+    const submit = page.locator("button[type=submit]");
+    await page.getByPlaceholder("example.com").fill("example.com");
+    await submit.click();
+    await expect(submit).toContainText("Starting your check…");
+
+    await expect(
+      page.getByRole("heading", { name: "Your SEO Report", level: 2 }),
+    ).toBeVisible({ timeout: 15_000 });
+    // The deadline was disarmed by the token, so nothing fires an error over
+    // the check that already ran.
+    await page.waitForTimeout(12_000);
+    await expect(page.locator(".alert-error")).toHaveCount(0);
+  });
 });
 
 test.describe("keyboard access", () => {

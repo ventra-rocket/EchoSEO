@@ -7,6 +7,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import type { CommandCenterView } from "./command-center-view-model";
 
 function formatDate(intl: IntlShape, iso: string | null): string | null {
@@ -214,16 +215,35 @@ export function SignalCards({
         to="/p/$projectId/rank-tracking"
         projectId={projectId}
       />
-      <SignalCard
-        icon={Bot}
-        label={intl.formatMessage({ id: "commandCenter.signal.aiWorkspace" })}
-        value={intl.formatMessage({
-          id: "commandCenter.value.assistedWorkflows",
-        })}
-        detail={intl.formatMessage({ id: "commandCenter.detail.aiWorkspace" })}
-        to="/p/$projectId/assistant"
-        projectId={projectId}
-      />
+      {/* In hosted mode the in-app assistant refuses every message
+          (`getAssistantWorkspaceIdentity` returns `available: false`), so this
+          card points at the surface that does work — the MCP server — rather
+          than at a page whose only content is that refusal. */}
+      {isHostedClientAuthMode() ? (
+        <SignalCard
+          icon={Bot}
+          label={intl.formatMessage({ id: "commandCenter.signal.aiWorkspace" })}
+          value={intl.formatMessage({ id: "commandCenter.value.viaMcpClient" })}
+          detail={intl.formatMessage({
+            id: "commandCenter.detail.aiWorkspaceHosted",
+          })}
+          to="/ai"
+          projectId={projectId}
+        />
+      ) : (
+        <SignalCard
+          icon={Bot}
+          label={intl.formatMessage({ id: "commandCenter.signal.aiWorkspace" })}
+          value={intl.formatMessage({
+            id: "commandCenter.value.assistedWorkflows",
+          })}
+          detail={intl.formatMessage({
+            id: "commandCenter.detail.aiWorkspace",
+          })}
+          to="/p/$projectId/assistant"
+          projectId={projectId}
+        />
+      )}
     </section>
   );
 }
@@ -243,7 +263,8 @@ function SignalCard({
   to:
     | "/p/$projectId/audit"
     | "/p/$projectId/rank-tracking"
-    | "/p/$projectId/assistant";
+    | "/p/$projectId/assistant"
+    | "/ai";
   projectId: string;
 }) {
   return (
