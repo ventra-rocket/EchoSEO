@@ -29,6 +29,12 @@ export const URLS = {
   features: "/features",
   mcp: "/features/mcp",
   searchConsoleMcp: "/google-search-console-mcp",
+  // Linked from the home footer, not just from a blog post: the page says out
+  // loud that there is no paywall today, so leaving it unlinked from the site's
+  // main entry point reads as a hidden price rather than as an honest one.
+  pricing: "/pricing",
+  docs: "/docs",
+  blog: "/blogs",
   // The app owns the legal text. There is exactly one copy of it, because two
   // copies of a binding document drift and only one of them can be the one the
   // OAuth consent screen links to.
@@ -424,6 +430,7 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
               label: S.backlinkChecker.eyebrow,
               href: `/features/${S.backlinkChecker.slug}`,
             },
+            { label: "Pricing", href: URLS.pricing },
           ],
         },
         {
@@ -462,6 +469,8 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
         {
           title: "Project",
           links: [
+            { label: "Docs", href: URLS.docs },
+            { label: "Blog", href: URLS.blog },
             { label: "EchoSEO on GitHub", href: URLS.repo, external: true },
             {
               label: "Built on open-seo",
@@ -747,6 +756,7 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
               label: "Kiểm tra backlink",
               href: `/features/${S.backlinkChecker.slug}`,
             },
+            { label: "Giá", href: URLS.pricing },
           ],
         },
         {
@@ -785,6 +795,8 @@ export const landingContent: Record<LandingLocale, LandingContent> = {
         {
           title: "Dự án",
           links: [
+            { label: "Tài liệu", href: URLS.docs },
+            { label: "Blog", href: URLS.blog },
             { label: "EchoSEO trên GitHub", href: URLS.repo, external: true },
             {
               label: "Xây trên open-seo",

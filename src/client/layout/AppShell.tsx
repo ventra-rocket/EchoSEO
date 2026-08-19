@@ -27,6 +27,11 @@ import { getProjects } from "@/serverFunctions/projects";
 import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
 import { OrgSwitcherSection } from "@/client/features/organizations/OrgSwitcher";
 import { getLastProjectId } from "@/client/lib/active-project";
+import {
+  getSeoKeyConfiguredHint,
+  resolveSeoKeyConfigured,
+  setSeoKeyConfiguredHint,
+} from "@/client/features/access-gate/seo-key-hint";
 
 const DATAFORSEO_HELP_PATH = "/help/dataforseo-api-key";
 const SUPPORT_PATH = "/support";
@@ -95,8 +100,17 @@ export function AuthenticatedAppLayout({
     queryFn: () => getSeoApiKeyStatus(),
     enabled: shouldCheckSeoApiKeyStatus,
   });
+  // The status is a client query, so it lands after the first paint and the
+  // banner it drives would push the whole page down when it does. The previous
+  // answer this browser saw stands in until then; `resolveSeoKeyConfigured`
+  // owns when that is safe.
+  const [seoKeyHint] = React.useState(getSeoKeyConfiguredHint);
   const isSeoApiKeyConfigured = shouldCheckSeoApiKeyStatus
-    ? (seoApiKeyStatusQuery.data?.configured ?? null)
+    ? resolveSeoKeyConfigured({
+        answer: seoApiKeyStatusQuery.data?.configured ?? null,
+        hint: seoKeyHint,
+        setupModalDismissed: isSeoSetupModalDismissed(),
+      })
     : null;
   const seoApiKeyStatusError =
     shouldCheckSeoApiKeyStatus && seoApiKeyStatusQuery.isError;
@@ -113,6 +127,9 @@ export function AuthenticatedAppLayout({
     }
 
     if (!seoApiKeyStatusQuery.isSuccess) return;
+
+    // Remember it for the next first paint, before acting on it.
+    setSeoKeyConfiguredHint(seoApiKeyStatusQuery.data.configured);
 
     if (seoApiKeyStatusQuery.data.configured) {
       // Key is set — close and re-arm so a future removal prompts once more.

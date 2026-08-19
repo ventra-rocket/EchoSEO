@@ -1,5 +1,9 @@
 import { AlertTriangle, Info } from "lucide-react";
 import type { IssueComparison } from "@/server/features/audit/services/AuditComparisonService";
+import {
+  crawlDay,
+  describeComparisonWindow,
+} from "@/client/features/audit/history/comparison-window";
 
 /**
  * Renders the outcome of comparing this crawl against a baseline. The three
@@ -54,7 +58,7 @@ export function ComparisonBar({
 
   if (comparison.state === "not_comparable") {
     const baselineDate = comparison.baseline
-      ? crawlDate(comparison.baseline.sealedAt)
+      ? crawlDay(comparison.baseline.sealedAt)
       : null;
     const message =
       comparison.reason === "baseline_not_materialized"
@@ -64,6 +68,7 @@ export function ComparisonBar({
   }
 
   const { totals, window, resolvedOnlyRules } = comparison;
+  const crawlLabels = describeComparisonWindow(window);
 
   return (
     <div className="rounded-lg border border-base-300 bg-base-200/40 px-3 py-2.5">
@@ -77,7 +82,7 @@ export function ComparisonBar({
         />
       </div>
       <p className="mt-1.5 text-xs text-base-content/60">
-        This crawl ({crawlDate(window.to)}) vs {crawlDate(window.from)} &middot;
+        This crawl ({crawlLabels.current}) vs {crawlLabels.baseline} &middot;
         Source: crawl
       </p>
       {resolvedOnlyRules.length > 0 && (
@@ -143,13 +148,4 @@ function Notice({
       <span>{children}</span>
     </div>
   );
-}
-
-/**
- * Timestamps arrive in two shapes across the schema (ISO and SQLite
- * "YYYY-MM-DD HH:MM:SS"); both start with the date, so slicing shows the day
- * without engine-dependent Date parsing.
- */
-function crawlDate(raw: string): string {
-  return raw.slice(0, 10);
 }
