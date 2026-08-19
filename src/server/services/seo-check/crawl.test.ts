@@ -51,6 +51,7 @@ beforeEach(() => {
   fetchRobotsTxtMock.mockResolvedValue({
     isAllowed: (url: string) => !url.includes("/private"),
     sitemapUrls: [],
+    crawlDelaySeconds: null,
   });
 });
 

@@ -16,9 +16,23 @@ const xmlParser = new XMLParser({
   isArray: (name) => name === "sitemap" || name === "url",
 });
 
+/**
+ * The name the crawler introduces itself as, everywhere it makes a request. It
+ * is also the name `Crawl-delay` and `Disallow` rules are matched against, so a
+ * second literal somewhere else would silently read a different robots.txt than
+ * the one being obeyed.
+ */
+export const AUDIT_USER_AGENT = "EchoSEO-Audit/1.0";
+
 export interface RobotsResult {
   isAllowed: (url: string) => boolean;
   sitemapUrls: string[];
+  /**
+   * Seconds the site asked crawlers to wait between requests, or null when it
+   * asked for nothing. A request, not a fact about the pages — the crawl's rate
+   * control obeys it instead of discovering the same limit by tripping over it.
+   */
+  crawlDelaySeconds: number | null;
 }
 
 /**
@@ -64,7 +78,7 @@ export async function fetchRobotsTxtBody(
   const robotsUrl = `${origin}/robots.txt`;
   try {
     const response = await fetch(robotsUrl, {
-      headers: { "User-Agent": "EchoSEO-Audit/1.0" },
+      headers: { "User-Agent": AUDIT_USER_AGENT },
       signal: AbortSignal.timeout(10_000),
     });
 
@@ -85,14 +99,17 @@ export async function fetchRobotsTxtBody(
  */
 export function parseRobotsTxt(body: RobotsTxtBody): RobotsResult {
   if (body.text === null) {
-    // No robots.txt = everything allowed.
-    return { isAllowed: () => true, sitemapUrls: [] };
+    // No robots.txt = everything allowed, at whatever rate the crawl discovers.
+    return { isAllowed: () => true, sitemapUrls: [], crawlDelaySeconds: null };
   }
 
   const robots = robotsParser(body.robotsUrl, body.text);
   return {
     isAllowed: (url: string) => robots.isAllowed(url) ?? true,
     sitemapUrls: robots.getSitemaps(),
+    // Matched on our own user-agent, so a site that slows down `EchoSEO-Audit`
+    // specifically is obeyed rather than only its `*` group.
+    crawlDelaySeconds: robots.getCrawlDelay(AUDIT_USER_AGENT) ?? null,
   };
 }
 
@@ -181,7 +198,7 @@ async function fetchSitemapDocumentWithRetry(sitemapUrl: string): Promise<{
   for (let attempt = 0; attempt <= SITEMAP_RETRIES; attempt++) {
     try {
       const response = await fetch(normalizedSitemapUrl, {
-        headers: { "User-Agent": "EchoSEO-Audit/1.0" },
+        headers: { "User-Agent": AUDIT_USER_AGENT },
         signal: AbortSignal.timeout(SITEMAP_FETCH_TIMEOUT_MS),
       });
 

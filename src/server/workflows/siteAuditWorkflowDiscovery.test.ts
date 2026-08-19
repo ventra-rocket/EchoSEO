@@ -56,7 +56,7 @@ function sitemapOf(count: number) {
       { length: count },
       (_, i) => `https://kello.example.com/watches/brand/model-${i}`,
     ),
-    robots: { isAllowed: () => true, sitemapUrls: [] },
+    robots: { isAllowed: () => true, sitemapUrls: [], crawlDelaySeconds: null },
     stats: { docsFetched: 2, docsFailed: 0, docsTimedOut: 0 },
   };
 }
