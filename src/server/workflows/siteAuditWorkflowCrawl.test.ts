@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { RobotsResult } from "@/server/lib/audit/discovery";
-import type { StepPageResult } from "@/server/lib/audit/types";
+import {
+  crawlParams as params,
+  page,
+  recordingStep as recorderFor,
+  robotsDisallowing,
+  sitemapUrls,
+  throttledPage,
+} from "./__tests__/crawl-fixtures";
 
 const { crawlPageMock, updateAuditProgressMock, pushCrawledUrlsMock } =
   vi.hoisted(() => ({
@@ -43,60 +49,7 @@ const step = {
   sleep: async () => {},
 };
 
-function robotsDisallowing(...disallowed: string[]): RobotsResult {
-  return {
-    isAllowed: (url) => !disallowed.some((path) => url.includes(path)),
-    sitemapUrls: [],
-  };
-}
-
-function page(url: string, internalLinks: string[] = []): StepPageResult {
-  return {
-    id: url,
-    url,
-    statusCode: 200,
-    redirectUrl: null,
-    title: "",
-    metaDescription: "",
-    canonicalUrl: null,
-    robotsMeta: null,
-    ogTitle: null,
-    ogDescription: null,
-    ogImage: null,
-    h1Count: 1,
-    h2Count: 0,
-    h3Count: 0,
-    h4Count: 0,
-    h5Count: 0,
-    h6Count: 0,
-    headingOrder: [1],
-    wordCount: 100,
-    imagesTotal: 0,
-    imagesMissingAlt: 0,
-    images: [],
-    internalLinks,
-    externalLinkCount: 0,
-    hasStructuredData: false,
-    hreflangTags: [],
-    hasMixedContent: false,
-    isIndexable: true,
-    isHtml: true,
-    responseTimeMs: 10,
-  };
-}
-
-function params(overrides: Partial<Parameters<typeof runCrawlPhase>[1]> = {}) {
-  return {
-    auditId: "audit-1",
-    workflowInstanceId: "wf-1",
-    origin: "https://example.com",
-    startUrl: "https://example.com/",
-    maxPages: 50,
-    robots: robotsDisallowing(),
-    sitemapUrls: [] as string[],
-    ...overrides,
-  };
-}
+const recordingStep = () => recorderFor(crawlPageMock);
 
 beforeEach(() => {
   crawlPageMock.mockResolvedValue(null);
@@ -212,55 +165,6 @@ describe("runCrawlPhase counts robots-blocked URLs", () => {
   });
 });
 
-function throttledPage(url: string, retryAfterMs: number | null = null) {
-  return {
-    ...page(url),
-    statusCode: 429,
-    title: "",
-    wordCount: 0,
-    isHtml: false,
-    isIndexable: false,
-    retryAfterMs,
-  };
-}
-
-/**
- * A step runner that records what the loop asked for: the size of each crawl
- * batch and every sleep it took. Batch size is the observable form of the
- * adaptive rate, and the sleeps are the politeness itself.
- */
-function recordingStep() {
-  const batchSizes: number[] = [];
-  const sleeps: Array<{ name: string; duration: string }> = [];
-  return {
-    batchSizes,
-    sleeps,
-    step: {
-      do: async <T>(
-        name: string,
-        callback: () => Promise<T> | T,
-      ): Promise<T> => {
-        const before = crawlPageMock.mock.calls.length;
-        const result = await callback();
-        if (name.startsWith("crawl-batch-")) {
-          batchSizes.push(crawlPageMock.mock.calls.length - before);
-        }
-        return result;
-      },
-      // Wider than the caller's `WorkflowSleepDuration` on purpose: a parameter
-      // has to accept everything the real signature may pass.
-      sleep: async (name: string, duration: string | number) => {
-        sleeps.push({ name, duration: String(duration) });
-      },
-    },
-  };
-}
-
-/** `n` same-origin sitemap URLs, so a batch can be filled without link discovery. */
-function sitemapUrls(count: number): string[] {
-  return Array.from({ length: count }, (_, i) => `https://example.com/p${i}`);
-}
-
 describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
   it("retries a throttled URL instead of recording it as a page", async () => {
     // The reported bug: 1,894 of 5,000 pages recorded as 429 and reported as the
@@ -284,52 +188,89 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     expect(result.pages.map((p) => p.statusCode)).toEqual([200, 200]);
   });
 
-  it("slows down and hibernates after a throttled batch", async () => {
-    crawlPageMock.mockImplementation(async (url: string) => throttledPage(url));
-    const { step: recorder, batchSizes, sleeps } = recordingStep();
+  it("spaces the requests inside a batch instead of firing them at once", async () => {
+    // The mismatch this fixes: the crawl controls a rate, the site meters one.
+    // A batch fired at once offers an unbounded instantaneous rate whatever the
+    // average works out to — which is how a crawl averaging 1.88 req/s against a
+    // site that gives 3-4 still collected 36 refusals.
+    crawlPageMock.mockImplementation(async (url: string) => page(url));
+    const recorder = recordingStep();
 
-    await runCrawlPhase(recorder, {
-      ...params({ maxPages: 200 }),
+    await runCrawlPhase(recorder.step, {
+      ...params({ maxPages: 60 }),
       sitemapUrls: sitemapUrls(40),
+      waitMs: recorder.waitMs,
     });
 
-    // 25 at a time until the site refuses, then halved for the retry.
-    expect(batchSizes[0]).toBe(25);
-    expect(batchSizes[1]).toBe(12);
-    expect(batchSizes[2]).toBe(6);
-    // Exponential while the refusals continue, since a 429 usually carries no
+    // 3 req/s to start: each request waits its own offset from the start of the
+    // batch, so one slow response cannot turn the crawl serial.
+    expect(recorder.waitsByBatch[0]?.slice(0, 3)).toEqual([333, 666, 999]);
+  });
+
+  it("gives up a quarter of the rate on a refused batch, and climbs back a step at a time", async () => {
+    // Halving plus an escalating sleep paid a minute of hibernation for a limit
+    // measured to recover in five seconds, and left the crawl far below the rate
+    // the site was willing to serve.
+    let refusals = 0;
+    crawlPageMock.mockImplementation(async (url: string) => {
+      refusals += 1;
+      return refusals <= 25 ? throttledPage(url) : page(url);
+    });
+    const recorder = recordingStep();
+
+    await runCrawlPhase(recorder.step, {
+      ...params({ maxPages: 200 }),
+      sitemapUrls: sitemapUrls(80),
+      waitMs: recorder.waitMs,
+    });
+
+    // 3 req/s refused → 2.25, then +0.25 per clean batch, held under the 2.7 the
+    // refusal established as a ceiling. A halving would read 889 ms here.
+    expect(recorder.intervals.slice(0, 4)).toEqual([333, 444, 400, 369]);
+  });
+
+  it("keeps the batch at 25 URLs, because the pacing moves instead", async () => {
+    // A Workflow instance is capped at 1,024 steps and a 5,000-page crawl already
+    // spends ~645. Pacing by shrinking the batch would run a large crawl out of
+    // steps before it ran out of pages.
+    crawlPageMock.mockImplementation(async (url: string) => throttledPage(url));
+    const recorder = recordingStep();
+
+    await runCrawlPhase(recorder.step, {
+      ...params({ maxPages: 200 }),
+      sitemapUrls: sitemapUrls(40),
+      waitMs: recorder.waitMs,
+    });
+
+    expect(recorder.batchSizes.slice(0, 3)).toEqual([25, 25, 25]);
+    expect(recorder.intervals.slice(0, 3)).toEqual([333, 444, 593]);
+    // Escalates only while the refusals continue, since a 429 usually carries no
     // Retry-After to follow.
-    expect(sleeps[0]).toEqual({
+    expect(recorder.sleeps[0]).toEqual({
       name: "throttle-backoff-1",
       duration: "5 seconds",
     });
-    expect(sleeps[1]?.duration).toBe("10 seconds");
-    expect(sleeps[2]?.duration).toBe("20 seconds");
+    expect(recorder.sleeps[1]?.duration).toBe("10 seconds");
+    expect(recorder.sleeps[2]?.duration).toBe("20 seconds");
   });
 
-  it("climbs back one request at a time, not by doubling", async () => {
-    // Doubling was measured overshooting: it sprinted back into the site's limit,
-    // lost a whole refused window each time, and a real 5,000-page crawl averaged
-    // an effective concurrency of 4.5 out of 25. Additive increase settles just
-    // under the limit instead.
-    const seen = new Set<string>();
-    crawlPageMock.mockImplementation(async (url: string) => {
-      if (!seen.has(url)) {
-        seen.add(url);
-        return throttledPage(url);
-      }
-      return page(url);
-    });
-    const { step: recorder, batchSizes } = recordingStep();
+  it("honours a published Crawl-delay instead of discovering the limit", async () => {
+    // A site owner who knows their own limit should be able to tell us, rather
+    // than have us find it by tripping over it.
+    crawlPageMock.mockImplementation(async (url: string) => page(url));
+    const recorder = recordingStep();
 
-    await runCrawlPhase(recorder, {
-      ...params({ maxPages: 200 }),
-      sitemapUrls: sitemapUrls(80),
+    await runCrawlPhase(recorder.step, {
+      ...params({
+        maxPages: 60,
+        robots: { ...robotsDisallowing(), crawlDelaySeconds: 2 },
+      }),
+      sitemapUrls: sitemapUrls(40),
+      waitMs: recorder.waitMs,
     });
 
-    // 25 refused → halved to 12, then +1 per clean batch. Doubling would read
-    // 12, 24 here.
-    expect(batchSizes.slice(0, 4)).toEqual([25, 12, 13, 14]);
+    // One request every two seconds, and clean batches never climb past it.
+    expect(recorder.intervals.slice(0, 2)).toEqual([2_000, 2_000]);
   });
 
   it("hibernates on measured page cost, not every fifth batch", async () => {
@@ -371,17 +312,18 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
       }
       return page(url);
     });
-    const { step: recorder, sleeps, batchSizes } = recordingStep();
+    const recorder = recordingStep();
 
-    const result = await runCrawlPhase(recorder, {
+    const result = await runCrawlPhase(recorder.step, {
       ...params({ maxPages: 200 }),
       sitemapUrls: sitemapUrls(80),
+      waitMs: recorder.waitMs,
     });
 
-    expect(sleeps).toEqual([]);
-    // Still at the configured rate: a lone dead URL never halved it. Enough URLs
-    // are queued that the batch size reflects the rate, not an emptying queue.
-    expect(batchSizes[1]).toBe(25);
+    expect(recorder.sleeps).toEqual([]);
+    // A lone dead URL never cost the crawl any rate: the second batch is paced
+    // faster than the first, because the first read as clean.
+    expect(recorder.intervals[1]).toBe(308);
     expect(result.pages.every((p) => p.statusCode === 200)).toBe(true);
   });
 
@@ -392,16 +334,16 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
       ...throttledPage(url),
       statusCode: 0,
     }));
-    const { step: recorder, batchSizes, sleeps } = recordingStep();
+    const recorder = recordingStep();
 
-    await runCrawlPhase(recorder, {
+    await runCrawlPhase(recorder.step, {
       ...params({ maxPages: 200 }),
       sitemapUrls: sitemapUrls(40),
+      waitMs: recorder.waitMs,
     });
 
-    expect(batchSizes[0]).toBe(25);
-    expect(batchSizes[1]).toBe(12);
-    expect(sleeps[0]?.name).toBe("throttle-backoff-1");
+    expect(recorder.intervals.slice(0, 2)).toEqual([333, 444]);
+    expect(recorder.sleeps[0]?.name).toBe("throttle-backoff-1");
   });
 
   it("records the status a URL kept returning once it stops retrying", async () => {
@@ -436,15 +378,16 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
         ? { ...throttledPage(url, 4_000), statusCode: 503 }
         : page(url),
     );
-    const { step: recorder, sleeps, batchSizes } = recordingStep();
+    const recorder = recordingStep();
 
-    await runCrawlPhase(recorder, {
+    await runCrawlPhase(recorder.step, {
       ...params({ maxPages: 60 }),
       sitemapUrls: sitemapUrls(40),
+      waitMs: recorder.waitMs,
     });
 
-    expect(batchSizes[1]).toBe(12);
-    expect(sleeps[0]?.duration).toBe("4 seconds");
+    expect(recorder.intervals[1]).toBe(444);
+    expect(recorder.sleeps[0]?.duration).toBe("4 seconds");
   });
 
   it("waits exactly as long as a Retry-After header asked", async () => {

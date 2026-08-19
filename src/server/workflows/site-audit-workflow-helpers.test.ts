@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { crawlPage } from "./site-audit-workflow-helpers";
 
 /**
- * A crawl-batch step returns up to `CRAWL_CONCURRENCY` of these objects, and a
+ * A crawl-batch step returns up to `CRAWL_BATCH_SIZE` of these objects, and a
  * Workflow step return has a hard 1 MiB ceiling. So what this shape carries is a
  * capacity question, not a style question: every unbounded field multiplies by
  * the batch size.

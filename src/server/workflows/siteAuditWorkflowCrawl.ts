@@ -9,30 +9,31 @@ import {
   classifyRefusal,
   isCongestionSignal,
 } from "@/server/lib/audit/crawl-retry";
-
-const CRAWL_CONCURRENCY = 25;
+import {
+  afterCleanBatch,
+  afterCongestedBatch,
+  dispatchIntervalMs,
+  initialCrawlRate,
+} from "@/server/lib/audit/crawl-rate";
 
 /**
- * Politeness. Measured against a real Cloudflare-fronted site: 25 requests at a
- * time is fine for two batches, then the zone's rate limit trips and returns 429
- * for *every* request in the window — 100 of 100 in a probe — before recovering a
- * few seconds later. The old loop kept firing at full rate straight through that
- * window and recorded each refusal as one of the site's pages, which is how one
- * audit reported 1,894 broken pages on a healthy site.
+ * How many URLs one crawl-batch step schedules. Not a concurrency: the batch is
+ * a scheduling window whose requests are spaced by the current offered rate, so
+ * the number in flight is whatever that rate and the site's latency imply.
  *
- * So the rate is adaptive rather than a lower fixed number: halve on a throttled
- * batch, hibernate, and climb back once the site is answering again. A fixed low
- * concurrency would slow every well-provisioned site down to protect the few.
- *
- * The climb is **additive** — one more request per clean batch — because doubling
- * it was measured overshooting. The first version doubled after three clean
- * batches and a 5,000-page crawl of that same site averaged an effective
- * concurrency of 4.5 out of 25: it kept sprinting back into the limit, losing a
- * whole refused window each time, and spent most of the crawl at its floor. This
- * is multiplicative-decrease / additive-increase for the same reason TCP is, and
- * a batch is the round trip it climbs per.
+ * It stays at 25 because the step count is a hard constraint — a Workflow
+ * instance is capped at 1,024 steps and a 5,000-page crawl already spends ~645
+ * of them. Smaller batches would pace just as well and run out of steps.
  */
-const MIN_CRAWL_CONCURRENCY = 3;
+const CRAWL_BATCH_SIZE = 25;
+
+/**
+ * How long to wait after the site refuses a batch, before the crawl resumes at
+ * its reduced rate. Sized to the measured recovery window: in a probe of
+ * `kello.ventrarocket.vn`, wave 3 was refused and wave 4 five seconds later was
+ * clean. Escalation is per *consecutive* refused batch — a site still refusing
+ * after a backoff needs longer than one that recovered.
+ */
 const THROTTLE_BACKOFF_BASE_SECONDS = 5;
 const THROTTLE_BACKOFF_MAX_SECONDS = 60;
 
@@ -53,8 +54,8 @@ const MAX_RETRY_ATTEMPTS = 3;
  *
  * It was every 5 batches, which is 125 pages, or 0.75 s of parse: 40 sleeps of 10 s
  * on a 5,000-page crawl, 6.7 minutes of a 47-minute run spent deliberately idle to
- * protect a budget that was never close. Counted in pages, not batches, because
- * the batch size now moves with the adaptive rate.
+ * protect a budget that was never close. Counted in pages, not batches, because a
+ * batch can be cut short by the page cap or an emptying frontier.
  */
 const PAGES_PER_CPU_BREAK = 500;
 
@@ -166,6 +167,15 @@ type CrawlPhaseParams = {
   maxPages: number;
   robots: RobotsResult;
   sitemapUrls: string[];
+  /**
+   * How the crawl spaces requests inside a batch. Injected so a test can read
+   * the pacing it asked for instead of waiting through it; production passes
+   * nothing and gets a real timer.
+   *
+   * Not `step.sleep`: a Workflow sleep is a durable checkpoint, and one per
+   * request would spend the instance's step budget on politeness.
+   */
+  waitMs?: (ms: number) => Promise<void>;
 };
 
 type CrawlPhaseResult = {
@@ -192,6 +202,7 @@ export async function runCrawlPhase(
     maxPages,
     robots,
     sitemapUrls,
+    waitMs = realWaitMs,
   } = params;
   const visited = new Set<string>();
   const queue: string[] = [];
@@ -211,7 +222,7 @@ export async function runCrawlPhase(
   });
 
   let crawlBatchIndex = 0;
-  let concurrency = CRAWL_CONCURRENCY;
+  let rate = initialCrawlRate(robots.crawlDelaySeconds);
   let throttleWaits = 0;
   let consecutiveThrottledBatches = 0;
   let pagesAtLastCpuBreak = 0;
@@ -225,17 +236,18 @@ export async function runCrawlPhase(
       robots,
       remaining: maxPages - allPages.length,
       blocked,
-      concurrency,
     });
     if (urlsToCrawl.length === 0) continue;
 
     crawlBatchIndex += 1;
-    const crawledBatch = await runCrawlBatch(
+    const crawledBatch = await runCrawlBatch({
       step,
       crawlBatchIndex,
       urlsToCrawl,
       origin,
-    );
+      rate: rate.rate,
+      waitMs,
+    });
 
     // Split before anything counts the batch: a refused request is not a page,
     // and requeueing it must undo the `visited` mark `selectNextCrawlBatch` set
@@ -283,10 +295,7 @@ export async function runCrawlPhase(
       })
     ) {
       consecutiveThrottledBatches += 1;
-      concurrency = Math.max(
-        MIN_CRAWL_CONCURRENCY,
-        Math.floor(concurrency / 2),
-      );
+      rate = afterCongestedBatch(rate);
       throttleWaits += 1;
       await step.sleep(
         `throttle-backoff-${throttleWaits}`,
@@ -294,9 +303,7 @@ export async function runCrawlPhase(
       );
     } else {
       consecutiveThrottledBatches = 0;
-      // One more per clean batch. Doubling here is what produced an effective
-      // concurrency of 4.5 out of 25 on a real crawl.
-      concurrency = Math.min(CRAWL_CONCURRENCY, concurrency + 1);
+      rate = afterCleanBatch(rate);
     }
 
     // CPU is charged per Workflow invocation, and a large crawl accumulates parse
@@ -380,12 +387,9 @@ function selectNextCrawlBatch(params: {
   robots: RobotsResult;
   remaining: number;
   blocked: Set<string>;
-  /** The current adaptive rate — see `MIN_CRAWL_CONCURRENCY`. */
-  concurrency: number;
 }) {
-  const { queue, queued, visited, robots, remaining, blocked, concurrency } =
-    params;
-  const batchSize = Math.min(concurrency, remaining);
+  const { queue, queued, visited, robots, remaining, blocked } = params;
+  const batchSize = Math.min(CRAWL_BATCH_SIZE, remaining);
   const urlsToCrawl: string[] = [];
 
   while (queue.length > 0 && urlsToCrawl.length < batchSize) {
@@ -406,15 +410,36 @@ function selectNextCrawlBatch(params: {
   return urlsToCrawl;
 }
 
-async function runCrawlBatch(
-  step: CrawlStep,
-  crawlBatchIndex: number,
-  urlsToCrawl: string[],
-  origin: string,
-): Promise<StepPageResult[]> {
+/**
+ * One batch: `CRAWL_BATCH_SIZE` requests dispatched at the current offered rate.
+ *
+ * The spacing is the whole control law made real. Firing the batch at once — what
+ * this used to do — offers an unbounded instantaneous rate however small the
+ * batch is, and a burst is exactly what a per-second limiter refuses: a measured
+ * crawl averaged 1.88 req/s against a site that gives 3-4 and still collected 36
+ * refusals, because the average was made of bursts and idle waits.
+ *
+ * Each request waits its own offset from the start of the batch rather than
+ * chaining sleeps, so a slow response cannot push every later request back and
+ * turn the crawl serial.
+ */
+async function runCrawlBatch(params: {
+  step: CrawlStep;
+  crawlBatchIndex: number;
+  urlsToCrawl: string[];
+  origin: string;
+  /** Offered requests per second for this batch. */
+  rate: number;
+  waitMs: (ms: number) => Promise<void>;
+}): Promise<StepPageResult[]> {
+  const { step, crawlBatchIndex, urlsToCrawl, origin, rate, waitMs } = params;
+  const intervalMs = dispatchIntervalMs(rate);
   return step.do(`crawl-batch-${crawlBatchIndex}`, async () => {
     const settled = await Promise.allSettled(
-      urlsToCrawl.map((url) => crawlPage(url, origin)),
+      urlsToCrawl.map(async (url, index) => {
+        if (index > 0) await waitMs(index * intervalMs);
+        return crawlPage(url, origin);
+      }),
     );
     return settled.flatMap((result) => {
       if (result.status === "fulfilled" && result.value) {
@@ -423,6 +448,15 @@ async function runCrawlBatch(
       return [];
     });
   });
+}
+
+/**
+ * Real wall-clock spacing. `step.sleep` would spend a durable step per request,
+ * and the project's `lib` target is ES2023, so no `Promise.withResolvers` — the
+ * same executor form the other delays in this codebase use.
+ */
+function realWaitMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function enqueueDiscoveredLinks(params: {

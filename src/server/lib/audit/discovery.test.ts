@@ -106,6 +106,29 @@ describe("parseRobotsTxt", () => {
     ]);
   });
 
+  it("reports the Crawl-delay the site asked our crawler for", () => {
+    // A site owner naming their own rate limit, instead of making us find it by
+    // tripping over it. Matched on our own user-agent, so a group aimed at
+    // `EchoSEO-Audit` beats the wildcard.
+    const robots = parseRobotsTxt({
+      robotsUrl: "https://example.com/robots.txt",
+      status: 200,
+      text: [
+        "User-agent: *",
+        "Crawl-delay: 10",
+        "",
+        "User-agent: EchoSEO-Audit",
+        "Crawl-delay: 2",
+      ].join("\n"),
+    });
+
+    expect(robots.crawlDelaySeconds).toBe(2);
+  });
+
+  it("reports no Crawl-delay when the site asked for none", () => {
+    expect(parseRobotsTxt(body).crawlDelaySeconds).toBeNull();
+  });
+
   it("agrees with itself across calls, so a replay decides identically", () => {
     // The property the whole split exists for. If this ever diverges, a Workflow
     // retry can crawl a different set of pages than the run it is replaying —

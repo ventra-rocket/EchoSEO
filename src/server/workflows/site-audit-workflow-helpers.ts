@@ -2,6 +2,7 @@ import { analyzeHtml } from "@/server/lib/audit/page-analyzer";
 import type { StepPageResult } from "@/server/lib/audit/types";
 import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
 import { classifyRefusal } from "@/server/lib/audit/crawl-retry";
+import { AUDIT_USER_AGENT } from "@/server/lib/audit/discovery";
 
 /**
  * Fetch and parse one page.
@@ -25,7 +26,7 @@ export async function crawlPage(
   try {
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "EchoSEO-Audit/1.0",
+        "User-Agent": AUDIT_USER_AGENT,
         Accept: "text/html,application/xhtml+xml",
       },
       redirect: "follow",
