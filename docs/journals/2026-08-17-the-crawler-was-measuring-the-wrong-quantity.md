@@ -104,6 +104,22 @@ Status-0 fell 170 → 55 on the #72 crawl alone, before the retry work deployed,
 consistent with those being dropped connections rather than dead URLs. That is corroboration,
 not the acceptance test.
 
+**Addendum 19/08 — the retry policy has never run a full crawl.** Lining the crawls up
+against the deployment list makes the gap sharper than "the acceptance test has not run on
+thehourglass". No crawl of any site has started since the retry fix went out:
+
+| time (UTC)  | event                                 |            status-0 |
+| ----------- | ------------------------------------- | ------------------: |
+| 08-16 10:53 | crawl kello, deploy `055e181d`        | 0, with 1,894 × 429 |
+| 08-17 06:37 | crawl kello, deploy `171dc8bd`        |                 170 |
+| 08-17 07:51 | crawl kello, deploy `e5293e41`        |                  55 |
+| 08-17 08:45 | **deploy `af87df16` — the retry fix** |                   — |
+| —           | no crawl since                        |                   — |
+
+So the 170 → 55 fall is entirely the rate-control work, as recorded above, and one crawl on
+`af87df16` from either workspace closes the box. The `thehourglass.com` ownership problem
+narrows the choice of site; it was never the only thing missing.
+
 ## What Is Not Done
 
 The acceptance test for #73 — re-crawling `thehourglass.com` (1,210 × 0, 73 × 502) and

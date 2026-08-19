@@ -66,5 +66,8 @@ export function useSubscribeRedirect() {
     hasCompletedOnboarding &&
     (accessQuery.isLoading || shouldRedirect);
 
-  return { isBlocking };
+  // `isRedirecting` is reported next to `isBlocking` so callers can tell the
+  // paywall bounce apart from the access lookup still running. Both block the
+  // page, but only the bounce justifies painting nothing.
+  return { isBlocking, isRedirecting: shouldRedirect };
 }

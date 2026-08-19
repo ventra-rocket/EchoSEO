@@ -99,6 +99,10 @@ export function useBacklinksPageData({
     backlinksEnabled &&
     Boolean(target) &&
     seoApiKeyStatus.data?.configured === true;
+  // The same fact `targetReady` gates on, kept for the empty state: with no key
+  // no backlinks request is sent, so "could not load" plus a Retry that fires
+  // nothing is not what happened.
+  const seoKeyMissing = seoApiKeyStatus.data?.configured === false;
   const baseQueryKeyParts = [projectId, scope, target] as const;
   const pageInputBase = { projectId, target, scope, page, pageSize };
 
@@ -253,6 +257,7 @@ export function useBacklinksPageData({
     referringDomainsQuery,
     rowsQuery,
     searchCardInitialValues,
+    seoKeyMissing,
     topPagesQuery,
   };
 }

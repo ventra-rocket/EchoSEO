@@ -19,6 +19,7 @@ import {
   getDomainSearchChangeValidationErrors,
   getDomainSearchValidationErrors,
 } from "@/client/features/domain/domainSearchValidation";
+import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import { useDomainOverviewQuery } from "@/client/features/domain/hooks/useDomainOverviewQuery";
 import { DomainOverviewLoadingState } from "@/client/features/domain/components/DomainOverviewLoadingState";
 import { DomainHistorySection } from "@/client/features/domain/components/DomainHistorySection";
@@ -261,6 +262,10 @@ function useDomainOverviewState({
   });
   const overview = overviewQuery.data ?? null;
   const isLoading = overviewQuery.isLoading;
+  // Another observer of the deduped ["seoApiKeyStatus"] query the overview gate
+  // reads, not a second fetch: the panels below need the same fact to avoid
+  // reporting a request that was never sent as a request that found nothing.
+  const seoKeyMissing = useSeoApiKeyStatus().data?.configured === false;
 
   const controlsForm = useForm({
     defaultValues: {
@@ -385,6 +390,7 @@ function useDomainOverviewState({
     controlsForm,
     isLoading,
     overview,
+    seoKeyMissing,
     canSaveKeywords,
     history,
     historyLoaded,
@@ -561,6 +567,7 @@ export function DomainOverviewPage({
             <DomainHistorySection
               history={state.history}
               historyLoaded={state.historyLoaded}
+              seoKeyMissing={state.seoKeyMissing}
               onRemoveHistoryItem={state.removeHistoryItem}
               onSelectHistoryItem={state.handleHistorySelect}
             />
@@ -630,6 +637,7 @@ export function DomainOverviewPage({
                   onSortClick={state.handleSortColumnClick}
                   onPageChange={state.goToPage}
                   onPageSizeChange={state.setPageSize}
+                  seoKeyMissing={state.seoKeyMissing}
                 />
               ) : (
                 <PagesTab
@@ -642,6 +650,7 @@ export function DomainOverviewPage({
                   onSortClick={state.handleSortColumnClick}
                   onPageChange={state.goToPage}
                   onPageSizeChange={state.setPageSize}
+                  seoKeyMissing={state.seoKeyMissing}
                 />
               )}
             </div>

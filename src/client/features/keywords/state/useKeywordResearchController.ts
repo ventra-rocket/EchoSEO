@@ -110,6 +110,7 @@ export function useKeywordResearchController(
     searchedKeyword,
     isLoading,
     retryResearch,
+    seoKeyMissing,
   } = useKeywordResearchData(
     {
       projectId: input.projectId,
@@ -274,6 +275,7 @@ export function useKeywordResearchController(
     rows,
     searchedKeyword,
     selectedRows,
+    seoKeyMissing,
     serpError,
     serpLoading,
     serpPage,

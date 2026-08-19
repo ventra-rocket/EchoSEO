@@ -55,6 +55,12 @@ export function useHostedAuthRouteGuard() {
 
   return {
     isHostedMode,
+    // The effect above has already committed to a redirect in this state.
+    // Callers need it separately from `canRenderAuthenticatedContent`, which is
+    // also false while the session is merely loading: without the distinction a
+    // caller has to render the same thing for both, and rendering nothing while
+    // loading is what makes a cold load look like a blank page.
+    isRedirecting: isHostedMode && !isPending && !hasVerifiedHostedSession,
     canRenderAuthenticatedContent: !isHostedMode || hasVerifiedHostedSession,
   };
 }

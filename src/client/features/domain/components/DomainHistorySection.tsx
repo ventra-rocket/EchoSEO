@@ -1,10 +1,14 @@
 import { Clock, History, X } from "lucide-react";
 import { Globe } from "lucide-react";
+import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import type { DomainHistoryItem } from "@/client/features/domain/types";
 
 type Props = {
   history: DomainHistoryItem[];
   historyLoaded: boolean;
+  /** No DataForSEO key: the overview query never fired, so the empty panel must
+   * not tell the user to enter the domain they already submitted. */
+  seoKeyMissing: boolean;
   onRemoveHistoryItem: (timestamp: number) => void;
   onSelectHistoryItem: (item: DomainHistoryItem) => void;
 };
@@ -12,9 +16,14 @@ type Props = {
 export function DomainHistorySection({
   history,
   historyLoaded,
+  seoKeyMissing,
   onRemoveHistoryItem,
   onSelectHistoryItem,
 }: Props) {
+  if (seoKeyMissing) {
+    return <DataforseoKeyMissingState />;
+  }
+
   if (!historyLoaded) {
     return null;
   }

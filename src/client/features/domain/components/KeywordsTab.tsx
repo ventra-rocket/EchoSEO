@@ -7,6 +7,7 @@ import {
   TableBulkActionButton,
   TableBulkExportMenu,
 } from "@/client/components/table/TableBulkActionBar";
+import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import { DomainKeywordsPagination } from "@/client/features/domain/components/DomainKeywordsPagination";
 import { DomainKeywordsTable } from "@/client/features/domain/components/DomainKeywordsTable";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
@@ -72,6 +73,9 @@ type Props = {
   onSortClick: (sort: DomainSortMode) => void;
   onPageChange: (nextPage: number) => void;
   onPageSizeChange: (nextSize: number) => void;
+  /** No DataForSEO key: this tab's query never fires, so it must not render an
+   * empty table as a measured zero. */
+  seoKeyMissing: boolean;
 };
 
 export function KeywordsTab({
@@ -84,6 +88,7 @@ export function KeywordsTab({
   onSortClick,
   onPageChange,
   onPageSizeChange,
+  seoKeyMissing,
 }: Props) {
   const queryClient = useQueryClient();
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(
@@ -247,6 +252,13 @@ export function KeywordsTab({
       scope: "selection",
     });
   };
+
+  // After every hook, so the branch cannot change the hook order: with no key the
+  // keywords query never fired, and the toolbar's "0 keywords" plus an empty table
+  // read as a measured result.
+  if (seoKeyMissing) {
+    return <DataforseoKeyMissingState />;
+  }
 
   return (
     <>

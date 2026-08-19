@@ -165,7 +165,12 @@ export function useKeywordResearchData(
     researchQuery.isSuccess,
   ]);
 
-  const hasSearched = request !== null;
+  // With no key the query never fires, so a submitted request is not a search:
+  // reporting one lets the empty state claim the provider found nothing for a
+  // keyword it was never asked about. `undefined` (status still loading) keeps
+  // the search alive so the loading state, not the empty state, is shown.
+  const seoKeyMissing = seoApiKeyStatus.data?.configured === false;
+  const hasSearched = request !== null && !seoKeyMissing;
   const rows = hasSearched ? (researchQuery.data?.rows ?? []) : [];
   const researchError =
     hasSearched && researchQuery.isError
@@ -184,13 +189,10 @@ export function useKeywordResearchData(
     researchError,
     researchMutationError: researchQuery.error,
     searchedKeyword: request?.seedKeyword ?? "",
-    // A query disabled by the key gate stays `isPending` while idle; don't
-    // report loading when there is no key (configured === false) or the search
-    // screen spins forever. `undefined` (status loading) keeps loading true.
-    isLoading:
-      hasSearched &&
-      researchQuery.isPending &&
-      seoApiKeyStatus.data?.configured !== false,
+    // A query disabled by the key gate stays `isPending` while idle; `hasSearched`
+    // is already false in that case, so the search screen cannot spin forever.
+    isLoading: hasSearched && researchQuery.isPending,
+    seoKeyMissing,
     researchQuery,
     retryResearch: researchQuery.refetch,
   };

@@ -1,5 +1,6 @@
 import { ShieldAlert } from "lucide-react";
 import { AccessGate } from "@/client/features/access-gate/AccessGate";
+import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 
 export function BacklinksSetupGate({
   errorMessage,
@@ -89,6 +90,27 @@ export function BacklinksErrorState({
       </button>
     </section>
   );
+}
+
+/**
+ * What to show when the overview produced no data. A missing DataForSEO key is
+ * not a failed request: the query was never sent, so `BacklinksErrorState`'s
+ * Retry could only re-run nothing while the copy blamed a transient failure.
+ */
+export function BacklinksOverviewEmptyState({
+  seoKeyMissing,
+  errorMessage,
+  onRetry,
+}: {
+  seoKeyMissing: boolean;
+  errorMessage: string | null;
+  onRetry: () => void;
+}) {
+  if (seoKeyMissing) {
+    return <DataforseoKeyMissingState />;
+  }
+
+  return <BacklinksErrorState errorMessage={errorMessage} onRetry={onRetry} />;
 }
 
 function InlineManagedOpenSeoLink() {

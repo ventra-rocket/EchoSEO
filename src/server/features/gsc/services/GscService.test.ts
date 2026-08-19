@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => {
     constructor(
       public readonly status: number,
       message: string,
+      public readonly body?: string,
     ) {
       super(message);
       this.name = "GscApiError";
@@ -25,13 +26,22 @@ const mocks = vi.hoisted(() => {
     deleteByProjectId: vi.fn(),
     existsForConnector: vi.fn(),
     dbDelete: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+    /** Tail of the `userHasGrant` select chain: resolves the account rows. */
+    grantRows: vi.fn(),
     GscApiError,
     GscTokenError,
   };
 });
 
 vi.mock("cloudflare:workers", () => ({ env: {} }));
-vi.mock("@/db", () => ({ db: { delete: mocks.dbDelete } }));
+vi.mock("@/db", () => ({
+  db: {
+    delete: mocks.dbDelete,
+    select: () => ({
+      from: () => ({ where: () => ({ limit: mocks.grantRows }) }),
+    }),
+  },
+}));
 vi.mock("@/server/lib/gscClient", () => ({
   createGscClient: () => ({ listSites: mocks.listSites }),
   GscApiError: mocks.GscApiError,
@@ -107,6 +117,9 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
   beforeEach(() => {
     mocks.listSites.mockReset();
     mocks.dbDelete.mockClear();
+    // A grant exists unless a test says otherwise.
+    mocks.grantRows.mockReset().mockResolvedValue([{ id: "acc1" }]);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   it("returns available sites when the grant is healthy", async () => {
@@ -119,34 +132,38 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
       GscService.listSitesForUserWithGrantStatus("u1"),
     ).resolves.toEqual({
       sites: [{ siteUrl: "https://x/", permissionLevel: "siteOwner" }],
-      requiresReconnect: false,
+      failure: null,
     });
     expect(mocks.dbDelete).not.toHaveBeenCalled();
   });
 
-  it("unlinks the dead grant and asks for reconnect when no token can be minted", async () => {
+  it("reports not_connected when no grant exists, instead of an expiry", async () => {
+    mocks.grantRows.mockResolvedValue([]);
     mocks.listSites.mockRejectedValue(new mocks.GscTokenError());
     const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
-    ).resolves.toEqual({ sites: [], requiresReconnect: true });
-    expect(mocks.dbDelete).toHaveBeenCalled();
+    ).resolves.toEqual({
+      sites: [],
+      failure: { reason: "not_connected", providerStatus: null },
+    });
   });
 
-  it("asks for reconnect without unlinking on a 403 (revoked vs. quota is ambiguous)", async () => {
-    mocks.listSites.mockRejectedValue(
-      new mocks.GscApiError(403, "Search Console denied access"),
-    );
+  it("unlinks the dead grant and reports grant_expired when no token can be minted", async () => {
+    mocks.listSites.mockRejectedValue(new mocks.GscTokenError());
     const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
-    ).resolves.toEqual({ sites: [], requiresReconnect: true });
-    expect(mocks.dbDelete).not.toHaveBeenCalled();
+    ).resolves.toEqual({
+      sites: [],
+      failure: { reason: "grant_expired", providerStatus: null },
+    });
+    expect(mocks.dbDelete).toHaveBeenCalled();
   });
 
-  it("asks for reconnect without unlinking on a 401", async () => {
+  it("reports grant_expired without unlinking on a 401", async () => {
     mocks.listSites.mockRejectedValue(
       new mocks.GscApiError(401, "unauthenticated"),
     );
@@ -154,8 +171,89 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
-    ).resolves.toEqual({ sites: [], requiresReconnect: true });
+    ).resolves.toEqual({
+      sites: [],
+      failure: { reason: "grant_expired", providerStatus: 401 },
+    });
     expect(mocks.dbDelete).not.toHaveBeenCalled();
+  });
+
+  it("reads a 403 quota refusal as transient, not as an expiry", async () => {
+    mocks.listSites.mockRejectedValue(
+      new mocks.GscApiError(
+        403,
+        "Search Console denied access",
+        JSON.stringify({
+          error: {
+            code: 403,
+            status: "RESOURCE_EXHAUSTED",
+            errors: [{ reason: "rateLimitExceeded" }],
+          },
+        }),
+      ),
+    );
+    const { GscService } = await import("./GscService");
+
+    await expect(
+      GscService.listSitesForUserWithGrantStatus("u1"),
+    ).resolves.toEqual({
+      sites: [],
+      failure: { reason: "provider_error", providerStatus: 403 },
+    });
+    expect(mocks.dbDelete).not.toHaveBeenCalled();
+  });
+
+  it("stays transient on a 403 whose body names no reason", async () => {
+    mocks.listSites.mockRejectedValue(
+      new mocks.GscApiError(403, "Search Console denied access"),
+    );
+    const { GscService } = await import("./GscService");
+
+    await expect(
+      GscService.listSitesForUserWithGrantStatus("u1"),
+    ).resolves.toEqual({
+      sites: [],
+      failure: { reason: "provider_error", providerStatus: 403 },
+    });
+    expect(mocks.dbDelete).not.toHaveBeenCalled();
+  });
+
+  it("reports consent_blocked when Google names a permission refusal", async () => {
+    mocks.listSites.mockRejectedValue(
+      new mocks.GscApiError(
+        403,
+        "Search Console denied access",
+        JSON.stringify({
+          error: {
+            code: 403,
+            status: "PERMISSION_DENIED",
+            details: [{ reason: "ACCESS_TOKEN_SCOPE_INSUFFICIENT" }],
+          },
+        }),
+      ),
+    );
+    const { GscService } = await import("./GscService");
+
+    await expect(
+      GscService.listSitesForUserWithGrantStatus("u1"),
+    ).resolves.toEqual({
+      sites: [],
+      failure: { reason: "consent_blocked", providerStatus: 403 },
+    });
+    expect(mocks.dbDelete).not.toHaveBeenCalled();
+  });
+
+  it("logs the reason and the provider status for a failure", async () => {
+    mocks.listSites.mockRejectedValue(
+      new mocks.GscApiError(401, "unauthenticated"),
+    );
+    const { GscService } = await import("./GscService");
+
+    await GscService.listSitesForUserWithGrantStatus("u1");
+
+    expect(console.warn).toHaveBeenCalledWith(
+      "[gsc-sites] grant unusable for user u1: reason=grant_expired providerStatus=401",
+    );
   });
 
   it("keeps non-auth GSC API errors reportable", async () => {

@@ -110,6 +110,7 @@ export function BacklinksPage({
     referringDomainsQuery,
     rowsQuery,
     searchCardInitialValues,
+    seoKeyMissing,
     topPagesQuery,
   } = useBacklinksPageData({
     projectId,
@@ -247,6 +248,7 @@ export function BacklinksPage({
                 }
               : null
           }
+          seoKeyMissing={seoKeyMissing}
         />
       </div>
     </div>

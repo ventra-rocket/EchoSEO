@@ -72,6 +72,7 @@ export function KeywordResearchMobileResults({ controller }: Props) {
             page={controller.serpPage}
             pageSize={controller.SERP_PAGE_SIZE}
             onPageChange={controller.setSerpPage}
+            seoKeyMissing={controller.seoKeyMissing}
           />
         </div>
       )}

@@ -370,6 +370,7 @@ describe("DataforseoKeyService.getStatus", () => {
       source: "none",
       last4: null,
       canManage: true,
+      platformDefaultAvailable: false,
     });
   });
 
@@ -389,6 +390,7 @@ describe("DataforseoKeyService.getStatus", () => {
       source: "global",
       last4: null,
       canManage: true,
+      platformDefaultAvailable: true,
     });
   });
 
@@ -408,6 +410,7 @@ describe("DataforseoKeyService.getStatus", () => {
       source: "none",
       last4: null,
       canManage: true,
+      platformDefaultAvailable: false,
     });
   });
 
@@ -430,7 +433,29 @@ describe("DataforseoKeyService.getStatus", () => {
       source: "org",
       last4: "cmQ=",
       canManage: true,
+      // Hosted open access refuses the global key, so removing the org key would
+      // fall back to nothing: the settings card must not offer that.
+      platformDefaultAvailable: false,
     });
+  });
+
+  /** The settings copy "leave this empty to use the platform default" is only
+   * true where the runtime would actually spend the operator's key. */
+  it("reports a reachable platform default behind an org key on a metered deployment", async () => {
+    await seedMember("owner1", "owner");
+    mockServingAccount();
+    await saveAsOwner();
+
+    const status = await DataforseoKeyService.getStatus({
+      userId: "owner1",
+      organizationId: ORG_ID,
+      authMode: "hosted",
+      globalApiKey: "platform-default",
+      hostedAccessOpen: false,
+    });
+
+    expect(status.source).toBe("org");
+    expect(status.platformDefaultAvailable).toBe(true);
   });
 
   it("reports canManage=false for a hosted viewer", async () => {

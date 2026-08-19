@@ -150,6 +150,7 @@ export const en = {
     "{count, plural, one {# issue group} other {# issue groups}}",
   "commandCenter.value.notConfigured": "Not configured",
   "commandCenter.value.assistedWorkflows": "Assisted workflows",
+  "commandCenter.value.viaMcpClient": "Via your MCP client",
 
   "commandCenter.detail.sourceCrawl": "Source: site crawl",
   "commandCenter.detail.crawlInProgress": "Crawl in progress",
@@ -164,6 +165,8 @@ export const en = {
   "commandCenter.detail.rankRange": "Updated {oldest} – {newest}",
   "commandCenter.detail.rankMixed": "Mixed run times across trackers",
   "commandCenter.detail.aiWorkspace": "Read-only planning and analysis",
+  "commandCenter.detail.aiWorkspaceHosted":
+    "In-app chat is off here; connect an agent over MCP",
 
   "commandCenter.health.title": "Data health",
   "commandCenter.health.searchConsole": "Search Console",
@@ -205,7 +208,11 @@ export const en = {
 
   "seoProvider.section": "SEO data provider",
   "seoProvider.description":
-    "Use your own DataForSEO account for keyword, rank, backlink, and domain data. You're billed by DataForSEO directly; EchoSEO only covers the AI features. Leave this empty to use the platform default when one is available.",
+    "Use your own DataForSEO account for keyword, rank, backlink, and domain data. You're billed by DataForSEO directly; EchoSEO only covers the AI features.",
+  // Appended to the description only when the server reports a platform default
+  // this deployment would actually spend.
+  "seoProvider.platformDefault":
+    "Leave this empty to use the platform default instead.",
   "seoProvider.getKey": "Get a key at dataforseo.com",
   "seoProvider.inputLabel": "API key (base64 of your login:password)",
   "seoProvider.placeholder": "Paste your DataForSEO API key",

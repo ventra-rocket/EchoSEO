@@ -68,7 +68,9 @@ export const listGscSites = createServerFn({ method: "POST" })
       GscService.getConnection(context.projectId),
     ]);
     return {
-      requiresReconnect: siteList.requiresReconnect,
+      // The picker speaks to the specific failure; the provider status stays
+      // server-side (it is in the log line) because it tells a user nothing.
+      failure: siteList.failure?.reason ?? null,
       sites: siteList.sites.map((s) => ({
         siteUrl: s.siteUrl,
         permissionLevel: s.permissionLevel,

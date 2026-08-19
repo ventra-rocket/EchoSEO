@@ -28,6 +28,7 @@ import { SampleReportPreview } from "./SampleReportPreview";
 import { LANDING_COPY, type LandingCopy } from "./landing-copy";
 import { ShareLinkRow } from "./ShareLinkRow";
 import { useTurnstileSiteKey } from "./use-turnstile-site-key";
+import { useQueuedSubmitDeadline } from "./queued-submit-deadline";
 import { isValidCheckUrl } from "./validate-check-url";
 
 interface CheckResponse {
@@ -115,6 +116,20 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     setStatus("error");
     setSubmitQueued(false);
     renewChallenge();
+  }
+
+  /**
+   * Both ways a challenge can turn out unable to answer — the widget reporting
+   * failure, and a queued submit outliving its deadline — end here. The queue is
+   * released so the button cannot sit on "starting", and the failure is
+   * remembered rather than acted on: remounting from here would loop forever
+   * when the script is blocked outright, so the remount waits for the visitor's
+   * next submit.
+   */
+  function abandonChallenge() {
+    setChallengeFailed(true);
+    setSubmitQueued(false);
+    setErrorMessage(copy.turnstileLoadError);
   }
 
   async function runCheck(token: string) {
@@ -220,6 +235,12 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
     // The queue is keyed by the two values that actually gate the request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitQueued, turnstileToken]);
+
+  // The queue's own deadline. Turnstile's callbacks stay the faster exit when
+  // they fire, but a widget that renders and never answers has no callback at
+  // all until Cloudflare's own error timing — 44s of a button stuck on
+  // "starting".
+  useQueuedSubmitDeadline(submitQueued, turnstileToken, abandonChallenge);
 
   // A challenge that can never produce the token a queued submit is waiting
   // for — no key configured, or the config fetch failed/timed out — must
@@ -366,16 +387,7 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
                   setTurnstileToken(token);
                 }}
                 onExpire={() => setTurnstileToken(null)}
-                onLoadError={() => {
-                  // A challenge that failed to load can never mint a token,
-                  // so a queued submit would spin forever — release it, and
-                  // remember the failure so the next submit remounts the
-                  // widget instead of queueing behind one that is already
-                  // dead.
-                  setChallengeFailed(true);
-                  setSubmitQueued(false);
-                  setErrorMessage(copy.turnstileLoadError);
-                }}
+                onLoadError={abandonChallenge}
               />
 
               {/* Never `disabled`. A grey dead button is the page's only action
@@ -403,6 +415,13 @@ export function FreeSeoCheckLanding({ locale }: { locale: Locale }) {
                   copy.submitIdle
                 )}
               </button>
+              {/* The queued wait is a button-label swap, which assistive tech
+                  does not announce — this mirror does, so the wait is not
+                  silent as well as slow. "loading" is left to the scan section,
+                  which announces itself. */}
+              <span role="status" aria-live="polite" className="sr-only">
+                {submitQueued ? copy.submitVerifying : ""}
+              </span>
             </div>
 
             {/* Trust facts live in the card's footer as a hairline spec grid —

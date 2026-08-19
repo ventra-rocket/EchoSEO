@@ -104,6 +104,12 @@ interface DataforseoKeyStatus {
   last4: string | null;
   /** Whether the caller (owner/admin) may set or remove the key. */
   canManage: boolean;
+  /**
+   * Whether an operator key would actually be used if this org had none. False
+   * on hosted open-access deployments, where policy refuses the global key: the
+   * settings copy must not offer "leave this empty" as a working option there.
+   */
+  platformDefaultAvailable: boolean;
 }
 
 interface ActorContext {
@@ -135,23 +141,44 @@ async function getStatus(
   ]);
   const canManage = canManageTarget(role);
 
-  if (row) {
-    return { configured: true, source: "org", last4: row.keyLast4, canManage };
-  }
+  // Resolved even when an org key wins: the settings card has to know whether
+  // removing that key would fall back to anything at all.
   const globalApiKey = input.globalApiKey?.trim();
-  if (globalApiKey) {
-    const access = await resolveDataforseoCredentialAccess(
-      { apiKey: globalApiKey, source: "global" },
-      {
-        hosted: input.authMode === "hosted",
-        openAccess: input.hostedAccessOpen,
-      },
-    );
-    if (access !== "unavailable") {
-      return { configured: true, source: "global", last4: null, canManage };
-    }
+  const platformDefaultAvailable = globalApiKey
+    ? (await resolveDataforseoCredentialAccess(
+        { apiKey: globalApiKey, source: "global" },
+        {
+          hosted: input.authMode === "hosted",
+          openAccess: input.hostedAccessOpen,
+        },
+      )) !== "unavailable"
+    : false;
+
+  if (row) {
+    return {
+      configured: true,
+      source: "org",
+      last4: row.keyLast4,
+      canManage,
+      platformDefaultAvailable,
+    };
   }
-  return { configured: false, source: "none", last4: null, canManage };
+  if (platformDefaultAvailable) {
+    return {
+      configured: true,
+      source: "global",
+      last4: null,
+      canManage,
+      platformDefaultAvailable,
+    };
+  }
+  return {
+    configured: false,
+    source: "none",
+    last4: null,
+    canManage,
+    platformDefaultAvailable,
+  };
 }
 
 /**

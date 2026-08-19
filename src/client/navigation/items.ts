@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { linkOptions } from "@tanstack/react-router";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import type { MessageId } from "@/client/i18n/messages";
 
 // Nav labels are message IDs resolved at the render site with react-intl, so the
@@ -116,6 +117,11 @@ export function getProjectNavGroups(projectId: string) {
   const all = getProjectNavItems(projectId);
   const bySegment = (seg: string) => all.find((i) => i.matchSegment === seg)!;
 
+  // The assistant workspace is unavailable in hosted mode by construction —
+  // `getAssistantWorkspaceIdentity` returns `available: false` there to avoid
+  // unmanaged model spend. Advertising it in the nav sends users to a page whose
+  // only content is that refusal, so hosted builds do not list it. Self-host
+  // keeps it: with an OPENROUTER_API_KEY it answers.
   return [
     {
       type: "standalone" as const,
@@ -154,10 +160,14 @@ export function getProjectNavGroups(projectId: string) {
       matchSegments: ["/brand-lookup", "/prompt-explorer"],
       items: [bySegment("/brand-lookup"), bySegment("/prompt-explorer")],
     },
-    {
-      type: "standalone" as const,
-      item: bySegment("/assistant"),
-    },
+    ...(isHostedClientAuthMode()
+      ? []
+      : [
+          {
+            type: "standalone" as const,
+            item: bySegment("/assistant"),
+          },
+        ]),
     {
       type: "standalone" as const,
       item: aiNavItem,

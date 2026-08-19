@@ -7,11 +7,13 @@ import {
 import { useEffect } from "react";
 import { setLastProjectId } from "@/client/lib/active-project";
 import { useHostedAuthRouteGuard } from "@/client/features/auth/useHostedAuthRouteGuard";
+import { getShellGateState } from "@/client/features/auth/shell-gate-state";
 import { FreePlanBanner } from "@/client/features/billing/FreePlanBanner";
 import { useSubscribeRedirect } from "@/client/features/billing/useSubscribeRedirect";
 import { useOnboardingRedirect } from "@/client/features/onboarding/useOnboardingRedirect";
 import { getErrorCode } from "@/client/lib/error-messages";
 import { AuthenticatedAppLayout } from "@/client/layout/AppShell";
+import { ShellPending } from "@/client/layout/ShellPending";
 import {
   getCurrentAuthRedirectFromHref,
   getSignInSearch,
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/_project/p/$projectId")({
       throw redirect({ to: "/", replace: true });
     }
   },
-  pendingComponent: ProjectRoutePending,
+  pendingComponent: ShellPending,
   component: ProjectLayout,
 });
 
@@ -58,8 +60,22 @@ function ProjectLayout() {
     setLastProjectId(projectId);
   }, [projectId, isSettingsPage]);
 
-  if (!authGate.canRenderAuthenticatedContent || subscribeGate.isBlocking) {
+  const gateState = getShellGateState({
+    canRenderAuthenticatedContent: authGate.canRenderAuthenticatedContent,
+    isAuthRedirecting: authGate.isRedirecting,
+    isSubscribeBlocking: subscribeGate.isBlocking,
+    isSubscribeRedirecting: subscribeGate.isRedirecting,
+  });
+
+  // `pendingComponent` only covers this route's own beforeLoad. Once the
+  // component mounts, these gates own the wait, so they have to keep showing
+  // progress — and the shell has to render at all for an unmatched child to
+  // reach the 404 the router puts in this layout's <Outlet/>.
+  if (gateState === "redirecting") {
     return null;
+  }
+  if (gateState === "pending") {
+    return <ShellPending />;
   }
 
   return (
@@ -69,13 +85,5 @@ function ProjectLayout() {
     >
       <Outlet />
     </AuthenticatedAppLayout>
-  );
-}
-
-function ProjectRoutePending() {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <span className="loading loading-spinner loading-md" />
-    </div>
   );
 }

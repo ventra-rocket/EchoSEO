@@ -1,6 +1,13 @@
 # EchoSEO — Roadmap
 
-**Version:** 0.6 · **Date:** 2026-07-28 · **Status:** M0 complete. Free SEO Checker and the Professional Site Audit are deployed in production. EchoSEO now runs as a public hosted SaaS with customer email/password signup; billing remains unlaunched. The Command Center and private, read-only assisted AI workspace are release-ready; production verification is the next release gate. Remaining MVP work is dogfooding + hardening the inherited surfaces and the public OSS release; the content engine and read-write agent loop are unbuilt V1 goals.
+**Version:** 0.7 · **Date:** 2026-08-19 · **Status:** M0 complete. Free SEO Checker and the Professional Site Audit are deployed in production, and the Google-First Parity Sprint (13–31/08) delivered all 12 committed days: weekly report email, trust repair on the free report, GSC multi-site import, site dashboard cards, page-level competitor audit, and a measured 5,000-page crawl ceiling. Billing remains unlaunched. Remaining MVP work is dogfooding + hardening the inherited surfaces and the public OSS release; the content engine and read-write agent loop are unbuilt V1 goals.
+
+**Known gaps that the checkboxes below do not show:**
+
+- **Rank tracking cannot run without a DataForSEO key**, and the company account has no balance. `rank_snapshots` has no source column, so `plans/260812-1320-gsc-first-rank-tracking/` is unimplemented — GSC-average positions cannot be shown as a Tier-0 substitute yet. This is the largest hole in the "Google-only" story.
+- **Two sprint acceptance boxes are unverified on production**, both needing a real Search Console grant: the multi-site import happy path (tested with a stubbed server function) and the weekly report's numbers against Search Console over the same date window (no `report_subscriptions` row exists in production, so no report has ever been sent).
+- **i18n covers the app shell and a handful of features only** (182 ids). Audit reports, the free-check report, competitor tables and the weekly email are English-only, so "Bilingual VN + EN across all shipped surfaces" is further off than one unticked box suggests.
+
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` · Companion: `docs/project-overview-pdr.md`
 
 Phases are scope-ordered, not date-locked. Durations are rough estimates for a small team and should be re-baselined after Phase 0.
@@ -46,12 +53,12 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 
 - [~] **Balanced UX:** Command Center and private, read-only assisted AI workspace are built; production verification pending. Autonomous or write-capable workflows remain V1+.
 - [ ] **Bilingual VN + EN** across all shipped surfaces.
-- [ ] Borrowed quick-wins (★ stack-native, mostly zero API cost):
-  - [ ] Scheduled SERP rank loop refinement + change alerts (SerpBear pattern)
+- [~] Borrowed quick-wins (★ stack-native, mostly zero API cost):
+  - [ ] Scheduled SERP rank loop refinement + change alerts (SerpBear pattern) — _blocked with rank tracking itself on a DataForSEO key or a GSC rank source._
   - [ ] GSC-actuals reconciliation (overlay real clicks/impressions on tracked keywords)
   - [ ] Traffic-light real-time content analysis (client-side heuristics)
-  - [ ] Severity-tiered audit issue taxonomy (critical/high/low) — P02 Rules KB seam; do not duplicate it in audit UI.
-  - [ ] Private-by-default audit review; free public links never expose a workspace audit.
+  - [x] Severity-tiered audit issue taxonomy (critical/high/low) — shipped in the rules engine (`src/server/lib/audit/rules/`), read by the audit UI rather than redefined there.
+  - [x] Private-by-default audit review; free public links never expose a workspace audit — `/r/{id}` reads the free-check report store only (`src/routes/r.$id.tsx`), and is `noindex` + robots-disallowed.
 
 **Exit / launch:** public open-source release; "Deploy to Cloudflare" one-click; docs; positioning = _the open, agent-native SEO platform_.
 
