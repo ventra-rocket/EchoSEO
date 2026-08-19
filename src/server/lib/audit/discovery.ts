@@ -105,10 +105,14 @@ export function parseRobotsTxt(body: RobotsTxtBody): RobotsResult {
 
   const robots = robotsParser(body.robotsUrl, body.text);
   return {
-    isAllowed: (url: string) => robots.isAllowed(url) ?? true,
+    // Both reads name our own user-agent, so a site that wrote a group for
+    // `EchoSEO-Audit` gets exactly what it wrote there. Omitting the agent reads
+    // only the `*` group, which meant a site could close `/admin` to us by name
+    // and be crawled anyway — while its `Crawl-delay` in that same group was
+    // obeyed. Two reads of one file disagreeing about which group applies is not
+    // a policy anyone wrote.
+    isAllowed: (url: string) => robots.isAllowed(url, AUDIT_USER_AGENT) ?? true,
     sitemapUrls: robots.getSitemaps(),
-    // Matched on our own user-agent, so a site that slows down `EchoSEO-Audit`
-    // specifically is obeyed rather than only its `*` group.
     crawlDelaySeconds: robots.getCrawlDelay(AUDIT_USER_AGENT) ?? null,
   };
 }

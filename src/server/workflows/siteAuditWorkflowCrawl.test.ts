@@ -207,7 +207,7 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     expect(recorder.waitsByBatch[0]?.slice(0, 3)).toEqual([333, 666, 999]);
   });
 
-  it("gives up a quarter of the rate on a refused batch, and climbs back a step at a time", async () => {
+  it("charges a wholesale refusal a quarter, then climbs back from that evidence", async () => {
     // Halving plus an escalating sleep paid a minute of hibernation for a limit
     // measured to recover in five seconds, and left the crawl far below the rate
     // the site was willing to serve.
@@ -224,9 +224,10 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
       waitMs: recorder.waitMs,
     });
 
-    // 3 req/s refused → 2.25, then +0.25 per clean batch, held under the 2.7 the
-    // refusal established as a ceiling. A halving would read 889 ms here.
-    expect(recorder.intervals.slice(0, 4)).toEqual([333, 444, 400, 369]);
+    // 3 req/s, whole batch refused → 2.25 (444 ms), then the ceiling forgets 2%
+    // per clean batch: 2.295, 2.34. A halving would read 889 ms here, and the
+    // flat +0.005 the first version crept back with would still read 444.
+    expect(recorder.intervals.slice(0, 4)).toEqual([333, 444, 436, 427]);
   });
 
   it("keeps the batch at 25 URLs, because the pacing moves instead", async () => {
@@ -386,7 +387,11 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
       waitMs: recorder.waitMs,
     });
 
-    expect(recorder.intervals[1]).toBe(444);
+    // One refusal in twenty-five: the crawl slows by that share — 3 → 2.88 req/s
+    // — and waits the header out. It does not pay a quarter of its rate for one
+    // page, which is what dragged a real crawl of a site that refuses
+    // occasionally down to 1.20 req/s.
+    expect(recorder.intervals[1]).toBe(347);
     expect(recorder.sleeps[0]?.duration).toBe("4 seconds");
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyRefusal, isCongestionSignal } from "./crawl-retry";
+import { classifyRefusal, congestionShare } from "./crawl-retry";
 
 describe("classifyRefusal", () => {
   it.each([
@@ -29,42 +29,55 @@ describe("classifyRefusal", () => {
   });
 });
 
-describe("isCongestionSignal", () => {
-  it("acts on a single explicit throttle", () => {
-    // 429 and 503 are the server saying it in words; one is enough.
+describe("congestionShare", () => {
+  it("reports a single explicit throttle as a small share, not a verdict", () => {
+    // 429 and 503 are the server saying it in words, so one is acted on — but one
+    // in twenty-five is a site that occasionally refuses, not a crawl to halve.
     expect(
-      isCongestionSignal({ throttled: 1, unanswered: 0, batchSize: 25 }),
-    ).toBe(true);
+      congestionShare({ throttled: 1, unanswered: 0, batchSize: 25 }),
+    ).toBeCloseTo(0.04);
+  });
+
+  it("reports a wholesale refusal as the whole batch", () => {
+    expect(
+      congestionShare({ throttled: 25, unanswered: 0, batchSize: 25 }),
+    ).toBe(1);
   });
 
   it("does not slow the whole crawl down for a couple of dead URLs", () => {
     // A site with a handful of broken links would otherwise drag every crawl to
     // the floor, which is the failure mode the adaptive rate exists to avoid.
     expect(
-      isCongestionSignal({ throttled: 0, unanswered: 3, batchSize: 25 }),
-    ).toBe(false);
+      congestionShare({ throttled: 0, unanswered: 3, batchSize: 25 }),
+    ).toBe(0);
   });
 
-  it("acts when unanswered requests took most of the batch", () => {
+  it("counts a batch that mostly went unanswered", () => {
     // The measured case: 1,210 of 5,000 requests died with no status and no 429
     // anywhere to explain them. A batch failing wholesale is about our load.
     expect(
-      isCongestionSignal({ throttled: 0, unanswered: 13, batchSize: 25 }),
-    ).toBe(true);
+      congestionShare({ throttled: 0, unanswered: 13, batchSize: 25 }),
+    ).toBeCloseTo(0.52);
   });
 
   it("needs more than half, not exactly half", () => {
     expect(
-      isCongestionSignal({ throttled: 0, unanswered: 12, batchSize: 24 }),
-    ).toBe(false);
+      congestionShare({ throttled: 0, unanswered: 12, batchSize: 24 }),
+    ).toBe(0);
     expect(
-      isCongestionSignal({ throttled: 0, unanswered: 13, batchSize: 24 }),
-    ).toBe(true);
+      congestionShare({ throttled: 0, unanswered: 13, batchSize: 24 }),
+    ).toBeCloseTo(0.5417);
   });
 
   it("stays quiet on a clean batch", () => {
     expect(
-      isCongestionSignal({ throttled: 0, unanswered: 0, batchSize: 25 }),
-    ).toBe(false);
+      congestionShare({ throttled: 0, unanswered: 0, batchSize: 25 }),
+    ).toBe(0);
+  });
+
+  it("says nothing about an empty batch instead of dividing by it", () => {
+    expect(congestionShare({ throttled: 0, unanswered: 0, batchSize: 0 })).toBe(
+      0,
+    );
   });
 });
