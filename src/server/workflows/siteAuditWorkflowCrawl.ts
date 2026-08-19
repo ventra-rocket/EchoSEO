@@ -38,6 +38,18 @@ const THROTTLE_BACKOFF_BASE_SECONDS = 5;
 const THROTTLE_BACKOFF_MAX_SECONDS = 60;
 
 /**
+ * How much of a batch has to be refused before the crawl stops as well as slows.
+ *
+ * Hibernating exists to let a limiter's window drain, which only matters when we
+ * filled that window. A single refusal in twenty-five is answered by the rate cut
+ * alone: on a measured 5,000-page crawl 19 batches were refused, 18 of them
+ * partially, and every one bought a 5 s pause — 1.6 minutes of deliberate idling
+ * to recover from something the pacing had already corrected. A server that sent
+ * `Retry-After` is obeyed whatever the share: it named a number.
+ */
+const BACKOFF_MIN_SHARE = 0.2;
+
+/**
  * A refused URL goes back on the queue instead of being recorded, because a
  * refusal is not a fact about the page. After this many attempts it is recorded
  * with the status it kept returning: the crawl has to terminate, and a URL that
@@ -296,11 +308,13 @@ export async function runCrawlPhase(
     if (refusedShare > 0) {
       consecutiveThrottledBatches += 1;
       rate = afterCongestedBatch(rate, refusedShare);
-      throttleWaits += 1;
-      await step.sleep(
-        `throttle-backoff-${throttleWaits}`,
-        `${throttleBackoffSeconds(consecutiveThrottledBatches, retryAfterMs)} seconds`,
-      );
+      if (refusedShare >= BACKOFF_MIN_SHARE || retryAfterMs != null) {
+        throttleWaits += 1;
+        await step.sleep(
+          `throttle-backoff-${throttleWaits}`,
+          `${throttleBackoffSeconds(consecutiveThrottledBatches, retryAfterMs)} seconds`,
+        );
+      }
     } else {
       consecutiveThrottledBatches = 0;
       rate = afterCleanBatch(rate);

@@ -188,6 +188,32 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     expect(result.pages.map((p) => p.statusCode)).toEqual([200, 200]);
   });
 
+  it("slows for a lone refusal without stopping the crawl to think about it", async () => {
+    // Hibernating lets a limiter's window drain, which only matters when we
+    // filled it. On a measured 5,000-page crawl, 19 batches were refused — 18 of
+    // them partially — and each bought a 5 s pause: 1.6 minutes idle to recover
+    // from something the rate cut had already answered.
+    let refusedOnce = false;
+    crawlPageMock.mockImplementation(async (url: string) => {
+      if (url.endsWith("/p0") && !refusedOnce) {
+        refusedOnce = true;
+        return throttledPage(url);
+      }
+      return page(url);
+    });
+    const recorder = recordingStep();
+
+    await runCrawlPhase(recorder.step, {
+      ...params({ maxPages: 60 }),
+      sitemapUrls: sitemapUrls(40),
+      waitMs: recorder.waitMs,
+    });
+
+    expect(recorder.sleeps).toEqual([]);
+    // The rate still moved: one in twenty-five is 4%, so 3 → 2.88 req/s.
+    expect(recorder.intervals[1]).toBe(347);
+  });
+
   it("spaces the requests inside a batch instead of firing them at once", async () => {
     // The mismatch this fixes: the crawl controls a rate, the site meters one.
     // A batch fired at once offers an unbounded instantaneous rate whatever the
