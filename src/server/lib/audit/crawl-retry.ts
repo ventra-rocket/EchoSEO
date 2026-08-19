@@ -37,19 +37,32 @@ export function classifyRefusal(
 }
 
 /**
- * Whether a batch's refusals say the crawl is going too fast.
+ * How much of a batch the site refused, as a share of it — and 0 when its
+ * refusals say nothing about our rate.
  *
- * An explicit throttle always does. An unanswered request only does when it was
- * most of the batch: a site with a handful of dead links would otherwise drag the
- * whole crawl down to its floor, and a load-induced failure storm — 1,210 of 5,000
- * on one measured audit, with no 429 anywhere to explain it — takes almost every
- * request in flight with it.
+ * A share rather than a yes/no, because the rate controller needs to know *how
+ * much* too fast it was. One 429 in a batch of 25 is a site that occasionally
+ * refuses at any rate (`kello.ventrarocket.vn` returned 36 of them across 5,000
+ * pages while averaging half its own tolerance); a batch refused wholesale is us.
+ * Treating those two the same is what makes a rate controller ratchet itself down
+ * to nothing on a site that was never rate-limiting it.
+ *
+ * An explicit throttle always counts. An unanswered request only counts when it
+ * was most of the batch: a site with a handful of dead links would otherwise drag
+ * every crawl down, and a load-induced failure storm — 1,210 of 5,000 on one
+ * measured audit, with no 429 anywhere to explain it — takes almost every request
+ * in flight with it.
  */
-export function isCongestionSignal(counts: {
+export function congestionShare(counts: {
   throttled: number;
   unanswered: number;
   batchSize: number;
-}): boolean {
-  if (counts.throttled > 0) return true;
-  return counts.unanswered * 2 > counts.batchSize;
+}): number {
+  if (counts.batchSize <= 0) return 0;
+  const stormed = counts.unanswered * 2 > counts.batchSize;
+  const refused = stormed
+    ? counts.throttled + counts.unanswered
+    : counts.throttled;
+  if (refused === 0) return 0;
+  return Math.min(1, refused / counts.batchSize);
 }

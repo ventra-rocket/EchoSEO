@@ -171,4 +171,32 @@ describe("parseRobotsTxt", () => {
 
     expect(robots.isAllowed("https://example.com/anything")).toBe(true);
   });
+
+  it("obeys a group the site wrote for our crawler by name", () => {
+    // The defect: the allow check read only the `*` group while `Crawl-delay`
+    // read our own, so a site could close a path to `EchoSEO-Audit` by name, see
+    // its crawl-delay respected, and still be crawled there.
+    const robots = parseRobotsTxt({
+      robotsUrl: "https://example.com/robots.txt",
+      status: 200,
+      text: [
+        "User-agent: *",
+        "Disallow: /cart",
+        "",
+        "User-agent: EchoSEO-Audit",
+        "Disallow: /admin",
+      ].join("\n"),
+    });
+
+    expect(robots.isAllowed("https://example.com/admin")).toBe(false);
+    // Only the most specific group applies, per RFC 9309: a site that wrote
+    // rules for us said what it wanted us to do, `*` notwithstanding.
+    expect(robots.isAllowed("https://example.com/cart")).toBe(true);
+  });
+
+  it("falls back to the wildcard group when the site named no crawler", () => {
+    expect(parseRobotsTxt(body).isAllowed("https://example.com/admin")).toBe(
+      false,
+    );
+  });
 });

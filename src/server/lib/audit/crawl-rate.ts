@@ -48,36 +48,27 @@ export const CRAWL_RATE_MAX = 8;
 const RATE_INCREASE = 0.25;
 
 /**
- * Multiplicative decrease. 0.75 rather than the usual halving: the limit this
- * backs off from recovers in about five seconds, so a single trip should not
- * undo a long climb. A halving plus the old exponential sleep paid a minute of
- * hibernation for a five-second problem and landed far below the sustainable
- * rate.
+ * The most a single refused batch may cost. A batch refused wholesale is not
+ * proof the site serves nothing, so the estimate below never reads worse than
+ * "three quarters of what we offered" from one batch's evidence — repeated
+ * refusals compound, which is how a genuinely slow site is found.
  */
-const RATE_DECREASE = 0.75;
+const MIN_SERVED_SHARE = 0.75;
 
 /**
- * A refused batch is evidence about *where the limit is*, not just a reason to
- * slow down once. The rate that tripped it becomes a ceiling the climb holds
- * under, so the sawtooth settles just below the site's real limit instead of
- * rediscovering it every few batches.
- */
-const CEILING_AFTER_TRIP = 0.9;
-
-/**
- * ...but a ceiling learned from one trip must not pin a whole crawl: an upstream
- * hiccup that refuses one batch would otherwise hold every later batch under a
- * limit that was never real. Each clean batch lifts it slightly — +0.5 req/s per
- * 100 batches — so a real limit still holds, because trips keep re-lowering it
- * faster than this raises it.
+ * How fast the learned ceiling forgets, per clean batch. Multiplicative, so
+ * recovery is symmetric with the decrease: from the floor back to 3 req/s takes
+ * about 90 batches rather than the 560 an additive step needed.
  *
- * Simulated against a 3.5 req/s sliding-window limiter at 1.2 s latency over
- * 5,000 pages: 0 relax gives 25.1 min but leaves a false trip pinned for the
- * whole crawl (29.5 min); 0.05 recovers from a false trip but re-trips the real
- * limit six times. 0.005 costs 0.3 min against a real limit and recovers a false
- * one in a few hundred pages.
+ * This matters more than it looks. The first version of this law lowered the
+ * ceiling on *any* refusal and lifted it by a flat 0.005, which is a one-way
+ * ratchet on any site that refuses occasionally for reasons of its own:
+ * `kello.ventrarocket.vn` returns about one 429 per 139 pages while serving half
+ * its own tolerance, and the deployed law was measured settling at 1.20 req/s on
+ * it — worse than the 1.88 it replaced. Simulated over 5,000 pages: 119.7 min at
+ * 0.70 req/s, against 21.9 min at 3.81 req/s for the law here.
  */
-const CEILING_RELAX = 0.005;
+const CEILING_RELAX = 1.02;
 
 type CrawlRateState = {
   /** Offered requests per second. */
@@ -107,7 +98,7 @@ export function initialCrawlRate(
 }
 
 export function afterCleanBatch(state: CrawlRateState): CrawlRateState {
-  const ceiling = Math.min(state.cap, state.ceiling + CEILING_RELAX);
+  const ceiling = Math.min(state.cap, state.ceiling * CEILING_RELAX);
   return {
     ...state,
     ceiling,
@@ -115,15 +106,25 @@ export function afterCleanBatch(state: CrawlRateState): CrawlRateState {
   };
 }
 
-export function afterCongestedBatch(state: CrawlRateState): CrawlRateState {
+/**
+ * What the site just told us it will serve.
+ *
+ * `refusedShare` is the fraction of the batch it turned away, so
+ * `rate × (1 - refusedShare)` is the rate it *did* serve at — a measurement
+ * rather than a guessed backoff factor. That becomes both the new rate and the
+ * ceiling the climb holds under, which is why one 429 in twenty-five costs 4% and
+ * a wholesale refusal costs a quarter.
+ */
+export function afterCongestedBatch(
+  state: CrawlRateState,
+  refusedShare: number,
+): CrawlRateState {
   // A `Crawl-delay` slower than the backoff floor is still the rate to honour,
   // so the floor is whichever of the two is lower.
   const floor = Math.min(CRAWL_RATE_MIN, state.cap);
-  return {
-    ...state,
-    ceiling: Math.max(floor, state.rate * CEILING_AFTER_TRIP),
-    rate: Math.max(floor, state.rate * RATE_DECREASE),
-  };
+  const served = Math.max(MIN_SERVED_SHARE, 1 - refusedShare);
+  const next = Math.max(floor, state.rate * served);
+  return { ...state, ceiling: next, rate: next };
 }
 
 /**

@@ -7,7 +7,7 @@ import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import { crawlPage } from "@/server/workflows/site-audit-workflow-helpers";
 import {
   classifyRefusal,
-  isCongestionSignal,
+  congestionShare,
 } from "@/server/lib/audit/crawl-retry";
 import {
   afterCleanBatch,
@@ -285,17 +285,17 @@ export async function runCrawlPhase(
     });
 
     // Counts refusals we gave up on too: a row recorded as refused is still the
-    // site telling us something. An unanswered request only counts as a rate
-    // signal when it took most of the batch with it — see `isCongestionSignal`.
-    if (
-      isCongestionSignal({
-        throttled,
-        unanswered,
-        batchSize: crawledBatch.length,
-      })
-    ) {
+    // site telling us something. How much of the batch was refused is the whole
+    // signal — one 429 in twenty-five is a site that occasionally says no, not a
+    // site we are hammering. See `congestionShare`.
+    const refusedShare = congestionShare({
+      throttled,
+      unanswered,
+      batchSize: crawledBatch.length,
+    });
+    if (refusedShare > 0) {
       consecutiveThrottledBatches += 1;
-      rate = afterCongestedBatch(rate);
+      rate = afterCongestedBatch(rate, refusedShare);
       throttleWaits += 1;
       await step.sleep(
         `throttle-backoff-${throttleWaits}`,
