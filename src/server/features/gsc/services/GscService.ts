@@ -1,7 +1,11 @@
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
 import { account } from "@/db/schema";
-import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
+import {
+  GSC_OAUTH_PROVIDER_ID,
+  type GscGrantFailureReason,
+} from "@/shared/gsc";
 import { AppError } from "@/server/lib/errors";
 import {
   createGscClient,
@@ -32,9 +36,17 @@ type GscPerformanceResult = {
   rows: GscSearchAnalyticsRow[];
 };
 
+type GscGrantFailure = {
+  reason: GscGrantFailureReason;
+  /** Status Search Console answered with, or null when the call never reached
+   *  Google because no access token could be minted. Logged, never shown. */
+  providerStatus: number | null;
+};
+
 type GscSiteListResult = {
   sites: GscSite[];
-  requiresReconnect: boolean;
+  /** Null when the listing succeeded. */
+  failure: GscGrantFailure | null;
 };
 
 /** Thrown when a project has no connected GSC property. */
@@ -82,9 +94,76 @@ export function isExpectedGrantFailure(error: unknown): boolean {
   );
 }
 
+/** Reasons Google reports when a 403 is a *permission* refusal rather than a
+ *  quota refusal: the OAuth app is still in Testing, a Workspace admin policy
+ *  blocks it, or the Search Console scope was declined on the consent screen.
+ *  Search Console answers 403 for quota too, so anything not on this list stays
+ *  transient — telling a rate-limited user to reconnect is the exact misdirection
+ *  this classification exists to prevent. */
+const GOOGLE_PERMISSION_DENIED_REASONS: Record<string, true> = {
+  forbidden: true,
+  insufficientPermissions: true,
+  accessNotConfigured: true,
+  ACCESS_TOKEN_SCOPE_INSUFFICIENT: true,
+  PERMISSION_DENIED: true,
+};
+
+/** Google's REST error envelope. Only the reason fields are read; the rest of a
+ *  provider body is diagnostic noise that must not reach the browser. */
+const googleErrorBodySchema = z.object({
+  error: z.object({
+    status: z.string().optional(),
+    errors: z.array(z.object({ reason: z.string().optional() })).optional(),
+    details: z.array(z.object({ reason: z.string().optional() })).optional(),
+  }),
+});
+
+function deniesPermission(body: string | undefined): boolean {
+  if (!body) return false;
+  let json: unknown;
+  try {
+    json = JSON.parse(body);
+  } catch {
+    return false;
+  }
+  const parsed = googleErrorBodySchema.safeParse(json);
+  if (!parsed.success) return false;
+  const { status, errors, details } = parsed.data.error;
+  if (status !== undefined && GOOGLE_PERMISSION_DENIED_REASONS[status]) {
+    return true;
+  }
+  return [...(errors ?? []), ...(details ?? [])].some(
+    (entry) =>
+      entry.reason !== undefined &&
+      GOOGLE_PERMISSION_DENIED_REASONS[entry.reason],
+  );
+}
+
+/** Narrow an expected grant failure to the one thing the user can act on. The
+ *  caller has already established that a grant exists, so every branch here is
+ *  about a grant Google would not serve. */
+function classifyGrantFailure(error: unknown): GscGrantFailure {
+  if (error instanceof GscApiError) {
+    if (error.status === 403 && deniesPermission(error.body)) {
+      return { reason: "consent_blocked", providerStatus: error.status };
+    }
+    // 401 means Google rejected a token Better Auth had just minted, so the
+    // grant behind it is spent. A 403 we could not attribute to a permission
+    // refusal is Search Console's quota answer far more often than a dead grant,
+    // and a retry costs the user nothing while a reconnect cannot help.
+    return {
+      reason: error.status === 401 ? "grant_expired" : "provider_error",
+      providerStatus: error.status,
+    };
+  }
+  // GscTokenError: no token could be minted, so nothing reached Google.
+  return { reason: "grant_expired", providerStatus: null };
+}
+
 /** List properties for the picker UI. When the stored grant can't currently
- *  reach GSC, return a reconnect signal instead of throwing, so an expected
- *  external-auth failure doesn't land in error tracking.
+ *  reach GSC, return a classified failure instead of throwing, so an expected
+ *  external-auth failure doesn't land in error tracking — and so the picker can
+ *  name an action that actually helps for each case.
  *
  *  Only a GscTokenError unlinks the stored grant — the one unambiguous "this
  *  grant is dead" signal (Better Auth couldn't mint/refresh a token, i.e. the
@@ -96,15 +175,27 @@ async function listSitesForUserWithGrantStatus(
   userId: string,
 ): Promise<GscSiteListResult> {
   try {
-    return { sites: await listSitesForUser(userId), requiresReconnect: false };
+    return { sites: await listSitesForUser(userId), failure: null };
   } catch (error) {
     if (!isExpectedGrantFailure(error)) {
       throw error;
     }
+    // A user who never linked an account fails to mint a token exactly like a
+    // revoked one does, and "reconnect" is nonsense advice for them. Read before
+    // any unlink below, so the answer describes the state the user arrived in.
+    const failure: GscGrantFailure = (await userHasGrant(userId))
+      ? classifyGrantFailure(error)
+      : { reason: "not_connected", providerStatus: null };
+    // Expected end states, so deliberately not error-tracked — but an operator
+    // still has to be able to tell a policy block from a quota refusal after the
+    // fact, and the provider status is the only signal that separates them.
+    console.warn(
+      `[gsc-sites] grant unusable for user ${userId}: reason=${failure.reason} providerStatus=${failure.providerStatus ?? "none"}`,
+    );
     if (error instanceof GscTokenError) {
       await unlinkUserGrant(userId);
     }
-    return { sites: [], requiresReconnect: true };
+    return { sites: [], failure };
   }
 }
 

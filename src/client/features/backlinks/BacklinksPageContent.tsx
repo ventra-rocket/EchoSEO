@@ -5,6 +5,7 @@ import { BacklinksResultsCard } from "./BacklinksPageSections";
 import {
   BacklinksErrorState,
   BacklinksLoadingState,
+  BacklinksOverviewEmptyState,
   BacklinksSetupGate,
 } from "./BacklinksPageStates";
 import { BacklinksHistorySection } from "./BacklinksHistorySection";
@@ -60,6 +61,8 @@ type BacklinksBodyProps = {
     onClose: (tabId: string) => void;
     onViewed: (tabId: string, when?: number) => void;
   } | null;
+  /** No DataForSEO key: every backlinks query is gated off, so nothing failed. */
+  seoKeyMissing: boolean;
 };
 
 export function BacklinksBody({
@@ -89,6 +92,7 @@ export function BacklinksBody({
   onTabChange,
   onViewChange,
   searchTabs,
+  seoKeyMissing,
 }: BacklinksBodyProps) {
   const tabRows = useMemo<BacklinksTabRows>(
     () => ({
@@ -166,7 +170,8 @@ export function BacklinksBody({
     return (
       <>
         {tabStrip}
-        <BacklinksErrorState
+        <BacklinksOverviewEmptyState
+          seoKeyMissing={seoKeyMissing}
           errorMessage={overviewError}
           onRetry={onRetryOverview}
         />

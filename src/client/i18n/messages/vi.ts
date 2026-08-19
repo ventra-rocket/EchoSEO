@@ -150,6 +150,7 @@ export const vi: Messages = {
   "commandCenter.value.issueGroups": "{count, plural, other {# nhóm lỗi}}",
   "commandCenter.value.notConfigured": "Chưa cấu hình",
   "commandCenter.value.assistedWorkflows": "Quy trình hỗ trợ",
+  "commandCenter.value.viaMcpClient": "Qua MCP client của bạn",
 
   "commandCenter.detail.sourceCrawl": "Nguồn: crawl website",
   "commandCenter.detail.crawlInProgress": "Đang crawl",
@@ -166,6 +167,8 @@ export const vi: Messages = {
   "commandCenter.detail.rankMixed":
     "Thời điểm chạy khác nhau giữa các bộ theo dõi",
   "commandCenter.detail.aiWorkspace": "Lập kế hoạch và phân tích chỉ đọc",
+  "commandCenter.detail.aiWorkspaceHosted":
+    "Chat trong ứng dụng đang tắt; kết nối agent qua MCP",
 
   "commandCenter.health.title": "Tình trạng dữ liệu",
   "commandCenter.health.searchConsole": "Search Console",
@@ -207,7 +210,9 @@ export const vi: Messages = {
 
   "seoProvider.section": "Nhà cung cấp dữ liệu SEO",
   "seoProvider.description":
-    "Dùng tài khoản DataForSEO của riêng bạn cho dữ liệu từ khóa, thứ hạng, backlink và tên miền. DataForSEO tính phí trực tiếp cho bạn; EchoSEO chỉ chi trả cho các tính năng AI. Để trống nếu muốn dùng khóa mặc định của nền tảng khi có.",
+    "Dùng tài khoản DataForSEO của riêng bạn cho dữ liệu từ khóa, thứ hạng, backlink và tên miền. DataForSEO tính phí trực tiếp cho bạn; EchoSEO chỉ chi trả cho các tính năng AI.",
+  "seoProvider.platformDefault":
+    "Để trống nếu bạn muốn dùng khóa mặc định của nền tảng.",
   "seoProvider.getKey": "Lấy khóa tại dataforseo.com",
   "seoProvider.inputLabel": "Khóa API (base64 của login:password)",
   "seoProvider.placeholder": "Dán khóa API DataForSEO của bạn",

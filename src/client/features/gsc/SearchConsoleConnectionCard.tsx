@@ -43,16 +43,16 @@ export function SearchConsoleConnectionCard({
     queryFn: () => listGscSites({ data: { projectId } }),
     enabled: Boolean(showPicker && !selfHostedNeedsSetup),
   });
-  const requiresReconnect = Boolean(sitesQuery.data?.requiresReconnect);
+  const failure = sitesQuery.data?.failure ?? null;
 
   React.useEffect(() => {
-    if (!requiresReconnect) return;
+    if (!failure) return;
 
     void queryClient.invalidateQueries({
       queryKey: ["gscConnection", projectId],
     });
     void queryClient.invalidateQueries({ queryKey: GRANT_STATUS_KEY });
-  }, [requiresReconnect, queryClient, projectId]);
+  }, [failure, queryClient, projectId]);
 
   const setSiteMutation = useMutation({
     mutationFn: (siteUrl: string) =>
@@ -129,7 +129,7 @@ export function SearchConsoleConnectionCard({
       ) : showPicker ? (
         <SitePicker
           loading={sitesQuery.isLoading}
-          error={sitesQuery.isError || requiresReconnect}
+          failure={failure ?? (sitesQuery.isError ? "provider_error" : null)}
           sites={sitesQuery.data?.sites ?? []}
           selectedSiteUrl={selectedSiteUrl}
           onSelect={setSelectedSiteUrl}
@@ -137,7 +137,8 @@ export function SearchConsoleConnectionCard({
             selectedSiteUrl && setSiteMutation.mutate(selectedSiteUrl)
           }
           saving={setSiteMutation.isPending}
-          onReconnect={handleConnect}
+          onConnect={handleConnect}
+          onRetry={() => void sitesQuery.refetch()}
           secondaryAction={
             connected
               ? { label: "Cancel", onClick: () => setPicking(false) }

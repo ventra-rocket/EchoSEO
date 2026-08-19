@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { ExportToSheetsButton } from "@/client/components/table/ExportToSheetsButton";
+import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import type { SerpResultItem } from "@/types/keywords";
 
 export function SerpAnalysisCard({
@@ -11,6 +12,7 @@ export function SerpAnalysisCard({
   page,
   pageSize,
   onPageChange,
+  seoKeyMissing,
 }: {
   items: SerpResultItem[];
   keyword?: string | null;
@@ -20,10 +22,14 @@ export function SerpAnalysisCard({
   page: number;
   pageSize: number;
   onPageChange: (p: number) => void;
+  /** No DataForSEO key: the SERP query never fired, so neither the error nor the
+   * "no details for this keyword" state can be claimed. */
+  seoKeyMissing: boolean;
 }) {
   const totalPages = Math.ceil(items.length / pageSize);
   const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
 
+  if (seoKeyMissing) return <DataforseoKeyMissingState />;
   if (loading) return <SerpAnalysisLoadingState />;
   if (error) {
     return (

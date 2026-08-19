@@ -60,10 +60,13 @@ function mutationErrorMessageId(error: unknown): string {
 
 /**
  * Settings card for the organization's DataForSEO API key. Owners and admins can
- * paste their own key (validated live before it is stored) or remove it to fall
- * back to the platform default. The key is write-only from the client: the
- * status query returns a source badge and a masked last-4, never the key itself.
- * Rendered only for callers the server reports as able to manage the key.
+ * paste their own key (validated live before it is stored) or remove it. Removing
+ * it falls back to the operator's platform key only where the runtime allows that
+ * key to be spent; the status query reports whether it does, because on hosted
+ * open-access deployments policy refuses it and nothing is left to fall back to.
+ * The key is write-only from the client: the status query returns a source badge
+ * and a masked last-4, never the key itself. Rendered only for callers the server
+ * reports as able to manage the key.
  */
 export function DataForSeoKeyCard() {
   const intl = useIntl();
@@ -129,6 +132,12 @@ export function DataForSeoKeyCard() {
           <div className="min-w-0">
             <p className="text-sm text-base-content/60">
               {intl.formatMessage({ id: "seoProvider.description" })}
+              {/* Only where the server confirms a reachable operator key. Hosted
+                  open-access deployments refuse the global key by policy, so
+                  "leave this empty" there means no data, forever. */}
+              {status?.platformDefaultAvailable
+                ? ` ${intl.formatMessage({ id: "seoProvider.platformDefault" })}`
+                : null}
             </p>
             <a
               href={GET_KEY_URL}

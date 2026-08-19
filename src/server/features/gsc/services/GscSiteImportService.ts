@@ -175,7 +175,7 @@ async function listCandidates(
     };
   });
 
-  return { candidates, requiresReconnect: siteList.requiresReconnect };
+  return { candidates, requiresReconnect: siteList.failure !== null };
 }
 
 /**
@@ -217,7 +217,7 @@ async function importSites(
   const siteList = await GscService.listSitesForUserWithGrantStatus(
     input.actorUserId,
   );
-  if (siteList.requiresReconnect) {
+  if (siteList.failure) {
     return { rows: [], requiresReconnect: true };
   }
 

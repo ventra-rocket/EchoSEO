@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Copy, Download, FileSpreadsheet, Sheet } from "lucide-react";
 import { toast } from "sonner";
 import { DomainKeywordsPagination } from "@/client/features/domain/components/DomainKeywordsPagination";
+import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
 import { DomainPagesTable } from "@/client/features/domain/components/DomainPagesTable";
 import { DomainTableTabSurface } from "@/client/features/domain/components/DomainTableTabSurface";
@@ -61,6 +62,9 @@ type Props = {
   onSortClick: (sort: DomainSortMode) => void;
   onPageChange: (nextPage: number) => void;
   onPageSizeChange: (nextSize: number) => void;
+  /** No DataForSEO key: this tab's query never fires, so it must not render an
+   * empty table as a measured zero. */
+  seoKeyMissing: boolean;
 };
 
 export function PagesTab({
@@ -72,6 +76,7 @@ export function PagesTab({
   onSortClick,
   onPageChange,
   onPageSizeChange,
+  seoKeyMissing,
 }: Props) {
   const [showFilters, setShowFilters] = useState(false);
   const filterPreferences = useDomainPageFilterPreferences(
@@ -176,6 +181,13 @@ export function PagesTab({
       });
     }
   };
+
+  // After every hook, so the branch cannot change the hook order: with no key the
+  // pages query never fired, and the toolbar's "0 pages" plus an empty table read
+  // as a measured result.
+  if (seoKeyMissing) {
+    return <DataforseoKeyMissingState />;
+  }
 
   return (
     <>

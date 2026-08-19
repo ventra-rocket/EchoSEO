@@ -94,7 +94,7 @@ function importInput(
 
 function grantHolds(...sites: { siteUrl: string; permissionLevel?: string }[]) {
   listSitesForUserWithGrantStatusMock.mockResolvedValue({
-    requiresReconnect: false,
+    failure: null,
     sites: sites.map((site) => ({
       siteUrl: site.siteUrl,
       permissionLevel: site.permissionLevel ?? "siteOwner",
@@ -286,7 +286,7 @@ describe("GscSiteImportService.importSites", () => {
     // full of red rows would send the user looking for the wrong problem.
     listSitesForUserWithGrantStatusMock.mockResolvedValue({
       sites: [],
-      requiresReconnect: true,
+      failure: { reason: "grant_expired", providerStatus: null },
     });
 
     const result = await GscSiteImportService.importSites(
@@ -455,7 +455,7 @@ describe("GscSiteImportService.listCandidates", () => {
   it("passes the reconnect signal through rather than an empty list", async () => {
     listSitesForUserWithGrantStatusMock.mockResolvedValue({
       sites: [],
-      requiresReconnect: true,
+      failure: { reason: "consent_blocked", providerStatus: 403 },
     });
 
     await expect(GscSiteImportService.listCandidates(ACTOR)).resolves.toEqual({

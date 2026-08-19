@@ -1,16 +1,43 @@
 import { Link } from "@tanstack/react-router";
 import { Clock, Globe, History, Search, X } from "lucide-react";
+import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import { DEFAULT_LOCATION_CODE } from "@/client/features/keywords/locations";
 import { LOCATIONS } from "@/client/features/keywords/utils";
 import type { KeywordResearchControllerState } from "./types";
 
+// The slice of the controller these states actually read. Narrower than the
+// whole controller on purpose: it documents the dependency, and a test can build
+// this state without asserting a stub through 50 unrelated fields.
+type EmptyStateController = Pick<
+  KeywordResearchControllerState,
+  | "hasSearched"
+  | "isLoading"
+  | "lastSearchError"
+  | "seoKeyMissing"
+  | "lastSearchKeyword"
+  | "lastSearchLocationCode"
+  | "history"
+  | "historyLoaded"
+  | "removeHistoryItem"
+>;
+
 type Props = {
-  controller: KeywordResearchControllerState;
+  controller: EmptyStateController;
   projectId: string;
 };
 
 export function KeywordResearchEmptyState({ controller, projectId }: Props) {
-  const { hasSearched, isLoading, lastSearchError } = controller;
+  const { hasSearched, isLoading, lastSearchError, seoKeyMissing } = controller;
+
+  // Checked before "no results": with no key the provider was never asked, so it
+  // cannot be quoted as having found nothing.
+  if (seoKeyMissing) {
+    return (
+      <div className="pt-1">
+        <DataforseoKeyMissingState />
+      </div>
+    );
+  }
 
   if (hasSearched && !isLoading && !lastSearchError) {
     return <NoResultsState controller={controller} />;
@@ -19,11 +46,7 @@ export function KeywordResearchEmptyState({ controller, projectId }: Props) {
   return <SearchHistoryState controller={controller} projectId={projectId} />;
 }
 
-function NoResultsState({
-  controller,
-}: {
-  controller: KeywordResearchControllerState;
-}) {
+function NoResultsState({ controller }: { controller: EmptyStateController }) {
   const { lastSearchKeyword, lastSearchLocationCode } = controller;
 
   return (
@@ -55,7 +78,7 @@ function SearchHistoryState({
   controller,
   projectId,
 }: {
-  controller: KeywordResearchControllerState;
+  controller: EmptyStateController;
   projectId: string;
 }) {
   const { history, historyLoaded, removeHistoryItem } = controller;
