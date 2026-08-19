@@ -239,6 +239,15 @@ export async function runCrawlPhase(
   let consecutiveThrottledBatches = 0;
   let pagesAtLastCpuBreak = 0;
   const retryAttempts = new Map<string, number>();
+  // Pacing evidence. Since a partially refused batch no longer hibernates, the
+  // Workflow trace no longer counts refusals — a crawl settling at half a site's
+  // tolerance looks exactly like one settling on its ceiling. See issue #88.
+  const pacing = {
+    congestedBatches: 0,
+    refusedRequests: 0,
+    lowestRate: rate.rate,
+    highestRate: rate.rate,
+  };
 
   while (queue.length > 0 && allPages.length < maxPages) {
     const urlsToCrawl = selectNextCrawlBatch({
@@ -307,6 +316,8 @@ export async function runCrawlPhase(
     });
     if (refusedShare > 0) {
       consecutiveThrottledBatches += 1;
+      pacing.congestedBatches += 1;
+      pacing.refusedRequests += Math.round(refusedShare * crawledBatch.length);
       rate = afterCongestedBatch(rate, refusedShare);
       if (refusedShare >= BACKOFF_MIN_SHARE || retryAfterMs != null) {
         throttleWaits += 1;
@@ -319,6 +330,8 @@ export async function runCrawlPhase(
       consecutiveThrottledBatches = 0;
       rate = afterCleanBatch(rate);
     }
+    pacing.lowestRate = Math.min(pacing.lowestRate, rate.rate);
+    pacing.highestRate = Math.max(pacing.highestRate, rate.rate);
 
     // CPU is charged per Workflow invocation, and a large crawl accumulates parse
     // cost across many batches within one, so hibernate periodically: the resume
@@ -337,6 +350,22 @@ export async function runCrawlPhase(
       await step.sleep(`cpu-budget-break-${crawlBatchIndex}`, "10 seconds");
     }
   }
+
+  // One line per crawl, in the log the workflow already writes to: the rate this
+  // site was measured to allow, and what it cost to find out.
+  console.info(
+    `crawl-pacing ${JSON.stringify({
+      auditId,
+      pages: allPages.length,
+      batches: crawlBatchIndex,
+      settledRate: Number(rate.rate.toFixed(2)),
+      lowestRate: Number(pacing.lowestRate.toFixed(2)),
+      highestRate: Number(pacing.highestRate.toFixed(2)),
+      congestedBatches: pacing.congestedBatches,
+      refusedRequests: pacing.refusedRequests,
+      hibernations: throttleWaits,
+    })}`,
+  );
 
   return { pages: allPages, blockedUrls: [...blocked] };
 }
