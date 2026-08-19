@@ -5,7 +5,7 @@
 **Known gaps that the checkboxes below do not show:**
 
 - **Rank tracking cannot run without a DataForSEO key**, and the company account has no balance. `rank_snapshots` has no source column, so `plans/260812-1320-gsc-first-rank-tracking/` is unimplemented — GSC-average positions cannot be shown as a Tier-0 substitute yet. This is the largest hole in the "Google-only" story.
-- **Two sprint acceptance boxes are unverified on production**, both needing a real Search Console grant: the multi-site import happy path (tested with a stubbed server function) and the weekly report's numbers against Search Console over the same date window (no `report_subscriptions` row exists in production, so no report has ever been sent).
+- **One sprint acceptance box is still unverified on production**: the weekly email's rendering on real mail clients (Gmail, Outlook, Apple Mail). Both Search Console boxes closed on 19/08 against a real grant — multi-site import created exactly +2 projects/connections/targets from two ticked properties and refused the already-bound ones, and the GSC numbers matched the Search Console UI exactly over an identical window (3 clicks / 244 impressions / position 17.0). A `report_subscriptions` row is now live, so the first real email goes out Monday 24/08 and is the sample for the remaining box.
 - **i18n covers the app shell and a handful of features only** (182 ids). Audit reports, the free-check report, competitor tables and the weekly email are English-only, so "Bilingual VN + EN across all shipped surfaces" is further off than one unticked box suggests.
 
 **Grounded in:** `plans/reports/research-summary-260703-1047-ventra-seo.md` · Companion: `docs/project-overview-pdr.md`
