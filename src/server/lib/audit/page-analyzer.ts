@@ -9,6 +9,7 @@ import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { normalizeUrl, isSameOrigin } from "./url-utils";
 import { detectMixedContent } from "./mixed-content";
+import { headingText, visibleText } from "./text-extract";
 import type { PageAnalysis } from "./types";
 
 /**
@@ -43,6 +44,8 @@ export function analyzeDocument(
   responseTimeMs: number,
   redirectUrl: string | null = null,
 ): PageAnalysis {
+  // `<title>` is parsed as raw text, so it holds no element boundary that would
+  // need separating — unlike the headings below. See `text-extract.ts`.
   const title = $("title").first().text().trim();
 
   const metaDescription =
@@ -63,7 +66,7 @@ export function analyzeDocument(
   // --- Headings ---
   const h1s: string[] = [];
   $("h1").each((_, el) => {
-    h1s.push($(el).text().trim());
+    h1s.push(headingText(el));
   });
 
   const headingOrder: number[] = [];
@@ -79,11 +82,11 @@ export function analyzeDocument(
   });
 
   // --- Word count (visible text in body) ---
-  // Remove script/style/noscript tags, then count words in remaining text
-  const bodyClone = $("body").clone();
-  bodyClone.find("script, style, noscript, svg").remove();
-  const bodyText = bodyClone.text().replace(/\s+/g, " ").trim();
-  const wordCount = bodyText ? bodyText.split(/\s+/).length : 0;
+  // `visibleText` skips script/style/noscript/svg as it walks, so the body needs
+  // no defensive clone — cloning a 118 KB DOM cost more than the whole analysis.
+  const body = $("body").get(0);
+  const bodyText = body ? visibleText(body) : "";
+  const wordCount = bodyText ? bodyText.split(" ").length : 0;
 
   const images: Array<{ src: string | null; alt: string | null }> = [];
   $("img").each((_, el) => {
