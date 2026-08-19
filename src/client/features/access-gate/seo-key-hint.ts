@@ -3,19 +3,21 @@
 //
 // The setup banner sits in normal flow above the content, so an answer that
 // arrives after the first paint moves every click target down by the banner's
-// height — measured at 66px, on a product that reports CLS to its users.
+// height — measured at 74px, on a product that reports CLS to its users.
 // Reserving the height unconditionally would cost that space to the majority
 // who have a key, so the first paint uses the previous answer instead.
 //
 // Browser-local and advisory: the server is still the only thing that decides
 // whether a key exists, every gate keeps waiting for it, and a status changed
-// on another device simply corrects itself on the next answer.
-const SEO_KEY_CONFIGURED_HINT_KEY = "echoseo:dataforseo-key-configured";
+// on another device simply corrects itself on the next answer. The key includes
+// the active workspace (or project while the session is loading), because the
+// credential belongs to an organization rather than to the browser.
+const SEO_KEY_CONFIGURED_HINT_PREFIX = "echoseo:dataforseo-key-configured";
 
-export function getSeoKeyConfiguredHint(): boolean | null {
-  if (typeof window === "undefined") return null;
+export function getSeoKeyConfiguredHint(scope: string | null): boolean | null {
+  if (typeof window === "undefined" || !scope) return null;
   try {
-    const raw = window.localStorage.getItem(SEO_KEY_CONFIGURED_HINT_KEY);
+    const raw = window.localStorage.getItem(hintKey(scope));
     if (raw === "1") return true;
     if (raw === "0") return false;
     return null;
@@ -24,17 +26,21 @@ export function getSeoKeyConfiguredHint(): boolean | null {
   }
 }
 
-export function setSeoKeyConfiguredHint(configured: boolean): void {
-  if (typeof window === "undefined") return;
+export function setSeoKeyConfiguredHint(
+  scope: string | null,
+  configured: boolean,
+): void {
+  if (typeof window === "undefined" || !scope) return;
   try {
-    window.localStorage.setItem(
-      SEO_KEY_CONFIGURED_HINT_KEY,
-      configured ? "1" : "0",
-    );
+    window.localStorage.setItem(hintKey(scope), configured ? "1" : "0");
   } catch {
     // Ignore private-mode / disabled-storage failures: the banner then behaves
     // as it did before, appearing once the server answers.
   }
+}
+
+function hintKey(scope: string): string {
+  return `${SEO_KEY_CONFIGURED_HINT_PREFIX}:${scope}`;
 }
 
 /**

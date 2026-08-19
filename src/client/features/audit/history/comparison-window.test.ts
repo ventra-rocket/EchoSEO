@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeComparisonWindow } from "./comparison-window";
+import { crawlDay, describeComparisonWindow } from "./comparison-window";
 
 describe("describeComparisonWindow", () => {
   it("names only the days when the crawls fall on different days", () => {
@@ -20,15 +20,15 @@ describe("describeComparisonWindow", () => {
       from: "2026-08-17 06:37:18",
       to: "2026-08-17 07:51:22",
     });
-    expect(labels.current).not.toEqual(labels.baseline);
-    expect(labels.current).toMatch(/^2026-08-17 \d{1,2}[:.]\d{2}/);
-    expect(labels.baseline).toMatch(/\d{1,2}[:.]\d{2}/);
-    expect(labels.baseline).not.toContain("2026-08-17");
+    expect(labels).toEqual({
+      current: "2026-08-17 07:51 UTC",
+      baseline: "06:37 UTC",
+    });
   });
 
-  it("reads the SQLite timestamp as UTC, not as the reader's clock", () => {
-    // Same instant in both shapes: a local-time parse would move one of them by
-    // the offset and could land the pair on different days.
+  it("reads both timestamp shapes as the stored UTC clock", () => {
+    // The source column is UTC. No Date parsing means a contributor's or
+    // reader's timezone cannot move either crawl onto a different day.
     const sqliteShape = describeComparisonWindow({
       from: "2026-08-17 06:37:18",
       to: "2026-08-19 08:46:52",
@@ -44,5 +44,10 @@ describe("describeComparisonWindow", () => {
     expect(
       describeComparisonWindow({ from: "not-a-date", to: "2026-08-19" }),
     ).toEqual({ current: "2026-08-19", baseline: "not-a-date" });
+  });
+
+  it("uses the same stored day as the other audit history labels", () => {
+    expect(crawlDay("2026-08-19 18:30:00")).toBe("2026-08-19");
+    expect(crawlDay("2026-08-19T18:30:00Z")).toBe("2026-08-19");
   });
 });

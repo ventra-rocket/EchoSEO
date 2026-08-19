@@ -21,6 +21,7 @@ import { GscReEngagementModal } from "@/client/features/gsc/GscReEngagementModal
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { getActiveOrganizationId } from "@/lib/auth-session";
 import { BILLING_ROUTE } from "@/shared/billing";
 import { getSeoApiKeyStatus } from "@/serverFunctions/config";
 import { getProjects } from "@/serverFunctions/projects";
@@ -70,6 +71,7 @@ export function AuthenticatedAppLayout({
 }) {
   const intl = useIntl();
   const location = useLocation();
+  const { data: session } = useSession();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [showMissingSeoApiKeyModal, setShowMissingSeoApiKeyModal] =
     React.useState(false);
@@ -102,9 +104,14 @@ export function AuthenticatedAppLayout({
   });
   // The status is a client query, so it lands after the first paint and the
   // banner it drives would push the whole page down when it does. The previous
-  // answer this browser saw stands in until then; `resolveSeoKeyConfigured`
-  // owns when that is safe.
-  const [seoKeyHint] = React.useState(getSeoKeyConfiguredHint);
+  // answer this workspace saw stands in until then; `resolveSeoKeyConfigured`
+  // owns when that is safe. `projectId` covers the first render while the
+  // session query is still resolving.
+  const seoKeyHintScope = getActiveOrganizationId(session) ?? projectId ?? null;
+  const seoKeyHint = React.useMemo(
+    () => getSeoKeyConfiguredHint(seoKeyHintScope),
+    [seoKeyHintScope],
+  );
   const isSeoApiKeyConfigured = shouldCheckSeoApiKeyStatus
     ? resolveSeoKeyConfigured({
         answer: seoApiKeyStatusQuery.data?.configured ?? null,
@@ -129,7 +136,10 @@ export function AuthenticatedAppLayout({
     if (!seoApiKeyStatusQuery.isSuccess) return;
 
     // Remember it for the next first paint, before acting on it.
-    setSeoKeyConfiguredHint(seoApiKeyStatusQuery.data.configured);
+    setSeoKeyConfiguredHint(
+      seoKeyHintScope,
+      seoApiKeyStatusQuery.data.configured,
+    );
 
     if (seoApiKeyStatusQuery.data.configured) {
       // Key is set — close and re-arm so a future removal prompts once more.
@@ -146,6 +156,7 @@ export function AuthenticatedAppLayout({
     seoApiKeyStatusQuery.isError,
     seoApiKeyStatusQuery.isSuccess,
     shouldCheckSeoApiKeyStatus,
+    seoKeyHintScope,
   ]);
 
   const shouldShowMissingSeoApiKeyModal =
