@@ -78,7 +78,11 @@ function page(
   };
 }
 
-describe("AuditRepository snapshot + link graph", () => {
+// Named for the boundary, not the module: the seal now lives in
+// `AuditSnapshotRepository` and the edges in `AuditRepository`, but both writes
+// are made by the one finalize step whose retry safety is what is under test, so
+// splitting them across two files by module would split one behaviour in half.
+describe("finalize-step persistence (audits + snapshots)", () => {
   let harness: FreeCheckTestDb;
 
   beforeEach(async () => {
