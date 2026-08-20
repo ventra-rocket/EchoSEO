@@ -2,7 +2,7 @@
  * Data access layer for site audit tables.
  * All D1 interactions for audits, audit_pages, and stored Lighthouse results.
  */
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   audits,
@@ -14,6 +14,7 @@ import {
 import type { LinkEdge } from "@/server/lib/audit/link-graph";
 import { buildSitemapMembership } from "@/server/lib/audit/sitemap-membership";
 import { pacingColumns } from "@/server/lib/audit/crawl-pacing";
+import { SEED_MIN_PAGES } from "@/server/lib/audit/crawl-rate";
 import type {
   AuditConfig,
   LighthouseResult,
@@ -278,35 +279,6 @@ async function batchWriteLinkEdges(auditId: string, edges: LinkEdge[]) {
 }
 
 /**
- * Seal the immutable snapshot for a completed audit. Called only from the
- * finalize boundary, so a running or failed audit never gets a row. One snapshot
- * per audit, so a retry re-seals to the same record instead of a second baseline.
- */
-async function sealSnapshot(input: {
-  auditId: string;
-  projectId: string;
-  targetId: string;
-  pagesCrawled: number;
-  edgeCount: number;
-  lighthouseCount: number;
-  pagesRedirected: number;
-  pagesBroken: number;
-  pagesBlocked: number;
-  pagesNoindex: number;
-}) {
-  // Spread, not a field-by-field copy: `input` is exactly the row minus the
-  // generated id and `sealed_at`, so restating each key would only create a
-  // place for the two lists to drift apart.
-  await db
-    .insert(auditSnapshots)
-    .values({ id: crypto.randomUUID(), ...input })
-    // A re-seal keeps the first row. The counters derive from the same cached
-    // crawl steps, so a replay writes identical numbers anyway — and the
-    // snapshot is meant to be immutable.
-    .onConflictDoNothing({ target: auditSnapshots.auditId });
-}
-
-/**
  * A lean projection of an audit's page facts for snapshot comparison — only the
  * columns the page-fact diff compares, not the whole row (which carries JSON
  * blobs a comparison never reads). Keyed by the stored final URL.
@@ -329,64 +301,53 @@ async function getPageFactsForAudit(auditId: string) {
     .where(eq(auditPages.auditId, auditId));
 }
 
-async function markSnapshotIssuesMaterialized(auditId: string) {
-  await db
-    .update(auditSnapshots)
-    .set({ issuesMaterializedAt: new Date().toISOString() })
-    .where(eq(auditSnapshots.auditId, auditId));
-}
-
-/**
- * Reset a snapshot to "not materialized" before its issues are rewritten.
- *
- * Re-materialization deletes the old issues before inserting the new ones. If
- * the write fails in between and this timestamp still held the *previous*
- * run's success, the audit would read as "materialized, no issues" — a clean
- * bill of health for a crawl whose issues had just been deleted. Clearing
- * first makes the failure honest: null means nobody has answered the question.
- */
-async function clearSnapshotIssuesMaterialized(auditId: string) {
-  await db
-    .update(auditSnapshots)
-    .set({ issuesMaterializedAt: null })
-    .where(eq(auditSnapshots.auditId, auditId));
-}
-
-/** The sealed snapshot for an audit, or null while it is running/failed. */
-async function getSnapshotForAudit(auditId: string) {
-  const row = await db.query.auditSnapshots.findFirst({
-    where: eq(auditSnapshots.auditId, auditId),
-  });
-  return row ?? null;
-}
-
-/**
- * Every sealed snapshot for a target, newest first — the candidate baselines a
- * comparison can pick from. Joined to `audits` only for the human-facing crawl
- * completion date. `issuesMaterializedAt` rides along so the caller can refuse
- * to compare against a snapshot whose issues were never materialized.
- */
-async function listSealedSnapshotsForTarget(targetId: string) {
-  return db
-    .select({
-      auditId: auditSnapshots.auditId,
-      projectId: auditSnapshots.projectId,
-      targetId: auditSnapshots.targetId,
-      sealedAt: auditSnapshots.sealedAt,
-      issuesMaterializedAt: auditSnapshots.issuesMaterializedAt,
-      pagesCrawled: auditSnapshots.pagesCrawled,
-      completedAt: audits.completedAt,
-    })
-    .from(auditSnapshots)
-    .innerJoin(audits, eq(auditSnapshots.auditId, audits.id))
-    .where(eq(auditSnapshots.targetId, targetId))
-    .orderBy(desc(auditSnapshots.sealedAt));
-}
-
 async function getAuditForProject(auditId: string, projectId: string) {
   return db.query.audits.findFirst({
     where: and(eq(audits.id, auditId), eq(audits.projectId, projectId)),
   });
+}
+
+/**
+ * What the last finished crawl of this target learned about the site's rate
+ * limit, or null if no crawl of it has ever recorded pacing — including every
+ * crawl that ran before the pacing columns existed.
+ *
+ * Keyed on `targetId` through the snapshot table, not on `startUrl`: pacing is a
+ * property of the host's per-IP limiter, while start URLs for one target differ
+ * by design — a scheduled re-crawl launches the bare origin while a manual one
+ * keeps whatever path the user typed. Matching the string would miss exactly the
+ * repeat-crawl case this exists for. `audit_snapshots` carries `targetId` and is
+ * only ever written at finalize, so the join also restricts this to crawls that
+ * reached the end.
+ *
+ * `SEED_MIN_PAGES` refuses a crawl too small to have measured anything: below
+ * one full batch the settled rate is an artifact of the last few URLs rather
+ * than a fact about the site. Ordered by `completedAt`, because the freshest
+ * evidence is the crawl that finished last, not the one that started last —
+ * nothing serialises crawls of one target, so those can differ.
+ *
+ * Unindexed for this shape (`audits` carries only a project index), which is a
+ * conscious cost: one execution per crawl. See issue #91.
+ */
+async function getLastPacingForTarget(targetId: string) {
+  const [row] = await db
+    .select({
+      settledRate: audits.crawlSettledRate,
+      highestRate: audits.crawlHighestRate,
+    })
+    .from(auditSnapshots)
+    .innerJoin(audits, eq(auditSnapshots.auditId, audits.id))
+    .where(
+      and(
+        eq(auditSnapshots.targetId, targetId),
+        isNotNull(audits.crawlSettledRate),
+        gte(audits.pagesCrawled, SEED_MIN_PAGES),
+      ),
+    )
+    .orderBy(desc(audits.completedAt))
+    .limit(1);
+  if (row?.settledRate == null) return null;
+  return { settledRate: row.settledRate, highestRate: row.highestRate ?? 0 };
 }
 
 async function getAuditCapacityUsageForUser(userId: string) {
@@ -471,16 +432,12 @@ export const AuditRepository = {
   getAuditForWorkflow,
   batchWriteResults,
   batchWriteLinkEdges,
-  sealSnapshot,
-  getSnapshotForAudit,
-  listSealedSnapshotsForTarget,
   getPageFactsForAudit,
   getPagesByUrls,
   listEdgesToTargets,
   listInboundCountsByTarget,
-  markSnapshotIssuesMaterialized,
-  clearSnapshotIssuesMaterialized,
   getAuditForProject,
+  getLastPacingForTarget,
   getAuditsByProject,
   getLatestAuditByProject,
   getLatestCompletedAuditByProject,

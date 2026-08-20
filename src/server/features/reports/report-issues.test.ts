@@ -17,8 +17,8 @@ const listSealedSnapshotsForTarget = vi.fn();
 const getOccurrenceKeysForAudit =
   vi.fn<(auditId: string) => Promise<unknown>>();
 
-vi.mock("@/server/features/audit/repositories/AuditRepository", () => ({
-  AuditRepository: { listSealedSnapshotsForTarget },
+vi.mock("@/server/features/audit/repositories/AuditSnapshotRepository", () => ({
+  AuditSnapshotRepository: { listSealedSnapshotsForTarget },
 }));
 
 vi.mock("@/server/features/audit/repositories/AuditIssueRepository", () => ({

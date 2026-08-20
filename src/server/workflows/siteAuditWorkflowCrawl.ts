@@ -15,6 +15,7 @@ import {
   afterCongestedBatch,
   dispatchIntervalMs,
   initialCrawlRate,
+  type CrawlRateSeed,
 } from "@/server/lib/audit/crawl-rate";
 import {
   type CrawlPacingSummary,
@@ -94,6 +95,12 @@ type CrawlPhaseParams = {
   robots: RobotsResult;
   sitemapUrls: string[];
   /**
+   * What the last finished crawl of this target measured about the site's rate
+   * limit, or null when it has never finished one. Read once, outside the loop,
+   * so the crawl opens at a measured rate instead of rediscovering it. See #91.
+   */
+  seed: CrawlRateSeed | null;
+  /**
    * How the crawl spaces requests inside a batch. Injected so a test can read
    * the pacing it asked for instead of waiting through it; production passes
    * nothing and gets a real timer.
@@ -119,7 +126,7 @@ export type CrawlPhaseResult = {
    * The same numbers rode the live KV feed while it ran; this is the copy that
    * survives after the progress key is cleared. See issue #88.
    */
-  pacing: CrawlPacingSummary;
+  pacing: CrawlPacingSummary | null;
 };
 
 export async function runCrawlPhase(
@@ -134,6 +141,7 @@ export async function runCrawlPhase(
     maxPages,
     robots,
     sitemapUrls,
+    seed,
     waitMs = realWaitMs,
   } = params;
   const visited = new Set<string>();
@@ -154,7 +162,7 @@ export async function runCrawlPhase(
   });
 
   let crawlBatchIndex = 0;
-  let rate = initialCrawlRate(robots.crawlDelaySeconds);
+  let rate = initialCrawlRate(robots.crawlDelaySeconds, seed);
   let throttleWaits = 0;
   let consecutiveThrottledBatches = 0;
   let pagesAtLastCpuBreak = 0;
@@ -296,7 +304,10 @@ export async function runCrawlPhase(
   return {
     pages: allPages,
     blockedUrls: [...blocked],
-    pacing: pacingSummary(pacing, rate.rate),
+    // A run that dispatched no batch measured nothing, and `rate` is still
+    // exactly the seed it opened with. Recording that as this crawl's settled
+    // rate would launder a seed forward as if the site had answered for it.
+    pacing: crawlBatchIndex > 0 ? pacingSummary(pacing, rate.rate) : null,
   };
 }
 

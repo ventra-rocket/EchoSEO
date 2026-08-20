@@ -10,6 +10,7 @@
 import { env } from "cloudflare:workers";
 import type { AuthMode } from "@/lib/auth-mode";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import {
   AuditExportRepository,
   type AuditExportJob,
@@ -96,7 +97,9 @@ async function requestExport(input: {
   // Refuse until the crawl's issues are materialized: exporting before then (or
   // while a re-materialization has cleared the flag) would produce a `ready`
   // artifact of zero or partial rows stamped as authoritative.
-  const snapshot = await AuditRepository.getSnapshotForAudit(input.auditId);
+  const snapshot = await AuditSnapshotRepository.getSnapshotForAudit(
+    input.auditId,
+  );
   if (!snapshot || snapshot.issuesMaterializedAt == null) {
     throw new AppError(
       "CONFLICT",

@@ -15,6 +15,7 @@
  * persisted per audit; deferred rather than guessed.
  */
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { AuditIssueRepository } from "@/server/features/audit/repositories/AuditIssueRepository";
 import {
   computeVerificationOutcome,
@@ -66,8 +67,8 @@ async function resolveVerificationOutcome(input: {
   }
 
   const [currentSnapshot, baselineSnapshot] = await Promise.all([
-    AuditRepository.getSnapshotForAudit(input.auditId),
-    AuditRepository.getSnapshotForAudit(baselineAuditId),
+    AuditSnapshotRepository.getSnapshotForAudit(input.auditId),
+    AuditSnapshotRepository.getSnapshotForAudit(baselineAuditId),
   ]);
 
   // The re-crawl's issues aren't materialized yet — nothing to judge.

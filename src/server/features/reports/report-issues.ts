@@ -12,7 +12,7 @@
  * never materialized is worse than no email: it tells the owner their site is
  * clean when the truth is that the comparison could not be made.
  */
-import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { AuditIssueRepository } from "@/server/features/audit/repositories/AuditIssueRepository";
 import {
   diffOccurrences,
@@ -235,7 +235,7 @@ export async function buildWeeklyIssueReport(input: {
   /** Report on this crawl; defaults to the newest sealed snapshot for the target. */
   auditId?: string;
 }): Promise<WeeklyIssueReport> {
-  const snapshots = await AuditRepository.listSealedSnapshotsForTarget(
+  const snapshots = await AuditSnapshotRepository.listSealedSnapshotsForTarget(
     input.targetId,
   );
   const picked = pickSnapshots(snapshots, input.auditId);

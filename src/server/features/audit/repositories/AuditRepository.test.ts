@@ -7,6 +7,7 @@
  * phases use as orphan evidence.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { eq } from "drizzle-orm";
 import {
   createFreeCheckTestDb,
@@ -77,7 +78,11 @@ function page(
   };
 }
 
-describe("AuditRepository snapshot + link graph", () => {
+// Named for the boundary, not the module: the seal now lives in
+// `AuditSnapshotRepository` and the edges in `AuditRepository`, but both writes
+// are made by the one finalize step whose retry safety is what is under test, so
+// splitting them across two files by module would split one behaviour in half.
+describe("finalize-step persistence (audits + snapshots)", () => {
   let harness: FreeCheckTestDb;
 
   beforeEach(async () => {
@@ -222,8 +227,8 @@ describe("AuditRepository snapshot + link graph", () => {
       pagesNoindex: 2,
     };
 
-    await AuditRepository.sealSnapshot(seal);
-    await AuditRepository.sealSnapshot(seal);
+    await AuditSnapshotRepository.sealSnapshot(seal);
+    await AuditSnapshotRepository.sealSnapshot(seal);
 
     const rows = await harness.db
       .select()
