@@ -46,6 +46,57 @@ describe("initialCrawlRate", () => {
     // a bounded crawl can and let the audit finish.
     expect(initialCrawlRate(86_400).rate).toBe(CRAWL_DELAY_RATE_MIN);
   });
+
+  it("opens at the rate this target was last measured to serve", () => {
+    // The whole point of issue #91: a re-crawl must not spend forty batches
+    // rediscovering a limit the last crawl already measured.
+    expect(initialCrawlRate(null, 1.75)).toEqual({
+      rate: 1.75,
+      ceiling: 1.75,
+      cap: CRAWL_RATE_MAX,
+    });
+  });
+
+  it("pins the ceiling to the seed, not just the rate", () => {
+    // Seeding the rate alone would leave the ceiling at the cap, and
+    // `afterCleanBatch` adds `RATE_INCREASE` per clean batch — so the crawl
+    // would climb straight back into the refusal the seed exists to avoid.
+    // Going above a known-served rate has to be earned one clean batch a time.
+    const seeded = afterCleanBatch(initialCrawlRate(null, 1.75));
+    expect(seeded.rate).toBeLessThan(2);
+  });
+
+  it("behaves exactly as an unseeded crawl when the target has no history", () => {
+    expect(initialCrawlRate(null, null)).toEqual(initialCrawlRate(null));
+    expect(initialCrawlRate(4, null)).toEqual(initialCrawlRate(4));
+  });
+
+  it("refuses a stored number that is not a usable rate", () => {
+    // A null column is the ordinary case, but a zero, a negative, or a NaN that
+    // reached the column would otherwise stall the crawl at the floor.
+    expect(initialCrawlRate(null, 0)).toEqual(initialCrawlRate(null));
+    expect(initialCrawlRate(null, -2)).toEqual(initialCrawlRate(null));
+    expect(initialCrawlRate(null, Number.NaN)).toEqual(initialCrawlRate(null));
+  });
+
+  it("never opens faster than an unseeded crawl would", () => {
+    // One anomalous stored number must not grant a crawl more than the default
+    // start, which is the only rate with measurement behind it.
+    expect(initialCrawlRate(null, 99).rate).toBe(CRAWL_RATE_START);
+  });
+
+  it("keeps a published Crawl-delay above the seed", () => {
+    // The site owner naming its limit beats our own measurement of it.
+    expect(initialCrawlRate(4, 2.5)).toEqual({
+      rate: 0.25,
+      ceiling: 0.25,
+      cap: 0.25,
+    });
+  });
+
+  it("holds a seed below the backoff floor at the floor", () => {
+    expect(initialCrawlRate(null, 0.01).rate).toBe(CRAWL_RATE_MIN);
+  });
 });
 
 describe("afterCongestedBatch", () => {

@@ -18,6 +18,7 @@ import { z } from "zod";
 import { strToU8, zipSync } from "fflate";
 import { AuditExportRepository } from "@/server/features/audit/repositories/AuditExportRepository";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { AuditIssueRepository } from "@/server/features/audit/repositories/AuditIssueRepository";
 import {
   buildIssuesExport,
@@ -111,7 +112,9 @@ export async function runAuditExport(
       if (!audit) {
         throw new NonRetryableError(`Audit ${job.auditId} not found`);
       }
-      const snapshot = await AuditRepository.getSnapshotForAudit(job.auditId);
+      const snapshot = await AuditSnapshotRepository.getSnapshotForAudit(
+        job.auditId,
+      );
       const filters = parseFilters(job.filtersJson);
 
       const { rows, truncated } = await collectExportRows({

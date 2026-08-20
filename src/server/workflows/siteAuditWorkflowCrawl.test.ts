@@ -329,6 +329,26 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     expect(recorder.intervals.slice(0, 2)).toEqual([2_000, 2_000]);
   });
 
+  it("opens at the seeded rate instead of rediscovering the limit", async () => {
+    // #91: the measured cost of discovery was 6.4 minutes on a 5,000-page crawl
+    // — the crawl opened at 3 req/s, was refused down to ~1.1, then climbed
+    // back one clean batch at a time. Given the rate the last crawl settled at,
+    // it opens there: 1000/1.75 = 571 ms between requests, not 333.
+    crawlPageMock.mockImplementation(async (url: string) => page(url));
+    const recorder = recordingStep();
+
+    await runCrawlPhase(recorder.step, {
+      ...params({ maxPages: 60, seedRate: 1.75 }),
+      sitemapUrls: sitemapUrls(40),
+      waitMs: recorder.waitMs,
+    });
+
+    expect(recorder.intervals[0]).toBe(571);
+    // And it still only climbs on earned evidence, so the second clean batch is
+    // 2% faster rather than back at the unseeded start.
+    expect(recorder.intervals[1]).toBe(560);
+  });
+
   it("hibernates on measured page cost, not every fifth batch", async () => {
     // 6.0 ms/page of parse against a 30 s per-invocation budget: the old cadence
     // slept every 125 pages, which cost 6.7 minutes of a 47-minute crawl to

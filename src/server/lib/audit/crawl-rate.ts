@@ -83,9 +83,26 @@ type CrawlRateState = {
  * `Crawl-delay: n` is the site owner telling us its own limit instead of making
  * us find it by tripping over it, so it caps the crawl outright: one request
  * every n seconds and no climbing past it.
+ *
+ * `seedRate` is what this target was last *measured* to serve (see #88). With
+ * one, the crawl opens there instead of at `CRAWL_RATE_START` and stops
+ * rediscovering a limit it already found — which is why it is politeness
+ * positive: the refusals that discovery costs are the ones it avoids.
+ *
+ * A seed sets the `ceiling` too, not just the rate. Seeding the rate alone
+ * would leave the ceiling at `cap`, and `afterCleanBatch` adds
+ * `RATE_INCREASE` per clean batch, so the crawl would climb straight back
+ * through the refusal it was seeded to avoid within a handful of batches.
+ * Pinning the ceiling keeps the law intact: going above a rate the site is
+ * known to serve still has to be earned at `CEILING_RELAX` per clean batch.
+ *
+ * The seed is clamped to `CRAWL_RATE_START` on the way up, so one anomalous
+ * stored number cannot open a crawl faster than an unseeded one would. A
+ * `Crawl-delay` still wins outright through `cap`.
  */
 export function initialCrawlRate(
   crawlDelaySeconds: number | null,
+  seedRate: number | null = null,
 ): CrawlRateState {
   const cap =
     crawlDelaySeconds != null && crawlDelaySeconds > 0
@@ -94,7 +111,15 @@ export function initialCrawlRate(
           Math.min(CRAWL_RATE_MAX, 1 / crawlDelaySeconds),
         )
       : CRAWL_RATE_MAX;
-  return { rate: Math.min(CRAWL_RATE_START, cap), ceiling: cap, cap };
+  if (seedRate == null || !Number.isFinite(seedRate) || seedRate <= 0) {
+    return { rate: Math.min(CRAWL_RATE_START, cap), ceiling: cap, cap };
+  }
+  const seed = Math.min(
+    CRAWL_RATE_START,
+    Math.max(CRAWL_RATE_MIN, seedRate),
+    cap,
+  );
+  return { rate: seed, ceiling: seed, cap };
 }
 
 export function afterCleanBatch(state: CrawlRateState): CrawlRateState {

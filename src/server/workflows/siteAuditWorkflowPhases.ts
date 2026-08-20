@@ -12,6 +12,7 @@ import {
 import { getOrigin } from "@/server/lib/audit/url-utils";
 import { buildLinkEdges } from "@/server/lib/audit/link-graph";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
 import { AuditIssueService } from "@/server/features/audit/services/AuditIssueService";
 import { notifyReportAgentOfCompletedAudit } from "@/server/features/reports/audit-completion-hook";
@@ -92,6 +93,12 @@ export async function runAuditPhases(
   const robots = parseRobotsTxt(
     await step.do("fetch-robots", () => fetchRobotsTxtBody(origin)),
   );
+  // Its own step so a resumed invocation reuses the number the crawl actually
+  // opened with, rather than re-reading a table another crawl may have written
+  // since. Null on a target's first crawl, which is the pre-#91 behaviour.
+  const seedRate = await step.do("seed-rate", () =>
+    AuditRepository.getLastSettledRateForTarget({ projectId, startUrl }),
+  );
   const crawl = await runCrawlPhase(step, {
     auditId,
     workflowInstanceId,
@@ -103,6 +110,7 @@ export async function runAuditPhases(
     // 50,000 strings in it to throw away 45,000 is waste, not thoroughness.
     // Membership below still uses the whole set.
     sitemapUrls: (sitemapUrls ?? []).slice(0, maxPages),
+    seedRate,
   });
   const allPages = crawl.pages;
   const lighthouseResults = await runLighthousePhase(step, {
@@ -451,7 +459,7 @@ async function sealAuditSnapshot(input: {
     return;
   }
 
-  await AuditRepository.sealSnapshot({
+  await AuditSnapshotRepository.sealSnapshot({
     auditId: input.auditId,
     projectId: input.projectId,
     targetId: target.id,

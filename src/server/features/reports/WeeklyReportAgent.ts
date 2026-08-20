@@ -1,6 +1,6 @@
 import { Agent } from "agents";
 import { getAuthMode } from "@/lib/auth-mode";
-import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
 import { AuditService } from "@/server/features/audit/services/AuditService";
 import {
@@ -182,7 +182,9 @@ export class WeeklyReportAgent extends Agent<
     // A newer run (or a disarm) superseded this poll; let it die quietly.
     if (!pending || pending.sendId !== payload.sendId) return;
 
-    const snapshot = await AuditRepository.getSnapshotForAudit(payload.auditId);
+    const snapshot = await AuditSnapshotRepository.getSnapshotForAudit(
+      payload.auditId,
+    );
     // Issues are materialized in a step that deliberately swallows its own
     // failures, so a sealed snapshot alone does not mean there is anything to
     // compare — wait for the materialization marker too.

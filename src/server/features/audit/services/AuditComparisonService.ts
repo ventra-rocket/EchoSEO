@@ -9,6 +9,7 @@
  * looks like a site cleaned itself up.
  */
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { AuditIssueRepository } from "@/server/features/audit/repositories/AuditIssueRepository";
 import { getIssueFixText } from "@/server/features/audit/issues/issue-fix-text";
 import {
@@ -83,7 +84,7 @@ export type PageChangesComparison =
     };
 
 type TargetSnapshot = Awaited<
-  ReturnType<typeof AuditRepository.listSealedSnapshotsForTarget>
+  ReturnType<typeof AuditSnapshotRepository.listSealedSnapshotsForTarget>
 >[number];
 
 /**
@@ -98,10 +99,11 @@ async function loadTargetSnapshots(auditId: string, projectId: string) {
   const audit = await AuditRepository.getAuditForProject(auditId, projectId);
   if (!audit) throw new AppError("NOT_FOUND");
 
-  const snapshotRow = await AuditRepository.getSnapshotForAudit(auditId);
+  const snapshotRow =
+    await AuditSnapshotRepository.getSnapshotForAudit(auditId);
   if (!snapshotRow) return { current: null, snapshots: [] as TargetSnapshot[] };
 
-  const snapshots = await AuditRepository.listSealedSnapshotsForTarget(
+  const snapshots = await AuditSnapshotRepository.listSealedSnapshotsForTarget(
     snapshotRow.targetId,
   );
   const current = snapshots.find((s) => s.auditId === auditId) ?? null;

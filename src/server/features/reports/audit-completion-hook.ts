@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { getAgentByName } from "agents";
-import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { ReportSubscriptionRepository } from "@/server/features/reports/ReportSubscriptionRepository";
 
 /**
@@ -22,7 +22,7 @@ export async function notifyReportAgentOfCompletedAudit(
   auditId: string,
 ): Promise<void> {
   try {
-    const snapshot = await AuditRepository.getSnapshotForAudit(auditId);
+    const snapshot = await AuditSnapshotRepository.getSnapshotForAudit(auditId);
     // No sealed snapshot means the crawl failed before finalize, so there is
     // nothing to compare and nothing worth mailing about.
     if (!snapshot) return;

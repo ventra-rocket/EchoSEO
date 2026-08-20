@@ -7,6 +7,7 @@
  * phases use as orphan evidence.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { eq } from "drizzle-orm";
 import {
   createFreeCheckTestDb,
@@ -222,8 +223,8 @@ describe("AuditRepository snapshot + link graph", () => {
       pagesNoindex: 2,
     };
 
-    await AuditRepository.sealSnapshot(seal);
-    await AuditRepository.sealSnapshot(seal);
+    await AuditSnapshotRepository.sealSnapshot(seal);
+    await AuditSnapshotRepository.sealSnapshot(seal);
 
     const rows = await harness.db
       .select()

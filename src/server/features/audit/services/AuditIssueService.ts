@@ -5,6 +5,7 @@
  * decides *when* they run and *where* the verdicts are stored.
  */
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
+import { AuditSnapshotRepository } from "@/server/features/audit/repositories/AuditSnapshotRepository";
 import { AuditIssueRepository } from "@/server/features/audit/repositories/AuditIssueRepository";
 import {
   buildOccurrences,
@@ -33,7 +34,9 @@ async function materializeForAudit(input: {
   auditId: string;
   projectId: string;
 }) {
-  const snapshot = await AuditRepository.getSnapshotForAudit(input.auditId);
+  const snapshot = await AuditSnapshotRepository.getSnapshotForAudit(
+    input.auditId,
+  );
   if (!snapshot) {
     return { materialized: false, occurrenceCount: 0 };
   }
@@ -79,14 +82,14 @@ async function materializeForAudit(input: {
   // deletes the previous issues first, so a failure partway through would
   // otherwise leave the earlier run's timestamp standing over an empty table
   // and read as "materialized, no issues found".
-  await AuditRepository.clearSnapshotIssuesMaterialized(input.auditId);
+  await AuditSnapshotRepository.clearSnapshotIssuesMaterialized(input.auditId);
   await AuditIssueRepository.replaceIssuesForAudit({
     auditId: input.auditId,
     projectId: input.projectId,
     occurrences,
     rollups,
   });
-  await AuditRepository.markSnapshotIssuesMaterialized(input.auditId);
+  await AuditSnapshotRepository.markSnapshotIssuesMaterialized(input.auditId);
 
   return { materialized: true, occurrenceCount: occurrences.length };
 }
@@ -113,7 +116,7 @@ async function getIssueSummary(
   await requireAudit(auditId, projectId);
 
   const [snapshot, rollups] = await Promise.all([
-    AuditRepository.getSnapshotForAudit(auditId),
+    AuditSnapshotRepository.getSnapshotForAudit(auditId),
     AuditIssueRepository.getRollupsForAudit(auditId),
   ]);
 

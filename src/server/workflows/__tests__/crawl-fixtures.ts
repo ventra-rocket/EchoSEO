@@ -80,6 +80,9 @@ export function crawlParams(overrides: Partial<CrawlPhaseParams> = {}) {
     maxPages: 50,
     robots: robotsDisallowing(),
     sitemapUrls: [] as string[],
+    // Unseeded by default: these tests assert the discovery path, where the
+    // crawl opens at `CRAWL_RATE_START`. Seeding is asserted separately.
+    seedRate: null as number | null,
     // Request spacing is asserted through `recordingStep`; the tests that are
     // about the frontier should not wait through it.
     waitMs: async () => {},

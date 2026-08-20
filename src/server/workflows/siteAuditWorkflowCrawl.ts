@@ -94,6 +94,12 @@ type CrawlPhaseParams = {
   robots: RobotsResult;
   sitemapUrls: string[];
   /**
+   * The rate this target's last finished crawl settled at, or null when it has
+   * never been crawled to completion. Read once, outside the loop, so the crawl
+   * opens at a measured rate instead of rediscovering it. See issue #91.
+   */
+  seedRate: number | null;
+  /**
    * How the crawl spaces requests inside a batch. Injected so a test can read
    * the pacing it asked for instead of waiting through it; production passes
    * nothing and gets a real timer.
@@ -134,6 +140,7 @@ export async function runCrawlPhase(
     maxPages,
     robots,
     sitemapUrls,
+    seedRate,
     waitMs = realWaitMs,
   } = params;
   const visited = new Set<string>();
@@ -154,7 +161,7 @@ export async function runCrawlPhase(
   });
 
   let crawlBatchIndex = 0;
-  let rate = initialCrawlRate(robots.crawlDelaySeconds);
+  let rate = initialCrawlRate(robots.crawlDelaySeconds, seedRate);
   let throttleWaits = 0;
   let consecutiveThrottledBatches = 0;
   let pagesAtLastCpuBreak = 0;
