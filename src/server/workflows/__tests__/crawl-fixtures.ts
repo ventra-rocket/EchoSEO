@@ -8,6 +8,7 @@
 import type { Mock } from "vitest";
 import type { RobotsResult } from "@/server/lib/audit/discovery";
 import type { StepPageResult } from "@/server/lib/audit/types";
+import type { CrawlRateSeed } from "@/server/lib/audit/crawl-rate";
 
 import type { runCrawlPhase } from "../siteAuditWorkflowCrawl";
 
@@ -82,7 +83,7 @@ export function crawlParams(overrides: Partial<CrawlPhaseParams> = {}) {
     sitemapUrls: [] as string[],
     // Unseeded by default: these tests assert the discovery path, where the
     // crawl opens at `CRAWL_RATE_START`. Seeding is asserted separately.
-    seedRate: null as number | null,
+    seed: null as CrawlRateSeed | null,
     // Request spacing is asserted through `recordingStep`; the tests that are
     // about the frontier should not wait through it.
     waitMs: async () => {},

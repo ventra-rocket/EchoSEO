@@ -2,17 +2,19 @@
  * Data access layer for site audit tables.
  * All D1 interactions for audits, audit_pages, and stored Lighthouse results.
  */
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   audits,
   auditLighthouseResults,
   auditLinkEdges,
   auditPages,
+  auditSnapshots,
 } from "@/db/schema";
 import type { LinkEdge } from "@/server/lib/audit/link-graph";
 import { buildSitemapMembership } from "@/server/lib/audit/sitemap-membership";
 import { pacingColumns } from "@/server/lib/audit/crawl-pacing";
+import { SEED_MIN_PAGES } from "@/server/lib/audit/crawl-rate";
 import type {
   AuditConfig,
   LighthouseResult,
@@ -306,29 +308,46 @@ async function getAuditForProject(auditId: string, projectId: string) {
 }
 
 /**
- * The rate the last finished crawl of this target settled at, or null if it has
- * never finished one — including a crawl that ran before the pacing columns
- * existed. Only `completeAudit` writes the column, so a non-null value already
- * means the crawl reached the end; no status predicate is needed on top.
+ * What the last finished crawl of this target learned about the site's rate
+ * limit, or null if no crawl of it has ever recorded pacing — including every
+ * crawl that ran before the pacing columns existed.
  *
- * Matched on the exact `startUrl` a relaunch reuses, which
- * `normalizeAndValidateStartUrl` has already made stable. A miss degrades to
- * null, which is the pre-seed behaviour. See issue #91.
+ * Keyed on `targetId` through the snapshot table, not on `startUrl`: pacing is a
+ * property of the host's per-IP limiter, while start URLs for one target differ
+ * by design — a scheduled re-crawl launches the bare origin while a manual one
+ * keeps whatever path the user typed. Matching the string would miss exactly the
+ * repeat-crawl case this exists for. `audit_snapshots` carries `targetId` and is
+ * only ever written at finalize, so the join also restricts this to crawls that
+ * reached the end.
+ *
+ * `SEED_MIN_PAGES` refuses a crawl too small to have measured anything: below
+ * one full batch the settled rate is an artifact of the last few URLs rather
+ * than a fact about the site. Ordered by `completedAt`, because the freshest
+ * evidence is the crawl that finished last, not the one that started last —
+ * nothing serialises crawls of one target, so those can differ.
+ *
+ * Unindexed for this shape (`audits` carries only a project index), which is a
+ * conscious cost: one execution per crawl. See issue #91.
  */
-async function getLastSettledRateForTarget(input: {
-  projectId: string;
-  startUrl: string;
-}) {
-  const row = await db.query.audits.findFirst({
-    where: and(
-      eq(audits.projectId, input.projectId),
-      eq(audits.startUrl, input.startUrl),
-      isNotNull(audits.crawlSettledRate),
-    ),
-    columns: { crawlSettledRate: true },
-    orderBy: [desc(audits.startedAt)],
-  });
-  return row?.crawlSettledRate ?? null;
+async function getLastPacingForTarget(targetId: string) {
+  const [row] = await db
+    .select({
+      settledRate: audits.crawlSettledRate,
+      highestRate: audits.crawlHighestRate,
+    })
+    .from(auditSnapshots)
+    .innerJoin(audits, eq(auditSnapshots.auditId, audits.id))
+    .where(
+      and(
+        eq(auditSnapshots.targetId, targetId),
+        isNotNull(audits.crawlSettledRate),
+        gte(audits.pagesCrawled, SEED_MIN_PAGES),
+      ),
+    )
+    .orderBy(desc(audits.completedAt))
+    .limit(1);
+  if (row?.settledRate == null) return null;
+  return { settledRate: row.settledRate, highestRate: row.highestRate ?? 0 };
 }
 
 async function getAuditCapacityUsageForUser(userId: string) {
@@ -418,7 +437,7 @@ export const AuditRepository = {
   listEdgesToTargets,
   listInboundCountsByTarget,
   getAuditForProject,
-  getLastSettledRateForTarget,
+  getLastPacingForTarget,
   getAuditsByProject,
   getLatestAuditByProject,
   getLatestCompletedAuditByProject,

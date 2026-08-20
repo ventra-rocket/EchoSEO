@@ -274,15 +274,15 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     });
 
     // The first batch of 25 was wholly refused, then the site served cleanly.
-    expect(result.pacing.refusedRequests).toBe(25);
-    expect(result.pacing.congestedBatches).toBe(1);
+    const pacing = result.pacing;
+    expect(pacing).not.toBeNull();
+    expect(pacing?.refusedRequests).toBe(25);
+    expect(pacing?.congestedBatches).toBe(1);
     // A whole-batch refusal drops the offered rate, so it never climbs back to
     // the 3 req/s the crawl opened at within this run.
-    expect(result.pacing.highestRate).toBe(3);
-    expect(result.pacing.settledRate).toBeLessThan(3);
-    expect(result.pacing.lowestRate).toBeLessThanOrEqual(
-      result.pacing.settledRate,
-    );
+    expect(pacing?.highestRate).toBe(3);
+    expect(pacing?.settledRate).toBeLessThan(3);
+    expect(pacing?.lowestRate).toBeLessThanOrEqual(pacing?.settledRate ?? 0);
   });
 
   it("keeps the batch at 25 URLs, because the pacing moves instead", async () => {
@@ -332,21 +332,42 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
   it("opens at the seeded rate instead of rediscovering the limit", async () => {
     // #91: the measured cost of discovery was 6.4 minutes on a 5,000-page crawl
     // — the crawl opened at 3 req/s, was refused down to ~1.1, then climbed
-    // back one clean batch at a time. Given the rate the last crawl settled at,
-    // it opens there: 1000/1.75 = 571 ms between requests, not 333.
+    // back one clean batch at a time. Given what the last crawl measured, it
+    // opens at the rate that one settled at: 1000/1.75 = 571 ms, not 333.
     crawlPageMock.mockImplementation(async (url: string) => page(url));
     const recorder = recordingStep();
 
     await runCrawlPhase(recorder.step, {
-      ...params({ maxPages: 60, seedRate: 1.75 }),
+      ...params({
+        maxPages: 60,
+        seed: { settledRate: 1.75, highestRate: 2.5 },
+      }),
       sitemapUrls: sitemapUrls(40),
       waitMs: recorder.waitMs,
     });
 
     expect(recorder.intervals[0]).toBe(571);
-    // And it still only climbs on earned evidence, so the second clean batch is
-    // 2% faster rather than back at the unseeded start.
-    expect(recorder.intervals[1]).toBe(560);
+    // Then climbs toward the rate that crawl sustained, additively: 2.0 req/s.
+    expect(recorder.intervals[1]).toBe(500);
+  });
+
+  it("records no pacing for a crawl that dispatched no batch", async () => {
+    // The seed is still sitting in `rate` when the frontier is empty, so
+    // reporting it would launder a seed forward as this crawl's own
+    // measurement — and the next crawl would read it back as evidence.
+    const recorder = recordingStep();
+
+    const result = await runCrawlPhase(recorder.step, {
+      ...params({
+        maxPages: 60,
+        seed: { settledRate: 1.75, highestRate: 2.5 },
+        robots: robotsDisallowing("/"),
+      }),
+      waitMs: recorder.waitMs,
+    });
+
+    expect(result.pages).toEqual([]);
+    expect(result.pacing).toBeNull();
   });
 
   it("hibernates on measured page cost, not every fifth batch", async () => {

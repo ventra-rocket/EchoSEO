@@ -50,20 +50,38 @@ describe("initialCrawlRate", () => {
   it("opens at the rate this target was last measured to serve", () => {
     // The whole point of issue #91: a re-crawl must not spend forty batches
     // rediscovering a limit the last crawl already measured.
-    expect(initialCrawlRate(null, 1.75)).toEqual({
-      rate: 1.75,
-      ceiling: 1.75,
-      cap: CRAWL_RATE_MAX,
-    });
+    expect(
+      initialCrawlRate(null, { settledRate: 1.75, highestRate: 3 }),
+    ).toEqual({ rate: 1.75, ceiling: 3, cap: CRAWL_RATE_MAX });
   });
 
-  it("pins the ceiling to the seed, not just the rate", () => {
-    // Seeding the rate alone would leave the ceiling at the cap, and
-    // `afterCleanBatch` adds `RATE_INCREASE` per clean batch — so the crawl
-    // would climb straight back into the refusal the seed exists to avoid.
-    // Going above a known-served rate has to be earned one clean batch a time.
-    const seeded = afterCleanBatch(initialCrawlRate(null, 1.75));
-    expect(seeded.rate).toBeLessThan(2);
+  it("lets the climb reach the rate the last crawl sustained", () => {
+    // The ceiling is the previous crawl's high water mark, not its settled
+    // rate. Pinning it to the settled rate would make one bad trailing batch
+    // the opening rate of every crawl after it, recoverable only at 2% a clean
+    // batch. Reaching a rate the site has already served is additive.
+    const climbed = afterCleanBatch(
+      initialCrawlRate(null, { settledRate: 0.5, highestRate: 2.5 }),
+    );
+    expect(climbed.rate).toBe(0.75);
+  });
+
+  it("does not let the seed open above what the site served", () => {
+    // A high water mark is a ceiling to climb toward, never the opening rate:
+    // opening there is what caused the refusal storm in the first place.
+    const seeded = initialCrawlRate(null, {
+      settledRate: 1.2,
+      highestRate: 3,
+    });
+    expect(seeded.rate).toBe(1.2);
+  });
+
+  it("holds the ceiling at the settled rate when nothing higher was measured", () => {
+    // A crawl that never climbed offers no evidence for a higher ceiling, and a
+    // row written before `crawl_highest_rate` existed reads as zero.
+    expect(
+      initialCrawlRate(null, { settledRate: 1.75, highestRate: 0 }),
+    ).toEqual({ rate: 1.75, ceiling: 1.75, cap: CRAWL_RATE_MAX });
   });
 
   it("behaves exactly as an unseeded crawl when the target has no history", () => {
@@ -74,20 +92,30 @@ describe("initialCrawlRate", () => {
   it("refuses a stored number that is not a usable rate", () => {
     // A null column is the ordinary case, but a zero, a negative, or a NaN that
     // reached the column would otherwise stall the crawl at the floor.
-    expect(initialCrawlRate(null, 0)).toEqual(initialCrawlRate(null));
-    expect(initialCrawlRate(null, -2)).toEqual(initialCrawlRate(null));
-    expect(initialCrawlRate(null, Number.NaN)).toEqual(initialCrawlRate(null));
+    for (const settledRate of [0, -2, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(initialCrawlRate(null, { settledRate, highestRate: 2 })).toEqual(
+        initialCrawlRate(null),
+      );
+    }
   });
 
   it("never opens faster than an unseeded crawl would", () => {
     // One anomalous stored number must not grant a crawl more than the default
     // start, which is the only rate with measurement behind it.
-    expect(initialCrawlRate(null, 99).rate).toBe(CRAWL_RATE_START);
+    const seeded = initialCrawlRate(null, {
+      settledRate: 99,
+      highestRate: 99,
+    });
+    expect(seeded).toEqual({
+      rate: CRAWL_RATE_START,
+      ceiling: CRAWL_RATE_START,
+      cap: CRAWL_RATE_MAX,
+    });
   });
 
   it("keeps a published Crawl-delay above the seed", () => {
     // The site owner naming its limit beats our own measurement of it.
-    expect(initialCrawlRate(4, 2.5)).toEqual({
+    expect(initialCrawlRate(4, { settledRate: 2.5, highestRate: 3 })).toEqual({
       rate: 0.25,
       ceiling: 0.25,
       cap: 0.25,
@@ -95,7 +123,11 @@ describe("initialCrawlRate", () => {
   });
 
   it("holds a seed below the backoff floor at the floor", () => {
-    expect(initialCrawlRate(null, 0.01).rate).toBe(CRAWL_RATE_MIN);
+    const seeded = initialCrawlRate(null, {
+      settledRate: 0.01,
+      highestRate: 0.02,
+    });
+    expect(seeded.rate).toBe(CRAWL_RATE_MIN);
   });
 });
 

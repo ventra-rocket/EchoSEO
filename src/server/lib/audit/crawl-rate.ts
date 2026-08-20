@@ -44,6 +44,15 @@ export const CRAWL_DELAY_RATE_MIN = 0.1;
  */
 export const CRAWL_RATE_MAX = 8;
 
+/**
+ * How much a crawl has to have fetched before its pacing is treated as a
+ * measurement worth seeding the next one with. One full batch is the floor:
+ * below it the settled rate is an artifact of the last handful of URLs — a
+ * single refusal in a three-URL batch reads as a third of the site refusing —
+ * rather than a fact about the host.
+ */
+export const SEED_MIN_PAGES = 25;
+
 /** Additive increase, per clean batch. */
 const RATE_INCREASE = 0.25;
 
@@ -80,29 +89,52 @@ type CrawlRateState = {
 };
 
 /**
+ * What the last finished crawl of this target learned about it (see #88).
+ *
+ * Two numbers, because they answer different questions and one of them is not
+ * trustworthy alone. `settledRate` is the rate after the *final* batch, so a
+ * crawl whose last batch drew one refusal stores a number up to a quarter below
+ * what the site served all run. `highestRate` is the fastest that crawl
+ * actually sustained, which is evidence in the other direction.
+ */
+export type CrawlRateSeed = {
+  settledRate: number;
+  highestRate: number;
+};
+
+/** A stored rate is only usable if it is a positive, finite number. */
+function usableRate(value: number | null | undefined): value is number {
+  return value != null && Number.isFinite(value) && value > 0;
+}
+
+/**
  * `Crawl-delay: n` is the site owner telling us its own limit instead of making
  * us find it by tripping over it, so it caps the crawl outright: one request
  * every n seconds and no climbing past it.
  *
- * `seedRate` is what this target was last *measured* to serve (see #88). With
- * one, the crawl opens there instead of at `CRAWL_RATE_START` and stops
- * rediscovering a limit it already found — which is why it is politeness
- * positive: the refusals that discovery costs are the ones it avoids.
+ * A `seed` opens the crawl at the rate this target was last measured to serve
+ * instead of at `CRAWL_RATE_START`, so it stops rediscovering a limit it already
+ * found. That is politeness positive: the refusals discovery costs are the ones
+ * it avoids.
  *
- * A seed sets the `ceiling` too, not just the rate. Seeding the rate alone
- * would leave the ceiling at `cap`, and `afterCleanBatch` adds
- * `RATE_INCREASE` per clean batch, so the crawl would climb straight back
- * through the refusal it was seeded to avoid within a handful of batches.
- * Pinning the ceiling keeps the law intact: going above a rate the site is
- * known to serve still has to be earned at `CEILING_RELAX` per clean batch.
+ * The opening rate and the ceiling come from different halves of the seed on
+ * purpose. Opening at `settledRate` is the polite move. Pinning the ceiling
+ * there too would make one bad trailing batch — or one crawl that overlapped a
+ * WAF episode — the opening rate of every crawl after it, recoverable only at
+ * `CEILING_RELAX` per clean batch: from the floor that is ~91 clean batches,
+ * and a small site crawled weekly would never climb out. So the ceiling is the
+ * rate the previous crawl demonstrably sustained, which `afterCleanBatch`
+ * reaches at `RATE_INCREASE` per clean batch and `afterCongestedBatch` takes
+ * straight back if the site refuses on the way. Evidence bounds the climb; it
+ * does not license one.
  *
- * The seed is clamped to `CRAWL_RATE_START` on the way up, so one anomalous
- * stored number cannot open a crawl faster than an unseeded one would. A
+ * Both halves are clamped to `CRAWL_RATE_START`, so no stored number opens a
+ * crawl faster than an unseeded one would, and floored at `CRAWL_RATE_MIN`. A
  * `Crawl-delay` still wins outright through `cap`.
  */
 export function initialCrawlRate(
   crawlDelaySeconds: number | null,
-  seedRate: number | null = null,
+  seed: CrawlRateSeed | null = null,
 ): CrawlRateState {
   const cap =
     crawlDelaySeconds != null && crawlDelaySeconds > 0
@@ -111,15 +143,16 @@ export function initialCrawlRate(
           Math.min(CRAWL_RATE_MAX, 1 / crawlDelaySeconds),
         )
       : CRAWL_RATE_MAX;
-  if (seedRate == null || !Number.isFinite(seedRate) || seedRate <= 0) {
+  if (!usableRate(seed?.settledRate)) {
     return { rate: Math.min(CRAWL_RATE_START, cap), ceiling: cap, cap };
   }
-  const seed = Math.min(
-    CRAWL_RATE_START,
-    Math.max(CRAWL_RATE_MIN, seedRate),
-    cap,
-  );
-  return { rate: seed, ceiling: seed, cap };
+  const clamp = (value: number) =>
+    Math.min(CRAWL_RATE_START, Math.max(CRAWL_RATE_MIN, value), cap);
+  const rate = clamp(seed.settledRate);
+  const sustained = usableRate(seed.highestRate)
+    ? Math.max(seed.settledRate, seed.highestRate)
+    : seed.settledRate;
+  return { rate, ceiling: Math.max(rate, clamp(sustained)), cap };
 }
 
 export function afterCleanBatch(state: CrawlRateState): CrawlRateState {
