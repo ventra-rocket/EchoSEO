@@ -23,7 +23,10 @@ import type {
 } from "@/server/lib/audit/types";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { classifyPageStatus } from "@/shared/http-status";
-import { runCrawlPhase } from "@/server/workflows/siteAuditWorkflowCrawl";
+import {
+  type CrawlPhaseResult,
+  runCrawlPhase,
+} from "@/server/workflows/siteAuditWorkflowCrawl";
 import { runDiscoveryPhase } from "@/server/workflows/siteAuditWorkflowDiscovery";
 
 const LIGHTHOUSE_URL_BATCH_SIZE = 10;
@@ -121,6 +124,7 @@ export async function runAuditPhases(
     config,
     allPages,
     blockedUrlCount: crawl.blockedUrls.length,
+    pacing: crawl.pacing,
     lighthouseResults,
     sitemapUrls,
   });
@@ -354,6 +358,7 @@ async function finalizeAudit(args: {
   config: AuditConfig;
   allPages: StepPageResult[];
   blockedUrlCount: number;
+  pacing: CrawlPhaseResult["pacing"];
   lighthouseResults: LighthouseResult[];
   /** Null when discovery left no readable evidence — see `discovered-urls-store`. */
   sitemapUrls: string[] | null;
@@ -368,6 +373,7 @@ async function finalizeAudit(args: {
     config,
     allPages,
     blockedUrlCount,
+    pacing,
     lighthouseResults,
     sitemapUrls,
   } = args;
@@ -385,10 +391,15 @@ async function finalizeAudit(args: {
       new Set(sitemapUrls ?? []),
     );
     await AuditRepository.batchWriteLinkEdges(auditId, linkEdges);
-    await AuditRepository.completeAudit(auditId, workflowInstanceId, {
-      pagesCrawled: allPages.length,
-      pagesTotal: allPages.length,
-    });
+    await AuditRepository.completeAudit(
+      auditId,
+      workflowInstanceId,
+      {
+        pagesCrawled: allPages.length,
+        pagesTotal: allPages.length,
+      },
+      pacing,
+    );
     await sealAuditSnapshot({
       auditId,
       projectId,

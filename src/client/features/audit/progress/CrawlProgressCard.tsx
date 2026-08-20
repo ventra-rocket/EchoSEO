@@ -127,6 +127,18 @@ export function CrawlProgressCard({
               {phase.visited.toLocaleString()} visited
             </p>
           )}
+
+          {phase?.offeredRate !== undefined && (
+            // Plain English, because the numbers are for anyone watching, not
+            // just the workflow trace: the rate the crawl settled at, and how
+            // hard the site pushed back to get there. See issue #88.
+            <p className="text-xs text-base-content/50">
+              Crawling at {phase.offeredRate.toFixed(1)} pages/s
+              {phase.refusedRequests
+                ? ` · the site refused ${phase.refusedRequests.toLocaleString()} request${phase.refusedRequests === 1 ? "" : "s"} so far`
+                : ""}
+            </p>
+          )}
         </div>
       </div>
 

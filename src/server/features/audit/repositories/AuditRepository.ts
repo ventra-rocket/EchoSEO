@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import type { LinkEdge } from "@/server/lib/audit/link-graph";
 import { buildSitemapMembership } from "@/server/lib/audit/sitemap-membership";
+import { pacingColumns } from "@/server/lib/audit/crawl-pacing";
 import type {
   AuditConfig,
   LighthouseResult,
@@ -97,10 +98,9 @@ async function updateAuditProgress(
 async function completeAudit(
   auditId: string,
   workflowInstanceId: string,
-  data: {
-    pagesCrawled: number;
-    pagesTotal: number;
-  },
+  data: { pagesCrawled: number; pagesTotal: number },
+  // Optional: a run that never crawled leaves the pacing columns null. See #88.
+  pacing?: Parameters<typeof pacingColumns>[0],
 ) {
   await db
     .update(audits)
@@ -109,6 +109,7 @@ async function completeAudit(
       completedAt: new Date().toISOString(),
       currentPhase: "completed",
       ...data,
+      ...(pacing ? pacingColumns(pacing) : {}),
     })
     .where(
       and(

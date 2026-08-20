@@ -50,6 +50,15 @@ const crawlPhaseDetailSchema = z.object({
   /** URLs already fetched, and URLs waiting in the queue. */
   visited: z.number().optional(),
   queued: z.number().optional(),
+  /**
+   * Live pacing, mirrored from the crawl loop so a running audit shows the rate
+   * it settled at and how hard the site is pushing back — the same numbers the
+   * finished audit keeps in D1. Optional so progress written before #88 (and by
+   * the discovery stage, which has no rate yet) still parses.
+   */
+  offeredRate: z.number().optional(),
+  refusedRequests: z.number().optional(),
+  congestedBatches: z.number().optional(),
   updatedAt: z.number(),
 });
 
@@ -94,7 +103,13 @@ async function write(auditId: string, progress: CrawlProgress): Promise<void> {
 async function pushCrawledUrls(
   auditId: string,
   nextEntries: CrawledUrlEntry[],
-  frontier?: { visited: number; queued: number },
+  frontier?: {
+    visited: number;
+    queued: number;
+    offeredRate?: number;
+    refusedRequests?: number;
+    congestedBatches?: number;
+  },
 ): Promise<void> {
   if (nextEntries.length === 0 && !frontier) return;
 
@@ -106,6 +121,9 @@ async function pushCrawledUrls(
           stage: "crawling",
           visited: frontier.visited,
           queued: frontier.queued,
+          offeredRate: frontier.offeredRate,
+          refusedRequests: frontier.refusedRequests,
+          congestedBatches: frontier.congestedBatches,
           updatedAt: Date.now(),
         }
       : current.phase,
