@@ -1,0 +1,1 @@
+ALTER TABLE `audit_export_jobs` ADD `format` text DEFAULT 'zip' NOT NULL;

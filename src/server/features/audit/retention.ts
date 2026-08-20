@@ -141,16 +141,19 @@ async function terminalizeStaleBuilds(now: Date): Promise<number> {
   const cutoff = toSqliteTimestamp(
     new Date(now.getTime() - STALE_BUILD_HOURS * HOUR_MS),
   );
-  const ids = await AuditRetentionRepository.findStaleActiveExportIds(
+  const stale = await AuditRetentionRepository.findStaleActiveExports(
     cutoff,
     MAX_EXPORTS_PER_SWEEP,
   );
-  if (ids.length === 0) return 0;
+  if (stale.length === 0) return 0;
+  const ids = stale.map((job) => job.id);
 
   // A build that wrote its object and died before markReady leaves a derivable
   // key no other part will ever collect (its row's r2Key is still null). Purge
   // it best-effort before terminalizing; deleting a never-written key is a no-op.
-  const orphaned = await deleteAuditExports(ids.map(auditExportKey));
+  const orphaned = await deleteAuditExports(
+    stale.map((job) => auditExportKey(job.id, job.format)),
+  );
   if (orphaned.length > 0) {
     console.error(
       `[cron] audit retention: could not purge ${orphaned.length} stale build object(s): ${orphaned.join(", ")}`,

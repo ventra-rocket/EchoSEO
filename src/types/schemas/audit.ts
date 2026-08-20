@@ -166,6 +166,11 @@ export const requestAuditExportSchema = z.object({
   severity: z.string().min(1).max(64).optional(),
   ruleId: z.string().min(1).max(128).optional(),
   urlContains: z.string().min(1).max(2048).optional(),
+  // Which artifact to build. Defaulted rather than required so an older client
+  // keeps getting the ZIP it already asks for.
+  format: z.enum(["zip", "pdf", "doc"]).default("zip"),
+  // Which language the rendered report is written in; ignored for the ZIP.
+  locale: z.enum(["en", "vi"]).default("en"),
 });
 
 export const listAuditExportsSchema = z.object({

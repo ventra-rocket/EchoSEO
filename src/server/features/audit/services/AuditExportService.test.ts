@@ -98,6 +98,8 @@ const request = (authMode: "hosted" | "local_noauth") =>
     auditId: AUDIT_ID,
     actorUserId: USER_ID,
     organizationId: ORG_ID,
+    format: "zip",
+    locale: "en",
     authMode,
     filters: { severity: "high" },
   });
@@ -201,6 +203,9 @@ describe("AuditExportService", () => {
       expect(resolved).toEqual({
         r2Key: "audit-exports/job-ready.zip",
         auditId: AUDIT_ID,
+        // Defaulted by the schema, so a row written before the format column
+        // existed still resolves as the ZIP it actually is.
+        format: "zip",
       });
     });
 

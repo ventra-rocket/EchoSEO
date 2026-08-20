@@ -301,7 +301,7 @@ describe("sweepAuditRetention", () => {
     });
     // Part B throws; A must still expire and the sweep must not reject.
     const spy = vi
-      .spyOn(AuditRetentionRepository, "findStaleActiveExportIds")
+      .spyOn(AuditRetentionRepository, "findStaleActiveExports")
       .mockRejectedValue(new Error("db blip"));
 
     const result = await sweepAuditRetention();

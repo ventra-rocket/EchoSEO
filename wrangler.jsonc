@@ -165,4 +165,10 @@
       "binding": "R2",
     },
   ],
+  // Browser Rendering, for the PDF half of the audit report export (issue #51).
+  // Requires Workers Paid, which this account is on — see the `limits.cpu_ms`
+  // note at the top of this file before reading anything here as Free tier.
+  "browser": {
+    "binding": "BROWSER",
+  },
 }

@@ -31,6 +31,8 @@ export const requestAuditExport = createServerFn({ method: "POST" })
         ruleId: data.ruleId,
         urlContains: data.urlContains,
       },
+      format: data.format,
+      locale: data.locale,
     });
   });
 
