@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AUDIT_EXPORT_FORMATS } from "@/shared/audit-export-format";
 import { AUDIT_MAX_PAGES, AUDIT_MIN_PAGES } from "@/shared/audit-limits";
 
 // ─── Server function input schemas ──────────────────────────────────────────
@@ -166,11 +167,13 @@ export const requestAuditExportSchema = z.object({
   severity: z.string().min(1).max(64).optional(),
   ruleId: z.string().min(1).max(128).optional(),
   urlContains: z.string().min(1).max(2048).optional(),
-  // Which artifact to build. Defaulted rather than required so an older client
-  // keeps getting the ZIP it already asks for.
-  format: z.enum(["zip", "pdf", "doc"]).default("zip"),
+  // Derived from the shared media table rather than restated: that module has no
+  // server imports, so unlike the rule catalogue there is nothing to keep out of
+  // the browser bundle — and a format added there must not be silently rejected
+  // here. Defaulted so an older client keeps getting the ZIP it already asks for.
+  format: z.enum(AUDIT_EXPORT_FORMATS).default("zip"),
   // Which language the rendered report is written in; ignored for the ZIP.
-  locale: z.enum(["en", "vi"]).default("en"),
+  locale: ruleLocaleSchema,
 });
 
 export const listAuditExportsSchema = z.object({

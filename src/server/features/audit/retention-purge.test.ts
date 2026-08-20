@@ -44,7 +44,10 @@ const { deleteAuditExportsMock } = vi.hoisted(() => ({
 }));
 vi.mock("@/server/features/audit/exports/audit-export-store", () => ({
   deleteAuditExports: deleteAuditExportsMock,
-  auditExportKey: (jobId: string) => `audit-exports/${jobId}.zip`,
+  // Format-aware, so a test can observe the extension the sweep derives: a
+  // stub that always said `.zip` would let a non-ZIP build orphan unnoticed.
+  auditExportKey: (jobId: string, format: string) =>
+    `audit-exports/${jobId}.${format}`,
 }));
 
 const { deleteAuditScreenshotsMock } = vi.hoisted(() => ({

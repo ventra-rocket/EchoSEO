@@ -47,6 +47,10 @@ export const REPORT_COPY: Record<ReportLocale, Record<string, string>> = {
     urlWord: "affected URL",
     englishFallback:
       "Some remediation text below is shown in English: the rule catalogue has no Vietnamese translation for it yet.",
+    filtered:
+      "This report covers a filtered view of the audit, not the whole site. Filters applied:",
+    citationBy: "Google",
+    citationReviewed: "reviewed",
   },
   vi: {
     title: "Kiểm định SEO kỹ thuật",
@@ -81,5 +85,9 @@ export const REPORT_COPY: Record<ReportLocale, Record<string, string>> = {
     urlWord: "URL bị ảnh hưởng",
     englishFallback:
       "Một số hướng dẫn khắc phục bên dưới hiển thị bằng tiếng Anh: bộ quy tắc chưa có bản dịch tiếng Việt cho phần đó.",
+    filtered:
+      "Báo cáo này chỉ gồm một phần đã lọc của kiểm định, không phải toàn site. Bộ lọc đã áp dụng:",
+    citationBy: "Google",
+    citationReviewed: "đã đối chiếu",
   },
 };

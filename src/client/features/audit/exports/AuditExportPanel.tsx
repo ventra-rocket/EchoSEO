@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Download, FileArchive, Loader2 } from "lucide-react";
 import { getAuditAccess } from "@/serverFunctions/audit";
@@ -40,7 +40,7 @@ export function AuditExportPanel({
   const listKey = ["audit-exports", projectId, auditId];
   // Report language. Only the rendered formats read it — the ZIP carries rule
   // ids, not prose — so the control sits beside the buttons that use it.
-  const [reportLocale, setReportLocale] = React.useState<ReportLocale>("en");
+  const [reportLocale, setReportLocale] = useState<ReportLocale>("en");
 
   const access = useQuery({
     queryKey: ["audit-access", projectId],
@@ -167,6 +167,7 @@ function ExportRow({ job }: { job: AuditExportJobView }) {
       </span>
       <span className="text-base-content/70">
         {AUDIT_EXPORT_MEDIA[job.format].label}
+        {job.format === "zip" ? null : ` · ${REPORT_LOCALE_LABEL[job.locale]}`}
       </span>
       <StatusLabel job={job} />
       <span className="ml-auto">

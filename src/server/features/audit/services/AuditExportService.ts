@@ -41,6 +41,12 @@ export interface AuditExportJobView {
   errorMessage: string | null;
   /** Which artifact this job built, so the list can label each download. */
   format: AuditExportFormat;
+  /**
+   * Which language it was rendered in. Two report jobs for one audit differ only
+   * by this, and the panel's language select is what produced the difference — so
+   * without it they render as two identical rows.
+   */
+  locale: ReportLocale;
   /** True only while the artifact is downloadable (ready and not expired). */
   downloadable: boolean;
 }
@@ -69,6 +75,7 @@ function toView(job: AuditExportJob, now: Date): AuditExportJobView {
     expiresAt: job.expiresAt,
     errorMessage: job.errorMessage,
     format: job.format,
+    locale: job.locale,
     downloadable: job.status === "ready" && !isExpired(job, now),
   };
 }

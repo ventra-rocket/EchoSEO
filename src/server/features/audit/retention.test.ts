@@ -30,7 +30,10 @@ const { deleteAuditExportsMock } = vi.hoisted(() => ({
 }));
 vi.mock("@/server/features/audit/exports/audit-export-store", () => ({
   deleteAuditExports: deleteAuditExportsMock,
-  auditExportKey: (jobId: string) => `audit-exports/${jobId}.zip`,
+  // Format-aware, so a test can observe the extension the sweep derives: a
+  // stub that always said `.zip` would let a non-ZIP build orphan unnoticed.
+  auditExportKey: (jobId: string, format: string) =>
+    `audit-exports/${jobId}.${format}`,
 }));
 
 const { deleteAuditScreenshotsMock } = vi.hoisted(() => ({
@@ -80,6 +83,7 @@ async function seedExport(input: {
   r2Key?: string | null;
   createdAt?: string;
   expiresAt?: string | null;
+  format?: "zip" | "pdf" | "doc";
 }) {
   await harness.db.insert(auditExportJobs).values({
     id: input.id,
@@ -87,6 +91,7 @@ async function seedExport(input: {
     projectId: PROJECT_ID,
     organizationId: ORG_ID,
     status: input.status,
+    ...(input.format ? { format: input.format } : {}),
     createdByUserId: "u1",
     r2Key: input.r2Key ?? null,
     ...(input.createdAt ? { createdAt: input.createdAt } : {}),
@@ -222,6 +227,26 @@ describe("sweepAuditRetention", () => {
       // The wedged build's derivable object is purged before it is terminalized.
       expect(deleteAuditExportsMock).toHaveBeenCalledWith([
         "audit-exports/wedged.zip",
+      ]);
+    });
+
+    it("derives a dead PDF build's key from its own format", async () => {
+      // A build that died before `markReady` has a null `r2Key`, so the derived
+      // key is the only handle anything will ever have on its object. Assuming
+      // `.zip` would orphan every rendered report in R2 permanently.
+      await seedAudit("a1");
+      await seedExport({
+        id: "wedged-pdf",
+        auditId: "a1",
+        status: "processing",
+        format: "pdf",
+        createdAt: toSqlite(new Date(Date.now() - 2 * HOUR_MS)),
+      });
+
+      await sweepAuditRetention();
+
+      expect(deleteAuditExportsMock).toHaveBeenCalledWith([
+        "audit-exports/wedged-pdf.pdf",
       ]);
     });
   });

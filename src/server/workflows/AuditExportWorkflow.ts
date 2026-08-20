@@ -172,6 +172,7 @@ export async function runAuditExport(
                 occurrences,
                 truncated,
                 locale: job.locale,
+                filters: filtersForManifest(filters),
               }),
             });
 

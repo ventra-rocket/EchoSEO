@@ -25,14 +25,18 @@ import type { ExportOccurrence } from "@/server/features/audit/exports/audit-exp
 import type { ReportLocale } from "@/shared/audit-export-format";
 import { REPORT_COPY } from "@/server/features/audit/exports/report-copy";
 
-/** Worst first. Anything unrecognised sorts last rather than throwing. */
-const SEVERITY_ORDER = ["critical", "high", "warn", "medium", "low"];
+/**
+ * Worst first. Only the values the rule catalogues actually emit — `warn` is a
+ * *status*, not a severity, and conflating the two vocabularies would put a row
+ * in the summary that no rule can produce. An unrecognised severity still sorts
+ * last and still appears, because the summary is built from the counts rather
+ * than from this list.
+ */
+const SEVERITY_ORDER = ["critical", "high", "low"];
 
 const SEVERITY_TONE: Record<string, string> = {
   critical: "sev-critical",
   high: "sev-high",
-  warn: "sev-warn",
-  medium: "sev-warn",
   low: "sev-low",
 };
 
@@ -57,6 +61,13 @@ interface ReportInput {
   truncated: boolean;
   /** Which language the document is written in. */
   locale: ReportLocale;
+  /**
+   * The issue filters this export was built from, as the ZIP's manifest states
+   * them. A filtered report must say so: unlike the panel it was requested from,
+   * the artifact travels to a client on its own, where "Technical SEO audit"
+   * over a critical-only subset reads as a whole-site verdict.
+   */
+  filters: Record<string, string>;
 }
 
 function severityRank(severity: string): number {
@@ -90,15 +101,28 @@ function groupFindings(occurrences: ExportOccurrence[]): ReportFinding[] {
   );
 }
 
+/**
+ * Distinct URLs per severity, not occurrences.
+ *
+ * An occurrence is unique per (audit, rule, url), so a page failing three
+ * critical rules would contribute 3 to a naive sum — and the roll-up could
+ * exceed the number of pages crawled while sitting under a header that says
+ * "affected URLs". The per-finding count is scoped to one rule, so it is a URL
+ * count already; only this cross-rule total needs the set.
+ */
 function countBySeverity(findings: ReportFinding[]): Map<string, number> {
-  const counts = new Map<string, number>();
+  const urlsBySeverity = new Map<string, Set<string>>();
   for (const finding of findings) {
-    counts.set(
-      finding.severity,
-      (counts.get(finding.severity) ?? 0) + finding.urls.length,
-    );
+    let seen = urlsBySeverity.get(finding.severity);
+    if (!seen) {
+      seen = new Set<string>();
+      urlsBySeverity.set(finding.severity, seen);
+    }
+    for (const url of finding.urls) seen.add(url);
   }
-  return counts;
+  return new Map(
+    [...urlsBySeverity].map(([severity, urls]) => [severity, urls.size]),
+  );
 }
 
 /** A date the reader can hold, or an honest blank. Never a fabricated one. */
@@ -117,7 +141,11 @@ function summaryTable(
   counts: Map<string, number>,
   copy: Record<string, string>,
 ): string {
-  const rows = SEVERITY_ORDER.filter((severity) => counts.has(severity))
+  // Ordered from the counts, not by filtering the known list: a severity the
+  // catalogue starts emitting tomorrow must not vanish from the summary while
+  // still appearing in the findings below.
+  const rows = [...counts.keys()]
+    .toSorted((a, b) => severityRank(a) - severityRank(b))
     .map(
       (severity) =>
         `<tr><td>${severityBadge(severity)}</td><td class="num">${counts
@@ -158,13 +186,15 @@ function findingSection(
         .join("")}</ol>`
     : "";
 
+  // The quote itself stays verbatim in Google's English — it is the cited data.
+  // The words wrapped around it are the document's own, so they translate.
   const citation = fix
     ? `<blockquote>${escapeHtml(fix.guideQuote)}
-         <cite>Google — <a href="${escapeHtml(
+         <cite>${escapeHtml(copy.citationBy)} — <a href="${escapeHtml(
            fix.googleSourceUrl,
-         )}">${escapeHtml(fix.googleSourceUrl)}</a>, reviewed ${escapeHtml(
-           fix.lastReviewedDate,
-         )}</cite>
+         )}">${escapeHtml(fix.googleSourceUrl)}</a>, ${escapeHtml(
+           copy.citationReviewed,
+         )} ${escapeHtml(fix.lastReviewedDate)}</cite>
        </blockquote>`
     : "";
 
@@ -237,6 +267,19 @@ const STYLESHEET = `
             font-size: 10pt; page-break-inside: avoid; }
 `;
 
+/** Names the filters a report was built from, or nothing when it covers all. */
+function filterNotice(
+  filters: Record<string, string>,
+  copy: Record<string, string>,
+): string {
+  const applied = Object.entries(filters);
+  if (applied.length === 0) return "";
+  const list = applied
+    .map(([key, value]) => `${escapeHtml(key)} = ${escapeHtml(value)}`)
+    .join(" · ");
+  return `<p class="notice">${escapeHtml(copy.filtered)} ${list}</p>`;
+}
+
 export function buildReportHtml(input: ReportInput): string {
   const copy = REPORT_COPY[input.locale];
   const findings = groupFindings(input.occurrences);
@@ -305,6 +348,7 @@ export function buildReportHtml(input: ReportInput): string {
   ${summaryTable(counts, copy)}
   <h4>${escapeHtml(copy.startHere)}</h4>
   ${prioritiesHtml}
+  ${filterNotice(input.filters, copy)}
   ${input.truncated ? `<p class="notice">${escapeHtml(copy.truncated)}</p>` : ""}
   ${fallbackNotice}
 

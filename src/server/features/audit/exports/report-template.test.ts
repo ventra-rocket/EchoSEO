@@ -26,6 +26,7 @@ const base = {
   exportedAt: "2026-08-20T10:00:00.000Z",
   truncated: false,
   locale: "en" as const,
+  filters: {} as Record<string, string>,
 };
 
 describe("buildReportHtml", () => {
@@ -159,5 +160,57 @@ describe("buildReportHtml", () => {
     });
 
     expect(html).toContain("not of the whole site");
+  });
+
+  it("counts distinct URLs in the summary, not issue occurrences", () => {
+    // An occurrence is unique per (audit, rule, url), so one page failing three
+    // rules must not read as three affected URLs — the roll-up would exceed the
+    // pages crawled while sitting under a header that says "Affected URLs".
+    const html = buildReportHtml({
+      ...base,
+      occurrences: [
+        occurrence({ url: "https://example.com/a", ruleId: "meta-title" }),
+        occurrence({
+          url: "https://example.com/a",
+          ruleId: "meta-description",
+        }),
+        occurrence({ url: "https://example.com/a", ruleId: "structure-h1" }),
+      ],
+    });
+
+    const summary = html.slice(0, html.indexOf("Technical findings"));
+    expect(summary).toContain(">1<");
+    expect(summary).not.toContain(">3<");
+  });
+
+  it("says the report covers a filtered view when filters were applied", () => {
+    // The artifact travels to a client on its own, where "Technical SEO audit"
+    // over a critical-only subset reads as a whole-site verdict.
+    const html = buildReportHtml({
+      ...base,
+      filters: { severity: "critical" },
+      occurrences: [occurrence()],
+    });
+
+    expect(html).toContain("filtered view");
+    expect(html).toContain("severity = critical");
+  });
+
+  it("claims nothing about filters when the export covers everything", () => {
+    const html = buildReportHtml({ ...base, occurrences: [occurrence()] });
+
+    expect(html).not.toContain("filtered view");
+  });
+
+  it("translates the citation's own words but never Google's quote", () => {
+    const html = buildReportHtml({
+      ...base,
+      locale: "vi",
+      occurrences: [occurrence()],
+    });
+
+    expect(html).toContain("đã đối chiếu");
+    // The quote is the cited data and stays verbatim.
+    expect(html).toContain("already indexed URLs that are unreachable");
   });
 });
