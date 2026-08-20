@@ -256,6 +256,35 @@ describe("runCrawlPhase treats a 429 as our problem, not the page's", () => {
     expect(recorder.intervals.slice(0, 4)).toEqual([333, 444, 436, 427]);
   });
 
+  it("returns the pacing the finished audit keeps, so it survives the cleared feed", async () => {
+    // #88: the live KV feed carries these numbers while the crawl runs, but that
+    // key is deleted on completion. The returned pacing is the copy finalize
+    // writes to D1, so a finished crawl can still be asked what it settled at.
+    let refused = 0;
+    crawlPageMock.mockImplementation(async (url: string) => {
+      refused += 1;
+      return refused <= 25 ? throttledPage(url) : page(url);
+    });
+    const recorder = recordingStep();
+
+    const result = await runCrawlPhase(recorder.step, {
+      ...params({ maxPages: 200 }),
+      sitemapUrls: sitemapUrls(80),
+      waitMs: recorder.waitMs,
+    });
+
+    // The first batch of 25 was wholly refused, then the site served cleanly.
+    expect(result.pacing.refusedRequests).toBe(25);
+    expect(result.pacing.congestedBatches).toBe(1);
+    // A whole-batch refusal drops the offered rate, so it never climbs back to
+    // the 3 req/s the crawl opened at within this run.
+    expect(result.pacing.highestRate).toBe(3);
+    expect(result.pacing.settledRate).toBeLessThan(3);
+    expect(result.pacing.lowestRate).toBeLessThanOrEqual(
+      result.pacing.settledRate,
+    );
+  });
+
   it("keeps the batch at 25 URLs, because the pacing moves instead", async () => {
     // A Workflow instance is capped at 1,024 steps and a 5,000-page crawl already
     // spends ~645. Pacing by shrinking the batch would run a large crawl out of

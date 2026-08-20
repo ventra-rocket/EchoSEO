@@ -6,8 +6,9 @@ import { AuditRepository } from "@/server/features/audit/repositories/AuditRepos
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import { crawlPage } from "@/server/workflows/site-audit-workflow-helpers";
 import {
-  classifyRefusal,
   congestionShare,
+  partitionRefusedBatch,
+  throttleBackoffSeconds,
 } from "@/server/lib/audit/crawl-retry";
 import {
   afterCleanBatch,
@@ -15,6 +16,12 @@ import {
   dispatchIntervalMs,
   initialCrawlRate,
 } from "@/server/lib/audit/crawl-rate";
+import {
+  type CrawlPacingSummary,
+  foldBatchPacing,
+  initialPacing,
+  pacingSummary,
+} from "@/server/lib/audit/crawl-pacing";
 
 /**
  * How many URLs one crawl-batch step schedules. Not a concurrency: the batch is
@@ -28,35 +35,15 @@ import {
 const CRAWL_BATCH_SIZE = 25;
 
 /**
- * How long to wait after the site refuses a batch, before the crawl resumes at
- * its reduced rate. Sized to the measured recovery window: in a probe of
- * `kello.ventrarocket.vn`, wave 3 was refused and wave 4 five seconds later was
- * clean. Escalation is per *consecutive* refused batch — a site still refusing
- * after a backoff needs longer than one that recovered.
- */
-const THROTTLE_BACKOFF_BASE_SECONDS = 5;
-const THROTTLE_BACKOFF_MAX_SECONDS = 60;
-
-/**
  * How much of a batch has to be refused before the crawl stops as well as slows.
  *
  * Hibernating exists to let a limiter's window drain, which only matters when we
- * filled that window. A single refusal in twenty-five is answered by the rate cut
- * alone: on a measured 5,000-page crawl 19 batches were refused, 18 of them
- * partially, and every one bought a 5 s pause — 1.6 minutes of deliberate idling
- * to recover from something the pacing had already corrected. A server that sent
- * `Retry-After` is obeyed whatever the share: it named a number.
+ * filled it. A single refusal in twenty-five is answered by the rate cut alone —
+ * pausing for it is 1.6 minutes of idling on a 5,000-page crawl to recover from
+ * something the pacing already corrected. A server that sent `Retry-After` is
+ * obeyed whatever the share: it named a number.
  */
 const BACKOFF_MIN_SHARE = 0.2;
-
-/**
- * A refused URL goes back on the queue instead of being recorded, because a
- * refusal is not a fact about the page. After this many attempts it is recorded
- * with the status it kept returning: the crawl has to terminate, and a URL that
- * failed every time is a much stronger claim than one that failed once.
- */
-const MAX_RETRY_ATTEMPTS = 3;
-
 /**
  * Pages between CPU-budget hibernations, derived from the measured cost rather
  * than guessed at. `analyzeHtml` takes 6.0 ms on a real 118 KB product page (50
@@ -98,79 +85,6 @@ function classifyCrawlLink(
   return "queue";
 }
 
-/**
- * Separate refusals from pages.
- *
- * `retry` is the URLs worth asking for again; `pages` keeps the rest, including
- * refusals that ran out of attempts — those stay as refused rows so the report can
- * say "we could not read this" instead of the crawl quietly shrinking. A URL that
- * failed every attempt is much stronger evidence than one that failed once, which
- * is the whole reason to retry before recording a finding against it.
- *
- * `retryAfterMs` is the longest wait any server in the batch asked for, or null
- * when none did (the usual case).
- */
-function partitionRefusedBatch(
-  crawledBatch: StepPageResult[],
-  retryAttempts: Map<string, number>,
-): {
-  pages: StepPageResult[];
-  retry: string[];
-  retryAfterMs: number | null;
-  throttled: number;
-  unanswered: number;
-} {
-  const pages: StepPageResult[] = [];
-  const retry: string[] = [];
-  let retryAfterMs: number | null = null;
-  let throttled = 0;
-  let unanswered = 0;
-
-  for (const page of crawledBatch) {
-    const refusal = classifyRefusal(page.statusCode);
-    if (refusal === null) {
-      pages.push(page);
-      continue;
-    }
-
-    if (refusal === "throttled") throttled += 1;
-    else unanswered += 1;
-
-    if (page.retryAfterMs != null) {
-      retryAfterMs = Math.max(retryAfterMs ?? 0, page.retryAfterMs);
-    }
-
-    const attempts = (retryAttempts.get(page.url) ?? 0) + 1;
-    retryAttempts.set(page.url, attempts);
-    if (attempts < MAX_RETRY_ATTEMPTS) {
-      retry.push(page.url);
-    } else {
-      pages.push(page);
-    }
-  }
-
-  return { pages, retry, retryAfterMs, throttled, unanswered };
-}
-
-/**
- * Exponential on how long the site has been refusing, because the common 429
- * carries no `Retry-After` at all. A header, when present, wins: the server knows
- * its own window better than our guess, and `parseRetryAfterMs` has already
- * clamped it to something sane.
- */
-function throttleBackoffSeconds(
-  consecutiveThrottledBatches: number,
-  retryAfterMs: number | null,
-): number {
-  if (retryAfterMs != null) {
-    return Math.max(1, Math.ceil(retryAfterMs / 1_000));
-  }
-  const seconds =
-    THROTTLE_BACKOFF_BASE_SECONDS *
-    2 ** Math.max(0, consecutiveThrottledBatches - 1);
-  return Math.min(seconds, THROTTLE_BACKOFF_MAX_SECONDS);
-}
-
 type CrawlPhaseParams = {
   auditId: string;
   workflowInstanceId: string;
@@ -190,7 +104,7 @@ type CrawlPhaseParams = {
   waitMs?: (ms: number) => Promise<void>;
 };
 
-type CrawlPhaseResult = {
+export type CrawlPhaseResult = {
   pages: StepPageResult[];
   /**
    * Distinct same-origin URLs robots.txt refused, deduped across every place
@@ -200,6 +114,12 @@ type CrawlPhaseResult = {
    * robots were re-fetched mid-run this number would be meaningless.
    */
   blockedUrls: string[];
+  /**
+   * What the site's rate limit cost this crawl, for the finished-audit record.
+   * The same numbers rode the live KV feed while it ran; this is the copy that
+   * survives after the progress key is cleared. See issue #88.
+   */
+  pacing: CrawlPacingSummary;
 };
 
 export async function runCrawlPhase(
@@ -242,12 +162,7 @@ export async function runCrawlPhase(
   // Pacing evidence. Since a partially refused batch no longer hibernates, the
   // Workflow trace no longer counts refusals — a crawl settling at half a site's
   // tolerance looks exactly like one settling on its ceiling. See issue #88.
-  const pacing = {
-    congestedBatches: 0,
-    refusedRequests: 0,
-    lowestRate: rate.rate,
-    highestRate: rate.rate,
-  };
+  let pacing = initialPacing(rate.rate);
 
   while (queue.length > 0 && allPages.length < maxPages) {
     const urlsToCrawl = selectNextCrawlBatch({
@@ -291,47 +206,58 @@ export async function runCrawlPhase(
       robots,
       blocked,
     });
-    await persistCrawlProgress({
-      step,
-      crawlBatchIndex,
-      auditId,
-      workflowInstanceId,
-      // The whole batch, refusals included: someone watching the live feed should
-      // see them. That feed is how this whole class of defect was found.
-      crawledBatch,
-      pagesCrawled: allPages.length,
-      visitedCount: visited.size,
-      queueLength: queue.length,
-      maxPages,
-    });
-
-    // Counts refusals we gave up on too: a row recorded as refused is still the
-    // site telling us something. How much of the batch was refused is the whole
-    // signal — one 429 in twenty-five is a site that occasionally says no, not a
-    // site we are hammering. See `congestionShare`.
+    // Fold this batch into the pacing counters before the write below, so the
+    // live feed and the backoff both see the current batch. A refused row
+    // counts even when we gave up on it: it is still the site saying no. How
+    // much of the batch was refused is the whole signal — one 429 in
+    // twenty-five is a site that occasionally says no, not one we are hammering.
     const refusedShare = congestionShare({
       throttled,
       unanswered,
       batchSize: crawledBatch.length,
     });
+    let shouldBackoff = false;
     if (refusedShare > 0) {
       consecutiveThrottledBatches += 1;
-      pacing.congestedBatches += 1;
-      pacing.refusedRequests += Math.round(refusedShare * crawledBatch.length);
       rate = afterCongestedBatch(rate, refusedShare);
-      if (refusedShare >= BACKOFF_MIN_SHARE || retryAfterMs != null) {
-        throttleWaits += 1;
-        await step.sleep(
-          `throttle-backoff-${throttleWaits}`,
-          `${throttleBackoffSeconds(consecutiveThrottledBatches, retryAfterMs)} seconds`,
-        );
-      }
+      shouldBackoff = refusedShare >= BACKOFF_MIN_SHARE || retryAfterMs != null;
     } else {
       consecutiveThrottledBatches = 0;
       rate = afterCleanBatch(rate);
     }
-    pacing.lowestRate = Math.min(pacing.lowestRate, rate.rate);
-    pacing.highestRate = Math.max(pacing.highestRate, rate.rate);
+    pacing = foldBatchPacing(pacing, {
+      refusedShare,
+      batchSize: crawledBatch.length,
+      rate: rate.rate,
+    });
+
+    await persistCrawlProgress({
+      step,
+      crawlBatchIndex,
+      auditId,
+      workflowInstanceId,
+      // The whole batch, refusals included: someone watching the live feed
+      // should see them. That feed is how this whole class of defect was found.
+      crawledBatch,
+      pagesCrawled: allPages.length,
+      visitedCount: visited.size,
+      queueLength: queue.length,
+      maxPages,
+      // The pacing the finished audit will keep in D1, shown live while it runs.
+      offeredRate: rate.rate,
+      refusedRequests: pacing.refusedRequests,
+      congestedBatches: pacing.congestedBatches,
+    });
+
+    // A partial refusal only slows the rate (above); a batch refused past the
+    // floor, or an explicit Retry-After, is the one worth hibernating over.
+    if (shouldBackoff) {
+      throttleWaits += 1;
+      await step.sleep(
+        `throttle-backoff-${throttleWaits}`,
+        `${throttleBackoffSeconds(consecutiveThrottledBatches, retryAfterMs)} seconds`,
+      );
+    }
 
     // CPU is charged per Workflow invocation, and a large crawl accumulates parse
     // cost across many batches within one, so hibernate periodically: the resume
@@ -367,7 +293,11 @@ export async function runCrawlPhase(
     })}`,
   );
 
-  return { pages: allPages, blockedUrls: [...blocked] };
+  return {
+    pages: allPages,
+    blockedUrls: [...blocked],
+    pacing: pacingSummary(pacing, rate.rate),
+  };
 }
 
 function seedCrawlQueue({
@@ -540,6 +470,9 @@ async function persistCrawlProgress(params: {
   visitedCount: number;
   queueLength: number;
   maxPages: number;
+  offeredRate: number;
+  refusedRequests: number;
+  congestedBatches: number;
 }) {
   const {
     step,
@@ -551,6 +484,9 @@ async function persistCrawlProgress(params: {
     visitedCount,
     queueLength,
     maxPages,
+    offeredRate,
+    refusedRequests,
+    congestedBatches,
   } = params;
   await step.do(`kv-progress-batch-${crawlBatchIndex}`, async () => {
     await AuditProgressKV.pushCrawledUrls(
@@ -563,7 +499,13 @@ async function persistCrawlProgress(params: {
       })),
       // Queue depth is what separates "slow site" from "stalled crawl" for
       // someone watching a progress bar that has not moved.
-      { visited: visitedCount, queued: queueLength },
+      {
+        visited: visitedCount,
+        queued: queueLength,
+        offeredRate,
+        refusedRequests,
+        congestedBatches,
+      },
     );
   });
 

@@ -112,4 +112,44 @@ describe("AuditProgressKV", () => {
 
     expect(kvPutMock).not.toHaveBeenCalled();
   });
+
+  it("carries the live pacing so a running crawl shows its rate and refusals", async () => {
+    // #88: with a partial refusal no longer hibernating, the live feed is where
+    // "settled at half the tolerance" and "settled at the ceiling" stop looking
+    // identical.
+    await AuditProgressKV.pushCrawledUrls(
+      "a1",
+      [{ url: "https://a.com/1", statusCode: 200, title: "One", crawledAt: 1 }],
+      {
+        visited: 1,
+        queued: 40,
+        offeredRate: 2.5,
+        refusedRequests: 84,
+        congestedBatches: 3,
+      },
+    );
+    kvGetMock.mockResolvedValue(lastWrite());
+
+    const progress = await AuditProgressKV.getProgress("a1");
+    expect(progress.phase).toMatchObject({
+      offeredRate: 2.5,
+      refusedRequests: 84,
+      congestedBatches: 3,
+    });
+  });
+
+  it("still parses a stored payload written before pacing existed", async () => {
+    // The additive fields are optional: a crawl mid-flight when this deploys has
+    // a phase without them, and it must not blank the whole feed.
+    kvGetMock.mockResolvedValue(
+      JSON.stringify({
+        phase: { stage: "crawling", visited: 10, queued: 5, updatedAt: 1 },
+        entries: [],
+      }),
+    );
+
+    const progress = await AuditProgressKV.getProgress("a1");
+    expect(progress.phase).toMatchObject({ stage: "crawling", visited: 10 });
+    expect(progress.phase?.offeredRate).toBeUndefined();
+  });
 });

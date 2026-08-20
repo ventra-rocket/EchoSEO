@@ -316,6 +316,13 @@
       "when": 1786873525981,
       "tag": "0044_sleepy_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1787188198658,
+      "tag": "0045_sticky_meteorite",
+      "breakpoints": true
     }
   ]
 }

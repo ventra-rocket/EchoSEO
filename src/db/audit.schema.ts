@@ -55,6 +55,17 @@ export const audits = sqliteTable(
     // the real cause was a 1 MiB step-output limit. Null for running and completed
     // runs, and for audits that failed before this column existed.
     errorMessage: text("error_message"),
+    // Crawl pacing summary, written once at completion so a finished crawl can be
+    // asked what rate it settled at and how hard the site pushed back — without
+    // re-deriving it from Workflow step durations. Nullable: additive for rows
+    // written before this existed, and left null on a run that never crawled.
+    // See issue #88; the same numbers ride the live KV progress feed while the
+    // crawl runs, but that key is cleared on completion.
+    crawlSettledRate: real("crawl_settled_rate"),
+    crawlLowestRate: real("crawl_lowest_rate"),
+    crawlHighestRate: real("crawl_highest_rate"),
+    crawlRefusedRequests: integer("crawl_refused_requests"),
+    crawlCongestedBatches: integer("crawl_congested_batches"),
   },
   (table) => [
     index("audits_project_id_idx").on(table.projectId),
