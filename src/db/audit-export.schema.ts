@@ -30,6 +30,19 @@ export const auditExportJobs = sqliteTable(
     })
       .notNull()
       .default("queued"),
+    // Which artifact was asked for. Defaulted so every row written before the
+    // PDF/document renders existed reads as the ZIP it actually is, and so the
+    // download endpoint can pick a content type without consulting the key.
+    format: text("format", { enum: ["zip", "pdf", "doc"] })
+      .notNull()
+      .default("zip"),
+    // Which language the rendered report is written in. The rule catalogue is
+    // bilingual, so this is what decides whether a consultant gets a document
+    // they can hand to a Vietnamese client. Irrelevant to the ZIP, which carries
+    // raw rule ids rather than prose.
+    locale: text("locale", { enum: ["en", "vi"] })
+      .notNull()
+      .default("en"),
     // The issue filters applied when the export was requested, as JSON, so the
     // manifest can state exactly what the artifact covers.
     filtersJson: text("filters_json").notNull().default("{}"),

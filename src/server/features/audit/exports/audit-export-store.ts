@@ -3,19 +3,31 @@
  * it is only ever streamed back through the authorized download endpoint.
  */
 import { env } from "cloudflare:workers";
+import {
+  AUDIT_EXPORT_MEDIA,
+  type AuditExportFormat,
+} from "@/shared/audit-export-format";
 
-export function auditExportKey(jobId: string): string {
-  return `audit-exports/${jobId}.zip`;
+export function auditExportKey(
+  jobId: string,
+  format: AuditExportFormat,
+): string {
+  return `audit-exports/${jobId}.${AUDIT_EXPORT_MEDIA[format].extension}`;
 }
 
-/** Writes the ZIP and returns its key (persist R2 before the D1 `ready` commit). */
+/**
+ * Writes the artifact and returns its key (persist R2 before the D1 `ready`
+ * commit). The content type is stored with the object so the download endpoint
+ * never has to infer one from the key.
+ */
 export async function putAuditExport(
   jobId: string,
-  zip: Uint8Array,
+  bytes: Uint8Array,
+  format: AuditExportFormat,
 ): Promise<string> {
-  const key = auditExportKey(jobId);
-  await env.R2.put(key, zip, {
-    httpMetadata: { contentType: "application/zip" },
+  const key = auditExportKey(jobId, format);
+  await env.R2.put(key, bytes, {
+    httpMetadata: { contentType: AUDIT_EXPORT_MEDIA[format].contentType },
   });
   return key;
 }

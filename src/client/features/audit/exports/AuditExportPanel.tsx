@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Download, FileArchive, Loader2 } from "lucide-react";
 import { getAuditAccess } from "@/serverFunctions/audit";
@@ -7,6 +8,14 @@ import {
 } from "@/serverFunctions/audit-exports";
 import type { AuditExportJobView } from "@/server/features/audit/services/AuditExportService";
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
+import {
+  AUDIT_EXPORT_FORMATS,
+  AUDIT_EXPORT_MEDIA,
+  REPORT_LOCALES,
+  REPORT_LOCALE_LABEL,
+  type AuditExportFormat,
+  type ReportLocale,
+} from "@/shared/audit-export-format";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 /**
@@ -29,6 +38,9 @@ export function AuditExportPanel({
 }) {
   const queryClient = useQueryClient();
   const listKey = ["audit-exports", projectId, auditId];
+  // Report language. Only the rendered formats read it — the ZIP carries rule
+  // ids, not prose — so the control sits beside the buttons that use it.
+  const [reportLocale, setReportLocale] = useState<ReportLocale>("en");
 
   const access = useQuery({
     queryKey: ["audit-access", projectId],
@@ -53,13 +65,21 @@ export function AuditExportPanel({
   });
 
   const request = useMutation({
-    mutationFn: () =>
+    mutationFn: ({
+      format,
+      locale,
+    }: {
+      format: AuditExportFormat;
+      locale: ReportLocale;
+    }) =>
       requestAuditExport({
         data: {
           projectId,
           auditId,
           issueGroup: filters.group,
           severity: filters.severity,
+          format,
+          locale,
         },
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey }),
@@ -74,22 +94,46 @@ export function AuditExportPanel({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileArchive className="size-4" />
-          Export issues
+          Export
           <span className="font-normal text-base-content/50">
-            current view · CSV + JSON + manifest (ZIP)
+            current view · one export at a time
           </span>
         </div>
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          disabled={request.isPending}
-          onClick={() => request.mutate()}
-        >
-          {request.isPending && (
-            <span className="loading loading-spinner loading-xs" />
-          )}
-          Export
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="select select-bordered select-sm"
+            aria-label="Report language"
+            value={reportLocale}
+            onChange={(event) => {
+              // Narrow by lookup rather than assertion: the option values come
+              // from this same list, so a miss means the markup drifted.
+              const picked = REPORT_LOCALES.find(
+                (option) => option === event.target.value,
+              );
+              if (picked) setReportLocale(picked);
+            }}
+          >
+            {REPORT_LOCALES.map((option) => (
+              <option key={option} value={option}>
+                {REPORT_LOCALE_LABEL[option]}
+              </option>
+            ))}
+          </select>
+          {AUDIT_EXPORT_FORMATS.map((format) => (
+            <button
+              key={format}
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={request.isPending}
+              onClick={() => request.mutate({ format, locale: reportLocale })}
+            >
+              {request.isPending && request.variables?.format === format && (
+                <span className="loading loading-spinner loading-xs" />
+              )}
+              {AUDIT_EXPORT_MEDIA[format].label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {request.isError && (
@@ -120,6 +164,10 @@ function ExportRow({ job }: { job: AuditExportJobView }) {
     <li className="flex items-center gap-3 py-2">
       <span className="text-base-content/60 tabular-nums">
         {formatTime(job.createdAt)}
+      </span>
+      <span className="text-base-content/70">
+        {AUDIT_EXPORT_MEDIA[job.format].label}
+        {job.format === "zip" ? null : ` · ${REPORT_LOCALE_LABEL[job.locale]}`}
       </span>
       <StatusLabel job={job} />
       <span className="ml-auto">

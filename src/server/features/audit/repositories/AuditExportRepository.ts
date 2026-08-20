@@ -5,6 +5,10 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { auditExportJobs } from "@/db/schema";
+import type {
+  AuditExportFormat,
+  ReportLocale,
+} from "@/shared/audit-export-format";
 
 export type AuditExportJob = typeof auditExportJobs.$inferSelect;
 
@@ -16,6 +20,8 @@ async function createJob(input: {
   filtersJson: string;
   workflowInstanceId: string;
   createdByUserId: string;
+  format: AuditExportFormat;
+  locale: ReportLocale;
 }): Promise<void> {
   await db.insert(auditExportJobs).values({
     id: input.id,
@@ -25,6 +31,8 @@ async function createJob(input: {
     filtersJson: input.filtersJson,
     workflowInstanceId: input.workflowInstanceId,
     createdByUserId: input.createdByUserId,
+    format: input.format,
+    locale: input.locale,
     status: "queued",
   });
 }

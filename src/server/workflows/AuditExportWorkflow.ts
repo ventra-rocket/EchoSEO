@@ -26,6 +26,8 @@ import {
 } from "@/server/features/audit/exports/audit-export-build";
 import { collectExportRows } from "@/server/features/audit/exports/audit-export-collect";
 import { putAuditExport } from "@/server/features/audit/exports/audit-export-store";
+import { buildReportHtml } from "@/server/features/audit/exports/report-template";
+import { renderReportArtifact } from "@/server/features/audit/exports/report-pdf";
 
 const FAILURE_MESSAGE = "The export could not be generated.";
 
@@ -94,9 +96,9 @@ export async function runAuditExport(
       AuditExportRepository.markProcessing(jobId),
     );
 
-    // Build the CSV/JSON/manifest, zip, and store in one step: the ZIP buffer
-    // stays transient and never crosses a step boundary (1 MiB cap). Only small
-    // values are read back after.
+    // Build the artifact and store it in one step: the buffer — a ZIP or a
+    // rendered PDF — stays transient and never crosses a step boundary (1 MiB
+    // cap). Only small values are read back after.
     await step.do("build-and-store", async () => {
       const job = await AuditExportRepository.getJobById(jobId);
       if (!job) {
@@ -151,19 +153,36 @@ export async function runAuditExport(
         truncated,
       });
 
-      const zip = zipSync({
-        "issues.csv": strToU8(built.csv),
-        "issues.json": strToU8(built.json),
-        "manifest.json": strToU8(built.manifest),
-      });
+      const artifact =
+        job.format === "zip"
+          ? {
+              bytes: zipSync({
+                "issues.csv": strToU8(built.csv),
+                "issues.json": strToU8(built.json),
+                "manifest.json": strToU8(built.manifest),
+              }),
+            }
+          : await renderReportArtifact({
+              format: job.format,
+              html: buildReportHtml({
+                auditId: job.auditId,
+                startUrl: audit.startUrl,
+                snapshotSealedAt: snapshot?.sealedAt ?? null,
+                exportedAt: built.manifestData.exportedAt,
+                occurrences,
+                truncated,
+                locale: job.locale,
+                filters: filtersForManifest(filters),
+              }),
+            });
 
-      const r2Key = await putAuditExport(jobId, zip);
+      const r2Key = await putAuditExport(jobId, artifact.bytes, job.format);
       const now = new Date();
       await AuditExportRepository.markReady({
         jobId,
         r2Key,
         rowCount: built.manifestData.rowCount,
-        sizeBytes: zip.length,
+        sizeBytes: artifact.bytes.length,
         readyAt: now.toISOString(),
         expiresAt: new Date(
           now.getTime() + EXPORT_RETENTION_DAYS * DAY_MS,

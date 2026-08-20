@@ -20,6 +20,8 @@ import {
   resolveWorkspaceRole,
 } from "@/server/features/audit/authz/workspace-role";
 import { AppError } from "@/server/lib/errors";
+import type { AuditExportFormat } from "@/shared/audit-export-format";
+import type { ReportLocale } from "@/shared/audit-export-format";
 
 interface ExportFilters {
   issueGroup?: string;
@@ -37,6 +39,14 @@ export interface AuditExportJobView {
   readyAt: string | null;
   expiresAt: string | null;
   errorMessage: string | null;
+  /** Which artifact this job built, so the list can label each download. */
+  format: AuditExportFormat;
+  /**
+   * Which language it was rendered in. Two report jobs for one audit differ only
+   * by this, and the panel's language select is what produced the difference — so
+   * without it they render as two identical rows.
+   */
+  locale: ReportLocale;
   /** True only while the artifact is downloadable (ready and not expired). */
   downloadable: boolean;
 }
@@ -64,6 +74,8 @@ function toView(job: AuditExportJob, now: Date): AuditExportJobView {
     readyAt: job.readyAt,
     expiresAt: job.expiresAt,
     errorMessage: job.errorMessage,
+    format: job.format,
+    locale: job.locale,
     downloadable: job.status === "ready" && !isExpired(job, now),
   };
 }
@@ -75,6 +87,8 @@ async function requestExport(input: {
   organizationId: string;
   authMode: AuthMode;
   filters: ExportFilters;
+  format: AuditExportFormat;
+  locale: ReportLocale;
 }): Promise<{ jobId: string }> {
   const role = await resolveWorkspaceRole({
     userId: input.actorUserId,
@@ -126,6 +140,8 @@ async function requestExport(input: {
     filtersJson: JSON.stringify(cleanFilters(input.filters)),
     workflowInstanceId: jobId,
     createdByUserId: input.actorUserId,
+    format: input.format,
+    locale: input.locale,
   });
 
   try {
@@ -156,6 +172,8 @@ async function listExports(input: {
 interface ResolvedDownload {
   r2Key: string;
   auditId: string;
+  /** Drives the response's content type and filename. */
+  format: AuditExportFormat;
 }
 
 /**
@@ -174,7 +192,7 @@ async function resolveDownload(input: {
   );
   if (!job || job.status !== "ready" || !job.r2Key) return null;
   if (isExpired(job, new Date())) return null;
-  return { r2Key: job.r2Key, auditId: job.auditId };
+  return { r2Key: job.r2Key, auditId: job.auditId, format: job.format };
 }
 
 export const AuditExportService = {

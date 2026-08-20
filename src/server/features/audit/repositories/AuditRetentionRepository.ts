@@ -17,6 +17,7 @@
 import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
+import type { AuditExportFormat } from "@/shared/audit-export-format";
 import {
   audits,
   auditIssueOccurrences,
@@ -73,13 +74,18 @@ async function markExportsExpired(ids: string[]): Promise<void> {
   }
 }
 
-/** Export builds stuck queued/processing past the stale cutoff. */
-async function findStaleActiveExportIds(
+/**
+ * Export builds stuck queued/processing past the stale cutoff, with the format
+ * each asked for. The format is what makes an orphaned object's key derivable: a
+ * build that died before `markReady` left its `r2Key` null, so the sweep has
+ * only the id and the extension to go on.
+ */
+async function findStaleActiveExports(
   sqliteCutoff: string,
   limit: number,
-): Promise<string[]> {
-  const rows = await db
-    .select({ id: auditExportJobs.id })
+): Promise<Array<{ id: string; format: AuditExportFormat }>> {
+  return db
+    .select({ id: auditExportJobs.id, format: auditExportJobs.format })
     .from(auditExportJobs)
     .where(
       and(
@@ -88,7 +94,6 @@ async function findStaleActiveExportIds(
       ),
     )
     .limit(limit);
-  return rows.map((row) => row.id);
 }
 
 async function markExportsFailed(
@@ -298,7 +303,7 @@ async function deleteAuditCascade(auditId: string): Promise<void> {
 export const AuditRetentionRepository = {
   findExpiredExports,
   markExportsExpired,
-  findStaleActiveExportIds,
+  findStaleActiveExports,
   markExportsFailed,
   findAuditIdsPastRetention,
   findExportKeysForAudits,

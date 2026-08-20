@@ -1,0 +1,1 @@
+ALTER TABLE `audit_export_jobs` ADD `locale` text DEFAULT 'en' NOT NULL;
