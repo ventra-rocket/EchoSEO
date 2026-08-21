@@ -25,10 +25,18 @@ const LocaleContext = React.createContext<LocaleContextValue | null>(null);
  * FreeSeoCheckLanding), so each language is a crawlable per-URL signal rather than
  * a cookie the crawler never sends.
  */
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = React.useState<Locale>(() =>
+export function I18nProvider({
+  children,
+  locale: forcedLocale,
+}: {
+  children?: React.ReactNode;
+  /** URL-owned public surfaces pass this so SSR never depends on a client cookie. */
+  locale?: Locale;
+}) {
+  const [clientLocale, setLocaleState] = React.useState<Locale>(() =>
     readClientLocale(),
   );
+  const locale = forcedLocale ?? clientLocale;
 
   React.useEffect(() => {
     document.documentElement.lang = locale;

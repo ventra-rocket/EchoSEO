@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { useIntl } from "react-intl";
 import { ExportToSheetsButton } from "@/client/components/table/ExportToSheetsButton";
 import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import type { SerpResultItem } from "@/types/keywords";
@@ -26,6 +27,7 @@ export function SerpAnalysisCard({
    * "no details for this keyword" state can be claimed. */
   seoKeyMissing: boolean;
 }) {
+  const intl = useIntl();
   const totalPages = Math.ceil(items.length / pageSize);
   const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
 
@@ -37,7 +39,7 @@ export function SerpAnalysisCard({
         <p>{error}</p>
         {onRetry ? (
           <button className="btn btn-xs" onClick={onRetry}>
-            Retry
+            {intl.formatMessage({ id: "common.action.retry" })}
           </button>
         ) : null}
       </div>
@@ -49,7 +51,10 @@ export function SerpAnalysisCard({
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="text-xs text-base-content/50">
-          {items.length} organic results
+          {intl.formatMessage(
+            { id: "keywordUi.serp.resultCount" },
+            { count: items.length },
+          )}
         </div>
         <ExportToSheetsButton
           headers={["Rank", "Title", "URL", "Domain"]}
@@ -73,13 +78,17 @@ export function SerpAnalysisCard({
 }
 
 function SerpAnalysisTable({ items }: { items: SerpResultItem[] }) {
+  const intl = useIntl();
+
   return (
     <div className="overflow-x-auto">
       <table className="table table-xs w-full">
         <thead>
           <tr className="text-xs text-base-content/60">
             <th className="w-8">#</th>
-            <th>Page</th>
+            <th>
+              {intl.formatMessage({ id: "keywordUi.serp.table.pageColumn" })}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -125,12 +134,17 @@ function SerpAnalysisPagination({
   totalPages: number;
   onPageChange: (p: number) => void;
 }) {
+  const intl = useIntl();
+
   if (totalPages <= 1) return null;
 
   return (
     <div className="flex items-center justify-between mt-3 pt-3 border-t border-base-200">
       <span className="text-xs text-base-content/50">
-        Page {page + 1} of {totalPages}
+        {intl.formatMessage(
+          { id: "common.table.pageOf" },
+          { page: page + 1, totalPages },
+        )}
       </span>
       <div className="flex gap-1">
         <button
@@ -139,14 +153,14 @@ function SerpAnalysisPagination({
           onClick={() => onPageChange(page - 1)}
         >
           <ChevronLeft className="size-3.5" />
-          Prev
+          {intl.formatMessage({ id: "keywordUi.serp.pagination.prev" })}
         </button>
         <button
           className="btn btn-ghost btn-xs"
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(page + 1)}
         >
-          Next
+          {intl.formatMessage({ id: "keywordUi.serp.pagination.next" })}
           <ChevronRight className="size-3.5" />
         </button>
       </div>
@@ -169,11 +183,15 @@ function SerpAnalysisLoadingState() {
 }
 
 function SerpAnalysisEmptyState({ keyword }: { keyword?: string | null }) {
+  const intl = useIntl();
+
   return (
     <div className="text-sm text-base-content/50 text-center py-8">
-      <p>No SERP details available for this keyword yet.</p>
+      <p>{intl.formatMessage({ id: "keywordUi.serp.empty.title" })}</p>
       {keyword ? (
-        <p className="mt-1">Try clicking another keyword to load data.</p>
+        <p className="mt-1">
+          {intl.formatMessage({ id: "keywordUi.serp.empty.hint" })}
+        </p>
       ) : null}
     </div>
   );

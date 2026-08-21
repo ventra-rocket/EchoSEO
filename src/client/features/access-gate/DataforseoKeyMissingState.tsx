@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { KeyRound } from "lucide-react";
+import { FormattedMessage } from "react-intl";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
 
 /**
@@ -18,18 +19,17 @@ export function DataforseoKeyMissingState() {
       <KeyRound className="size-9 mx-auto text-base-content/35" />
       <div className="space-y-1.5">
         <p className="text-base font-medium text-base-content/80">
-          No DataForSEO API key connected
+          <FormattedMessage id="seoProvider.keyMissing.title" />
         </p>
         <p className="mx-auto max-w-lg text-sm text-base-content/60">
-          This data comes from DataForSEO. Nothing was requested, so there is
-          nothing to report about it yet — add your key to see results.
+          <FormattedMessage id="seoProvider.keyMissing.description" />
         </p>
       </div>
       <Link
         {...dataforseoHelpLinkOptions}
         className="link link-primary text-sm font-medium"
       >
-        How to add your DataForSEO API key
+        <FormattedMessage id="seoProvider.keyMissing.helpLink" />
       </Link>
     </section>
   );

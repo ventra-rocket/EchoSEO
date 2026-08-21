@@ -1,3 +1,4 @@
+import type { IntlShape } from "react-intl";
 import type { CsvValue } from "@/client/lib/csv";
 import { KEYWORD_RESEARCH_HEADERS } from "@/client/features/keywords/state/keywordControllerActions";
 import type { SavedKeywordRow } from "@/types/keywords";
@@ -39,12 +40,25 @@ export function toSavedKeywordSort(
   return "createdAt";
 }
 
-export function formatSavedKeywordNumber(value: number | null | undefined) {
+// Non-hook utilities: take `intl` as a parameter rather than calling
+// useIntl() themselves, matching formatCount/formatPosition
+// (src/client/features/search-performance/SearchPerformanceColumns.tsx).
+export function formatSavedKeywordNumber(
+  intl: IntlShape,
+  value: number | null | undefined,
+) {
   if (value == null) return "-";
-  return new Intl.NumberFormat().format(value);
+  return intl.formatNumber(value);
 }
 
-export function formatSavedKeywordDate(value: string | null | undefined) {
+// `fetchedAt` is a real timestamp (server sets it via `new Date().toISOString()`),
+// not calendar-only data, so it formats in the viewer's local time zone like any
+// other instant — no UTC pin. Pinning it would risk showing tomorrow's date for
+// a fetch that happened late in the day in a negative UTC offset.
+export function formatSavedKeywordDate(
+  intl: IntlShape,
+  value: string | null | undefined,
+) {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString();
+  return intl.formatDate(value, { dateStyle: "medium" });
 }

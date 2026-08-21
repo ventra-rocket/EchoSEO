@@ -1,6 +1,11 @@
-import { createElement } from "react";
+import { Fragment, createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { RawIntlProvider, createIntl } from "react-intl";
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { RawIntlProvider, createIntl, useIntl } from "react-intl";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -25,10 +30,28 @@ import { vi } from "@/client/i18n/messages/vi";
  */
 const CATALOGS = { en, vi } as const;
 
-const column = {
-  getIsSorted: () => false as const,
-  getToggleSortingHandler: () => undefined,
-};
+function HeaderHarness() {
+  const intl = useIntl();
+  const table = useReactTable({
+    data: [],
+    columns: buildKeywordSuggestionColumns(intl),
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  return createElement(
+    Fragment,
+    null,
+    table
+      .getFlatHeaders()
+      .map((header) =>
+        createElement(
+          Fragment,
+          { key: header.id },
+          flexRender(header.column.columnDef.header, header.getContext()),
+        ),
+      ),
+  );
+}
 
 function renderHeaders(locale: keyof typeof CATALOGS): {
   errors: string[];
@@ -41,21 +64,16 @@ function renderHeaders(locale: keyof typeof CATALOGS): {
     onError: (error) => errors.push(error.code),
   });
 
-  const titles = buildKeywordSuggestionColumns(intl).map((col) => {
-    const header = col.header;
-    if (typeof header !== "function") {
-      throw new Error("every suggestion column renders its header");
-    }
-    const markup = renderToStaticMarkup(
-      createElement(
-        RawIntlProvider,
-        { value: intl },
-        // The real caller is TanStack's header renderer; only `column` is read.
-        header({ column } as never),
-      ),
-    );
-    return /title="([^"]*)"/.exec(markup)?.[1] ?? "";
-  });
+  const markup = renderToStaticMarkup(
+    createElement(
+      RawIntlProvider,
+      { value: intl },
+      createElement(HeaderHarness),
+    ),
+  );
+  const titles = [...markup.matchAll(/title="([^"]*)"/g)].map(
+    (match) => match[1],
+  );
 
   return { errors, titles };
 }
@@ -101,7 +119,7 @@ describe("suggested keyword rows", () => {
     ).map((col) => col.id);
 
     expect(ids).toEqual(["keyword", "position", "searchVolume", "traffic"]);
-    expect(Object.keys(row).sort()).toEqual([
+    expect(Object.keys(row).toSorted()).toEqual([
       "keyword",
       "position",
       "searchVolume",

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Search } from "lucide-react";
+import { useIntl } from "react-intl";
 import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 
 type LocationOption = (typeof LOCATION_OPTIONS)[number];
@@ -13,10 +14,15 @@ type Props = {
   className?: string;
 };
 
-function matches(option: LocationOption, query: string): boolean {
+function matches(
+  option: LocationOption,
+  localizedLabel: string,
+  query: string,
+): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
   return (
+    localizedLabel.toLowerCase().includes(needle) ||
     option.label.toLowerCase().includes(needle) ||
     option.shortLabel.toLowerCase().includes(needle)
   );
@@ -32,6 +38,7 @@ export function LocationSelect({
   options = LOCATION_OPTIONS,
   className = "w-full",
 }: Props) {
+  const intl = useIntl();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -40,11 +47,26 @@ export function LocationSelect({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const selected = options.find((option) => option.code === value) ?? null;
+  const localizedOptions = useMemo(
+    () =>
+      options.map((option) => ({
+        option,
+        label:
+          intl.formatDisplayName(option.shortLabel, { type: "region" }) ??
+          option.label,
+      })),
+    [intl, options],
+  );
+
+  const selected =
+    localizedOptions.find(({ option }) => option.code === value) ?? null;
 
   const filtered = useMemo(
-    () => options.filter((option) => matches(option, query)),
-    [options, query],
+    () =>
+      localizedOptions.filter(({ option, label }) =>
+        matches(option, label, query),
+      ),
+    [localizedOptions, query],
   );
 
   // Reset transient state and focus the search input each time the menu opens.
@@ -92,8 +114,8 @@ export function LocationSelect({
         break;
       case "Enter": {
         event.preventDefault();
-        const option = filtered[activeIndex];
-        if (option) select(option);
+        const entry = filtered[activeIndex];
+        if (entry) select(entry.option);
         break;
       }
       case "Escape":
@@ -112,7 +134,10 @@ export function LocationSelect({
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
       >
-        <span className="truncate">{selected?.label ?? "Select country"}</span>
+        <span className="truncate">
+          {selected?.label ??
+            intl.formatMessage({ id: "common.location.selectCountry" })}
+        </span>
       </button>
 
       {open ? (
@@ -122,8 +147,13 @@ export function LocationSelect({
             <input
               ref={inputRef}
               type="text"
+              aria-label={intl.formatMessage({
+                id: "common.location.searchPlaceholder",
+              })}
               className="grow min-w-0 bg-transparent text-sm outline-none placeholder:text-base-content/40"
-              placeholder="Search countries"
+              placeholder={intl.formatMessage({
+                id: "common.location.searchPlaceholder",
+              })}
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -140,10 +170,13 @@ export function LocationSelect({
           >
             {filtered.length === 0 ? (
               <li className="w-full break-all px-3 py-2 text-sm text-base-content/50">
-                No countries match “{query.trim()}”
+                {intl.formatMessage(
+                  { id: "common.location.noMatches" },
+                  { query: query.trim() },
+                )}
               </li>
             ) : (
-              filtered.map((option, index) => {
+              filtered.map(({ option, label }, index) => {
                 const isSelected = option.code === value;
                 return (
                   <li
@@ -157,7 +190,7 @@ export function LocationSelect({
                       onClick={() => select(option)}
                       onMouseEnter={() => setActiveIndex(index)}
                     >
-                      <span className="flex-1 truncate">{option.label}</span>
+                      <span className="flex-1 truncate">{label}</span>
                       {isSelected ? (
                         <Check className="size-4 shrink-0 text-primary" />
                       ) : null}

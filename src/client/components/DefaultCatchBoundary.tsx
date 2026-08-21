@@ -1,16 +1,35 @@
 import { Link, rootRouteId, useMatch, useRouter } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import * as React from "react";
+import { useIntl } from "react-intl";
 import { shouldCaptureAppErrorCode } from "@/shared/error-codes";
 import {
   getErrorCode,
-  getStandardErrorMessage,
+  getLocalizedErrorMessage,
 } from "@/client/lib/error-messages";
 import { AuthConfigErrorCard } from "@/client/components/AuthConfigErrorCard";
 import { captureClientError } from "@/client/lib/posthog";
 import { UnauthenticatedErrorCard } from "@/client/components/UnauthenticatedErrorCard";
+import { I18nProvider } from "@/client/i18n/I18nProvider";
+import { getRouteOwnedLocale } from "@/client/i18n/config";
 
-export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
+export function DefaultCatchBoundary(props: ErrorComponentProps) {
+  // Root-route and public-route errors replace the subtree that normally owns
+  // I18nProvider. Keep the boundary self-sufficient so translating its copy
+  // cannot turn an original routing error into a missing-intl-context crash.
+  const router = useRouter();
+  const pathname = router.state.location.pathname;
+  const routeLocale = getRouteOwnedLocale(pathname);
+
+  return (
+    <I18nProvider locale={routeLocale}>
+      <DefaultCatchBoundaryContent {...props} />
+    </I18nProvider>
+  );
+}
+
+function DefaultCatchBoundaryContent({ error }: ErrorComponentProps) {
+  const intl = useIntl();
   const router = useRouter();
   const isRoot = useMatch({
     strict: false,
@@ -18,9 +37,10 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   });
   const pathname = router.state.location.pathname;
 
-  const message = getStandardErrorMessage(
+  const message = getLocalizedErrorMessage(
+    intl,
     error,
-    "Something went wrong. Please try again.",
+    intl.formatMessage({ id: "common.error.default" }),
   );
   const errorCode = getErrorCode(error);
 
@@ -74,11 +94,11 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
           }}
           className="btn btn-neutral btn-sm uppercase"
         >
-          Try Again
+          {intl.formatMessage({ id: "common.action.retry" })}
         </button>
         {isRoot ? (
           <Link to="/" className="btn btn-neutral btn-sm uppercase">
-            Home
+            {intl.formatMessage({ id: "common.action.home" })}
           </Link>
         ) : (
           <Link
@@ -89,7 +109,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
               window.history.back();
             }}
           >
-            Go Back
+            {intl.formatMessage({ id: "common.action.back" })}
           </Link>
         )}
       </div>

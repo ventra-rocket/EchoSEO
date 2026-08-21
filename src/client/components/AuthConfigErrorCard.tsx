@@ -1,4 +1,5 @@
 import { ShieldAlert } from "lucide-react";
+import { FormattedMessage } from "react-intl";
 
 const README_CLOUDFLARE_ACCESS_URL =
   "https://github.com/ventra-rocket/EchoSEO/blob/main/docs/SELF_HOSTING_CLOUDFLARE.md";
@@ -17,7 +18,7 @@ export function AuthConfigErrorCard({
       <div className="card-body gap-4">
         <h2 className="card-title gap-2">
           <ShieldAlert className="size-5 text-error" />
-          Authentication setup required
+          <FormattedMessage id="common.auth.config.title" />
         </h2>
 
         <div className="alert alert-error">
@@ -25,18 +26,24 @@ export function AuthConfigErrorCard({
         </div>
 
         <p className="text-sm text-base-content/70">
-          Check the auth environment variables for your selected
-          <code className="mx-1">AUTH_MODE</code>. Cloudflare Access requires
-          <code className="mx-1">TEAM_DOMAIN</code> and
-          <code className="mx-1">POLICY_AUD</code>. Hosted mode requires
-          <code className="mx-1">BETTER_AUTH_SECRET</code> and
-          <code className="ml-1">BETTER_AUTH_URL</code>.
+          <FormattedMessage
+            id="common.auth.config.instructions"
+            values={{
+              authMode: <code className="mx-1">AUTH_MODE</code>,
+              teamDomain: <code className="mx-1">TEAM_DOMAIN</code>,
+              policyAud: <code className="mx-1">POLICY_AUD</code>,
+              betterAuthSecret: (
+                <code className="mx-1">BETTER_AUTH_SECRET</code>
+              ),
+              betterAuthUrl: <code className="ml-1">BETTER_AUTH_URL</code>,
+            }}
+          />
         </p>
 
         <div className="card-actions justify-end">
           {onRetry ? (
             <button className="btn btn-ghost btn-sm" onClick={onRetry}>
-              Try Again
+              <FormattedMessage id="common.action.retry" />
             </button>
           ) : null}
           <a
@@ -45,7 +52,7 @@ export function AuthConfigErrorCard({
             target="_blank"
             rel="noreferrer"
           >
-            Open Setup Guide
+            <FormattedMessage id="common.action.openSetupGuide" />
           </a>
         </div>
       </div>

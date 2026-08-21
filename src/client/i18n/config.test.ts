@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_LOCALE,
+  getRouteOwnedLocale,
   isLocale,
   LOCALE_COOKIE,
   readClientLocale,
@@ -35,6 +36,18 @@ describe("resolveLocale", () => {
     expect(resolveLocale("fr")).toBe(DEFAULT_LOCALE);
     expect(resolveLocale(undefined)).toBe(DEFAULT_LOCALE);
     expect(resolveLocale("")).toBe(DEFAULT_LOCALE);
+  });
+});
+
+describe("getRouteOwnedLocale", () => {
+  it("uses the URL locale for public SSR and Vietnamese not-found routes", () => {
+    expect(getRouteOwnedLocale("/free-seo-check")).toBe("en");
+    expect(getRouteOwnedLocale("/vi/kiem-tra-seo")).toBe("vi");
+    expect(getRouteOwnedLocale("/vi/khong-ton-tai")).toBe("vi");
+  });
+
+  it("leaves authenticated routes to the persisted app locale", () => {
+    expect(getRouteOwnedLocale("/p/project-1/keywords")).toBeUndefined();
   });
 });
 

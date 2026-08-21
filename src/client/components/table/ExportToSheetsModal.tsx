@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { Check, ExternalLink, X } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 import {
   closeExportToSheetsModal,
@@ -9,6 +10,7 @@ import {
 } from "@/client/lib/exportToSheets";
 
 export function ExportToSheetsModal() {
+  const intl = useIntl();
   const state = useExportToSheetsModalState();
   // Close any stale modal when the user navigates away mid-flow. Deps must
   // be `[pathname]` only — adding `isOpen` would close the modal the instant
@@ -39,21 +41,21 @@ export function ExportToSheetsModal() {
             <Check className="size-4" />
           </span>
           <h3 id="export-to-sheets-title" className="text-base font-semibold">
-            Copied {rowCount} row{rowCount === 1 ? "" : "s"} to your clipboard
+            <FormattedMessage id="common.sheets.copied" values={{ rowCount }} />
           </h3>
         </div>
         <button
           type="button"
           className="btn btn-ghost btn-xs btn-square"
           onClick={closeExportToSheetsModal}
-          aria-label="Close"
+          aria-label={intl.formatMessage({ id: "common.action.close" })}
         >
           <X className="size-4" />
         </button>
       </div>
 
       <p className="text-sm text-base-content/75">
-        Open a new Google Sheet and paste to fill it.
+        <FormattedMessage id="common.sheets.instructions" />
       </p>
 
       <div className="flex justify-end">
@@ -62,7 +64,7 @@ export function ExportToSheetsModal() {
           className="btn btn-primary btn-sm gap-1.5"
           onClick={handleOpenSheet}
         >
-          Open new Google Sheet
+          <FormattedMessage id="common.sheets.open" />
           <ExternalLink className="size-3.5" />
         </button>
       </div>

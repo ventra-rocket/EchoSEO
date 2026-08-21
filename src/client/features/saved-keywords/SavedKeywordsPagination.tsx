@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useIntl } from "react-intl";
 import { SAVED_KEYWORD_PAGE_SIZES } from "./savedKeywordsUtils";
 
 export function SavedKeywordsPagination({
@@ -18,6 +19,7 @@ export function SavedKeywordsPagination({
     pageSize: (typeof SAVED_KEYWORD_PAGE_SIZES)[number],
   ) => void;
 }) {
+  const intl = useIntl();
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(totalCount, page * pageSize);
@@ -26,14 +28,18 @@ export function SavedKeywordsPagination({
     <div className="flex flex-col gap-3 border-t border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2 text-sm tabular-nums text-base-content/70">
         <span>
-          {start.toLocaleString()}-{end.toLocaleString()} of{" "}
-          {totalCount.toLocaleString()}
+          {intl.formatMessage(
+            { id: "common.table.rangeWithTotal" },
+            { start, end, total: totalCount },
+          )}
         </span>
         {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : null}
       </div>
       <div className="flex items-center gap-6">
         <label className="flex items-center gap-2 text-sm text-base-content/70">
-          <span className="whitespace-nowrap">Rows per page</span>
+          <span className="whitespace-nowrap">
+            {intl.formatMessage({ id: "common.table.rowsPerPage" })}
+          </span>
           <select
             className="select select-bordered select-sm w-20"
             value={pageSize}
@@ -43,14 +49,17 @@ export function SavedKeywordsPagination({
           >
             {SAVED_KEYWORD_PAGE_SIZES.map((size) => (
               <option key={size} value={size}>
-                {size}
+                {intl.formatNumber(size)}
               </option>
             ))}
           </select>
         </label>
         <div className="flex items-center gap-2">
           <span className="whitespace-nowrap text-sm tabular-nums text-base-content/70">
-            Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+            {intl.formatMessage(
+              { id: "common.table.pageOf" },
+              { page, totalPages },
+            )}
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -58,7 +67,9 @@ export function SavedKeywordsPagination({
               className="btn btn-ghost btn-sm btn-square"
               disabled={page <= 1 || isLoading}
               onClick={() => onPageChange(page - 1)}
-              aria-label="Previous page"
+              aria-label={intl.formatMessage({
+                id: "common.table.previousPage",
+              })}
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -67,7 +78,9 @@ export function SavedKeywordsPagination({
               className="btn btn-ghost btn-sm btn-square"
               disabled={page >= totalPages || isLoading}
               onClick={() => onPageChange(page + 1)}
-              aria-label="Next page"
+              aria-label={intl.formatMessage({
+                id: "common.table.nextPage",
+              })}
             >
               <ChevronRight className="size-4" />
             </button>

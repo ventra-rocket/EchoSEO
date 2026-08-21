@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { LOCATIONS, getLanguageCode } from "@/client/features/keywords/utils";
 import { DEFAULT_LOCATION_CODE } from "@/client/features/keywords/locations";
@@ -95,6 +96,7 @@ export function useKeywordResearchData(
   input: KeywordResearchQueryInput,
   addSearch: AddSearchFn,
 ) {
+  const intl = useIntl();
   const {
     clickstream,
     keywordInput,
@@ -174,7 +176,11 @@ export function useKeywordResearchData(
   const rows = hasSearched ? (researchQuery.data?.rows ?? []) : [];
   const researchError =
     hasSearched && researchQuery.isError
-      ? getStandardErrorMessage(researchQuery.error, "Research failed.")
+      ? getLocalizedErrorMessage(
+          intl,
+          researchQuery.error,
+          intl.formatMessage({ id: "keywordUi.research.errorDefault" }),
+        )
       : null;
 
   return {

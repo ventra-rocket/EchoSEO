@@ -1,5 +1,6 @@
 import { Check, Loader2, Plus, Search, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
+import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 import { resolveTagColor, tagDotClass } from "@/shared/tag-colors";
 import type { SavedKeywordTag, SavedKeywordTagSummary } from "@/types/keywords";
@@ -24,6 +25,7 @@ export function SavedKeywordsBulkTagsModal({
   onClose: () => void;
   onApply: (input: { addTags?: string[]; removeTagIds?: string[] }) => void;
 }) {
+  const intl = useIntl();
   const [mode, setMode] = useState<Mode>("add");
   const [query, setQuery] = useState("");
   const [addNames, setAddNames] = useState<string[]>([]);
@@ -97,11 +99,13 @@ export function SavedKeywordsBulkTagsModal({
       <div className="space-y-4">
         <div>
           <h3 id="bulk-tags-title" className="text-lg font-semibold">
-            Update tags
+            <FormattedMessage id="saved.bulkTagsModal.title" />
           </h3>
           <p className="text-sm text-base-content/65">
-            Apply or remove tags across {selectedCount} selected keyword
-            {selectedCount !== 1 ? "s" : ""}.
+            <FormattedMessage
+              id="saved.bulkTagsModal.subtitle"
+              values={{ count: selectedCount }}
+            />
           </p>
         </div>
 
@@ -109,13 +113,13 @@ export function SavedKeywordsBulkTagsModal({
           <SegmentButton
             active={mode === "add"}
             onClick={() => setMode("add")}
-            label="Add tags"
+            label={<FormattedMessage id="saved.bulkTagsModal.addTagsTab" />}
             count={addNames.length}
           />
           <SegmentButton
             active={mode === "remove"}
             onClick={() => setMode("remove")}
-            label="Remove tags"
+            label={<FormattedMessage id="saved.bulkTagsModal.removeTagsTab" />}
             count={removeIds.length}
             disabled={selectedRowTags.length === 0}
           />
@@ -148,7 +152,9 @@ export function SavedKeywordsBulkTagsModal({
                         )
                       }
                       trailing={<X className="size-3 opacity-70" />}
-                      title="Remove from selection"
+                      title={intl.formatMessage({
+                        id: "saved.bulkTagsModal.removeFromSelectionTitle",
+                      })}
                     />
                   );
                 })}
@@ -167,7 +173,9 @@ export function SavedKeywordsBulkTagsModal({
                     handleCreate();
                   }
                 }}
-                placeholder="Search or create…"
+                placeholder={intl.formatMessage({
+                  id: "saved.bulkTagsModal.searchPlaceholder",
+                })}
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-base-content/40"
               />
             </label>
@@ -180,18 +188,27 @@ export function SavedKeywordsBulkTagsModal({
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-base-200"
                 >
                   <Plus className="size-3.5 text-primary" />
-                  <span className="text-base-content/70">Create</span>
+                  <span className="text-base-content/70">
+                    <FormattedMessage id="saved.bulkTagsModal.createLabel" />
+                  </span>
                   <span className="font-medium">
-                    &ldquo;{trimmedQuery}&rdquo;
+                    <FormattedMessage
+                      id="saved.bulkTagsModal.createQuery"
+                      values={{ query: trimmedQuery }}
+                    />
                   </span>
                 </button>
               ) : null}
 
               {filteredAvailable.length === 0 && !showCreate ? (
                 <div className="px-3 py-6 text-center text-xs text-base-content/55">
-                  {availableTags.length === 0
-                    ? "No tags yet. Type a name above to create one."
-                    : "No tags match that search."}
+                  <FormattedMessage
+                    id={
+                      availableTags.length === 0
+                        ? "saved.bulkTagsModal.emptyNoTags"
+                        : "saved.bulkTagsModal.emptyNoMatches"
+                    }
+                  />
                 </div>
               ) : null}
 
@@ -219,7 +236,7 @@ export function SavedKeywordsBulkTagsModal({
                     />
                     <span className="flex-1 truncate text-sm">{tag.name}</span>
                     <span className="text-[11px] tabular-nums text-base-content/45">
-                      {tag.keywordCount}
+                      <FormattedNumber value={tag.keywordCount} />
                     </span>
                   </button>
                 );
@@ -230,7 +247,7 @@ export function SavedKeywordsBulkTagsModal({
           <div className="space-y-2">
             {selectedRowTags.length === 0 ? (
               <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-6 text-center text-xs text-base-content/55">
-                The selected keywords don&apos;t have any tags to remove.
+                <FormattedMessage id="saved.bulkTagsModal.removeEmpty" />
               </div>
             ) : (
               <div className="flex flex-wrap gap-1.5 rounded-md border border-base-300 p-3">
@@ -244,7 +261,11 @@ export function SavedKeywordsBulkTagsModal({
                       onClick={() => handleToggleRemove(tag)}
                       selected={checked}
                       trailing={checked ? <Check className="size-3" /> : null}
-                      title={checked ? "Will be removed" : "Click to remove"}
+                      title={intl.formatMessage({
+                        id: checked
+                          ? "saved.bulkTagsModal.willBeRemovedTitle"
+                          : "saved.bulkTagsModal.clickToRemoveTitle",
+                      })}
                     />
                   );
                 })}
@@ -252,8 +273,10 @@ export function SavedKeywordsBulkTagsModal({
             )}
             {removeIds.length > 0 ? (
               <p className="text-xs text-base-content/55">
-                {removeIds.length} tag{removeIds.length !== 1 ? "s" : ""} will
-                be detached from the selected keywords.
+                <FormattedMessage
+                  id="saved.bulkTagsModal.removeSummary"
+                  values={{ count: removeIds.length }}
+                />
               </p>
             ) : null}
           </div>
@@ -265,7 +288,7 @@ export function SavedKeywordsBulkTagsModal({
             className="rounded-md px-3 py-1.5 text-sm text-base-content/70 hover:bg-base-200"
             onClick={onClose}
           >
-            Cancel
+            <FormattedMessage id="saved.bulkTagsModal.cancel" />
           </button>
           <button
             type="button"
@@ -279,7 +302,7 @@ export function SavedKeywordsBulkTagsModal({
             }
           >
             {isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-            Apply
+            <FormattedMessage id="saved.bulkTagsModal.apply" />
           </button>
         </div>
       </div>
@@ -296,7 +319,7 @@ function SegmentButton({
 }: {
   active: boolean;
   onClick: () => void;
-  label: string;
+  label: ReactNode;
   count: number;
   disabled?: boolean;
 }) {
@@ -314,7 +337,7 @@ function SegmentButton({
       {label}
       {count > 0 ? (
         <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-content">
-          {count}
+          <FormattedNumber value={count} />
         </span>
       ) : null}
     </button>

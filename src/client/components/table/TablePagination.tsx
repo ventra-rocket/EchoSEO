@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { type IntlShape, useIntl } from "react-intl";
 
 type Props = {
   page: number;
@@ -12,17 +13,27 @@ type Props = {
 };
 
 function formatRange(
+  intl: IntlShape,
   page: number,
   pageSize: number,
   totalCount: number | null,
 ) {
   const start = (page - 1) * pageSize + 1;
   if (totalCount == null) {
-    return `${start.toLocaleString()}–${(start + pageSize - 1).toLocaleString()}`;
+    return `${intl.formatNumber(start)}–${intl.formatNumber(
+      start + pageSize - 1,
+    )}`;
   }
-  if (totalCount === 0) return "0";
+  if (totalCount === 0) return intl.formatNumber(0);
   const end = Math.min(totalCount, start + pageSize - 1);
-  return `${start.toLocaleString()}–${end.toLocaleString()} of ${totalCount.toLocaleString()}`;
+  return intl.formatMessage(
+    { id: "common.table.rangeWithTotal" },
+    {
+      start,
+      end,
+      total: totalCount,
+    },
+  );
 }
 
 export function TablePagination({
@@ -35,6 +46,7 @@ export function TablePagination({
   onPageChange,
   onPageSizeChange,
 }: Props) {
+  const intl = useIntl();
   const totalPages =
     totalCount != null ? Math.max(1, Math.ceil(totalCount / pageSize)) : null;
   const canGoPrev = page > 1;
@@ -43,7 +55,7 @@ export function TablePagination({
   return (
     <div className="flex flex-col gap-3 border-t border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2 text-sm text-base-content/70 tabular-nums">
-        <span>{formatRange(page, pageSize, totalCount)}</span>
+        <span>{formatRange(intl, page, pageSize, totalCount)}</span>
         {isLoading ? (
           <span className="loading loading-spinner loading-xs" />
         ) : null}
@@ -51,7 +63,9 @@ export function TablePagination({
 
       <div className="flex items-center gap-6">
         <label className="flex items-center gap-2 text-sm text-base-content/70">
-          <span className="whitespace-nowrap">Rows per page</span>
+          <span className="whitespace-nowrap">
+            {intl.formatMessage({ id: "common.table.rowsPerPage" })}
+          </span>
           <select
             className="select select-bordered select-sm w-20"
             value={pageSize}
@@ -59,7 +73,7 @@ export function TablePagination({
           >
             {pageSizes.map((size) => (
               <option key={size} value={size}>
-                {size}
+                {intl.formatNumber(size)}
               </option>
             ))}
           </select>
@@ -67,13 +81,19 @@ export function TablePagination({
 
         <div className="flex items-center gap-2">
           <span className="whitespace-nowrap text-sm tabular-nums text-base-content/70">
-            Page {page.toLocaleString()}
-            {totalPages != null ? ` of ${totalPages.toLocaleString()}` : ""}
+            {totalPages == null
+              ? intl.formatMessage({ id: "common.table.page" }, { page })
+              : intl.formatMessage(
+                  { id: "common.table.pageOf" },
+                  { page, totalPages },
+                )}
           </span>
           <div className="flex items-center gap-1">
             <button
               type="button"
-              aria-label="Previous page"
+              aria-label={intl.formatMessage({
+                id: "common.table.previousPage",
+              })}
               className="btn btn-ghost btn-sm btn-square"
               disabled={!canGoPrev || isLoading}
               onClick={() => onPageChange(page - 1)}
@@ -82,7 +102,9 @@ export function TablePagination({
             </button>
             <button
               type="button"
-              aria-label="Next page"
+              aria-label={intl.formatMessage({
+                id: "common.table.nextPage",
+              })}
               className="btn btn-ghost btn-sm btn-square"
               disabled={!canGoNext || isLoading}
               onClick={() => onPageChange(page + 1)}

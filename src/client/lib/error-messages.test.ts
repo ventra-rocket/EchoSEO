@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { createIntl } from "react-intl";
+import {
+  getLocalizedErrorMessage,
+  getStandardErrorMessage,
+} from "@/client/lib/error-messages";
+import { en } from "@/client/i18n/messages/en";
+import { vi } from "@/client/i18n/messages/vi";
 
 describe("getStandardErrorMessage", () => {
   it("maps known error codes to standard copy", () => {
@@ -26,5 +32,32 @@ describe("getStandardErrorMessage", () => {
         new Error("DataForSEO task missing billing metadata. Response: {...}"),
       ),
     ).toBe("DataForSEO task missing billing metadata. Response: {...}");
+  });
+
+  it("localizes shared error codes without replacing custom messages", () => {
+    const english = createIntl({ locale: "en", messages: en });
+    const vietnamese = createIntl({ locale: "vi", messages: vi });
+
+    expect(
+      getLocalizedErrorMessage(
+        english,
+        new Error("UPSTREAM_UNAVAILABLE"),
+        "fallback",
+      ),
+    ).toBe(en["common.error.code.upstreamUnavailable"]);
+    expect(
+      getLocalizedErrorMessage(
+        vietnamese,
+        new Error("UPSTREAM_UNAVAILABLE"),
+        "fallback",
+      ),
+    ).toBe(vi["common.error.code.upstreamUnavailable"]);
+    expect(
+      getLocalizedErrorMessage(
+        vietnamese,
+        new Error("Provider returned a custom message"),
+        "fallback",
+      ),
+    ).toBe("Provider returned a custom message");
   });
 });

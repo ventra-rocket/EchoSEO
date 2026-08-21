@@ -1,4 +1,5 @@
 import { Info, Search } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { getFieldError } from "@/client/lib/forms";
 import {
   isResultLimit,
@@ -24,6 +25,7 @@ function getTextareaRows(value: string): number {
 
 export function KeywordResearchSearchBar({ controller }: Props) {
   const { controlsForm, handleSearchSubmit } = controller;
+  const intl = useIntl();
 
   return (
     <div className="card border border-base-300 bg-base-100">
@@ -47,7 +49,9 @@ export function KeywordResearchSearchBar({ controller }: Props) {
                   <textarea
                     className="grow min-w-0 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-base-content/40"
                     rows={rows}
-                    placeholder="Enter keywords, one per line"
+                    placeholder={intl.formatMessage({
+                      id: "keywordResearch.searchBar.keywordPlaceholder",
+                    })}
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onKeyDown={(event) => {
@@ -91,7 +95,10 @@ export function KeywordResearchSearchBar({ controller }: Props) {
                 >
                   {RESULT_LIMITS.map((limit) => (
                     <option key={limit} value={limit}>
-                      {limit} results
+                      <FormattedMessage
+                        id="keywordResearch.searchBar.resultLimitOption"
+                        values={{ count: limit }}
+                      />
                     </option>
                   ))}
                 </select>
@@ -107,10 +114,20 @@ export function KeywordResearchSearchBar({ controller }: Props) {
                     field.handleChange(normalizeKeywordMode(event.target.value))
                   }
                 >
-                  <option value="auto">Auto</option>
-                  <option value="related">Related keywords</option>
-                  <option value="suggestions">Suggestions</option>
-                  <option value="ideas">Ideas</option>
+                  <option value="auto">
+                    {intl.formatMessage({ id: "keywordResearch.mode.auto" })}
+                  </option>
+                  <option value="related">
+                    {intl.formatMessage({ id: "keywordResearch.mode.related" })}
+                  </option>
+                  <option value="suggestions">
+                    {intl.formatMessage({
+                      id: "keywordResearch.mode.suggestions",
+                    })}
+                  </option>
+                  <option value="ideas">
+                    {intl.formatMessage({ id: "keywordResearch.mode.ideas" })}
+                  </option>
                 </select>
               )}
             </controlsForm.Field>
@@ -119,7 +136,7 @@ export function KeywordResearchSearchBar({ controller }: Props) {
               type="submit"
               className="btn btn-primary w-full px-6 font-semibold lg:w-auto lg:shrink-0"
             >
-              Search
+              <FormattedMessage id="keywordResearch.searchBar.submit" />
             </button>
           </div>
         </form>
@@ -148,12 +165,14 @@ export function KeywordResearchSearchBar({ controller }: Props) {
                         }
                       />
                       <span className="text-sm font-medium text-base-content/80">
-                        Clickstream-refined volumes
+                        <FormattedMessage id="keywordResearch.searchBar.clickstreamLabel" />
                       </span>
                     </label>
                     <div
                       className="tooltip tooltip-right"
-                      data-tip="Google reports one combined search volume for similar keywords (e.g. 'seo tool' and 'seo tools'). Turn this on to estimate each keyword's own volume. Costs 2x the credits."
+                      data-tip={intl.formatMessage({
+                        id: "keywordResearch.searchBar.clickstreamTooltip",
+                      })}
                     >
                       <Info className="size-3.5 text-base-content/50" />
                     </div>
@@ -167,9 +186,7 @@ export function KeywordResearchSearchBar({ controller }: Props) {
               >
                 <Info className="mt-0.5 size-4 shrink-0 text-info" />
                 <span>
-                  Keyword data for this country comes from Google Ads — search
-                  volume, CPC, and trends are available, but difficulty and
-                  intent are not.
+                  <FormattedMessage id="keywordResearch.searchBar.googleAdsNotice" />
                 </span>
               </div>
             )

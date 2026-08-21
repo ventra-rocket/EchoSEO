@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { FormattedMessage } from "react-intl";
 import { useCallback, useEffect, useMemo } from "react";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { getErrorCode } from "@/client/lib/error-messages";
@@ -192,9 +193,11 @@ export function KeywordResearchPage(input: Props) {
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
         <div>
-          <h1 className="text-2xl font-semibold">Keyword Research</h1>
+          <h1 className="text-2xl font-semibold">
+            <FormattedMessage id="keywordResearch.page.title" />
+          </h1>
           <p className="text-sm text-base-content/70">
-            Discover keyword ideas, search demand, and ranking opportunities.
+            <FormattedMessage id="keywordResearch.page.subtitle" />
           </p>
         </div>
 
@@ -208,7 +211,7 @@ export function KeywordResearchPage(input: Props) {
               onClick={showRecentSearches}
             >
               <ArrowLeft className="size-4" />
-              Recent searches
+              <FormattedMessage id="keywordResearch.page.recentSearches" />
             </button>
             <SearchTabStrip
               projectId={projectId}
@@ -254,11 +257,11 @@ function KeywordResearchContent({
           </div>
           {isCreditsError ? (
             <Link to={BILLING_ROUTE} className="btn btn-sm">
-              Go to Billing
+              <FormattedMessage id="keywordResearch.page.error.goToBilling" />
             </Link>
           ) : (
             <button className="btn btn-sm" onClick={controller.retrySearch}>
-              Try again
+              <FormattedMessage id="common.action.retry" />
             </button>
           )}
         </div>
@@ -289,11 +292,14 @@ function KeywordSaveDialog({
     <div className="modal modal-open">
       <div className="modal-box">
         <h3 className="font-bold text-lg">
-          Save {controller.selectedRows.size} Keywords
+          <FormattedMessage
+            id="keywordResearch.page.saveDialog.title"
+            values={{ count: controller.selectedRows.size }}
+          />
         </h3>
         <div className="py-4">
           <p className="text-base-content/70 text-sm">
-            These keywords will be saved to your current project.
+            <FormattedMessage id="keywordResearch.page.saveDialog.body" />
           </p>
         </div>
         <div className="modal-action">
@@ -301,10 +307,10 @@ function KeywordSaveDialog({
             className="btn"
             onClick={() => controller.setShowSaveDialog(false)}
           >
-            Cancel
+            <FormattedMessage id="keywordResearch.page.saveDialog.cancel" />
           </button>
           <button className="btn btn-primary" onClick={controller.confirmSave}>
-            Save
+            <FormattedMessage id="keywordResearch.page.saveDialog.confirm" />
           </button>
         </div>
       </div>

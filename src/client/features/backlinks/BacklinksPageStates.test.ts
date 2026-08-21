@@ -1,10 +1,12 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
 import {
   BacklinksErrorState,
   BacklinksOverviewEmptyState,
 } from "./BacklinksPageStates";
+import { en } from "@/client/i18n/messages/en";
 
 // The states under test link to the help page; the router itself is not.
 vi.mock("@tanstack/react-router", () => ({
@@ -13,9 +15,15 @@ vi.mock("@tanstack/react-router", () => ({
   linkOptions: (options: unknown) => options,
 }));
 
+function renderWithIntl(node: ReactNode): string {
+  return renderToStaticMarkup(
+    createElement(IntlProvider, { locale: "en", messages: en }, node),
+  );
+}
+
 describe("BacklinksErrorState", () => {
   it("renders a visible retry state", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderWithIntl(
       createElement(BacklinksErrorState, {
         errorMessage: "Could not load backlinks data.",
         onRetry: vi.fn(),
@@ -30,7 +38,7 @@ describe("BacklinksErrorState", () => {
 
 describe("BacklinksOverviewEmptyState", () => {
   it("reports the missing key and offers no retry that cannot fire", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderWithIntl(
       createElement(BacklinksOverviewEmptyState, {
         seoKeyMissing: true,
         errorMessage: null,
@@ -45,7 +53,7 @@ describe("BacklinksOverviewEmptyState", () => {
   });
 
   it("still reports a real failed request as retryable", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderWithIntl(
       createElement(BacklinksOverviewEmptyState, {
         seoKeyMissing: false,
         errorMessage: "Could not load backlinks data.",

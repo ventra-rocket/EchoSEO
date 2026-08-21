@@ -1,4 +1,5 @@
 import { SlidersHorizontal } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { SavedKeywordsFilterPanel } from "./SavedKeywordsFilterPanel";
 import { SavedKeywordsTagFilter } from "./SavedKeywordsTagFilter";
 import type { TagColorKey } from "@/shared/tag-colors";
@@ -36,6 +37,7 @@ export function SavedKeywordsFilters({
   }) => void;
   onDeleteTag: (tagId: string) => void;
 }) {
+  const intl = useIntl();
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 px-4 py-2.5">
@@ -43,13 +45,13 @@ export function SavedKeywordsFilters({
           type="button"
           className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
           onClick={onToggleFilters}
-          title="Toggle table filters"
+          title={intl.formatMessage({ id: "saved.table.filter.toggleTooltip" })}
         >
           <SlidersHorizontal className="size-3.5" />
-          Filters
+          <FormattedMessage id="saved.table.filter.filtersLabel" />
           {activeFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {activeFilterCount}
+              {intl.formatNumber(activeFilterCount)}
             </span>
           ) : null}
         </button>

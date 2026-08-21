@@ -7,6 +7,7 @@ import {
   Sheet,
   SlidersHorizontal,
 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   downloadKeywordResearchCsv,
   KEYWORD_RESEARCH_HEADERS,
@@ -45,7 +46,10 @@ export function KeywordResearchMobileResults({ controller }: Props) {
           }`}
           onClick={() => controller.setMobileTab("keywords")}
         >
-          Keywords ({filteredRows.length})
+          <FormattedMessage
+            id="keywordResearch.mobileResults.tabKeywords"
+            values={{ count: filteredRows.length }}
+          />
         </button>
         <button
           className={`flex-1 py-2 text-sm font-medium text-center border-b-2 transition-colors ${
@@ -55,7 +59,7 @@ export function KeywordResearchMobileResults({ controller }: Props) {
           }`}
           onClick={() => controller.setMobileTab("serp")}
         >
-          SERP Analysis
+          <FormattedMessage id="keywordResearch.results.serpHeading" />
         </button>
       </div>
 
@@ -89,15 +93,25 @@ function MobileKeywordResults({ controller }: Props) {
     sheetsExportRows,
     showFilters,
   } = controller;
+  const intl = useIntl();
   const { page, pageSize, pageRows, setPage, setPageSize } =
     useKeywordResearchPagination(filteredRows);
 
   const keywordCountLabel =
     selectedRows.size > 0
-      ? `${selectedRows.size} selected`
+      ? intl.formatMessage(
+          { id: "keywordResearch.mobileResults.selectedCount" },
+          { count: selectedRows.size },
+        )
       : activeFilterCount > 0
-        ? `Showing ${filteredRows.length} of ${rows.length}`
-        : `Showing ${filteredRows.length} keywords`;
+        ? intl.formatMessage(
+            { id: "keywordResearch.mobileResults.filteredOfTotal" },
+            { filtered: filteredRows.length, total: rows.length },
+          )
+        : intl.formatMessage(
+            { id: "keywordResearch.mobileResults.filteredCount" },
+            { count: filteredRows.length },
+          );
 
   const canExport = filteredRows.length > 0;
   const selectedExportRows = filteredRows
@@ -133,9 +147,13 @@ function MobileKeywordResults({ controller }: Props) {
           className="mx-4 mt-2 rounded-lg border border-warning/40 bg-warning/15 px-3 py-2 text-xs text-base-content"
           role="status"
         >
-          No exact match for{" "}
-          <span className="font-medium">"{controller.searchedKeyword}"</span>.
-          Showing closest related keywords.
+          <FormattedMessage
+            id="keywordResearch.mobileResults.approximateMatch"
+            values={{
+              keyword: controller.searchedKeyword,
+              b: (chunks) => <span className="font-medium">{chunks}</span>,
+            }}
+          />
         </div>
       ) : null}
 
@@ -145,7 +163,7 @@ function MobileKeywordResults({ controller }: Props) {
           onClick={() => controller.setShowFilters((current) => !current)}
         >
           <SlidersHorizontal className="size-3.5" />
-          Filters
+          <FormattedMessage id="keywordResearch.results.filtersButton" />
           {activeFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
               {activeFilterCount}
@@ -161,7 +179,7 @@ function MobileKeywordResults({ controller }: Props) {
             tabIndex={0}
             role="button"
             className={`btn btn-ghost btn-xs gap-1 ${!canExport ? "btn-disabled" : ""}`}
-            aria-label="Export"
+            aria-label={intl.formatMessage({ id: "common.table.export" })}
           >
             <Download className="size-3.5" />
             <ChevronDown className="size-3 opacity-60" />
@@ -173,13 +191,13 @@ function MobileKeywordResults({ controller }: Props) {
             <li>
               <button onClick={handleExportToSheets} disabled={!canExport}>
                 <Sheet className="size-4" />
-                Export to Sheets
+                <FormattedMessage id="common.sheets.export" />
               </button>
             </li>
             <li>
               <button onClick={controller.exportCsv} disabled={!canExport}>
                 <FileDown className="size-4" />
-                Export CSV
+                <FormattedMessage id="keywordResearch.results.exportCsv" />
               </button>
             </li>
           </ul>
@@ -195,17 +213,19 @@ function MobileKeywordResults({ controller }: Props) {
               icon={<Save className="size-3.5" />}
               onClick={controller.handleSaveKeywords}
             >
-              Save
+              <FormattedMessage id="keywordResearch.mobileResults.saveButton" />
             </TableBulkActionButton>
             <TableBulkExportMenu
               actions={[
                 {
-                  label: "Export to Sheets",
+                  label: intl.formatMessage({ id: "common.sheets.export" }),
                   icon: <Sheet className="size-4" />,
                   onClick: handleExportSelectionToSheets,
                 },
                 {
-                  label: "Export CSV",
+                  label: intl.formatMessage({
+                    id: "keywordResearch.results.exportCsv",
+                  }),
                   icon: <FileDown className="size-4" />,
                   onClick: handleExportSelectionCsv,
                 },
@@ -244,12 +264,15 @@ function MobileKeywordResults({ controller }: Props) {
 
 function MobileFilters({ controller }: Props) {
   const { activeFilterCount, filtersForm } = controller;
+  const intl = useIntl();
 
   return (
     <div className="shrink-0 border-b border-base-300 bg-gradient-to-b from-base-100 to-base-200/30 px-4 py-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold">Refine table results</p>
+          <p className="text-xs font-semibold">
+            <FormattedMessage id="keywordResearch.results.refineResults" />
+          </p>
           {activeFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
               {activeFilterCount}
@@ -262,7 +285,7 @@ function MobileFilters({ controller }: Props) {
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
-          Clear
+          <FormattedMessage id="keywordResearch.mobileResults.clear" />
         </button>
       </div>
 
@@ -271,7 +294,9 @@ function MobileFilters({ controller }: Props) {
           {(field) => (
             <input
               className="input input-bordered input-sm bg-base-100"
-              placeholder="Include terms (audit, checker)"
+              placeholder={intl.formatMessage({
+                id: "keywordResearch.mobileResults.includePlaceholder",
+              })}
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
             />
@@ -281,7 +306,9 @@ function MobileFilters({ controller }: Props) {
           {(field) => (
             <input
               className="input input-bordered input-sm bg-base-100"
-              placeholder="Exclude terms (jobs, course)"
+              placeholder={intl.formatMessage({
+                id: "keywordResearch.mobileResults.excludePlaceholder",
+              })}
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
             />
@@ -293,34 +320,46 @@ function MobileFilters({ controller }: Props) {
         <MobileRangeInput
           form={filtersForm}
           name="minVol"
-          placeholder="Min volume"
+          placeholder={intl.formatMessage({
+            id: "keywordResearch.mobileResults.minVolume",
+          })}
         />
         <MobileRangeInput
           form={filtersForm}
           name="maxVol"
-          placeholder="Max volume"
+          placeholder={intl.formatMessage({
+            id: "keywordResearch.mobileResults.maxVolume",
+          })}
         />
         <MobileRangeInput
           form={filtersForm}
           name="minCpc"
-          placeholder="Min CPC"
+          placeholder={intl.formatMessage({
+            id: "keywordResearch.mobileResults.minCpc",
+          })}
           step="0.01"
         />
         <MobileRangeInput
           form={filtersForm}
           name="maxCpc"
-          placeholder="Max CPC"
+          placeholder={intl.formatMessage({
+            id: "keywordResearch.mobileResults.maxCpc",
+          })}
           step="0.01"
         />
         <MobileRangeInput
           form={filtersForm}
           name="minKd"
-          placeholder="Min difficulty"
+          placeholder={intl.formatMessage({
+            id: "keywordResearch.mobileResults.minDifficulty",
+          })}
         />
         <MobileRangeInput
           form={filtersForm}
           name="maxKd"
-          placeholder="Max difficulty"
+          placeholder={intl.formatMessage({
+            id: "keywordResearch.mobileResults.maxDifficulty",
+          })}
         />
       </div>
     </div>

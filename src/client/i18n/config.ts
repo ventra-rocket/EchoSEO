@@ -1,3 +1,5 @@
+import { isPublicSsrPath } from "@/shared/free-seo-check";
+
 export const SUPPORTED_LOCALES = ["en", "vi"] as const;
 
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -33,6 +35,16 @@ export function resolveLocale(value: unknown): Locale {
     if (isLocale(base)) return base;
   }
   return DEFAULT_LOCALE;
+}
+
+/**
+ * Routes with a language in their public URL own their locale. Other public
+ * SSR routes are English; authenticated routes return undefined so the app
+ * cookie/browser preference remains authoritative.
+ */
+export function getRouteOwnedLocale(pathname: string): Locale | undefined {
+  if (pathname === "/vi" || pathname.startsWith("/vi/")) return "vi";
+  return isPublicSsrPath(pathname) ? "en" : undefined;
 }
 
 function readCookieValue(

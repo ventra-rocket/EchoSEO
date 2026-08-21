@@ -32,18 +32,20 @@ const CONVERTED_DIRS = [
   "src/client/features/rank-tracking",
   "src/client/features/gsc",
   "src/client/features/search-performance",
+  "src/client/features/keywords",
+  "src/client/features/saved-keywords",
   "src/client/layout",
-  // Shared components are only partly converted: the three strings the bulk
-  // action bar renders are done, the other 43 findings under
-  // `src/client/components/` are not, and some of those are code identifiers
-  // (`AUTH_MODE` inside a `<code>` tag) that need the detector taught about
-  // `<code>` before the directory can be listed honestly.
-  "src/client/components/table/TableBulkActionBar.tsx",
-  // Reached from the audit and Search Performance tables, both listed above:
-  // its one English `aria-label` made a converted surface read "Sort by Tiêu
-  // đề" to a screen reader. A shared component is part of every surface that
-  // renders it, so it belongs in whichever gate claims those surfaces are done.
-  "src/client/components/table/SortableHeader.tsx",
+  // A shared component belongs to every surface that renders it. This
+  // directory entered the gate only after all prose was converted and the
+  // detector learned that JSX text under semantic `<code>` is a technical
+  // value (`AUTH_MODE`, `TEAM_DOMAIN`), not a sentence. The exemption is narrow:
+  // user-visible attributes on `<code>` are still checked.
+  "src/client/components",
+  // Keyword Research renders this shared provider gate before any owned page
+  // state when a workspace has no DataForSEO key. Listing only `keywords/`
+  // would have declared the real first-run screen translated while its main
+  // card stayed English.
+  "src/client/features/access-gate/DataforseoKeyMissingState.tsx",
   // A feature directory is not the whole surface: a route file renders the page
   // heading above it. Converting `features/rank-tracking` left "Rank Tracking /
   // Track keyword positions across domains" in English at the top of every
@@ -51,6 +53,8 @@ const CONVERTED_DIRS = [
   // per file because their siblings — `saved.tsx` most of all — are not
   // converted yet.
   "src/routes/_project/p/$projectId/rank-tracking.tsx",
+  "src/routes/_project/p/$projectId/keywords.tsx",
+  "src/routes/_project/p/$projectId/saved.tsx",
   "src/routes/_project/p/$projectId/rank-tracking/$configId.tsx",
 ];
 
@@ -69,6 +73,7 @@ const PROSE_SINKS = new Set([
   "toast.success",
   "toast.warning",
   "getStandardErrorMessage",
+  "getLocalizedErrorMessage",
 ]);
 
 /**
@@ -83,7 +88,17 @@ const USER_VISIBLE_ATTRS = new Set([
   "aria-placeholder",
   "aria-roledescription",
   "aria-valuetext",
+  "data-tip",
   "placeholder",
+  "title",
+]);
+
+/** Visible defaults in shared component prop destructuring. */
+const USER_VISIBLE_PROP_DEFAULTS = new Set([
+  "ariaLabel",
+  "label",
+  "placeholder",
+  "selectedLabel",
   "title",
 ]);
 
@@ -96,6 +111,10 @@ const USER_VISIBLE_ATTRS = new Set([
 const ALLOWED_LITERALS = new Set([
   "DataForSEO",
   "EchoSEO",
+  // The visual wordmark splits EchoSEO into two spans only to color "SEO".
+  // They remain exact brand fragments, not translatable words.
+  "Echo",
+  "SEO",
   "Google",
   "Google Search Console",
   "IndexNow",
@@ -157,6 +176,31 @@ function calleeName(node: ts.CallExpression): string {
 }
 
 /**
+ * Uppercase identifiers inside a semantic `<code>` element are data, not
+ * prose. `AUTH_MODE`, `TEAM_DOMAIN` and `POLICY_AUD` must be identical in every
+ * locale. Walk every ancestor rather than checking only the immediate parent:
+ * `<code><span>AUTH_MODE</span></code>` is still code.
+ *
+ * The caller also checks CODE_IDENTIFIER: ordinary prose inside `<code>` and a
+ * `title="Copy this value"` on it must still go through react-intl.
+ */
+function isInsideCodeElement(node: ts.Node): boolean {
+  for (let current = node.parent; current; current = current.parent) {
+    if (
+      ts.isJsxElement(current) &&
+      ts.isIdentifier(current.openingElement.tagName) &&
+      current.openingElement.tagName.text === "code"
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Configuration identifiers are code; prose inside `<code>` is still prose. */
+const CODE_IDENTIFIER = /^[A-Z][A-Z0-9_]*$/;
+
+/**
  * A template literal is prose if any of its fixed spans is. `Metrics updated
  * for ${n} keywords` has to be caught: the interpolation is what makes it look
  * like a value rather than a sentence.
@@ -171,6 +215,18 @@ function stringArgumentProse(node: ts.Expression): string | null {
       node.head.text,
       ...node.templateSpans.map((s) => s.literal.text),
     ];
+    const firstInterpolation =
+      node.head.text === "" && spans[1]?.startsWith("/")
+        ? "https://example.invalid"
+        : node.head.text.endsWith("https://")
+          ? "example.invalid"
+          : "value";
+    const renderedExample = node.templateSpans.reduce(
+      (text, span, index) =>
+        `${text}${index === 0 ? firstInterpolation : "value"}${span.literal.text}`,
+      node.head.text,
+    );
+    if (BARE_URL.test(renderedExample)) return null;
     const prose = spans.find((span) => isProse(span));
     return prose ? spans.join("${…}") : null;
   }
@@ -185,7 +241,10 @@ function isProse(raw: string): boolean {
 }
 
 function findHardcodedStrings(file: string): Finding[] {
-  const source = readFileSync(file, "utf8");
+  return findHardcodedStringsInSource(file, readFileSync(file, "utf8"));
+}
+
+function findHardcodedStringsInSource(file: string, source: string): Finding[] {
   const tree = ts.createSourceFile(
     file,
     source,
@@ -201,7 +260,11 @@ function findHardcodedStrings(file: string): Finding[] {
   };
 
   const visit = (node: ts.Node): void => {
-    if (ts.isJsxText(node) && isProse(node.text)) {
+    if (
+      ts.isJsxText(node) &&
+      isProse(node.text) &&
+      !(isInsideCodeElement(node) && CODE_IDENTIFIER.test(node.text.trim()))
+    ) {
       record(node, node.text);
     }
 
@@ -214,15 +277,21 @@ function findHardcodedStrings(file: string): Finding[] {
         // review is for.
         if (ts.isStringLiteral(value) && isProse(value.text)) {
           record(node, `${name}="${value.text}"`);
-        } else if (
-          ts.isJsxExpression(value) &&
-          value.expression &&
-          ts.isStringLiteral(value.expression) &&
-          isProse(value.expression.text)
-        ) {
-          record(node, `${name}={"${value.expression.text}"}`);
+        } else if (ts.isJsxExpression(value) && value.expression) {
+          const prose = stringArgumentProse(value.expression);
+          if (prose) record(node, `${name}={"${prose}"}`);
         }
       }
+    }
+
+    if (
+      ts.isBindingElement(node) &&
+      ts.isIdentifier(node.name) &&
+      USER_VISIBLE_PROP_DEFAULTS.has(node.name.text) &&
+      node.initializer
+    ) {
+      const prose = stringArgumentProse(node.initializer);
+      if (prose) record(node, `${node.name.text} = "${prose}"`);
     }
 
     if (ts.isCallExpression(node) && PROSE_SINKS.has(calleeName(node))) {
@@ -268,5 +337,54 @@ describe("converted surfaces hold no hardcoded prose", () => {
     // A URL inside a sentence does not excuse the sentence.
     expect(isProse("Open https://example.com to continue")).toBe(true);
     expect(isProse("")).toBe(false);
+  });
+
+  it("treats code literals as data without excusing prose around them", () => {
+    const source = [
+      "export function Probe() {",
+      "  return (",
+      "    <p>",
+      "      Check <code><span>AUTH_MODE</span></code> before launch",
+      '      <code title="Copy this value">TEAM_DOMAIN</code>',
+      "      <code>Run this command</code>",
+      "    </p>",
+      "  );",
+      "}",
+    ].join("\n");
+
+    expect(
+      findHardcodedStringsInSource("probe.tsx", source).map(
+        (finding) => finding.text,
+      ),
+    ).toEqual([
+      "Check",
+      "before launch",
+      'title="Copy this value"',
+      "Run this command",
+    ]);
+  });
+
+  it("detects tooltip/template attributes and visible prop defaults", () => {
+    const source = [
+      'export function Probe({ label = "Visible default" }) {',
+      "  const name = 'keyword';",
+      "  return (",
+      '    <div data-tip="Hidden tooltip" aria-label={`Remove ${name}`}>',
+      "      <input placeholder={`${origin}/their-page`} />",
+      "      {label}",
+      "    </div>",
+      "  );",
+      "}",
+    ].join("\n");
+
+    expect(
+      findHardcodedStringsInSource("probe.tsx", source).map(
+        (finding) => finding.text,
+      ),
+    ).toEqual([
+      'label = "Visible default"',
+      'data-tip="Hidden tooltip"',
+      'aria-label={"Remove ${…}"}',
+    ]);
   });
 });

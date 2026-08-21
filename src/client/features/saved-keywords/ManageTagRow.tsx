@@ -1,5 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import {
   resolveTagColor,
   TAG_COLOR_KEYS,
@@ -7,6 +9,17 @@ import {
   type TagColorKey,
 } from "@/shared/tag-colors";
 import type { SavedKeywordTagSummary } from "@/types/keywords";
+
+const COLOR_LABEL_IDS: Record<TagColorKey, MessageId> = {
+  slate: "saved.tagManage.row.color.slate",
+  rose: "saved.tagManage.row.color.rose",
+  amber: "saved.tagManage.row.color.amber",
+  lime: "saved.tagManage.row.color.lime",
+  emerald: "saved.tagManage.row.color.emerald",
+  sky: "saved.tagManage.row.color.sky",
+  violet: "saved.tagManage.row.color.violet",
+  fuchsia: "saved.tagManage.row.color.fuchsia",
+};
 
 export function ManageTagRow({
   tag,
@@ -21,6 +34,7 @@ export function ManageTagRow({
   onDelete: () => void;
   onCancel: () => void;
 }) {
+  const intl = useIntl();
   const [name, setName] = useState(tag.name);
   const currentColor = resolveTagColor(tag);
   const [color, setColor] = useState<TagColorKey>(currentColor);
@@ -32,7 +46,7 @@ export function ManageTagRow({
     <div className="space-y-2 border-y border-base-300 bg-base-200/40 px-3 py-2.5">
       <div className="space-y-1">
         <label className="text-[11px] font-semibold uppercase tracking-wide text-base-content/55">
-          Rename
+          <FormattedMessage id="saved.tagManage.row.renameLabel" />
         </label>
         <div className="flex items-center gap-1.5">
           <Pencil className="size-3 opacity-50" />
@@ -46,14 +60,14 @@ export function ManageTagRow({
 
       <div className="space-y-1">
         <label className="text-[11px] font-semibold uppercase tracking-wide text-base-content/55">
-          Color
+          <FormattedMessage id="saved.tagManage.row.colorLabel" />
         </label>
         <div className="flex flex-wrap items-center gap-1.5">
           {TAG_COLOR_KEYS.map((key) => (
             <button
               key={key}
               type="button"
-              aria-label={key}
+              aria-label={intl.formatMessage({ id: COLOR_LABEL_IDS[key] })}
               className={`size-5 rounded-full transition ${tagSwatchClass(key)} ${
                 color === key
                   ? "ring-2 ring-offset-2 ring-offset-base-200 ring-base-content/40"
@@ -73,7 +87,7 @@ export function ManageTagRow({
           disabled={isBusy}
         >
           <Trash2 className="size-3" />
-          Delete
+          <FormattedMessage id="saved.tagManage.row.delete" />
         </button>
         <div className="flex items-center gap-1.5">
           <button
@@ -81,7 +95,7 @@ export function ManageTagRow({
             className="rounded px-2 py-1 text-xs text-base-content/70 hover:bg-base-300"
             onClick={onCancel}
           >
-            Cancel
+            <FormattedMessage id="saved.tagManage.row.cancel" />
           </button>
           <button
             type="button"
@@ -94,7 +108,7 @@ export function ManageTagRow({
               })
             }
           >
-            Save
+            <FormattedMessage id="saved.tagManage.row.save" />
           </button>
         </div>
       </div>
