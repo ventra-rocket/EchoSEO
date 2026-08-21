@@ -20,8 +20,31 @@ import { describe, expect, it } from "vitest";
  * directory may carry prose. A directory joins CONVERTED_DIRS only when it is
  * finished, which also gives the next conversion an objective definition of
  * done instead of someone's reading of a screenshot.
+ *
+ * The first version of this test scanned `.tsx` only, and that was the same
+ * mistake one layer up: five user-visible toasts live in `.ts` hooks
+ * (`useRankCheckTrigger`, `useMetricsRefresh`), so the gate would have called
+ * a directory clean while English toasts fired over a Vietnamese page. A
+ * component is not the only thing a user reads. Hence the second scan below.
  */
 const CONVERTED_DIRS = ["src/client/features/audit", "src/client/layout"];
+
+/**
+ * Prose reaches a user through these calls without ever being JSX. `toast.*` is
+ * the common one; the second argument of `getStandardErrorMessage` is a
+ * user-facing fallback that only renders when a request fails, which is exactly
+ * the state nobody opens while translating.
+ */
+const PROSE_SINKS = new Set([
+  "toast",
+  "toast.error",
+  "toast.info",
+  "toast.loading",
+  "toast.message",
+  "toast.success",
+  "toast.warning",
+  "getStandardErrorMessage",
+]);
 
 /**
  * Attributes a user reads. `title` and `aria-label` matter most: they are the
@@ -73,19 +96,53 @@ const BARE_URL = /^https?:\/\/\S+$/i;
 
 type Finding = { file: string; line: number; text: string };
 
-function tsxFilesIn(dir: string): string[] {
+function sourceFilesIn(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
-      out.push(...tsxFilesIn(path));
+      out.push(...sourceFilesIn(path));
       continue;
     }
-    if (entry.name.endsWith(".tsx") && !entry.name.endsWith(".test.tsx")) {
-      out.push(path);
-    }
+    const isSource = entry.name.endsWith(".tsx") || entry.name.endsWith(".ts");
+    const isTest = entry.name.includes(".test.");
+    if (isSource && !isTest) out.push(path);
   }
   return out;
+}
+
+/** `toast.error` reads as a property access; `getStandardErrorMessage` as a bare name. */
+function calleeName(node: ts.CallExpression): string {
+  const callee = node.expression;
+  if (ts.isIdentifier(callee)) return callee.text;
+  if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.name)) {
+    const target = callee.expression;
+    return ts.isIdentifier(target)
+      ? `${target.text}.${callee.name.text}`
+      : callee.name.text;
+  }
+  return "";
+}
+
+/**
+ * A template literal is prose if any of its fixed spans is. `Metrics updated
+ * for ${n} keywords` has to be caught: the interpolation is what makes it look
+ * like a value rather than a sentence.
+ */
+function stringArgumentProse(node: ts.Expression): string | null {
+  if (ts.isStringLiteral(node)) return isProse(node.text) ? node.text : null;
+  if (ts.isNoSubstitutionTemplateLiteral(node)) {
+    return isProse(node.text) ? node.text : null;
+  }
+  if (ts.isTemplateExpression(node)) {
+    const spans = [
+      node.head.text,
+      ...node.templateSpans.map((s) => s.literal.text),
+    ];
+    const prose = spans.find((span) => isProse(span));
+    return prose ? spans.join("${…}") : null;
+  }
+  return null;
 }
 
 function isProse(raw: string): boolean {
@@ -136,6 +193,14 @@ function findHardcodedStrings(file: string): Finding[] {
       }
     }
 
+    if (ts.isCallExpression(node) && PROSE_SINKS.has(calleeName(node))) {
+      const name = calleeName(node);
+      for (const argument of node.arguments) {
+        const prose = stringArgumentProse(argument);
+        if (prose) record(node, `${name}(… "${prose}" …)`);
+      }
+    }
+
     ts.forEachChild(node, visit);
   };
 
@@ -146,7 +211,7 @@ function findHardcodedStrings(file: string): Finding[] {
 describe("converted surfaces hold no hardcoded prose", () => {
   for (const dir of CONVERTED_DIRS) {
     it(`${dir} routes every user-visible string through react-intl`, () => {
-      const findings = tsxFilesIn(dir).flatMap(findHardcodedStrings);
+      const findings = sourceFilesIn(dir).flatMap(findHardcodedStrings);
       const report = findings.map((f) => `${f.file}:${f.line} — ${f.text}`);
       expect(report).toEqual([]);
     });
