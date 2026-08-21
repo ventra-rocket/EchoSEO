@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { FormattedMessage, useIntl } from "react-intl";
 import type { RankTrackingSearchActuals } from "@/server/features/rank-tracking/services/RankTrackingSearchActualsService";
 
 /**
@@ -6,7 +7,7 @@ import type { RankTrackingSearchActuals } from "@/server/features/rank-tracking/
  * that shows them.
  *
  * Every branch here exists because the columns' absence or presence is itself a
- * claim: absent because no property is connected, absent because the connected
+ * claim — absent because no property is connected, absent because the connected
  * property covers a different site, or present but read from a truncated query
  * set. Left unexplained, a reader fills the gap with the most flattering
  * assumption — that the numbers cover their site and their whole keyword set.
@@ -20,21 +21,27 @@ export function RankTrackingSearchActualsNote({
   projectId: string;
   domain: string;
 }) {
+  const intl = useIntl();
+
   if (!actuals) return null;
 
   if (actuals.state === "not_connected") {
     return (
       <p className="text-xs text-base-content/55">
-        Connect Search Console to see the clicks, impressions and average
-        position Google recorded for these keywords — free, no provider key.{" "}
-        <Link
-          to="/p/$projectId/search-performance"
-          params={{ projectId }}
-          className="underline underline-offset-2"
-        >
-          Open Search Performance
-        </Link>
-        .
+        <FormattedMessage
+          id="rank.table.searchActuals.notConnected"
+          values={{
+            link: (chunks) => (
+              <Link
+                to="/p/$projectId/search-performance"
+                params={{ projectId }}
+                className="underline underline-offset-2"
+              >
+                {chunks}
+              </Link>
+            ),
+          }}
+        />
       </p>
     );
   }
@@ -42,28 +49,40 @@ export function RankTrackingSearchActualsNote({
   if (actuals.state === "property_mismatch") {
     return (
       <p className="text-xs text-base-content/55">
-        Search Console property{" "}
-        <span className="font-mono">{actuals.property}</span> does not cover{" "}
-        <span className="font-mono">{domain}</span>, so no Search Console
-        columns are shown for these keywords.
+        <FormattedMessage
+          id="rank.table.searchActuals.propertyMismatch"
+          values={{
+            property: actuals.property,
+            domain,
+            mono: (chunks) => <span className="font-mono">{chunks}</span>,
+          }}
+        />
       </p>
     );
   }
 
   return (
     <p className="text-xs text-base-content/55">
-      Search Console columns: Google&apos;s own data for{" "}
-      <span className="font-mono">{actuals.property}</span>,{" "}
-      {actuals.window.from} → {actuals.window.to}. Average position over the
-      window, not the live SERP rank in the position column. Google never names
-      a query rare enough to be anonymized, so a keyword shown at 0 may still
-      have real traffic Search Console won&apos;t report.
+      <FormattedMessage
+        id="rank.table.searchActuals.ready"
+        values={{
+          property: actuals.property,
+          // Date-only values: anchored to UTC so the window's calendar dates
+          // never shift a day for a reader west of Greenwich — the same class
+          // of bug `formatStartedAt` had with a UTC audit timestamp.
+          from: intl.formatDate(actuals.window.from, {
+            dateStyle: "medium",
+            timeZone: "UTC",
+          }),
+          to: intl.formatDate(actuals.window.to, {
+            dateStyle: "medium",
+            timeZone: "UTC",
+          }),
+          mono: (chunks) => <span className="font-mono">{chunks}</span>,
+        }}
+      />
       {!actuals.complete && (
-        <>
-          {" "}
-          This property has more queries than one read covers, so a keyword
-          without numbers is unmeasured here rather than at zero.
-        </>
+        <FormattedMessage id="rank.table.searchActuals.readyTruncatedSuffix" />
       )}
     </p>
   );

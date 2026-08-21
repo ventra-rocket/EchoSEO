@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 import { buildCsv, downloadCsv } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -8,33 +9,33 @@ import type {
   RankTrackingRow,
 } from "@/types/schemas/rank-tracking";
 
-const FEATURE_SHORT_LABELS: Record<string, string> = {
-  featured_snippet: "FS",
-  people_also_ask: "PAA",
-  ai_overview: "AI",
-  local_pack: "Local",
-  knowledge_panel: "KP",
-  video: "Video",
-  images: "Img",
-  shopping: "Shop",
-  top_stories: "News",
+const FEATURE_SHORT_LABEL_IDS: Record<string, string> = {
+  featured_snippet: "rank.table.serp.featuredSnippet.short",
+  people_also_ask: "rank.table.serp.peopleAlsoAsk.short",
+  ai_overview: "rank.table.serp.aiOverview.short",
+  local_pack: "rank.table.serp.localPack.short",
+  knowledge_panel: "rank.table.serp.knowledgePanel.short",
+  video: "rank.table.serp.video.short",
+  images: "rank.table.serp.images.short",
+  shopping: "rank.table.serp.shopping.short",
+  top_stories: "rank.table.serp.topStories.short",
 };
 
-const FEATURE_TOOLTIPS: Record<string, string> = {
-  featured_snippet:
-    "Featured Snippet — highlighted answer box at top of results",
-  people_also_ask: "People Also Ask — expandable related questions",
-  ai_overview: "AI Overview — AI-generated summary at top of search",
-  local_pack: "Local Pack — map with local business listings",
-  knowledge_panel: "Knowledge Panel — info box about an entity",
-  video: "Video — video results shown in the SERP",
-  images: "Images — image results shown in the SERP",
-  shopping: "Shopping — product listings with prices",
-  top_stories: "Top Stories — news articles carousel",
+const FEATURE_TOOLTIP_IDS: Record<string, string> = {
+  featured_snippet: "rank.table.serp.featuredSnippet.tooltip",
+  people_also_ask: "rank.table.serp.peopleAlsoAsk.tooltip",
+  ai_overview: "rank.table.serp.aiOverview.tooltip",
+  local_pack: "rank.table.serp.localPack.tooltip",
+  knowledge_panel: "rank.table.serp.knowledgePanel.tooltip",
+  video: "rank.table.serp.video.tooltip",
+  images: "rank.table.serp.images.tooltip",
+  shopping: "rank.table.serp.shopping.tooltip",
+  top_stories: "rank.table.serp.topStories.tooltip",
 };
 
 export function SerpFeatureTags({ features }: { features: string[] }) {
-  const notable = features.filter((f) => f in FEATURE_SHORT_LABELS);
+  const intl = useIntl();
+  const notable = features.filter((f) => f in FEATURE_SHORT_LABEL_IDS);
   if (notable.length === 0) return null;
   return (
     <div className="flex gap-1 flex-wrap">
@@ -42,10 +43,10 @@ export function SerpFeatureTags({ features }: { features: string[] }) {
         <span
           key={f}
           className="badge badge-xs gap-0.5 cursor-help bg-base-300 border-0 text-base-content/70"
-          title={FEATURE_TOOLTIPS[f] ?? f}
+          title={intl.formatMessage({ id: FEATURE_TOOLTIP_IDS[f] })}
         >
           {f === "ai_overview" && <Sparkles className="size-2.5" />}
-          {FEATURE_SHORT_LABELS[f]}
+          {intl.formatMessage({ id: FEATURE_SHORT_LABEL_IDS[f] })}
         </span>
       ))}
     </div>
@@ -73,7 +74,7 @@ export function DeviceRankCell({
         </span>
         <span className="text-base-content/30">→</span>
         <span className="font-mono rounded px-1.5 py-0.5 text-xs font-semibold bg-error/20 text-error">
-          lost
+          <FormattedMessage id="rank.table.rank.lost" />
         </span>
       </span>
     );
@@ -128,15 +129,16 @@ export function DeviceUrlCell({
   );
 }
 
-const compactFormatter = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
 export function VolumeCell({ value }: { value: number | null }) {
+  const intl = useIntl();
   if (value == null) return <span className="text-base-content/40">-</span>;
   return (
-    <span className="font-mono text-sm">{compactFormatter.format(value)}</span>
+    <span className="font-mono text-sm">
+      {intl.formatNumber(value, {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      })}
+    </span>
   );
 }
 
@@ -155,29 +157,44 @@ export function DifficultyCell({ value }: { value: number | null }) {
 }
 
 export function CpcCell({ value }: { value: number | null }) {
+  const intl = useIntl();
   if (value == null) return <span className="text-base-content/40">-</span>;
-  return <span className="font-mono text-sm">${value.toFixed(2)}</span>;
+  return (
+    <span className="font-mono text-sm">
+      {intl.formatNumber(value, { style: "currency", currency: "USD" })}
+    </span>
+  );
 }
 
 /**
- * The GscCountCell tooltip for an absent keyword. Exported (not inlined) so the
- * copy is a pinned, testable contract: a `complete` read only means Google
- * named every query it was willing to — it is never proof of zero, because
- * Search Console omits anonymized (privacy-thresholded) queries from the
- * report at any read depth. Getting this wording wrong is exactly how "0"
- * turns back into a claim the read cannot support.
+ * The GscCountCell tooltip id for an absent keyword. Exported (not inlined) so
+ * which variant applies is a pinned, testable contract: a `complete` read only
+ * means Google was allowed to page through the whole query set — it is never
+ * proof of zero, because Search Console omits anonymized (privacy-thresholded)
+ * queries from the report at any read depth. Returns a message id rather than
+ * English prose — GscCountCell resolves it through react-intl, so the "must not
+ * claim a proof the read cannot make" wording lives once, in the catalog, in
+ * both languages, instead of being baked into this helper.
  */
-export function gscCountTooltip(complete: boolean): string {
+export function gscCountTooltip(
+  complete: boolean,
+):
+  | "rank.table.gsc.tooltip.countComplete"
+  | "rank.table.gsc.tooltip.countTruncated" {
   return complete
-    ? "Google reported nothing for this query in the window — shown as 0, though very rare queries are omitted from Search Console entirely and would look the same"
-    : "Outside the queries read from Search Console — unknown, not zero";
+    ? "rank.table.gsc.tooltip.countComplete"
+    : "rank.table.gsc.tooltip.countTruncated";
 }
 
-/** The GscPositionCell tooltip for an absent keyword — see gscCountTooltip. */
-export function gscPositionTooltip(complete: boolean): string {
+/** The GscPositionCell tooltip id for an absent keyword — see gscCountTooltip. */
+export function gscPositionTooltip(
+  complete: boolean,
+):
+  | "rank.table.gsc.tooltip.positionComplete"
+  | "rank.table.gsc.tooltip.positionTruncated" {
   return complete
-    ? "Google reported nothing for this query in the window, so there is no average position to show — very rare queries are omitted from Search Console entirely and would look the same"
-    : "Outside the queries read from Search Console — no measurement available";
+    ? "rank.table.gsc.tooltip.positionComplete"
+    : "rank.table.gsc.tooltip.positionTruncated";
 }
 
 /**
@@ -197,15 +214,24 @@ export function GscCountCell({
   value: number | null | undefined;
   complete: boolean;
 }) {
+  const intl = useIntl();
   if (value == null) {
     return (
-      <span className="text-base-content/40" title={gscCountTooltip(complete)}>
+      <span
+        className="text-base-content/40"
+        title={intl.formatMessage({ id: gscCountTooltip(complete) })}
+      >
         {complete ? "0" : "?"}
       </span>
     );
   }
   return (
-    <span className="font-mono text-sm">{compactFormatter.format(value)}</span>
+    <span className="font-mono text-sm">
+      {intl.formatNumber(value, {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      })}
+    </span>
   );
 }
 
@@ -217,17 +243,25 @@ export function GscPositionCell({
   value: number | null | undefined;
   complete: boolean;
 }) {
+  const intl = useIntl();
   if (value == null) {
     return (
       <span
         className="text-base-content/40"
-        title={gscPositionTooltip(complete)}
+        title={intl.formatMessage({ id: gscPositionTooltip(complete) })}
       >
         -
       </span>
     );
   }
-  return <span className="font-mono text-sm">{value.toFixed(1)}</span>;
+  return (
+    <span className="font-mono text-sm">
+      {intl.formatNumber(value, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })}
+    </span>
+  );
 }
 
 /** Numeric change for CSV export — numbers bypass the CSV formula-injection sanitizer */
@@ -252,6 +286,10 @@ export interface RankTrackingGscExport {
   complete: boolean;
 }
 
+// Headers and cell values below stay English/raw regardless of UI locale — a
+// spreadsheet is an interchange artifact, not a translated UI surface. Matches
+// src/client/features/audit/results/export.ts's PAGES_HEADERS/PERFORMANCE_HEADERS,
+// which keep the same convention while their on-screen tables render Vietnamese.
 export function buildRankTrackingExport(
   sorted: RankTrackingRow[],
   showDesktop: boolean,
@@ -339,15 +377,30 @@ export function exportRankTrackingToSheets(
   void exportTableToSheets({ headers, rows, feature: "rank_tracking" });
 }
 
-export function exportRankTrackingCsv(
-  sorted: RankTrackingRow[],
-  showDesktop: boolean,
-  showMobile: boolean,
-  domain: string,
-  gsc: RankTrackingGscExport | null = null,
-) {
+export function exportRankTrackingCsv({
+  sorted,
+  showDesktop,
+  showMobile,
+  domain,
+  gsc = null,
+  intl,
+}: {
+  sorted: RankTrackingRow[];
+  showDesktop: boolean;
+  showMobile: boolean;
+  domain: string;
+  gsc?: RankTrackingGscExport | null;
+  /** Only used for the "nothing to export" toast below — a plain function has
+   *  no hook context of its own, so the caller's `useIntl()` result is threaded
+   *  in as data rather than this file calling `useIntl()` outside a component
+   *  (precedent: `getLaunchValidationErrors` in
+   *  src/client/features/audit/launch/useLaunchController.ts). Headers and cell
+   *  values themselves stay English/raw regardless of locale, so nothing else
+   *  in this export path needs it. */
+  intl: IntlShape;
+}) {
   if (sorted.length === 0) {
-    toast.error("No data to export");
+    toast.error(intl.formatMessage({ id: "rank.table.export.noData" }));
     return;
   }
   const { headers, rows } = buildRankTrackingExport(

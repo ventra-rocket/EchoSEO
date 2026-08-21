@@ -1,3 +1,4 @@
+import { FormattedMessage, useIntl } from "react-intl";
 import { estimateRankCheckCredits } from "@/shared/rank-tracking";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 
@@ -15,6 +16,7 @@ type Props = {
  * re-reads all three rather than caching a number that would drift.
  */
 export function CostEstimateNote({ devices, serpDepth, schedule }: Props) {
+  const intl = useIntl();
   // Scheduled checks run through the cheaper task queue; manual configs only
   // ever pay the live price.
   const { costUsd: costPerKeyword } = estimateRankCheckCredits(
@@ -29,18 +31,37 @@ export function CostEstimateNote({ devices, serpDepth, schedule }: Props) {
   return (
     <div className="rounded-lg bg-base-200/50 px-3 py-2.5 text-xs text-base-content/70 space-y-0.5">
       <div>
-        <span className="font-mono font-semibold text-base-content">
-          ~${costPerKeyword.toFixed(4)}
-        </span>{" "}
-        per keyword per check
+        <FormattedMessage
+          id="rank.config.costNote.perKeyword"
+          values={{
+            amount: (
+              <span className="font-mono font-semibold text-base-content">
+                {intl.formatNumber(costPerKeyword, {
+                  style: "currency",
+                  currency: "USD",
+                  minimumFractionDigits: 4,
+                  maximumFractionDigits: 4,
+                })}
+              </span>
+            ),
+          }}
+        />
       </div>
       {schedule !== "manual" && (
         <div>
-          50 keywords would cost{" "}
-          <span className="font-mono font-semibold text-base-content">
-            ~${(costPerKeyword * 50 * checksPerMonth).toFixed(2)}
-          </span>
-          /month
+          <FormattedMessage
+            id="rank.config.costNote.monthlyEstimate"
+            values={{
+              amount: (
+                <span className="font-mono font-semibold text-base-content">
+                  {intl.formatNumber(costPerKeyword * 50 * checksPerMonth, {
+                    style: "currency",
+                    currency: "USD",
+                  })}
+                </span>
+              ),
+            }}
+          />
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 import {
   Area,
   AreaChart,
@@ -18,10 +19,18 @@ import {
 } from "./RankTrackingTrendChart";
 
 const BUCKETS = [
-  { key: "top3", label: "Top 3", color: "#16a34a" },
-  { key: "top4to10", label: "4–10", color: "#2563eb" },
-  { key: "top11to20", label: "11–20", color: "#f59e0b" },
-  { key: "notRanking", label: "Not in top 20", color: "#6b7280" },
+  { key: "top3", messageId: "rank.charts.band.top3", color: "#16a34a" },
+  { key: "top4to10", messageId: "rank.charts.band.top4to10", color: "#2563eb" },
+  {
+    key: "top11to20",
+    messageId: "rank.charts.band.top11to20",
+    color: "#f59e0b",
+  },
+  {
+    key: "notRanking",
+    messageId: "rank.charts.band.notRanking",
+    color: "#6b7280",
+  },
 ] as const;
 
 /** Narrowed recharts tooltip payload entry (typed `any` upstream). */
@@ -40,6 +49,7 @@ export function RankTrackingOverview({
   configId: string;
 }) {
   const [sinceDays, setSinceDays] = useState(730);
+  const intl = useIntl();
 
   const { data: trend, isLoading: trendLoading } = useQuery({
     queryKey: ["rankConfigTrend", projectId, configId, device, sinceDays],
@@ -67,7 +77,9 @@ export function RankTrackingOverview({
     <div className="px-4 pt-4 pb-4">
       <div className="rounded-lg border border-base-300 p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium">Position distribution</span>
+          <span className="text-sm font-medium">
+            {intl.formatMessage({ id: "rank.charts.overview.title" })}
+          </span>
           <TrendRangeToggle value={sinceDays} onChange={setSinceDays} />
         </div>
 
@@ -81,7 +93,7 @@ export function RankTrackingOverview({
                 className="size-2 rounded-sm"
                 style={{ backgroundColor: b.color }}
               />
-              {b.label}
+              {intl.formatMessage({ id: b.messageId })}
             </span>
           ))}
         </div>
@@ -92,9 +104,12 @@ export function RankTrackingOverview({
           </div>
         ) : chartData.length <= 1 ? (
           <div className="rounded-lg border border-dashed border-base-300 p-8 text-center text-xs text-base-content/60">
-            {chartData.length === 0
-              ? "No history yet — run a check to start tracking positions over time."
-              : "Only 1 check so far — the trend fills in after the next check."}
+            {intl.formatMessage({
+              id:
+                chartData.length === 0
+                  ? "rank.charts.overview.empty.none"
+                  : "rank.charts.overview.empty.one",
+            })}
           </div>
         ) : (
           <div
@@ -120,7 +135,7 @@ export function RankTrackingOverview({
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
-                  tickFormatter={formatDateTick}
+                  tickFormatter={(value: number) => formatDateTick(intl, value)}
                   tick={{ fontSize: 10, fill: "#888" }}
                   tickLine={false}
                   axisLine={false}
@@ -158,7 +173,7 @@ export function RankTrackingOverview({
                     key={b.key}
                     type="monotone"
                     dataKey={b.key}
-                    name={b.label}
+                    name={intl.formatMessage({ id: b.messageId })}
                     stackId="positions"
                     stroke={b.color}
                     fill={b.color}
@@ -182,14 +197,11 @@ function DistributionTooltip({
   label: number;
   byKey: Map<string, number>;
 }) {
+  const intl = useIntl();
   return (
     <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm space-y-0.5">
       <p className="text-xs text-base-content/60">
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
+        {intl.formatDate(label, { dateStyle: "medium" })}
       </p>
       {BUCKETS.map((b) => (
         <p key={b.key} className="text-xs flex items-center gap-1.5">
@@ -197,9 +209,11 @@ function DistributionTooltip({
             className="size-2 rounded-sm"
             style={{ backgroundColor: b.color }}
           />
-          <span className="text-base-content/60">{b.label}:</span>
+          <span className="text-base-content/60">
+            {intl.formatMessage({ id: b.messageId })}:
+          </span>
           <span className="font-medium tabular-nums">
-            {byKey.get(b.key) ?? 0}
+            {intl.formatNumber(byKey.get(b.key) ?? 0)}
           </span>
         </p>
       ))}

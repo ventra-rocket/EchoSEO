@@ -1,4 +1,5 @@
 import { CalendarDays, Loader2, SlidersHorizontal, Table } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { ExportMenu, MoreMenu } from "./ToolbarMenus";
 
@@ -44,6 +45,7 @@ export function RankTrackingTableToolbar({
   checkDisabled: boolean;
   hasData: boolean;
 }) {
+  const intl = useIntl();
   return (
     <div className="shrink-0 flex flex-wrap items-center gap-2 px-4 py-2 border-y border-base-300">
       {/* History needs at least two checks to compare; until then the toggle
@@ -55,12 +57,12 @@ export function RankTrackingTableToolbar({
             {
               value: "table" as const,
               icon: <Table className="size-3.5" />,
-              label: "Latest",
+              label: intl.formatMessage({ id: "rank.table.toolbar.latest" }),
             },
             {
               value: "history" as const,
               icon: <CalendarDays className="size-3.5" />,
-              label: "History",
+              label: intl.formatMessage({ id: "rank.table.toolbar.history" }),
             },
           ]}
           value={viewMode}
@@ -71,10 +73,12 @@ export function RankTrackingTableToolbar({
       <button
         className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
         onClick={onToggleFilters}
-        title="Toggle table filters"
+        title={intl.formatMessage({
+          id: "rank.table.toolbar.filtersToggleTooltip",
+        })}
       >
         <SlidersHorizontal className="size-3.5" />
-        Filters
+        <FormattedMessage id="rank.table.toolbar.filters" />
         {activeFilterCount > 0 && (
           <span className="badge badge-xs badge-primary border-0 text-primary-content">
             {activeFilterCount}
@@ -86,9 +90,14 @@ export function RankTrackingTableToolbar({
         <div className="flex items-center gap-2 text-sm text-base-content/70">
           <Loader2 className="size-3.5 animate-spin text-primary" />
           <span>
-            {latestRun.status === "pending"
-              ? "Preparing..."
-              : `Getting rankings for ${latestRun.keywordsTotal || "?"} keyword${latestRun.keywordsTotal !== 1 ? "s" : ""}...`}{" "}
+            {latestRun.status === "pending" ? (
+              <FormattedMessage id="rank.table.toolbar.preparing" />
+            ) : (
+              <FormattedMessage
+                id="rank.table.toolbar.gettingRankings"
+                values={{ total: latestRun.keywordsTotal }}
+              />
+            )}{" "}
             {latestRun.keywordsChecked}/{latestRun.keywordsTotal || "?"}
           </span>
           {latestRun.keywordsTotal > 0 && (
@@ -101,7 +110,10 @@ export function RankTrackingTableToolbar({
         </div>
       ) : (
         <span className="text-sm text-base-content/60">
-          {keywordCount} keywords
+          <FormattedMessage
+            id="rank.table.toolbar.keywordCount"
+            values={{ count: keywordCount }}
+          />
         </span>
       )}
 

@@ -2,22 +2,22 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AutumnProvider, useCustomer } from "autumn-js/react";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   getLatestRankResults,
   getRankPositionMatrix,
   estimateRankCheckCost,
 } from "@/serverFunctions/rank-tracking";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { FreePlanAlert } from "./FreePlanAlert";
+import { RankTrackingRunAlerts } from "./RankTrackingRunAlerts";
 import { RankTrackingDetailHeader } from "./RankTrackingDetailHeader";
 import { RankTrackingOverview } from "./RankTrackingOverview";
 import { RankTrackingTable } from "./RankTrackingTable";
-import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
 import { RankTrackingSearchActualsNote } from "./RankTrackingSearchActualsNote";
-import { isProviderAuthFailureMessage } from "@/shared/provider-failure";
 import {
   countMatrixRuns,
   RankTrackingHistoryMatrix,
@@ -88,6 +88,7 @@ function RankTrackingDomainDetailInner({
   onBack: () => void;
   onEdit: () => void;
 }) {
+  const intl = useIntl();
   const { data: session } = useSession();
   const customerQuery = useCustomer({
     queryOptions: { enabled: Boolean(session?.user?.id) },
@@ -164,10 +165,15 @@ function RankTrackingDomainDetailInner({
     setShowAddKeywords(false);
     captureClientEvent("rank_tracking:keywords_add");
     toast.success(
-      `${result.added} keyword${result.added !== 1 ? "s" : ""} added`,
+      intl.formatMessage(
+        { id: "rank.config.detail.keywordsAddedToast" },
+        { count: result.added },
+      ),
     );
     if (!result.checkTriggered && result.added > 0) {
-      toast.info('Use "Check rankings" in the ⋯ menu to check these keywords');
+      toast.info(
+        intl.formatMessage({ id: "rank.config.detail.checkNowUseMenuToast" }),
+      );
     }
   };
 
@@ -221,46 +227,14 @@ function RankTrackingDomainDetailInner({
         onClick={onBack}
       >
         <ArrowLeft className="size-3" />
-        Back to domains
+        <FormattedMessage id="rank.config.detail.backToDomains" />
       </button>
 
-      {config.lastSkipReason === "insufficient_credits" && (
-        <div className="alert alert-warning text-sm py-2">
-          <AlertTriangle className="size-4" />
-          <span>
-            Last scheduled check was skipped due to insufficient credits. Top up
-            your balance to resume automatic tracking.
-          </span>
-        </div>
-      )}
-
-      {latestRun?.maybeStale && (
-        <div className="alert alert-warning text-sm py-2">
-          <AlertTriangle className="size-4" />
-          <span>
-            This run may be unresponsive and will be cleaned up automatically.
-          </span>
-        </div>
-      )}
-
-      {/* Surface any other failed-run reason (e.g. missing DataForSEO key,
-          workflow error) instead of leaving the failure invisible. The
-          insufficient-credits case has its own friendlier alert above. When the
-          provider is what refused, the user has no rank data at all, so name
-          the free alternative rather than leaving them at the error. */}
-      {latestRun?.status === "failed" &&
-        latestRun.errorMessage &&
-        config.lastSkipReason !== "insufficient_credits" && (
-          <div className="alert alert-error text-sm py-2 items-start">
-            <AlertTriangle className="size-4 mt-0.5 shrink-0" />
-            <div className="space-y-1">
-              <span>Last check failed: {latestRun.errorMessage}</span>
-              {isProviderAuthFailureMessage(latestRun.errorMessage) && (
-                <RankTrackingSearchPerformanceHint projectId={projectId} />
-              )}
-            </div>
-          </div>
-        )}
+      <RankTrackingRunAlerts
+        config={config}
+        latestRun={latestRun}
+        projectId={projectId}
+      />
 
       <FreePlanAlert visible={isFreePlan} />
 
@@ -312,13 +286,14 @@ function RankTrackingDomainDetailInner({
           onViewModeChange={setViewMode}
           historyAvailable={historyAvailable}
           onExport={() =>
-            exportRankTrackingCsv(
-              filtered,
+            exportRankTrackingCsv({
+              sorted: filtered,
               showDesktop,
               showMobile,
-              config.domain,
-              gscExport,
-            )
+              domain: config.domain,
+              gsc: gscExport,
+              intl,
+            })
           }
           onExportToSheets={() =>
             exportRankTrackingToSheets(
@@ -332,7 +307,11 @@ function RankTrackingDomainDetailInner({
             void navigator.clipboard.writeText(
               filtered.map((r) => r.keyword).join("\n"),
             );
-            toast.success("Keywords copied to clipboard");
+            toast.success(
+              intl.formatMessage({
+                id: "rank.config.detail.keywordsCopiedToast",
+              }),
+            );
           }}
           onCheckNow={() => {
             const count = costEstimate?.keywordCount ?? rows?.length ?? 0;
@@ -340,7 +319,11 @@ function RankTrackingDomainDetailInner({
             // the click produces no request, no toast and no disabled state, so
             // the user cannot tell whether the product is broken or the input is.
             if (count === 0) {
-              toast.info('Add keywords first — use "Add Keywords" above.');
+              toast.info(
+                intl.formatMessage({
+                  id: "rank.config.detail.addKeywordsFirstToast",
+                }),
+              );
               return;
             }
             requestCheck(count);

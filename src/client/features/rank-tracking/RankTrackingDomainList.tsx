@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 import { LOCATIONS } from "@/client/features/keywords/locations";
 import {
   AlertTriangle,
@@ -15,8 +16,9 @@ import {
   getRankTrackingConfigSummaries,
   updateRankTrackingConfig,
 } from "@/serverFunctions/rank-tracking";
-import { devicesLabel, scheduleLabel } from "@/shared/rank-tracking";
 import { Modal } from "@/client/components/Modal";
+import type { MessageId } from "@/client/i18n/messages";
+import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import {
   applyDomainListFilters,
   countActiveDomainListFilters,
@@ -35,6 +37,48 @@ type ConfigSummary = Awaited<
 // (e.g. archiving dropped the count) so they never get orphaned.
 const FILTER_BAR_MIN_DOMAINS = 6;
 
+// The compact "location · devices · schedule" summary line (here and in
+// RankTrackingDetailHeader) needs the same device/schedule wording the config
+// form uses, just shorter — "Desktop" rather than "Desktop only". Duplicated
+// in both files rather than shared: the lookup itself is trivial, and the
+// actual translations live once in the catalog, so there is nothing to drift.
+const DEVICE_SUMMARY_IDS: Record<RankTrackingConfig["devices"], MessageId> = {
+  both: "rank.config.device.both",
+  desktop: "rank.config.device.desktop",
+  mobile: "rank.config.device.mobile",
+};
+
+const SCHEDULE_SUMMARY_IDS: Record<
+  RankTrackingConfig["scheduleInterval"],
+  MessageId
+> = {
+  daily: "rank.config.schedule.daily",
+  weekly: "rank.config.schedule.weekly",
+  monthly: "rank.config.schedule.monthly",
+  manual: "rank.config.schedule.manual",
+};
+
+/**
+ * `completed_at` is written by app code as `new Date().toISOString()` (see
+ * RankCheckWorkflow / rankCheckRunGuards) — properly zoned, in principle.
+ * But this column has no D1 `current_timestamp` default of its own, so
+ * nothing stops a different write path (a seed script, a backfill, a future
+ * migration) from writing the same zone-less `"YYYY-MM-DD HH:MM:SS"` shape
+ * D1 itself defaults `started_at`/`checked_at` to — confirmed against this
+ * project's own local seed data, where `completed_at` carries exactly that
+ * shape. Parsing defensively here, the same way `parseAuditTimestamp`
+ * (src/client/features/audit/shared.tsx) does for audit timestamps, costs
+ * nothing for an already-zoned string and fixes the case where it isn't —
+ * cheaper than trusting one write path forever.
+ */
+function parseRankCheckTimestamp(dateStr: string): Date {
+  const hasZoneDesignator = /(?:Z|[+-]\d{2}:\d{2})$/.test(dateStr);
+  if (hasZoneDesignator) {
+    return new Date(dateStr);
+  }
+  return new Date(dateStr.replace(" ", "T") + "Z");
+}
+
 export function RankTrackingDomainList({
   projectId,
   onAddDomain,
@@ -42,6 +86,7 @@ export function RankTrackingDomainList({
   projectId: string;
   onAddDomain: () => void;
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [archiveTarget, setArchiveTarget] = useState<ConfigSummary | null>(
     null,
@@ -77,7 +122,9 @@ export function RankTrackingDomainList({
       void queryClient.invalidateQueries({
         queryKey: ["rankTrackingConfigs", projectId],
       });
-      toast.success("Domain archived");
+      toast.success(
+        intl.formatMessage({ id: "rank.config.domainList.archiveToast" }),
+      );
     },
   });
 
@@ -85,13 +132,15 @@ export function RankTrackingDomainList({
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body gap-0 p-0">
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <h2 className="text-sm font-semibold">Tracked Domains</h2>
+          <h2 className="text-sm font-semibold">
+            <FormattedMessage id="rank.config.domainList.heading" />
+          </h2>
           <button
             className="btn btn-primary btn-sm gap-1"
             onClick={onAddDomain}
           >
             <Plus className="size-3.5" />
-            Add Domain
+            <FormattedMessage id="rank.config.action.addDomain" />
           </button>
         </div>
         {(allSummaries.length >= FILTER_BAR_MIN_DOMAINS ||
@@ -111,10 +160,10 @@ export function RankTrackingDomainList({
                 <Globe className="size-5 text-base-content/40" />
               </div>
               <p className="text-sm font-medium text-base-content/70">
-                No tracked domains yet
+                <FormattedMessage id="rank.config.domainList.empty.title" />
               </p>
               <p className="text-xs text-base-content/40">
-                Add a domain to start monitoring keyword rankings over time.
+                <FormattedMessage id="rank.config.domainList.empty.body" />
               </p>
             </div>
           ) : filteredSummaries.length === 0 ? (
@@ -124,10 +173,10 @@ export function RankTrackingDomainList({
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-base-content/70">
-                  No matching tracked domains
+                  <FormattedMessage id="rank.config.domainList.filterEmpty.title" />
                 </p>
                 <p className="text-xs text-base-content/40">
-                  Try clearing search or adjusting filters.
+                  <FormattedMessage id="rank.config.domainList.filterEmpty.body" />
                 </p>
               </div>
               <button
@@ -135,7 +184,7 @@ export function RankTrackingDomainList({
                 onClick={() => setFilters(EMPTY_DOMAIN_LIST_FILTERS)}
                 disabled={activeFilterCount === 0}
               >
-                Clear filters
+                <FormattedMessage id="rank.config.domainList.filterEmpty.clear" />
               </button>
             </div>
           ) : (
@@ -157,18 +206,20 @@ export function RankTrackingDomainList({
           labelledBy="archive-domain-title"
         >
           <h3 id="archive-domain-title" className="text-lg font-semibold">
-            Archive {archiveTarget.domain}?
+            <FormattedMessage
+              id="rank.config.domainList.archiveModal.title"
+              values={{ domain: archiveTarget.domain }}
+            />
           </h3>
           <p className="text-sm text-base-content/70">
-            Scheduled checks will stop and this domain will be hidden from the
-            list. Ranking history is preserved.
+            <FormattedMessage id="rank.config.domainList.archiveModal.body" />
           </p>
           <div className="flex justify-end gap-2">
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setArchiveTarget(null)}
             >
-              Cancel
+              <FormattedMessage id="rank.config.action.cancel" />
             </button>
             <button
               className="btn btn-error btn-sm gap-1"
@@ -176,7 +227,7 @@ export function RankTrackingDomainList({
               disabled={archiveMutation.isPending}
             >
               <Archive className="size-3.5" />
-              Archive
+              <FormattedMessage id="rank.config.domainList.archiveModal.confirm" />
             </button>
           </div>
         </Modal>
@@ -194,37 +245,49 @@ function DomainRow({
   summary: ConfigSummary;
   onArchive: () => void;
 }) {
+  const intl = useIntl();
   return (
     <div className="relative flex w-full items-center gap-4 px-5 py-3.5 transition-colors hover:bg-base-200/50">
       <Link
         to="/p/$projectId/rank-tracking/$configId"
         params={{ projectId, configId: summary.id }}
         className="absolute inset-0 z-0"
-        aria-label={`Open ${summary.domain}`}
+        aria-label={intl.formatMessage(
+          { id: "rank.config.domainList.row.openAria" },
+          { domain: summary.domain },
+        )}
       />
       <div className="min-w-0 flex-1 pointer-events-none">
         <p className="font-medium truncate">{summary.domain}</p>
         <p className="text-xs text-base-content/60">
           {LOCATIONS[summary.locationCode] ?? "US"} &middot;{" "}
-          {devicesLabel(summary.devices)} &middot;{" "}
-          {scheduleLabel(summary.scheduleInterval)}
+          {intl.formatMessage({ id: DEVICE_SUMMARY_IDS[summary.devices] })}{" "}
+          &middot;{" "}
+          {intl.formatMessage({
+            id: SCHEDULE_SUMMARY_IDS[summary.scheduleInterval],
+          })}
           {/* An interval alone doesn't run anything — the cron reads the
               separate opt-in. Say when the schedule is only a setting. */}
           {summary.scheduleInterval !== "manual" &&
-            !summary.scheduledEnabled &&
-            " (paused)"}
+            !summary.scheduledEnabled && (
+              <FormattedMessage id="rank.config.summary.paused" />
+            )}
           {summary.lastRunCompletedAt && (
-            <>
-              {" "}
-              &middot; Last:{" "}
-              {new Date(summary.lastRunCompletedAt).toLocaleDateString()}
-            </>
+            <FormattedMessage
+              id="rank.config.summary.lastRunSuffix"
+              values={{
+                date: intl.formatDate(
+                  parseRankCheckTimestamp(summary.lastRunCompletedAt),
+                  { dateStyle: "medium" },
+                ),
+              }}
+            />
           )}
         </p>
         {summary.lastSkipReason === "insufficient_credits" && (
           <p className="flex items-center gap-1 text-xs text-warning">
             <AlertTriangle className="size-3" />
-            Scheduled check skipped — insufficient credits
+            <FormattedMessage id="rank.config.domainList.row.creditsSkipped" />
           </p>
         )}
       </div>
@@ -232,16 +295,20 @@ function DomainRow({
         {summary.keywordCount > 0 && (
           <div className="text-center">
             <p className="text-xs uppercase tracking-wide text-base-content/60">
-              Keywords
+              <FormattedMessage id="rank.config.domainList.row.keywordsLabel" />
             </p>
-            <p className="font-mono font-medium">{summary.keywordCount}</p>
+            <p className="font-mono font-medium">
+              <FormattedNumber value={summary.keywordCount} />
+            </p>
           </div>
         )}
       </div>
       <button
         type="button"
         className="btn btn-ghost btn-xs text-base-content/40 hover:text-error relative z-10"
-        title="Archive domain"
+        title={intl.formatMessage({
+          id: "rank.config.domainList.row.archiveTitle",
+        })}
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();

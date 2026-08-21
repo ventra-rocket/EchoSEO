@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
+import { useIntl } from "react-intl";
 import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
+import { formatDateTick } from "./RankTrackingTrendChart";
 
 /**
  * "By date" view: keyword rows × recent check columns, each cell the position
@@ -16,6 +18,7 @@ export function RankTrackingHistoryMatrix({
   isLoading: boolean;
   keywords: { trackingKeywordId: string; keyword: string }[];
 }) {
+  const intl = useIntl();
   const { runs, cellByKeyword } = useMemo(() => buildMatrix(cells), [cells]);
 
   if (isLoading) {
@@ -29,7 +32,7 @@ export function RankTrackingHistoryMatrix({
   if (runs.length === 0 || keywords.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-base-300 p-10 text-center text-sm text-base-content/55">
-        No history yet. Run a check to start building the timeline.
+        {intl.formatMessage({ id: "rank.charts.historyMatrix.empty" })}
       </div>
     );
   }
@@ -41,13 +44,17 @@ export function RankTrackingHistoryMatrix({
           <tr>
             {/* Unconstrained keyword column absorbs the slack when only a few
                 check columns exist, so sparse history doesn't stretch oddly. */}
-            <th className="sticky left-0 z-10 bg-base-100 w-full">Keyword</th>
+            <th className="sticky left-0 z-10 bg-base-100 w-full">
+              {intl.formatMessage({
+                id: "rank.charts.historyMatrix.keywordHeader",
+              })}
+            </th>
             {runs.map((r) => (
               <th
                 key={r.runId}
                 className="w-24 whitespace-nowrap text-right text-xs font-medium text-base-content/60"
               >
-                {formatDate(r.checkedAt)}
+                {formatDateTick(intl, r.checkedAt)}
               </th>
             ))}
           </tr>
@@ -86,6 +93,7 @@ function MatrixCell({
   position: number | null;
   previous: number | null | undefined;
 }) {
+  const intl = useIntl();
   if (position === null) {
     return <span className="text-base-content/30">—</span>;
   }
@@ -95,12 +103,12 @@ function MatrixCell({
     previous != null && previous !== undefined ? previous - position : null;
   return (
     <span className="inline-flex items-center justify-end gap-1 font-mono text-xs">
-      <span>{position}</span>
+      <span>{intl.formatNumber(position)}</span>
       {change != null && change > 0 && (
-        <span className="text-success">▲{change}</span>
+        <span className="text-success">▲{intl.formatNumber(change)}</span>
       )}
       {change != null && change < 0 && (
-        <span className="text-warning">▼{-change}</span>
+        <span className="text-warning">▼{intl.formatNumber(-change)}</span>
       )}
     </span>
   );
@@ -135,11 +143,4 @@ function buildMatrix(cells: RankPositionMatrixCell[]): {
     .map(([runId, checkedAt]) => ({ runId, checkedAt }))
     .toSorted((a, b) => a.checkedAt.localeCompare(b.checkedAt));
   return { runs, cellByKeyword };
-}
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 }

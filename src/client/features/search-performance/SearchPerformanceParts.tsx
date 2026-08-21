@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy, Loader2, Save } from "lucide-react";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 import { toast } from "sonner";
 import {
   AppDataTable,
@@ -132,50 +133,85 @@ export function TabButton({
 
 type Delta = { text: string; improved: boolean } | null;
 
-function percentDelta(current: number, previous: number): Delta {
+function percentDelta(
+  intl: IntlShape,
+  current: number,
+  previous: number,
+): Delta {
   if (previous <= 0) return null;
   const change = (current - previous) / previous;
-  const pct = (change * 100).toFixed(1);
-  return { text: `${change >= 0 ? "+" : ""}${pct}%`, improved: change >= 0 };
+  return {
+    text: intl.formatNumber(change, {
+      style: "percent",
+      signDisplay: "always",
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
+    improved: change >= 0,
+  };
 }
 
 /** Position falls as rankings improve, so the delta is inverted. */
-function positionDelta(current: number, previous: number): Delta {
+function positionDelta(
+  intl: IntlShape,
+  current: number,
+  previous: number,
+): Delta {
   if (previous <= 0 || current <= 0) return null;
   const change = previous - current;
   return {
-    text: `${change >= 0 ? "+" : ""}${change.toFixed(1)}`,
+    text: intl.formatNumber(change, {
+      signDisplay: "always",
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
     improved: change >= 0,
   };
 }
 
 export function TotalsCards({ report }: { report: Report }) {
+  const intl = useIntl();
   const { totals, prevTotals, range } = report;
-  const deltaTitle = `vs ${range.prevStartDate} to ${range.prevEndDate}`;
+  // range.prevStartDate/prevEndDate are calendar-day strings (YYYY-MM-DD), not
+  // instants — formatting in the viewer's local zone could shift the
+  // displayed day, so the UTC offset is pinned to match the string exactly.
+  const deltaTitle = intl.formatMessage(
+    { id: "searchPerf.totals.deltaTitle" },
+    {
+      prevStart: intl.formatDate(range.prevStartDate, {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      }),
+      prevEnd: intl.formatDate(range.prevEndDate, {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      }),
+    },
+  );
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <TotalCard
-        label="Clicks"
-        value={formatCount(totals.clicks)}
-        delta={percentDelta(totals.clicks, prevTotals.clicks)}
+        label={intl.formatMessage({ id: "searchPerf.metric.clicks" })}
+        value={formatCount(intl, totals.clicks)}
+        delta={percentDelta(intl, totals.clicks, prevTotals.clicks)}
         deltaTitle={deltaTitle}
       />
       <TotalCard
-        label="Impressions"
-        value={formatCount(totals.impressions)}
-        delta={percentDelta(totals.impressions, prevTotals.impressions)}
+        label={intl.formatMessage({ id: "searchPerf.metric.impressions" })}
+        value={formatCount(intl, totals.impressions)}
+        delta={percentDelta(intl, totals.impressions, prevTotals.impressions)}
         deltaTitle={deltaTitle}
       />
       <TotalCard
-        label="CTR"
-        value={formatCtr(totals.ctr)}
-        delta={percentDelta(totals.ctr, prevTotals.ctr)}
+        label={intl.formatMessage({ id: "searchPerf.metric.ctr" })}
+        value={formatCtr(intl, totals.ctr)}
+        delta={percentDelta(intl, totals.ctr, prevTotals.ctr)}
         deltaTitle={deltaTitle}
       />
       <TotalCard
-        label="Avg position"
-        value={formatPosition(totals.position)}
-        delta={positionDelta(totals.position, prevTotals.position)}
+        label={intl.formatMessage({ id: "searchPerf.metric.avgPosition" })}
+        value={formatPosition(intl, totals.position)}
+        delta={positionDelta(intl, totals.position, prevTotals.position)}
         deltaTitle={deltaTitle}
       />
     </div>
@@ -220,7 +256,11 @@ export function DimensionTable({
   rows: SearchPerformanceTableRow[];
   keyLabel: string;
 }) {
-  const columns = useMemo(() => buildDimensionColumns(keyLabel), [keyLabel]);
+  const intl = useIntl();
+  const columns = useMemo(
+    () => buildDimensionColumns(intl, keyLabel),
+    [intl, keyLabel],
+  );
   const table = useAppTable({
     data: rows,
     columns,
@@ -234,7 +274,7 @@ export function DimensionTable({
       wrapperClassName="overflow-x-auto"
       empty={
         <p className="p-6 text-sm text-base-content/60">
-          No data for this period yet. Search Console data trails by a few days.
+          <FormattedMessage id="searchPerf.dimensionTable.empty" />
         </p>
       }
     />
@@ -248,10 +288,14 @@ export function StrikingDistanceTable({
   projectId: string;
   rows: Report["strikingDistance"];
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const anchorRef = useSelectionAnchor();
   const [rowSelection, setRowSelection] = useState({});
-  const columns = useMemo(() => buildStrikingColumns(anchorRef), [anchorRef]);
+  const columns = useMemo(
+    () => buildStrikingColumns(anchorRef, intl),
+    [anchorRef, intl],
+  );
   const table = useAppTable({
     data: rows,
     columns,
@@ -279,10 +323,13 @@ export function StrikingDistanceTable({
     try {
       await navigator.clipboard.writeText(selectedQueries.join("\n"));
       toast.success(
-        `Copied ${selectedQueries.length} ${selectedQueries.length === 1 ? "keyword" : "keywords"}`,
+        intl.formatMessage(
+          { id: "searchPerf.striking.copySuccess" },
+          { count: selectedQueries.length },
+        ),
       );
     } catch {
-      toast.error("Couldn't copy to clipboard");
+      toast.error(intl.formatMessage({ id: "searchPerf.striking.copyError" }));
     }
   };
 
@@ -298,21 +345,27 @@ export function StrikingDistanceTable({
         queryKey: ["savedKeywords", projectId],
       });
       toast.success(
-        `Saved ${keywords.length} ${keywords.length === 1 ? "keyword" : "keywords"}`,
+        intl.formatMessage(
+          { id: "searchPerf.striking.saveSuccess" },
+          { count: keywords.length },
+        ),
       );
       setRowSelection({});
     },
     onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Could not save keywords"));
+      toast.error(
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "searchPerf.striking.saveError" }),
+        ),
+      );
     },
   });
 
   if (rows.length === 0) {
     return (
       <p className="p-6 text-sm text-base-content/60">
-        No striking-distance queries in this period. These are queries ranking
-        at positions 5 to 20, where an improvement is most likely to move
-        traffic.
+        <FormattedMessage id="searchPerf.striking.empty" />
       </p>
     );
   }
@@ -321,8 +374,7 @@ export function StrikingDistanceTable({
     <>
       <div className="p-4">
         <p className="mb-3 text-sm text-base-content/60">
-          Queries ranking at positions 5 to 20, sorted by impressions. Improve
-          the listed page to move them into the top results.
+          <FormattedMessage id="searchPerf.striking.explanation" />
         </p>
         <AppDataTable
           table={table}
@@ -342,7 +394,10 @@ export function StrikingDistanceTable({
       />
       <TableBulkActionBar
         selectedCount={selectedQueries.length}
-        selectedLabel={selectedQueries.length === 1 ? "query" : "queries"}
+        selectedLabel={intl.formatMessage(
+          { id: "searchPerf.striking.selectedLabel" },
+          { count: selectedQueries.length },
+        )}
         onClear={() => setRowSelection({})}
         actions={
           <div className="flex items-center gap-1 px-1.5">
@@ -350,7 +405,7 @@ export function StrikingDistanceTable({
               icon={<Copy className="size-3.5" />}
               onClick={() => void copyKeywords()}
             >
-              Copy keywords
+              <FormattedMessage id="searchPerf.striking.copyKeywords" />
             </TableBulkActionButton>
             <TableBulkActionButton
               icon={
@@ -363,7 +418,7 @@ export function StrikingDistanceTable({
               onClick={() => save.mutate(selectedQueries)}
               disabled={save.isPending}
             >
-              Save as keywords
+              <FormattedMessage id="searchPerf.striking.saveAsKeywords" />
             </TableBulkActionButton>
           </div>
         }

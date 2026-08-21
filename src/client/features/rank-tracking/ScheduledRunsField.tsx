@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { FormattedMessage } from "react-intl";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 
 type Props = {
@@ -35,8 +36,7 @@ export function ScheduledRunsField({
       <div className="flex items-start gap-1.5 text-xs text-base-content/60">
         <Info className="size-3.5 shrink-0 mt-0.5" />
         <span>
-          Automatic checks start off. Add the domain, then turn them on from
-          Configure when you're ready to spend on this schedule.
+          <FormattedMessage id="rank.config.scheduledRuns.createHint" />
         </span>
       </div>
     );
@@ -51,12 +51,18 @@ export function ScheduledRunsField({
           checked={enabled}
           onChange={(e) => onChange(e.target.checked)}
         />
-        <span className="label-text font-medium">Run checks automatically</span>
+        <span className="label-text font-medium">
+          <FormattedMessage id="rank.config.scheduledRuns.toggleLabel" />
+        </span>
       </label>
       <div className="mt-1.5 text-xs text-base-content/50">
-        {enabled
-          ? "Checks run on the schedule above and bill your DataForSEO key without asking."
-          : "Checks only run when you start them yourself."}
+        <FormattedMessage
+          id={
+            enabled
+              ? "rank.config.scheduledRuns.enabledHint"
+              : "rank.config.scheduledRuns.disabledHint"
+          }
+        />
       </div>
     </div>
   );

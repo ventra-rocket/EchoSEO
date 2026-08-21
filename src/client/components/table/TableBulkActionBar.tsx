@@ -1,5 +1,6 @@
 import { ChevronDown, Download, Loader2, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 
 export function TableBulkActionBar({
   selectedCount,
@@ -14,6 +15,7 @@ export function TableBulkActionBar({
   onClear: () => void;
   placement?: "fixed" | "inline";
 }) {
+  const intl = useIntl();
   if (selectedCount === 0) return null;
 
   const wrapperClass =
@@ -27,11 +29,17 @@ export function TableBulkActionBar({
 
   return (
     <div className={wrapperClass}>
-      <div role="toolbar" aria-label="Bulk actions" className={toolbarClass}>
+      <div
+        role="toolbar"
+        aria-label={intl.formatMessage({ id: "common.table.bulkActions" })}
+        className={toolbarClass}
+      >
         <div className="flex items-center gap-2 border-r border-base-content/10 px-3 py-2 text-sm">
           <button
             type="button"
-            aria-label="Clear selection"
+            aria-label={intl.formatMessage({
+              id: "common.table.clearSelection",
+            })}
             className="-ml-1 rounded p-1 text-base-content/55 hover:bg-base-content/10 hover:text-base-content"
             onClick={onClear}
           >
@@ -103,7 +111,7 @@ export function TableBulkExportMenu({
         ) : (
           <Download className="size-3.5" />
         )}
-        Export
+        <FormattedMessage id="common.table.export" />
         <ChevronDown className="size-3 opacity-60" />
       </button>
       <ul

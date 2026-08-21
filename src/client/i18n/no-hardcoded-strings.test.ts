@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -27,7 +27,26 @@ import { describe, expect, it } from "vitest";
  * a directory clean while English toasts fired over a Vietnamese page. A
  * component is not the only thing a user reads. Hence the second scan below.
  */
-const CONVERTED_DIRS = ["src/client/features/audit", "src/client/layout"];
+const CONVERTED_DIRS = [
+  "src/client/features/audit",
+  "src/client/features/rank-tracking",
+  "src/client/features/search-performance",
+  "src/client/layout",
+  // Shared components are only partly converted: the three strings the bulk
+  // action bar renders are done, the other 43 findings under
+  // `src/client/components/` are not, and some of those are code identifiers
+  // (`AUTH_MODE` inside a `<code>` tag) that need the detector taught about
+  // `<code>` before the directory can be listed honestly.
+  "src/client/components/table/TableBulkActionBar.tsx",
+  // A feature directory is not the whole surface: a route file renders the page
+  // heading above it. Converting `features/rank-tracking` left "Rank Tracking /
+  // Track keyword positions across domains" in English at the top of every
+  // Vietnamese rank page, and the directory-shaped gate said nothing. Listed
+  // per file because their siblings — `saved.tsx` most of all — are not
+  // converted yet.
+  "src/routes/_project/p/$projectId/rank-tracking.tsx",
+  "src/routes/_project/p/$projectId/rank-tracking/$configId.tsx",
+];
 
 /**
  * Prose reaches a user through these calls without ever being JSX. `toast.*` is
@@ -96,10 +115,17 @@ const BARE_URL = /^https?:\/\/\S+$/i;
 
 type Finding = { file: string; line: number; text: string };
 
-function sourceFilesIn(dir: string): string[] {
+/**
+ * Takes a directory or a single file, because a surface can be converted before
+ * the directory around it is: listing one finished file is honest, and listing
+ * its directory would claim 43 unconverted strings are done.
+ */
+function sourceFilesIn(target: string): string[] {
+  if (!statSync(target).isDirectory()) return [target];
+
   const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
+  for (const entry of readdirSync(target, { withFileTypes: true })) {
+    const path = join(target, entry.name);
     if (entry.isDirectory()) {
       out.push(...sourceFilesIn(path));
       continue;

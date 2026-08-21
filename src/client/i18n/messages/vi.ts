@@ -1,4 +1,5 @@
 import type { Messages } from "./en";
+import { common } from "./vi/common";
 import { shell } from "./vi/shell";
 import { members } from "./vi/members";
 import { commandCenter } from "./vi/commandCenter";
@@ -7,6 +8,10 @@ import { audit } from "./vi/audit";
 import { auditChrome } from "./vi/auditChrome";
 import { auditPanels } from "./vi/auditPanels";
 import { auditOps } from "./vi/auditOps";
+import { rankTable } from "./vi/rankTable";
+import { rankConfig } from "./vi/rankConfig";
+import { rankCharts } from "./vi/rankCharts";
+import { searchPerformance } from "./vi/searchPerformance";
 
 // Vietnamese catalog — machine-translated seed, pending human review (see
 // README.md). Typed as `Messages` so the compiler fails if any English key is
@@ -17,8 +22,13 @@ export const vi: Messages = {
   ...members,
   ...commandCenter,
   ...seoProvider,
+  ...common,
   ...audit,
   ...auditChrome,
   ...auditPanels,
   ...auditOps,
+  ...rankTable,
+  ...rankConfig,
+  ...rankCharts,
+  ...searchPerformance,
 };

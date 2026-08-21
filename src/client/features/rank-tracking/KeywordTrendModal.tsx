@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Copy, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 import { buildCsv, downloadCsv } from "@/client/lib/csv";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -17,10 +18,16 @@ import {
 
 const DEVICE_STYLE: Record<
   "desktop" | "mobile",
-  { label: string; color: string }
+  { messageId: string; color: string }
 > = {
-  desktop: { label: "Desktop", color: "#2563eb" },
-  mobile: { label: "Mobile", color: "#14b8a6" },
+  desktop: {
+    messageId: "rank.charts.trendModal.deviceDesktop",
+    color: "#2563eb",
+  },
+  mobile: {
+    messageId: "rank.charts.trendModal.deviceMobile",
+    color: "#14b8a6",
+  },
 };
 
 export interface KeywordTrendTarget {
@@ -46,6 +53,7 @@ export function KeywordTrendModal({
   onClose: () => void;
 }) {
   const [sinceDays, setSinceDays] = useState(730);
+  const intl = useIntl();
 
   const { data: history, isLoading } = useQuery({
     queryKey: [
@@ -84,7 +92,7 @@ export function KeywordTrendModal({
 
   const series: TrendSeries[] = devices.map((device) => ({
     dataKey: device,
-    name: DEVICE_STYLE[device].label,
+    name: intl.formatMessage({ id: DEVICE_STYLE[device].messageId }),
     color: DEVICE_STYLE[device].color,
     strokeDasharray: "4 3",
   }));
@@ -112,20 +120,32 @@ export function KeywordTrendModal({
   const exportRows = () =>
     historyRows.map((r) => [
       new Date(r.checkedAt).toISOString(),
-      DEVICE_STYLE[r.device].label,
+      intl.formatMessage({ id: DEVICE_STYLE[r.device].messageId }),
       r.position ?? "",
       csvChange(r.position, r.previousPosition),
     ]);
 
   const handleCopy = () => {
-    const headers = ["Date", "Device", "Position", "Change vs previous"];
+    const headers = [
+      intl.formatMessage({ id: "rank.charts.trendModal.colDate" }),
+      intl.formatMessage({ id: "rank.charts.trendModal.colDevice" }),
+      intl.formatMessage({ id: "rank.charts.trendModal.colPosition" }),
+      intl.formatMessage({ id: "rank.charts.trendModal.colChangeFull" }),
+    ];
     void navigator.clipboard.writeText(buildCsv(headers, exportRows()));
-    toast.success("Copied to clipboard");
+    toast.success(
+      intl.formatMessage({ id: "rank.charts.trendModal.copiedToast" }),
+    );
     captureClientEvent("rank_tracking:keyword_trend_copy");
   };
 
   const handleExport = () => {
-    const headers = ["Date", "Device", "Position", "Change vs previous"];
+    const headers = [
+      intl.formatMessage({ id: "rank.charts.trendModal.colDate" }),
+      intl.formatMessage({ id: "rank.charts.trendModal.colDevice" }),
+      intl.formatMessage({ id: "rank.charts.trendModal.colPosition" }),
+      intl.formatMessage({ id: "rank.charts.trendModal.colChangeFull" }),
+    ];
     downloadCsv(
       `rank-history-${slugify(target.keyword)}.csv`,
       buildCsv(headers, exportRows()),
@@ -145,8 +165,10 @@ export function KeywordTrendModal({
             {target.keyword}
           </h3>
           <p className="text-xs text-base-content/60">
-            {domain} &middot; {LOCATIONS[locationCode] ?? "US"} &middot;
-            Position over time
+            {intl.formatMessage(
+              { id: "rank.charts.trendModal.subtitle" },
+              { domain, location: LOCATIONS[locationCode] ?? "US" },
+            )}
           </p>
         </div>
         <TrendRangeToggle value={sinceDays} onChange={setSinceDays} />
@@ -178,14 +200,14 @@ export function KeywordTrendModal({
           <div className="flex items-center justify-end gap-2">
             <button className="btn btn-ghost btn-xs gap-1" onClick={handleCopy}>
               <Copy className="size-3.5" />
-              Copy
+              {intl.formatMessage({ id: "rank.charts.trendModal.copy" })}
             </button>
             <button
               className="btn btn-ghost btn-xs gap-1"
               onClick={handleExport}
             >
               <Download className="size-3.5" />
-              Export CSV
+              {intl.formatMessage({ id: "rank.charts.trendModal.exportCsv" })}
             </button>
           </div>
 
@@ -193,10 +215,28 @@ export function KeywordTrendModal({
             <table className="table table-sm">
               <thead className="sticky top-0 bg-base-100">
                 <tr>
-                  <th>Date</th>
-                  {devices.length > 1 && <th>Device</th>}
-                  <th>Position</th>
-                  <th>Δ vs previous check</th>
+                  <th>
+                    {intl.formatMessage({
+                      id: "rank.charts.trendModal.colDate",
+                    })}
+                  </th>
+                  {devices.length > 1 && (
+                    <th>
+                      {intl.formatMessage({
+                        id: "rank.charts.trendModal.colDevice",
+                      })}
+                    </th>
+                  )}
+                  <th>
+                    {intl.formatMessage({
+                      id: "rank.charts.trendModal.colPosition",
+                    })}
+                  </th>
+                  <th>
+                    {intl.formatMessage({
+                      id: "rank.charts.trendModal.colChangeShort",
+                    })}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -210,21 +250,26 @@ export function KeywordTrendModal({
                   return (
                     <tr key={`${r.device}-${r.checkedAt}-${idx}`}>
                       <td className="whitespace-nowrap text-xs">
-                        {new Date(r.checkedAt).toLocaleDateString()}
+                        {intl.formatDate(r.checkedAt, { dateStyle: "medium" })}
                       </td>
                       {devices.length > 1 && (
                         <td className="text-xs">
-                          {DEVICE_STYLE[r.device].label}
+                          {intl.formatMessage({
+                            id: DEVICE_STYLE[r.device].messageId,
+                          })}
                         </td>
                       )}
                       <td>
                         {r.position === null ? (
                           <span className="text-base-content/40 text-xs">
-                            Not in top {serpDepth}
+                            {intl.formatMessage(
+                              { id: "rank.charts.notInTopN" },
+                              { depth: serpDepth },
+                            )}
                           </span>
                         ) : (
                           <span className="font-mono text-sm">
-                            {r.position}
+                            {intl.formatNumber(r.position)}
                           </span>
                         )}
                       </td>
@@ -239,7 +284,7 @@ export function KeywordTrendModal({
                               →
                             </span>
                             <span className="font-mono rounded bg-base-200 px-1.5 py-0.5 text-xs font-semibold text-base-content/70">
-                              {r.position}
+                              {intl.formatNumber(r.position!)}
                             </span>
                           </span>
                         ) : (
@@ -264,7 +309,7 @@ export function KeywordTrendModal({
 
       <div className="flex justify-end">
         <button className="btn btn-ghost btn-sm" onClick={onClose}>
-          Close
+          {intl.formatMessage({ id: "rank.charts.trendModal.close" })}
         </button>
       </div>
     </Modal>
@@ -272,11 +317,15 @@ export function KeywordTrendModal({
 }
 
 function EmptyState({ count }: { count: number }) {
+  const intl = useIntl();
   return (
     <div className="rounded-lg border border-dashed border-base-300 p-10 text-center text-sm text-base-content/60">
-      {count === 0
-        ? "No history yet — run a check to start tracking position over time."
-        : "Only 1 check so far — the trend chart fills in after the next check."}
+      {intl.formatMessage({
+        id:
+          count === 0
+            ? "rank.charts.trendModal.empty.none"
+            : "rank.charts.trendModal.empty.one",
+      })}
     </div>
   );
 }
@@ -292,19 +341,16 @@ function ChartTooltip({
   serpDepth: number;
   bottomBandKeys: Set<string>;
 }) {
+  const intl = useIntl();
   return (
     <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm space-y-0.5">
       <p className="text-xs text-base-content/60">
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
+        {intl.formatDate(label, { dateStyle: "medium" })}
       </p>
       {entries.map((e) => {
         const device =
           e.dataKey === "desktop" || e.dataKey === "mobile"
-            ? DEVICE_STYLE[e.dataKey].label
+            ? intl.formatMessage({ id: DEVICE_STYLE[e.dataKey].messageId })
             : String(e.dataKey ?? "");
         const inBottomBand = bottomBandKeys.has(`${label}:${e.dataKey}`);
         return (
@@ -312,10 +358,13 @@ function ChartTooltip({
             {device}:{" "}
             {inBottomBand ? (
               <span className="text-base-content/60">
-                Not in top {serpDepth}
+                {intl.formatMessage(
+                  { id: "rank.charts.notInTopN" },
+                  { depth: serpDepth },
+                )}
               </span>
             ) : (
-              e.value
+              intl.formatNumber(e.value ?? 0)
             )}
           </p>
         );

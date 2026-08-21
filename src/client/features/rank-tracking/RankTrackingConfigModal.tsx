@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   createRankTrackingConfig,
   updateRankTrackingConfig,
 } from "@/serverFunctions/rank-tracking";
-import { Info, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { Modal } from "@/client/components/Modal";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import { domainField, normalizeDomain } from "@/types/schemas/domain";
-import { depthToPages, pagesToDepth } from "@/shared/rank-tracking";
 import {
   DEFAULT_LOCATION_CODE,
   getLanguageCode,
@@ -19,8 +19,12 @@ import {
 } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
-import { ScheduledRunsField } from "./ScheduledRunsField";
 import { CostEstimateNote } from "./CostEstimateNote";
+import {
+  DevicesField,
+  ScheduleFieldGroup,
+  DepthField,
+} from "./RankTrackingConfigFields";
 
 type Props = {
   projectId: string;
@@ -37,6 +41,7 @@ export function RankTrackingConfigModal({
   onSaved,
   onConfigCreated,
 }: Props) {
+  const intl = useIntl();
   const isEdit = !!existingConfig;
   const [step, setStep] = useState<"config" | "keywords">("config");
   const [domain, setDomain] = useState(existingConfig?.domain ?? "");
@@ -78,13 +83,20 @@ export function RankTrackingConfigModal({
       }),
     onSuccess: (result) => {
       captureClientEvent("rank_tracking:config_create");
-      toast.success("Domain added for rank tracking");
+      toast.success(
+        intl.formatMessage({ id: "rank.config.form.createSuccessToast" }),
+      );
       setCreatedConfigId(result.configId);
       onConfigCreated?.();
       setStep("keywords");
     },
     onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Failed to save config"));
+      toast.error(
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "rank.config.form.createErrorDefault" }),
+        ),
+      );
     },
   });
 
@@ -109,11 +121,18 @@ export function RankTrackingConfigModal({
       }),
     onSuccess: () => {
       captureClientEvent("rank_tracking:config_update");
-      toast.success("Configuration updated");
+      toast.success(
+        intl.formatMessage({ id: "rank.config.form.updateSuccessToast" }),
+      );
       onSaved();
     },
     onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Failed to update config"));
+      toast.error(
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "rank.config.form.updateErrorDefault" }),
+        ),
+      );
     },
   });
 
@@ -121,12 +140,16 @@ export function RankTrackingConfigModal({
     e.preventDefault();
     if (isPending) return;
     if (!domain.trim()) {
-      toast.error("Please enter a domain");
+      toast.error(
+        intl.formatMessage({ id: "rank.config.form.domainRequiredToast" }),
+      );
       return;
     }
     const parsedDomain = domainField.safeParse(domain);
     if (!parsedDomain.success) {
-      toast.error("Please enter a valid domain");
+      toast.error(
+        intl.formatMessage({ id: "rank.config.form.domainInvalidToast" }),
+      );
       return;
     }
     setDomain(parsedDomain.data);
@@ -177,7 +200,13 @@ export function RankTrackingConfigModal({
     >
       <div className="flex items-center justify-between">
         <h2 id="rank-config-modal-title" className="text-lg font-semibold">
-          {isEdit ? "Edit Domain Config" : "Add Domain"}
+          <FormattedMessage
+            id={
+              isEdit
+                ? "rank.config.modal.editTitle"
+                : "rank.config.action.addDomain"
+            }
+          />
         </h2>
         <button className="btn btn-ghost btn-sm btn-square" onClick={onClose}>
           <X className="size-4" />
@@ -187,11 +216,15 @@ export function RankTrackingConfigModal({
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="form-control">
           <label className="label">
-            <span className="label-text font-medium">Target Domain</span>
+            <span className="label-text font-medium">
+              <FormattedMessage id="rank.config.form.domainLabel" />
+            </span>
           </label>
           <input
             type="text"
-            placeholder="example.com"
+            placeholder={intl.formatMessage({
+              id: "rank.config.form.domainPlaceholder",
+            })}
             className="input input-bordered w-full"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
@@ -201,7 +234,9 @@ export function RankTrackingConfigModal({
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text font-medium">Country</span>
+            <span className="label-text font-medium">
+              <FormattedMessage id="rank.config.form.countryLabel" />
+            </span>
           </label>
           <LocationSelect
             value={locationCode}
@@ -214,7 +249,9 @@ export function RankTrackingConfigModal({
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text font-medium">Language</span>
+            <span className="label-text font-medium">
+              <FormattedMessage id="rank.config.form.languageLabel" />
+            </span>
           </label>
           <select
             className="select select-bordered w-full"
@@ -230,102 +267,17 @@ export function RankTrackingConfigModal({
           </select>
         </div>
 
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Devices</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            value={devices}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (
-                value === "both" ||
-                value === "desktop" ||
-                value === "mobile"
-              ) {
-                setDevices(value);
-              }
-            }}
-          >
-            <option value="both">Desktop + Mobile</option>
-            <option value="desktop">Desktop only</option>
-            <option value="mobile">Mobile only</option>
-          </select>
-          <div className="mt-1.5 text-xs text-base-content/50">
-            Most Google searches come from mobile, but select this based on your
-            customer.
-          </div>
-          {devices === "both" && (
-            <div className="mt-1.5 flex items-start gap-1.5 text-xs text-info">
-              <Info className="size-3.5 shrink-0 mt-0.5" />
-              <span>
-                Tracking both devices uses 2x credits per keyword check
-              </span>
-            </div>
-          )}
-        </div>
+        <DevicesField devices={devices} onChange={setDevices} />
 
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Schedule</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            value={schedule}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (
-                value === "daily" ||
-                value === "weekly" ||
-                value === "monthly" ||
-                value === "manual"
-              ) {
-                setSchedule(value);
-              }
-            }}
-          >
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly (end of month)</option>
-            <option value="manual">Manual only</option>
-          </select>
-          {schedule === "daily" && (
-            <div className="mt-1.5 flex items-start gap-1.5 text-xs text-warning">
-              <Info className="size-3.5 shrink-0 mt-0.5" />
-              <span>Daily checks use 7x more credits than weekly</span>
-            </div>
-          )}
-          <div className="mt-3">
-            <ScheduledRunsField
-              isEdit={isEdit}
-              schedule={schedule}
-              enabled={scheduledEnabled}
-              onChange={setScheduledEnabled}
-            />
-          </div>
-        </div>
+        <ScheduleFieldGroup
+          schedule={schedule}
+          onScheduleChange={setSchedule}
+          isEdit={isEdit}
+          scheduledEnabled={scheduledEnabled}
+          onScheduledEnabledChange={setScheduledEnabled}
+        />
 
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Search Depth</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            value={depthToPages(serpDepth)}
-            onChange={(e) => setSerpDepth(pagesToDepth(Number(e.target.value)))}
-          >
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((pages) => (
-              <option key={pages} value={pages}>
-                {pages} {pages === 1 ? "page" : "pages"} (top {pages * 10}{" "}
-                results)
-              </option>
-            ))}
-          </select>
-          <div className="mt-1.5 text-xs text-base-content/50">
-            10 pages is ~8x more expensive than 1 page
-          </div>
-        </div>
+        <DepthField serpDepth={serpDepth} onChange={setSerpDepth} />
 
         <CostEstimateNote
           devices={devices}
@@ -339,7 +291,7 @@ export function RankTrackingConfigModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            Cancel
+            <FormattedMessage id="rank.config.action.cancel" />
           </button>
           <button
             type="submit"
@@ -347,7 +299,13 @@ export function RankTrackingConfigModal({
             disabled={isPending || !domain.trim()}
           >
             {isPending && <Loader2 className="size-3.5 animate-spin" />}
-            {isEdit ? "Save Changes" : "Add Domain"}
+            <FormattedMessage
+              id={
+                isEdit
+                  ? "rank.config.modal.saveChanges"
+                  : "rank.config.action.addDomain"
+              }
+            />
           </button>
         </div>
       </form>

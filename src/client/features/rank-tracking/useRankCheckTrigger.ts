@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useIntl } from "react-intl";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { triggerRankCheck } from "@/serverFunctions/rank-tracking";
@@ -15,6 +16,12 @@ export function useRankCheckTrigger({
   projectId: string;
   onSuccess: () => void;
 }) {
+  // A hook, not a plain function — calls useIntl() itself rather than taking
+  // an IntlShape parameter, matching useLaunchController/useLaunchMutations
+  // (src/client/features/audit/launch/useLaunchController.ts), which only
+  // thread intl as a parameter into plain non-hook helpers that cannot call
+  // useIntl() on their own.
+  const intl = useIntl();
   const queryClient = useQueryClient();
 
   const triggerMutation = useMutation({
@@ -32,15 +39,24 @@ export function useRankCheckTrigger({
         queryKey: ["rankTrackingLatestRun", projectId, configId],
       });
       if (!result.ok) {
-        toast.info("A rank check is already running");
+        toast.info(
+          intl.formatMessage({ id: "rank.config.checkTrigger.alreadyRunning" }),
+        );
         return;
       }
 
       captureClientEvent("rank_tracking:check_trigger");
-      toast.success("Rank check started");
+      toast.success(
+        intl.formatMessage({ id: "rank.config.checkTrigger.started" }),
+      );
     },
     onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Failed to start rank check"));
+      toast.error(
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "rank.config.checkTrigger.errorDefault" }),
+        ),
+      );
     },
   });
 
