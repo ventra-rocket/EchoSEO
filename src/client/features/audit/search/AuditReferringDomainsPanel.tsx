@@ -15,6 +15,7 @@ import {
 } from "@/serverFunctions/audit-referring-domains";
 import type { AuditReferringDomainSignals } from "@/server/features/audit/services/AuditReferringDomainsService";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 
 /**
  * Off-page referring-domain signals for this audit's target, sourced only from
@@ -34,6 +35,8 @@ export function AuditReferringDomainsPanel({
   auditId: string;
   projectId: string;
 }) {
+  const intl = useIntl();
+
   const queryClient = useQueryClient();
   const signalsKey = ["audit-referring-domains", projectId, auditId];
 
@@ -71,7 +74,9 @@ export function AuditReferringDomainsPanel({
     return (
       <div className="alert alert-error">
         <AlertCircle className="size-5" />
-        <span>We could not load off-page data for this audit.</span>
+        <span>
+          <FormattedMessage id="audit.search.referring.loadError" />
+        </span>
       </div>
     );
   }
@@ -84,12 +89,15 @@ export function AuditReferringDomainsPanel({
   // caller may trigger (RefreshControl then handles provider-disabled itself).
   const triggerArea = access.isError ? (
     <Notice>
-      We couldn't check whether off-page data can be fetched for this site.{" "}
-      {getStandardErrorMessage(access.error, "Try again shortly.")}
+      <FormattedMessage id="audit.search.referring.accessCheckFailed" />{" "}
+      {getStandardErrorMessage(
+        access.error,
+        intl.formatMessage({ id: "audit.search.referring.tryAgainShortly" }),
+      )}
     </Notice>
   ) : !access.data ? null : !access.data.canTrigger ? (
     <Notice>
-      Ask a workspace editor or owner to fetch off-page data for this site.
+      <FormattedMessage id="audit.search.referring.cannotTrigger" />
     </Notice>
   ) : (
     <RefreshControl
@@ -101,7 +109,9 @@ export function AuditReferringDomainsPanel({
         refresh.isError
           ? getStandardErrorMessage(
               refresh.error,
-              "Failed to fetch off-page data",
+              intl.formatMessage({
+                id: "audit.search.referring.refreshError",
+              }),
             )
           : null
       }
@@ -113,9 +123,7 @@ export function AuditReferringDomainsPanel({
     return (
       <div className="space-y-3">
         <Notice>
-          No off-page reading has been fetched for this site yet. Fetching pulls
-          the current referring-domain count from DataForSEO and stores it, so
-          viewing it later costs nothing and a trend builds up over time.
+          <FormattedMessage id="audit.search.referring.noSnapshot" />
         </Notice>
         {triggerArea}
       </div>
@@ -139,22 +147,29 @@ export function AuditReferringDomainsPanel({
 type ReadySignals = Extract<AuditReferringDomainSignals, { state: "ready" }>;
 
 function ReadingBlock({ data }: { data: ReadySignals }) {
+  const intl = useIntl();
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Metric
           icon={<Link2 className="size-4" />}
-          label="Referring domains"
+          label={intl.formatMessage({
+            id: "audit.search.referring.metricDomains",
+          })}
           value={data.referringDomains}
         />
         <Metric
           icon={<TrendingUp className="size-4 text-success" />}
-          label="New (provider period)"
+          label={intl.formatMessage({
+            id: "audit.search.referring.metricNew",
+          })}
           value={data.newReferringDomains}
         />
         <Metric
           icon={<TrendingDown className="size-4 text-error" />}
-          label="Lost (provider period)"
+          label={intl.formatMessage({
+            id: "audit.search.referring.metricLost",
+          })}
           value={data.lostReferringDomains}
         />
       </div>
@@ -179,7 +194,7 @@ function Metric({
         {label}
       </p>
       <p className="text-2xl font-semibold tabular-nums">
-        {value === null ? "—" : value.toLocaleString()}
+        {value === null ? "—" : <FormattedNumber value={value} />}
       </p>
     </div>
   );
@@ -198,11 +213,16 @@ function TrendLine({ trend }: { trend: ReadySignals["trend"] }) {
     <p className="text-sm">
       <span className={`font-medium tabular-nums ${deltaClass}`}>
         {sign}
-        {trend.delta.toLocaleString()}
+        <FormattedNumber value={trend.delta} />
       </span>{" "}
       <span className="text-base-content/60">
-        referring domains since the previous reading ({formatDate(trend.from)} →{" "}
-        {formatDate(trend.to)})
+        <FormattedMessage
+          id="audit.search.referring.trendLabel"
+          values={{
+            from: formatDate(trend.from),
+            to: formatDate(trend.to),
+          }}
+        />
       </span>
     </p>
   );
@@ -221,8 +241,15 @@ function SourceLine({
 }) {
   return (
     <p className="text-xs text-base-content/50">
-      Source: {providerLabel(provider)} · {target} · {coverage} · queried{" "}
-      {formatDate(queriedAt)}
+      <FormattedMessage
+        id="audit.search.referring.sourceLine"
+        values={{
+          provider: providerLabel(provider),
+          target,
+          coverage,
+          date: formatDate(queriedAt),
+        }}
+      />
     </p>
   );
 }
@@ -247,25 +274,32 @@ function RefreshControl({
   errorMessage: string | null;
   onConfirm: () => void;
 }) {
+  const intl = useIntl();
   const [armed, setArmed] = useState(false);
 
   if (!providerEnabled) {
     return (
       <Notice>
         {providerMessage ??
-          "The backlinks provider is not enabled for this deployment."}
+          intl.formatMessage({
+            id: "audit.search.referring.providerDisabled",
+          })}
       </Notice>
     );
   }
 
-  const label = hasReading ? "Refresh off-page data" : "Fetch off-page data";
+  const label = intl.formatMessage({
+    id: hasReading
+      ? "audit.search.referring.refreshLabel"
+      : "audit.search.referring.fetchLabel",
+  });
 
   return (
     <div className="space-y-2">
       {armed ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-base-content/70">
-            This spends one credit. Continue?
+            <FormattedMessage id="audit.search.referring.confirmSpend" />
           </span>
           <button
             type="button"
@@ -279,7 +313,7 @@ function RefreshControl({
             {isPending && (
               <span className="loading loading-spinner loading-xs" />
             )}
-            Confirm
+            <FormattedMessage id="audit.search.referring.confirm" />
           </button>
           <button
             type="button"
@@ -287,7 +321,7 @@ function RefreshControl({
             disabled={isPending}
             onClick={() => setArmed(false)}
           >
-            Cancel
+            <FormattedMessage id="audit.search.referring.cancel" />
           </button>
         </div>
       ) : (
@@ -298,7 +332,10 @@ function RefreshControl({
           onClick={() => setArmed(true)}
         >
           <RefreshCw className="size-4" />
-          {label} · uses credits
+          {intl.formatMessage(
+            { id: "audit.search.referring.actionUsesCredits" },
+            { label },
+          )}
         </button>
       )}
       {errorMessage && (

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { CalendarClock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useIntl } from "react-intl";
 import {
   getReportSubscription,
   saveReportSubscription,
@@ -32,6 +33,7 @@ export function PeriodicReportCard({
   projectId: string;
   auditId: string;
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [locale, setLocale] = useState<"en" | "vi">("en");
@@ -63,11 +65,16 @@ export function PeriodicReportCard({
         data: { projectId, auditId, recipientEmail: email.trim(), locale },
       }),
     onSuccess: () => {
-      toast.success("Weekly report is on. The first one goes out Monday.");
+      toast.success(intl.formatMessage({ id: "audit.reports.enabledToast" }));
       void invalidate();
     },
     onError: (error) =>
-      toast.error(errorMessage(error, "Could not save the report settings.")),
+      toast.error(
+        errorMessage(
+          error,
+          intl.formatMessage({ id: "audit.reports.saveError" }),
+        ),
+      ),
   });
 
   const toggle = useMutation({
@@ -75,12 +82,21 @@ export function PeriodicReportCard({
       setReportSubscriptionEnabled({ data: { projectId, auditId, enabled } }),
     onSuccess: (result) => {
       toast.success(
-        result?.enabled ? "Weekly report resumed." : "Weekly report paused.",
+        intl.formatMessage({
+          id: result?.enabled
+            ? "audit.reports.resumedToast"
+            : "audit.reports.pausedToast",
+        }),
       );
       void invalidate();
     },
     onError: (error) =>
-      toast.error(errorMessage(error, "Could not change the schedule.")),
+      toast.error(
+        errorMessage(
+          error,
+          intl.formatMessage({ id: "audit.reports.scheduleError" }),
+        ),
+      ),
   });
 
   const busy = save.isPending || toggle.isPending;
@@ -96,22 +112,23 @@ export function PeriodicReportCard({
         <div>
           <h2 className="flex items-center gap-2 font-medium">
             <CalendarClock className="size-4" />
-            Weekly report
+            {intl.formatMessage({ id: "audit.reports.heading" })}
           </h2>
           <p className="text-xs text-base-content/60">
-            Every Monday at 08:00 (UTC+7) we re-crawl this site, then email what
-            changed — new issues with the exact fix steps first, Search Console
-            numbers underneath. Critical problems are emailed as soon as a crawl
-            finds them, at most once a day.
+            {intl.formatMessage({ id: "audit.reports.description" })}
           </p>
         </div>
 
         <label className="form-control w-full max-w-sm">
-          <span className="label-text text-xs">Send the report to</span>
+          <span className="label-text text-xs">
+            {intl.formatMessage({ id: "audit.reports.recipientLabel" })}
+          </span>
           <input
             type="email"
             className="input input-sm input-bordered w-full"
-            placeholder="seo@example.com"
+            placeholder={intl.formatMessage({
+              id: "audit.reports.emailPlaceholder",
+            })}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             disabled={busy}
@@ -119,7 +136,9 @@ export function PeriodicReportCard({
         </label>
 
         <label className="form-control w-full max-w-sm">
-          <span className="label-text text-xs">Language</span>
+          <span className="label-text text-xs">
+            {intl.formatMessage({ id: "language.label" })}
+          </span>
           <select
             className="select select-sm select-bordered w-full"
             value={locale}
@@ -128,8 +147,12 @@ export function PeriodicReportCard({
             }
             disabled={busy}
           >
-            <option value="en">English</option>
-            <option value="vi">Tiếng Việt</option>
+            <option value="en">
+              {intl.formatMessage({ id: "language.english" })}
+            </option>
+            <option value="vi">
+              {intl.formatMessage({ id: "language.vietnamese" })}
+            </option>
           </select>
         </label>
 
@@ -143,11 +166,13 @@ export function PeriodicReportCard({
             {save.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : null}
-            {subscription
-              ? optedOut
-                ? "Ask again"
-                : "Save"
-              : "Turn on weekly report"}
+            {intl.formatMessage({
+              id: subscription
+                ? optedOut
+                  ? "audit.reports.askAgainButton"
+                  : "audit.reports.saveButton"
+                : "audit.reports.turnOnButton",
+            })}
           </button>
 
           {subscription && !optedOut ? (
@@ -160,7 +185,11 @@ export function PeriodicReportCard({
               {toggle.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : null}
-              {subscription.enabled ? "Pause" : "Resume"}
+              {intl.formatMessage({
+                id: subscription.enabled
+                  ? "audit.reports.pauseButton"
+                  : "audit.reports.resumeButton",
+              })}
             </button>
           ) : null}
         </div>
@@ -168,12 +197,30 @@ export function PeriodicReportCard({
         {subscription ? (
           <p className="text-xs text-base-content/60">
             {optedOut
-              ? `${subscription.recipientEmail} unsubscribed on ${new Date(subscription.unsubscribedAt ?? "").toLocaleDateString()} · re-enter the address above and save to ask again`
+              ? intl.formatMessage(
+                  { id: "audit.reports.unsubscribedStatus" },
+                  {
+                    email: subscription.recipientEmail,
+                    date: intl.formatDate(subscription.unsubscribedAt ?? "", {
+                      dateStyle: "medium",
+                    }),
+                  },
+                )
               : subscription.enabled
-                ? `Active · crawls up to ${subscription.maxPages} pages each run`
-                : "Paused · no crawl and no email until you resume"}
+                ? intl.formatMessage(
+                    { id: "audit.reports.activeStatus" },
+                    { maxPages: subscription.maxPages },
+                  )
+                : intl.formatMessage({ id: "audit.reports.pausedStatus" })}
             {subscription.lastSentAt
-              ? ` · last sent ${new Date(subscription.lastSentAt).toLocaleDateString()}`
+              ? intl.formatMessage(
+                  { id: "audit.reports.lastSentSuffix" },
+                  {
+                    date: intl.formatDate(subscription.lastSentAt, {
+                      dateStyle: "medium",
+                    }),
+                  },
+                )
               : null}
           </p>
         ) : null}

@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Camera, ExternalLink } from "lucide-react";
 import { extractPathname } from "@/client/features/audit/shared";
 import { IssueEvidenceScreenshot } from "@/client/features/audit/issues/IssueEvidenceScreenshot";
@@ -34,15 +35,22 @@ export function IssueEvidenceTable({
   // One capture panel open at a time — the query behind it is lazy, so a row's
   // evidence is only fetched (and only ever captured) when its panel is opened.
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const intl = useIntl();
 
   return (
     <div className="overflow-x-auto">
       <table className="table table-sm">
         <thead>
           <tr>
-            <th>URL</th>
-            <th className="w-24">Status</th>
-            <th>Evidence</th>
+            <th>
+              <FormattedMessage id="audit.issues.evidence.columnUrl" />
+            </th>
+            <th className="w-24">
+              <FormattedMessage id="audit.issues.evidence.columnStatus" />
+            </th>
+            <th>
+              <FormattedMessage id="audit.issues.evidence.columnEvidence" />
+            </th>
             <th className="w-12" />
           </tr>
         </thead>
@@ -79,9 +87,11 @@ export function IssueEvidenceTable({
                         className={`btn btn-ghost btn-xs btn-square ${
                           expanded ? "text-primary" : ""
                         }`}
-                        aria-label={
-                          expanded ? "Hide evidence" : "Show evidence capture"
-                        }
+                        aria-label={intl.formatMessage({
+                          id: expanded
+                            ? "audit.issues.evidence.hideEvidence"
+                            : "audit.issues.evidence.showEvidence",
+                        })}
                         aria-expanded={expanded}
                         onClick={() =>
                           setExpandedId(expanded ? null : occurrence.id)

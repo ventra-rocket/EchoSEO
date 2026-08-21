@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FormattedMessage, type IntlShape, useIntl } from "react-intl";
 import { AlertCircle, Camera, Loader2 } from "lucide-react";
 import {
   captureAuditScreenshot,
@@ -28,6 +29,7 @@ export function IssueEvidenceScreenshot({
   projectId: string;
   url: string;
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const stateKey = ["audit-screenshot", projectId, auditId, url];
 
@@ -52,7 +54,7 @@ export function IssueEvidenceScreenshot({
     return (
       <div className="flex items-center gap-2 py-3 text-xs text-base-content/60">
         <Loader2 className="size-3.5 animate-spin" />
-        Loading evidence…
+        <FormattedMessage id="audit.issues.screenshot.loading" />
       </div>
     );
   }
@@ -61,7 +63,7 @@ export function IssueEvidenceScreenshot({
     return (
       <div className="flex items-center gap-2 py-3 text-xs text-error">
         <AlertCircle className="size-3.5" />
-        We could not load the evidence for this URL.
+        <FormattedMessage id="audit.issues.screenshot.loadError" />
       </div>
     );
   }
@@ -73,13 +75,18 @@ export function IssueEvidenceScreenshot({
       <figure className="space-y-1.5 py-2">
         <img
           src={`/api/audit/screenshot/get?id=${encodeURIComponent(data.screenshotId)}`}
-          alt={`Rendered capture of ${url}`}
+          alt={intl.formatMessage(
+            { id: "audit.issues.screenshot.alt" },
+            { url },
+          )}
           loading="lazy"
           className="max-h-[520px] w-auto max-w-full rounded border border-base-300"
         />
         <figcaption className="text-xs text-base-content/50">
-          Rendered from the live page via PageSpeed · captured{" "}
-          {formatCapturedAt(data.capturedAt)}
+          <FormattedMessage
+            id="audit.issues.screenshot.caption"
+            values={{ date: formatCapturedAt(intl, data.capturedAt) }}
+          />
         </figcaption>
       </figure>
     );
@@ -88,8 +95,7 @@ export function IssueEvidenceScreenshot({
   if (data.status === "unavailable") {
     return (
       <p className="py-3 text-xs text-base-content/50">
-        No page capture is available for this URL — it was not crawled as an
-        HTML page in this audit.
+        <FormattedMessage id="audit.issues.screenshot.unavailable" />
       </p>
     );
   }
@@ -102,7 +108,7 @@ export function IssueEvidenceScreenshot({
     <div className="space-y-2 py-2">
       {failed && (
         <p className="text-xs text-base-content/60">
-          We could not render this page the last time it was tried.
+          <FormattedMessage id="audit.issues.screenshot.renderFailed" />
         </p>
       )}
 
@@ -118,28 +124,43 @@ export function IssueEvidenceScreenshot({
           ) : (
             <Camera className="size-3.5" />
           )}
-          {failed ? "Try again" : "Capture evidence"}
+          <FormattedMessage
+            id={
+              failed
+                ? "audit.issues.screenshot.tryAgain"
+                : "audit.issues.screenshot.captureEvidence"
+            }
+          />
         </button>
       ) : (
         <p className="text-xs text-base-content/50">
-          {failed
-            ? "No evidence could be captured for this URL."
-            : "No evidence has been captured for this URL yet."}
+          <FormattedMessage
+            id={
+              failed
+                ? "audit.issues.screenshot.noneCaptured"
+                : "audit.issues.screenshot.notCapturedYet"
+            }
+          />
         </p>
       )}
 
       {capture.isError && (
         <p className="flex items-center gap-1.5 text-xs text-error">
           <AlertCircle className="size-3.5" />
-          {getStandardErrorMessage(capture.error, "Could not capture evidence")}
+          {getStandardErrorMessage(
+            capture.error,
+            intl.formatMessage({
+              id: "audit.issues.screenshot.captureFailedDefault",
+            }),
+          )}
         </p>
       )}
     </div>
   );
 }
 
-function formatCapturedAt(iso: string): string {
+function formatCapturedAt(intl: IntlShape, iso: string): string {
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return iso;
-  return new Date(ms).toLocaleString();
+  return intl.formatDate(ms, { dateStyle: "medium", timeStyle: "short" });
 }

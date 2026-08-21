@@ -1,7 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { MoreHorizontal, ScanSearch, Trash2 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import type { getAuditHistory } from "@/serverFunctions/audit";
-import { formatDate, StatusBadge } from "@/client/features/audit/shared";
+import {
+  parseAuditTimestamp,
+  StatusBadge,
+} from "@/client/features/audit/shared";
 
 export function AuditHistorySection({
   projectId,
@@ -16,12 +20,15 @@ export function AuditHistorySection({
   onDelete: (auditId: string) => void;
   canDelete: boolean;
 }) {
+  const intl = useIntl();
   if (history.length === 0 && !isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="text-center text-base-content/40 space-y-3">
           <ScanSearch className="size-12 mx-auto opacity-30" />
-          <p className="text-lg font-medium">No audits yet</p>
+          <p className="text-lg font-medium">
+            <FormattedMessage id="audit.chrome.history.empty" />
+          </p>
         </div>
       </div>
     );
@@ -32,16 +39,28 @@ export function AuditHistorySection({
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body gap-3">
-        <h2 className="card-title text-base">Previous Audits</h2>
+        <h2 className="card-title text-base">
+          <FormattedMessage id="audit.chrome.history.title" />
+        </h2>
         <div className="overflow-x-auto">
           <table className="table table-sm">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>URL</th>
-                <th>Status</th>
-                <th>Pages</th>
-                <th>Lighthouse</th>
+                <th>
+                  <FormattedMessage id="audit.chrome.history.columnDate" />
+                </th>
+                <th>
+                  <FormattedMessage id="audit.chrome.history.columnUrl" />
+                </th>
+                <th>
+                  <FormattedMessage id="audit.chrome.history.columnStatus" />
+                </th>
+                <th>
+                  <FormattedMessage id="audit.chrome.history.columnPages" />
+                </th>
+                <th>
+                  <FormattedMessage id="audit.chrome.history.columnLighthouse" />
+                </th>
                 <th></th>
               </tr>
             </thead>
@@ -49,7 +68,9 @@ export function AuditHistorySection({
               {history.map((audit) => (
                 <tr key={audit.id} className="hover group">
                   <td className="text-xs text-base-content/70">
-                    {formatDate(audit.startedAt)}
+                    {intl.formatDate(parseAuditTimestamp(audit.startedAt), {
+                      dateStyle: "medium",
+                    })}
                   </td>
                   <td className="max-w-[220px] truncate">{audit.startUrl}</td>
                   <td>
@@ -66,7 +87,9 @@ export function AuditHistorySection({
                   </td>
                   <td>
                     {audit.ranLighthouse ? (
-                      <span className="badge badge-ghost badge-xs">Yes</span>
+                      <span className="badge badge-ghost badge-xs">
+                        <FormattedMessage id="audit.chrome.history.yes" />
+                      </span>
                     ) : null}
                   </td>
                   <td>
@@ -98,6 +121,7 @@ function HistoryActions({
   onDelete: (auditId: string) => void;
   canDelete: boolean;
 }) {
+  const intl = useIntl();
   return (
     <div className="flex items-center justify-end gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
       <Link
@@ -106,7 +130,7 @@ function HistoryActions({
         search={{ auditId, tab: "pages" }}
         className="btn btn-primary btn-xs"
       >
-        View
+        <FormattedMessage id="audit.chrome.history.view" />
       </Link>
       {/* Read-only members keep the View link but get no action the server
           would reject. */}
@@ -115,7 +139,9 @@ function HistoryActions({
           tabIndex={0}
           role="button"
           className="btn btn-ghost btn-xs btn-square"
-          aria-label="Audit actions"
+          aria-label={intl.formatMessage({
+            id: "audit.chrome.history.actionsLabel",
+          })}
         >
           <MoreHorizontal className="size-3.5" />
         </div>
@@ -132,7 +158,7 @@ function HistoryActions({
               }}
             >
               <Trash2 className="size-3.5" />
-              Delete audit
+              <FormattedMessage id="audit.chrome.history.delete" />
             </button>
           </li>
         </ul>

@@ -59,7 +59,6 @@ export const REPORT_LOCALES = ["en", "vi"] as const;
 
 export type ReportLocale = (typeof REPORT_LOCALES)[number];
 
-export const REPORT_LOCALE_LABEL: Record<ReportLocale, string> = {
-  en: "English",
-  vi: "Tiếng Việt",
-};
+// The label for each locale is a UI concern, so it lives in the message
+// catalogs (`language.english` / `language.vietnamese`) rather than here: the
+// picker must read the same endonyms as the app's language switcher.

@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import {
   MAX_PAGES_LIMIT,
@@ -39,13 +40,14 @@ export function LaunchFormCard({
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body gap-4">
-        <h2 className="card-title text-base">Start New Audit</h2>
+        <h2 className="card-title text-base">
+          <FormattedMessage id="audit.chrome.launch.title" />
+        </h2>
 
         {canLaunch ? null : (
           <div className="alert alert-info py-2">
             <span className="text-sm">
-              You have read-only access to this workspace, so you can review
-              existing audits but not start new ones.
+              <FormattedMessage id="audit.chrome.launch.readOnlyNotice" />
             </span>
           </div>
         )}
@@ -94,10 +96,11 @@ export function LaunchFormCard({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Starting...
+                    <Loader2 className="size-4 animate-spin" />{" "}
+                    <FormattedMessage id="audit.chrome.launch.submitStarting" />
                   </>
                 ) : (
-                  "Start Audit"
+                  <FormattedMessage id="audit.chrome.launch.submit" />
                 )}
               </button>
             )}
@@ -127,10 +130,12 @@ function LaunchOptions({ launchForm, commitMaxPagesInput }: Props) {
   return (
     <div className="rounded-lg border border-base-300 bg-base-200/20 p-3 space-y-2">
       <label className="text-xs font-medium uppercase tracking-wide text-base-content/60">
-        Crawl limit
+        <FormattedMessage id="audit.chrome.launch.crawlLimitLabel" />
       </label>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-base-content/70">Max pages</span>
+        <span className="text-sm text-base-content/70">
+          <FormattedMessage id="audit.chrome.launch.maxPagesLabel" />
+        </span>
         <launchForm.Field name="maxPagesInput">
           {(field) => (
             <input
@@ -153,13 +158,17 @@ function LaunchOptions({ launchForm, commitMaxPagesInput }: Props) {
         </launchForm.Field>
       </div>
       <p className="text-xs text-base-content/50">
-        Enter any value from {MIN_PAGES} to {MAX_PAGES_LIMIT}.
+        <FormattedMessage
+          id="audit.chrome.launch.pagesRangeHint"
+          values={{ min: MIN_PAGES, max: MAX_PAGES_LIMIT }}
+        />
       </p>
     </div>
   );
 }
 
 function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
+  const intl = useIntl();
   // Lighthouse runs through DataForSEO, so a keyless org can't select it —
   // ticking it would just fail server-side once the run fires.
   const seoApiKeyStatus = useSeoApiKeyStatus();
@@ -181,9 +190,11 @@ function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
         </launchForm.Field>
         <span
           className="text-sm font-medium text-base-content/80"
-          title="Lighthouse measures the performance of your pages and identifies issues."
+          title={intl.formatMessage({
+            id: "audit.chrome.launch.lighthouseTooltip",
+          })}
         >
-          Include Lighthouse
+          <FormattedMessage id="audit.chrome.launch.includeLighthouse" />
         </span>
       </label>
 
@@ -195,8 +206,7 @@ function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
             runLighthouse ? (
               <div className="space-y-1">
                 <p className="text-xs text-base-content/60">
-                  We choose a sample of 20 pages to audit, removing pages from
-                  duplicate templates.
+                  <FormattedMessage id="audit.chrome.launch.lighthouseSampleNote" />
                 </p>
               </div>
             ) : null
@@ -204,7 +214,7 @@ function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
         </launchForm.Subscribe>
       ) : (
         <p className="text-xs text-base-content/60">
-          Lighthouse needs a DataForSEO key — add one in Settings.
+          <FormattedMessage id="audit.chrome.launch.lighthouseNeedsKey" />
         </p>
       )}
     </div>
@@ -232,14 +242,31 @@ function VerificationNote({
   if (!gate) {
     return (
       <p id={VERIFICATION_NOTE_ID} className="text-xs text-base-content/60">
-        {access.verifiedSiteUrl
-          ? `Search Console property connected (${access.verifiedSiteUrl}). Crawls over ${access.verificationPageThreshold.toLocaleString()} pages are allowed on the domains it proves — that host and its subdomains.`
-          : `Crawls over ${access.verificationPageThreshold.toLocaleString()} pages require a matching verified Search Console property for the domain.`}
+        {access.verifiedSiteUrl ? (
+          <FormattedMessage
+            id="audit.chrome.launch.verificationConnected"
+            values={{
+              url: access.verifiedSiteUrl,
+              threshold: (
+                <FormattedNumber value={access.verificationPageThreshold} />
+              ),
+            }}
+          />
+        ) : (
+          <FormattedMessage
+            id="audit.chrome.launch.verificationRequired"
+            values={{
+              threshold: (
+                <FormattedNumber value={access.verificationPageThreshold} />
+              ),
+            }}
+          />
+        )}
       </p>
     );
   }
 
-  const limit = gate.threshold.toLocaleString();
+  const limit = <FormattedNumber value={gate.threshold} />;
 
   return (
     <div
@@ -248,16 +275,31 @@ function VerificationNote({
     >
       <div className="space-y-2 text-sm">
         <p>
-          {gate.verifiedSiteUrl
-            ? `${gate.domain} is not proved by the connected Search Console property (${gate.verifiedSiteUrl}), so it can be crawled up to ${limit} pages. Connect a property covering ${gate.domain} — a Domain property covers every subdomain — to crawl more.`
-            : `No Search Console property is connected, so ${gate.domain} can be crawled up to ${limit} pages. Connect a matching property in Settings to crawl more.`}
+          {gate.verifiedSiteUrl ? (
+            <FormattedMessage
+              id="audit.chrome.launch.verificationGateMismatch"
+              values={{
+                domain: gate.domain,
+                url: gate.verifiedSiteUrl,
+                limit,
+              }}
+            />
+          ) : (
+            <FormattedMessage
+              id="audit.chrome.launch.verificationGateNone"
+              values={{ domain: gate.domain, limit }}
+            />
+          )}
         </p>
         <button
           type="button"
           className="btn btn-sm"
           onClick={onUseVerificationLimit}
         >
-          Crawl {limit} pages
+          <FormattedMessage
+            id="audit.chrome.launch.crawlLimitButton"
+            values={{ limit }}
+          />
         </button>
       </div>
     </div>

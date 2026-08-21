@@ -5,9 +5,11 @@
  * mapped into one of those groups — this pins it to the actual mapping.
  */
 import { describe, expect, it } from "vitest";
+import { createIntl } from "react-intl";
 import {
   compareSeverity,
   groupLabel,
+  translatedGroupLabel,
   UNCOVERED_GROUPS,
   UNCOVERED_GROUPS_NOTE,
 } from "./issue-filters";
@@ -18,6 +20,7 @@ import {
 import { LITE_RULES } from "@/server/lib/seo-rules";
 import { CORE_WEB_VITALS_RULES } from "@/server/lib/seo-rules/rules/core-web-vitals";
 import { CROSS_PAGE_RULES } from "@/server/lib/audit/rules/cross-page";
+import { MESSAGES } from "@/client/i18n/messages";
 
 function groupsWithNoRules(): string[] {
   const covered = new Set(
@@ -66,5 +69,28 @@ describe("group presentation", () => {
       "low",
     ]);
     expect(compareSeverity("mystery", "low")).toBeGreaterThan(0);
+  });
+});
+
+describe("translatedGroupLabel", () => {
+  it("resolves a locale-aware label for every known group", () => {
+    const en = createIntl({ locale: "en", messages: MESSAGES.en });
+    const vi = createIntl({ locale: "vi", messages: MESSAGES.vi });
+    for (const group of AUDIT_ISSUE_GROUPS) {
+      const enLabel = translatedGroupLabel(en, group);
+      const viLabel = translatedGroupLabel(vi, group);
+      expect(enLabel).not.toBe(group);
+      expect(viLabel).not.toBe(group);
+      // English catalog copy must stay in lockstep with the English fallback
+      // dictionary `groupLabel` reads — this pins the two from drifting apart.
+      expect(enLabel).toBe(groupLabel(group));
+    }
+  });
+
+  it("falls back to the raw slug for an unknown group, same as groupLabel", () => {
+    const intl = createIntl({ locale: "vi", messages: MESSAGES.vi });
+    expect(translatedGroupLabel(intl, "brand-new-group")).toBe(
+      "brand-new-group",
+    );
   });
 });

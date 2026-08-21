@@ -1,8 +1,9 @@
 import { ChevronRight } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   compareSeverity,
-  groupLabel,
   severityBadgeClass,
+  translatedGroupLabel,
   type IssueFilters,
   type IssueFixText,
 } from "@/client/features/audit/issues/issue-filters";
@@ -44,6 +45,7 @@ export function IssueGroupList({
   onFiltersChange: (filters: Partial<IssueFilters>) => void;
   onSelectRule: (rule: SelectedRule) => void;
 }) {
+  const intl = useIntl();
   // Severity narrows before grouping, so a group whose only issues were
   // filtered out disappears rather than rendering an empty section.
   const severityFiltered = filters.severity
@@ -71,7 +73,7 @@ export function IssueGroupList({
 
       {visibleGroups.length === 0 && (
         <p className="rounded-lg border border-base-300 px-3 py-4 text-center text-sm text-base-content/60">
-          No issues match these filters.
+          <FormattedMessage id="audit.issues.groupList.emptyFiltered" />
         </p>
       )}
 
@@ -81,12 +83,17 @@ export function IssueGroupList({
           className="rounded-lg border border-base-300 overflow-hidden"
         >
           <header className="flex items-center justify-between bg-base-200/50 px-3 py-2">
-            <h4 className="text-sm font-medium">{groupLabel(group.group)}</h4>
+            <h4 className="text-sm font-medium">
+              {translatedGroupLabel(intl, group.group)}
+            </h4>
             <span className="text-xs text-base-content/60">
-              {group.rules.length}{" "}
-              {group.rules.length === 1 ? "issue" : "issues"} &middot;{" "}
-              {group.urlTotal.toLocaleString()}{" "}
-              {group.urlTotal === 1 ? "URL" : "URLs"}
+              <FormattedMessage
+                id="audit.issues.groupList.summary"
+                values={{
+                  issueCount: group.rules.length,
+                  urlCount: group.urlTotal,
+                }}
+              />
             </span>
           </header>
 
@@ -118,7 +125,7 @@ export function IssueGroupList({
                   </span>
                   <RuleChangeBadges delta={deltaByRule?.[rule.ruleId]} />
                   <span className="text-sm tabular-nums text-base-content/70">
-                    {rule.urlCount.toLocaleString()}
+                    {intl.formatNumber(rule.urlCount)}
                   </span>
                   <ChevronRight className="size-4 shrink-0 text-base-content/40" />
                 </button>
@@ -137,6 +144,7 @@ export function IssueGroupList({
  * would read as a measurement where there was none.
  */
 function RuleChangeBadges({ delta }: { delta: RuleDelta | undefined }) {
+  const intl = useIntl();
   if (!delta || (delta.added === 0 && delta.resolved === 0)) return null;
 
   return (
@@ -144,7 +152,9 @@ function RuleChangeBadges({ delta }: { delta: RuleDelta | undefined }) {
       {delta.added > 0 && (
         <span
           className="badge badge-xs badge-warning"
-          title="New since baseline"
+          title={intl.formatMessage({
+            id: "audit.issues.groupList.newSinceBaseline",
+          })}
         >
           +{delta.added}
         </span>
@@ -152,7 +162,9 @@ function RuleChangeBadges({ delta }: { delta: RuleDelta | undefined }) {
       {delta.resolved > 0 && (
         <span
           className="badge badge-xs badge-success"
-          title="Resolved since baseline"
+          title={intl.formatMessage({
+            id: "audit.issues.groupList.resolvedSinceBaseline",
+          })}
         >
           −{delta.resolved}
         </span>
@@ -170,6 +182,7 @@ function GroupFilterBar({
   activeGroup: string | undefined;
   onSelect: (group: string | undefined) => void;
 }) {
+  const intl = useIntl();
   if (groups.length < 2) return null;
 
   return (
@@ -179,7 +192,7 @@ function GroupFilterBar({
         className={`btn btn-xs ${activeGroup ? "btn-ghost" : "btn-primary"}`}
         onClick={() => onSelect(undefined)}
       >
-        All groups
+        <FormattedMessage id="audit.issues.groupList.allGroups" />
       </button>
       {groups.map((group) => (
         <button
@@ -190,8 +203,10 @@ function GroupFilterBar({
           }`}
           onClick={() => onSelect(group.group)}
         >
-          {groupLabel(group.group)}
-          <span className="opacity-60">{group.urlTotal.toLocaleString()}</span>
+          {translatedGroupLabel(intl, group.group)}
+          <span className="opacity-60">
+            {intl.formatNumber(group.urlTotal)}
+          </span>
         </button>
       ))}
     </div>
@@ -222,13 +237,15 @@ function SeverityFilterBar({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs text-base-content/50">Severity</span>
+      <span className="text-xs text-base-content/50">
+        <FormattedMessage id="audit.issues.groupList.severity" />
+      </span>
       <button
         type="button"
         className={`btn btn-xs ${activeSeverity ? "btn-ghost" : "btn-primary"}`}
         onClick={() => onSelect(undefined)}
       >
-        Any
+        <FormattedMessage id="audit.issues.groupList.anySeverity" />
       </button>
       {severities.map((severity) => (
         <button

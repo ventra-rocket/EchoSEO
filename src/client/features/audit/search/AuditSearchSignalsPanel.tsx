@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, ExternalLink, Info, TrendingDown } from "lucide-react";
 import { getAuditSearchSignals } from "@/serverFunctions/audit-search";
 import type { AuditSearchSignals } from "@/server/features/audit/services/AuditSearchSignalsService";
+import { FormattedMessage, type IntlShape, useIntl } from "react-intl";
 
 /**
  * Search Console signals for this audit's target: organic traffic change and
@@ -19,6 +20,8 @@ export function AuditSearchSignalsPanel({
   auditId: string;
   projectId: string;
 }) {
+  const intl = useIntl();
+
   const query = useQuery({
     queryKey: ["audit-search-signals", projectId, auditId],
     queryFn: () => getAuditSearchSignals({ data: { projectId, auditId } }),
@@ -36,7 +39,9 @@ export function AuditSearchSignalsPanel({
     return (
       <div className="alert alert-error">
         <AlertCircle className="size-5" />
-        <span>We could not load Search Console signals for this audit.</span>
+        <span>
+          <FormattedMessage id="audit.search.signals.loadError" />
+        </span>
       </div>
     );
   }
@@ -46,8 +51,7 @@ export function AuditSearchSignalsPanel({
   if (signals.state === "not_connected") {
     return (
       <Notice>
-        Connect Google Search Console for this project to see organic traffic
-        and ranking changes for this site.
+        <FormattedMessage id="audit.search.signals.notConnected" />
       </Notice>
     );
   }
@@ -55,9 +59,13 @@ export function AuditSearchSignalsPanel({
   if (signals.state === "property_mismatch") {
     return (
       <Notice>
-        The connected Search Console property (<code>{signals.property}</code>)
-        doesn't cover this audit's domain, so its search data isn't shown here.
-        Connect the property that matches this site.
+        <FormattedMessage
+          id="audit.search.signals.propertyMismatch"
+          values={{
+            property: signals.property,
+            mono: (chunks) => <code>{chunks}</code>,
+          }}
+        />
       </Notice>
     );
   }
@@ -66,7 +74,10 @@ export function AuditSearchSignalsPanel({
     return (
       <div className="space-y-2">
         <Notice>
-          No Search Console data for {formatWindow(signals.window.current)} yet.
+          <FormattedMessage
+            id="audit.search.signals.noData"
+            values={{ window: formatWindow(intl, signals.window.current) }}
+          />
         </Notice>
         <SourceLine property={signals.property} window={signals.window} />
       </div>
@@ -85,16 +96,19 @@ export function AuditSearchSignalsPanel({
 type ReadySignals = Extract<AuditSearchSignals, { state: "ready" }>;
 
 function TrafficBlock({ traffic }: { traffic: ReadySignals["traffic"] }) {
+  const intl = useIntl();
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <Metric
-        label="Organic clicks"
+        label={intl.formatMessage({ id: "audit.search.signals.metricClicks" })}
         value={traffic.clicks}
         delta={traffic.clicksDelta}
         previous={traffic.prevClicks}
       />
       <Metric
-        label="Impressions"
+        label={intl.formatMessage({
+          id: "audit.search.signals.metricImpressions",
+        })}
         value={traffic.impressions}
         delta={traffic.impressionsDelta}
         previous={traffic.prevImpressions}
@@ -114,6 +128,7 @@ function Metric({
   delta: number;
   previous: number;
 }) {
+  const intl = useIntl();
   const deltaClass =
     delta < 0
       ? "text-error"
@@ -125,22 +140,30 @@ function Metric({
     <div className="rounded-lg border border-base-300 bg-base-200/40 px-3 py-2.5">
       <p className="text-xs text-base-content/60">{label}</p>
       <p className="text-2xl font-semibold tabular-nums">
-        {value.toLocaleString()}
+        {intl.formatNumber(value)}
       </p>
       <p className={`text-xs tabular-nums ${deltaClass}`}>
         {sign}
-        {delta.toLocaleString()} vs previous ({previous.toLocaleString()})
+        {intl.formatNumber(delta)}{" "}
+        {intl.formatMessage(
+          { id: "audit.search.signals.vsPrevious" },
+          { previous: intl.formatNumber(previous) },
+        )}
       </p>
     </div>
   );
 }
 
 function Top10DropBlock({ drop }: { drop: ReadySignals["droppedFromTop10"] }) {
+  const intl = useIntl();
+
   if (drop.total === 0) {
     return (
       <div className="flex items-start gap-2 rounded-lg border border-base-300 bg-base-200/40 px-3 py-2 text-sm text-base-content/70">
         <Info className="size-4 shrink-0 mt-0.5" />
-        <span>No pages dropped out of the top 10 in this window.</span>
+        <span>
+          <FormattedMessage id="audit.search.signals.top10Empty" />
+        </span>
       </div>
     );
   }
@@ -149,8 +172,10 @@ function Top10DropBlock({ drop }: { drop: ReadySignals["droppedFromTop10"] }) {
     <div className="rounded-lg border border-base-300 overflow-hidden">
       <header className="flex items-center gap-2 bg-base-200/50 px-3 py-2 text-sm font-medium">
         <TrendingDown className="size-4 text-warning" />
-        {drop.total.toLocaleString()} {drop.total === 1 ? "page" : "pages"}{" "}
-        dropped out of the top 10
+        <FormattedMessage
+          id="audit.search.signals.top10Header"
+          values={{ count: drop.total }}
+        />
       </header>
       <ul className="divide-y divide-base-300">
         {drop.pages.map((page) => (
@@ -172,10 +197,18 @@ function Top10DropBlock({ drop }: { drop: ReadySignals["droppedFromTop10"] }) {
               )}
             </span>
             <span className="ml-auto shrink-0 tabular-nums text-base-content/70">
-              avg {page.prevPosition.toFixed(1)} →{" "}
-              {page.position === null
-                ? "not in results"
-                : page.position.toFixed(1)}
+              <FormattedMessage
+                id="audit.search.signals.positionChange"
+                values={{
+                  from: page.prevPosition.toFixed(1),
+                  to:
+                    page.position === null
+                      ? intl.formatMessage({
+                          id: "audit.search.signals.notInResults",
+                        })
+                      : page.position.toFixed(1),
+                }}
+              />
             </span>
           </li>
         ))}
@@ -191,10 +224,17 @@ function SourceLine({
   property: string;
   window: ReadySignals["window"];
 }) {
+  const intl = useIntl();
   return (
     <p className="text-xs text-base-content/50">
-      Source: GSC · {property} · {formatWindow(window.current)} vs{" "}
-      {formatWindow(window.previous)}
+      <FormattedMessage
+        id="audit.search.signals.sourceLine"
+        values={{
+          property,
+          current: formatWindow(intl, window.current),
+          previous: formatWindow(intl, window.previous),
+        }}
+      />
     </p>
   );
 }
@@ -208,6 +248,9 @@ function Notice({ children }: { children: React.ReactNode }) {
   );
 }
 
-function formatWindow(window: { from: string; to: string }): string {
-  return `${window.from} to ${window.to}`;
+function formatWindow(
+  intl: IntlShape,
+  window: { from: string; to: string },
+): string {
+  return intl.formatMessage({ id: "audit.search.signals.windowRange" }, window);
 }

@@ -130,6 +130,7 @@ export function TableBulkExportMenu({
 
 export function TableExportMenu({
   actions,
+  label = "Export",
   buttonClassName = "btn btn-sm gap-1",
   menuClassName = "dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-56",
 }: {
@@ -139,6 +140,8 @@ export function TableExportMenu({
     onClick: () => void;
     disabled?: boolean;
   }>;
+  /** Trigger button text. Defaults to "Export" for callers that don't localize it. */
+  label?: string;
   buttonClassName?: string;
   menuClassName?: string;
 }) {
@@ -146,7 +149,7 @@ export function TableExportMenu({
     <div className="dropdown dropdown-end">
       <div tabIndex={0} role="button" className={buttonClassName}>
         <Download className="size-4" />
-        Export
+        {label}
         <ChevronDown className="size-3 opacity-60" />
       </div>
       <ul tabIndex={0} className={menuClassName}>

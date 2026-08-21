@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { StatCard } from "@/client/features/audit/shared";
 import {
   exportPages,
@@ -39,25 +40,41 @@ export function ResultsView({
 }) {
   const { audit, pages, lighthouse } = data;
   const stats = useResultStats(pages, lighthouse);
+  const intl = useIntl();
 
   // Which tabs this audit can actually back with data. Performance disappears
   // when Lighthouse never ran; Issues is always offered because "issues were
   // never materialized" is itself a state the tab has to report, and hiding the
   // tab would make a failed materializer invisible.
   const availableTabs: Array<{ tab: ResultsTab; label: string }> = [
-    { tab: "pages", label: `Pages (${pages.length})` },
+    {
+      tab: "pages",
+      label: intl.formatMessage(
+        { id: "audit.results.tab.pages" },
+        { count: pages.length },
+      ),
+    },
     ...(lighthouse.length > 0
       ? [
           {
             tab: "performance" as const,
-            label: `Performance (${lighthouse.length})`,
+            label: intl.formatMessage(
+              { id: "audit.results.tab.performance" },
+              { count: lighthouse.length },
+            ),
           },
         ]
       : []),
-    { tab: "issues" as const, label: "All Issues" },
+    {
+      tab: "issues" as const,
+      label: intl.formatMessage({ id: "audit.results.tab.allIssues" }),
+    },
     // Always offered: "Search Console isn't connected" is itself a state the tab
     // reports, and hiding it would make a missing connection invisible.
-    { tab: "search" as const, label: "Search" },
+    {
+      tab: "search" as const,
+      label: intl.formatMessage({ id: "audit.results.tab.search" }),
+    },
   ];
 
   // A tab the URL asks for but this audit cannot show falls back to Pages
@@ -130,9 +147,9 @@ export function ResultsView({
             <div className="space-y-6">
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold text-base-content/80">
-                  Search Console
+                  <FormattedMessage id="audit.results.search.consoleTitle" />
                   <span className="ml-2 font-normal text-base-content/50">
-                    first-party · free
+                    <FormattedMessage id="audit.results.search.consoleTag" />
                   </span>
                 </h3>
                 <AuditSearchSignalsPanel
@@ -142,9 +159,9 @@ export function ResultsView({
               </section>
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold text-base-content/80">
-                  Off-page · Referring domains
+                  <FormattedMessage id="audit.results.search.referringDomainsTitle" />
                   <span className="ml-2 font-normal text-base-content/50">
-                    provider data · uses credits
+                    <FormattedMessage id="audit.results.search.referringDomainsTag" />
                   </span>
                 </h3>
                 <AuditReferringDomainsPanel
@@ -184,18 +201,19 @@ function TruncatedCrawlNotice({
       <AlertTriangle className="size-5 shrink-0" />
       <div className="space-y-1 text-sm">
         <p className="font-medium">
-          This crawl stopped at {limit.toLocaleString()} pages.
+          <FormattedMessage
+            id="audit.results.truncatedNotice.title"
+            values={{ limit }}
+          />
         </p>
         <p>
-          Your site has more than that, so this report covers the{" "}
-          {limit.toLocaleString()} pages reached first from {startUrl}.
-          Everything shown is measured; what is missing is the rest of the site,
-          not a clean bill of health for it.
+          <FormattedMessage
+            id="audit.results.truncatedNotice.body"
+            values={{ limit, startUrl }}
+          />
         </p>
         <p className="text-base-content/70">
-          Orphan-page and sitemap-coverage checks are switched off for a partial
-          crawl: a page nothing seems to link to may simply not have been
-          reached.
+          <FormattedMessage id="audit.results.truncatedNotice.note" />
         </p>
       </div>
     </div>
@@ -215,21 +233,22 @@ function ThrottledCrawlNotice({ throttledCount }: { throttledCount: number }) {
       <AlertTriangle className="size-5 shrink-0" />
       <div className="space-y-1 text-sm">
         <p className="font-medium">
-          {throttledCount.toLocaleString()}{" "}
-          {throttledCount === 1 ? "page was" : "pages were"} not read because
-          the site rate-limited this crawl.
+          <FormattedMessage
+            id="audit.results.throttledNotice.title"
+            values={{ count: throttledCount }}
+          />
         </p>
         <p>
-          Those pages answered{" "}
-          <span className="font-mono">429 Too Many Requests</span>, which is
-          about how fast we asked, not about the pages. They are excluded from
-          the broken-page count and from every on-page check, and are listed
-          under the <em>Throttled</em> status filter.
+          <FormattedMessage
+            id="audit.results.throttledNotice.body"
+            values={{
+              mono: (chunks) => <span className="font-mono">{chunks}</span>,
+              em: (chunks) => <em>{chunks}</em>,
+            }}
+          />
         </p>
         <p className="text-base-content/70">
-          The crawler slows down and retries when this happens. If it keeps
-          recurring, allowing our crawler in the site&apos;s rate-limiting rules
-          will let the audit cover the whole site.
+          <FormattedMessage id="audit.results.throttledNotice.note" />
         </p>
       </div>
     </div>
@@ -346,16 +365,33 @@ function StatsGrid({
     avgAccessibility: number | null;
   };
 }) {
+  const intl = useIntl();
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <StatCard label="Pages Crawled" value={String(pagesCrawled)} />
-      <StatCard label="Total URLs" value={String(totalPages)} />
-      <StatCard label="Lighthouse Tests" value={String(totalLighthouse)} />
-      <StatCard label="Avg Response" value={`${averageResponseMs}ms`} />
+      <StatCard
+        label={intl.formatMessage({ id: "audit.results.stats.pagesCrawled" })}
+        value={String(pagesCrawled)}
+      />
+      <StatCard
+        label={intl.formatMessage({ id: "audit.results.stats.totalUrls" })}
+        value={String(totalPages)}
+      />
+      <StatCard
+        label={intl.formatMessage({
+          id: "audit.results.stats.lighthouseTests",
+        })}
+        value={String(totalLighthouse)}
+      />
+      <StatCard
+        label={intl.formatMessage({ id: "audit.results.stats.avgResponse" })}
+        value={`${averageResponseMs}ms`}
+      />
       {totalLighthouse > 0 && (
         <>
           <StatCard
-            label="Avg Lighthouse Perf"
+            label={intl.formatMessage({
+              id: "audit.results.stats.avgLighthousePerf",
+            })}
             value={
               lighthouseSummary.avgPerformance == null
                 ? "-"
@@ -364,7 +400,9 @@ function StatsGrid({
             className={scoreClass(lighthouseSummary.avgPerformance)}
           />
           <StatCard
-            label="Avg Lighthouse SEO"
+            label={intl.formatMessage({
+              id: "audit.results.stats.avgLighthouseSeo",
+            })}
             value={
               lighthouseSummary.avgSeo == null
                 ? "-"
@@ -373,7 +411,9 @@ function StatsGrid({
             className={scoreClass(lighthouseSummary.avgSeo)}
           />
           <StatCard
-            label="Avg Lighthouse A11y"
+            label={intl.formatMessage({
+              id: "audit.results.stats.avgLighthouseA11y",
+            })}
             value={
               lighthouseSummary.avgAccessibility == null
                 ? "-"
@@ -382,7 +422,9 @@ function StatsGrid({
             className={scoreClass(lighthouseSummary.avgAccessibility)}
           />
           <StatCard
-            label="Lighthouse Failures"
+            label={intl.formatMessage({
+              id: "audit.results.stats.lighthouseFailures",
+            })}
             value={String(lighthouseSummary.failed)}
             className={
               lighthouseSummary.failed > 0 ? "text-error" : "text-success"

@@ -1,4 +1,5 @@
 import { AlertTriangle, Info } from "lucide-react";
+import { useIntl } from "react-intl";
 import type { IssueComparison } from "@/server/features/audit/services/AuditComparisonService";
 import {
   crawlDay,
@@ -24,12 +25,16 @@ export function ComparisonBar({
   isLoading: boolean;
   isError: boolean;
 }) {
+  const intl = useIntl();
+
   if (!comparison) {
     if (isLoading) {
       return (
         <div className="flex items-center gap-2 rounded-lg border border-base-300 bg-base-200/40 px-3 py-2 text-sm text-base-content/60">
           <span className="loading loading-spinner loading-xs" />
-          <span>Comparing with a previous crawl…</span>
+          <span>
+            {intl.formatMessage({ id: "audit.history.comparisonBar.loading" })}
+          </span>
         </div>
       );
     }
@@ -39,8 +44,9 @@ export function ComparisonBar({
     if (isError) {
       return (
         <Notice tone="warning">
-          Couldn't compare with the selected crawl. The issues below are still
-          this crawl's own findings.
+          {intl.formatMessage({
+            id: "audit.history.comparisonBar.compareError",
+          })}
         </Notice>
       );
     }
@@ -50,8 +56,9 @@ export function ComparisonBar({
   if (comparison.state === "single_snapshot") {
     return (
       <Notice tone="info">
-        Findings from this crawl only. This is the first audit of this site — a
-        second audit will show what's new and what's fixed.
+        {intl.formatMessage({
+          id: "audit.history.comparisonBar.singleSnapshot",
+        })}
       </Notice>
     );
   }
@@ -62,8 +69,15 @@ export function ComparisonBar({
       : null;
     const message =
       comparison.reason === "baseline_not_materialized"
-        ? `Can't compare with the crawl of ${baselineDate} yet — its issue analysis hasn't finished, so a comparison would wrongly read every earlier issue as resolved.`
-        : "Can't compare yet — issue analysis for this crawl hasn't finished.";
+        ? intl.formatMessage(
+            {
+              id: "audit.history.comparisonBar.notComparableBaselineNotMaterialized",
+            },
+            { date: baselineDate },
+          )
+        : intl.formatMessage({
+            id: "audit.history.comparisonBar.notComparableDefault",
+          });
     return <Notice tone="warning">{message}</Notice>;
   }
 
@@ -73,21 +87,39 @@ export function ComparisonBar({
   return (
     <div className="rounded-lg border border-base-300 bg-base-200/40 px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <ChangeChip value={totals.added} label="new" tone="up" />
-        <ChangeChip value={totals.resolved} label="resolved" tone="down" />
+        <ChangeChip
+          value={totals.added}
+          label={intl.formatMessage({
+            id: "audit.history.comparisonBar.chipNew",
+          })}
+          tone="up"
+        />
+        <ChangeChip
+          value={totals.resolved}
+          label={intl.formatMessage({
+            id: "audit.history.comparisonBar.chipResolved",
+          })}
+          tone="down"
+        />
         <ChangeChip
           value={totals.persisting}
-          label="still present"
+          label={intl.formatMessage({
+            id: "audit.history.comparisonBar.chipStillPresent",
+          })}
           tone="flat"
         />
       </div>
       <p className="mt-1.5 text-xs text-base-content/60">
-        This crawl ({crawlLabels.current}) vs {crawlLabels.baseline} &middot;
-        Source: crawl
+        {intl.formatMessage(
+          { id: "audit.history.comparisonBar.crawlLabelsLine" },
+          { current: crawlLabels.current, baseline: crawlLabels.baseline },
+        )}
       </p>
       {resolvedOnlyRules.length > 0 && (
         <p className="mt-1 text-xs text-success">
-          Fixed since then:{" "}
+          {intl.formatMessage({
+            id: "audit.history.comparisonBar.fixedSinceThen",
+          })}{" "}
           {resolvedOnlyRules
             .map((rule) => rule.fix?.label ?? rule.ruleId)
             .join(", ")}
@@ -106,6 +138,7 @@ function ChangeChip({
   label: string;
   tone: "up" | "down" | "flat";
 }) {
+  const intl = useIntl();
   const toneClass =
     tone === "up"
       ? "text-warning"
@@ -120,7 +153,7 @@ function ChangeChip({
     <span className="flex items-baseline gap-1 text-sm">
       <span className={`font-semibold tabular-nums ${toneClass}`}>
         {sign}
-        {value.toLocaleString()}
+        {intl.formatNumber(value)}
       </span>
       <span className="text-base-content/60">{label}</span>
     </span>

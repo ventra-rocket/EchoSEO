@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Sparkles } from "lucide-react";
 import { explainAuditIssue } from "@/serverFunctions/audit-issues";
 import { useLocale } from "@/client/i18n/I18nProvider";
+import type { MessageId } from "@/client/i18n/messages";
 
-const PRIORITY_LABELS: Record<string, string> = {
-  now: "Worth doing now",
-  soon: "Worth doing soon",
-  later: "Can wait",
+const PRIORITY_MESSAGE_IDS: Record<string, MessageId> = {
+  now: "audit.issues.ai.priorityNow",
+  soon: "audit.issues.ai.prioritySoon",
+  later: "audit.issues.ai.priorityLater",
 };
 
 /**
@@ -30,6 +32,7 @@ export function AiExplanationPanel({
   ruleId: string;
 }) {
   const { locale } = useLocale();
+  const intl = useIntl();
   const [dismissed, setDismissed] = useState(false);
 
   const mutation = useMutation({
@@ -59,29 +62,31 @@ export function AiExplanationPanel({
         ) : (
           <Sparkles className="size-3.5" />
         )}
-        Explain for this site
+        <FormattedMessage id="audit.issues.ai.explainCta" />
       </button>
     );
   }
 
   const { explanation } = result;
+  const priorityMessageId = PRIORITY_MESSAGE_IDS[explanation.priority];
+  const priorityLabel = priorityMessageId
+    ? intl.formatMessage({ id: priorityMessageId })
+    : explanation.priority;
 
   return (
     <section className="space-y-2 rounded-lg border border-dashed border-base-300 p-3">
       <header className="flex items-center gap-2">
         <Sparkles className="size-3.5 text-base-content/40" />
         <h4 className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-          AI commentary
+          <FormattedMessage id="audit.issues.ai.commentaryTitle" />
         </h4>
-        <span className="badge badge-ghost badge-xs">
-          {PRIORITY_LABELS[explanation.priority] ?? explanation.priority}
-        </span>
+        <span className="badge badge-ghost badge-xs">{priorityLabel}</span>
         <button
           type="button"
           className="btn btn-ghost btn-xs ml-auto"
           onClick={() => setDismissed(true)}
         >
-          Hide
+          <FormattedMessage id="audit.issues.ai.hide" />
         </button>
       </header>
 
@@ -91,8 +96,7 @@ export function AiExplanationPanel({
       {/* The distinction that matters: the steps above are quoted from Google,
           this paragraph is not. */}
       <p className="text-xs text-base-content/40">
-        Written by a language model to summarize the steps above. The fix steps
-        and the quote are from Google's documentation; this note is not.
+        <FormattedMessage id="audit.issues.ai.disclaimer" />
       </p>
     </section>
   );

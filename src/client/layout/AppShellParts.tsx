@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Sidebar, SidebarRail } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
@@ -20,15 +20,19 @@ function SeoApiStatusBanners({
             <div className="alert alert-warning">
               <AlertTriangle className="size-4 shrink-0" />
               <span className="text-sm">
-                Setup needed: add your DataForSEO API key to use EchoSEO
-                features. See the quick steps on the{" "}
-                <Link
-                  {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
-                >
-                  help page
-                </Link>
-                .
+                <FormattedMessage
+                  id="shell.setupNeeded.warning"
+                  values={{
+                    helpLink: (chunks) => (
+                      <Link
+                        {...dataforseoHelpLinkOptions}
+                        className="link link-primary font-medium"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  }}
+                />
               </span>
             </div>
           </div>
@@ -41,15 +45,19 @@ function SeoApiStatusBanners({
             <div className="alert alert-info">
               <AlertTriangle className="size-4 shrink-0" />
               <span className="text-sm">
-                We could not verify your DataForSEO setup. If features are not
-                working, check the setup steps on the{" "}
-                <Link
-                  {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
-                >
-                  help page
-                </Link>
-                .
+                <FormattedMessage
+                  id="shell.setupNeeded.verifyError"
+                  values={{
+                    helpLink: (chunks) => (
+                      <Link
+                        {...dataforseoHelpLinkOptions}
+                        className="link link-primary font-medium"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  }}
+                />
               </span>
             </div>
           </div>
@@ -182,27 +190,27 @@ function MissingSeoSetupModal({
               id="dataforseo-setup-title"
               className="text-lg font-semibold text-base-content"
             >
-              One quick setup step
+              <FormattedMessage id="shell.setupModal.title" />
             </h2>
             <p
               id="dataforseo-setup-description"
               className="text-sm text-base-content/75"
             >
-              Add your DataForSEO API key to start using EchoSEO.
+              <FormattedMessage id="shell.setupModal.body" />
             </p>
           </div>
         </div>
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Dismiss
+            <FormattedMessage id="shell.setupModal.dismiss" />
           </button>
           <Link
             {...dataforseoHelpLinkOptions}
             className="btn btn-primary"
             onClick={onClose}
           >
-            Open setup guide
+            <FormattedMessage id="shell.setupModal.openGuide" />
             <ExternalLink className="size-4" />
           </Link>
         </div>

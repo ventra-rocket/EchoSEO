@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { FormattedMessage, useIntl } from "react-intl";
 import { getAuditAccess, startAudit } from "@/serverFunctions/audit";
 import type { AuditResultsData } from "@/client/features/audit/results/types";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -25,6 +26,7 @@ export function RecrawlVerifyButton({
   config: AuditResultsData["audit"]["config"];
   onStarted: (auditId: string) => void;
 }) {
+  const intl = useIntl();
   const accessQuery = useQuery({
     queryKey: ["audit-access", projectId],
     queryFn: () => getAuditAccess({ data: { projectId } }),
@@ -44,12 +46,17 @@ export function RecrawlVerifyButton({
       return result.auditId;
     },
     onSuccess: (auditId) => {
-      toast.success("Re-crawl started — verifying your fixes.");
+      toast.success(
+        intl.formatMessage({ id: "audit.verification.recrawlStarted" }),
+      );
       onStarted(auditId);
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(error, "Could not start the re-crawl."),
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "audit.verification.recrawlError" }),
+        ),
       );
     },
   });
@@ -68,7 +75,7 @@ export function RecrawlVerifyButton({
       ) : (
         <RefreshCw className="size-4" />
       )}
-      Re-crawl to verify
+      <FormattedMessage id="audit.verification.recrawlButton" />
     </button>
   );
 }
