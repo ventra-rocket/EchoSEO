@@ -62,17 +62,28 @@ export type RankTrackingSearchActuals =
       property: string;
       window: { from: string; to: string };
       /**
-       * Whether the whole query set was read. When false, GSC truncated at the
-       * page cap and a keyword with no row is *unknown*, not zero — the caller
-       * must not render an absence as "no impressions".
+       * Whether the whole query set GSC was willing to return was read. When
+       * false, GSC truncated at the page cap and a keyword with no row is
+       * *unknown*, not zero — the caller must not render an absence as "no
+       * impressions". When true, an absent keyword still renders as a
+       * numeral 0, but that is a display choice, not a proof: Search Console
+       * omits anonymized queries — queries below its privacy threshold —
+       * from the query dimension entirely, at any read depth. `complete`
+       * only rules out truncation as the reason a keyword is missing; it can
+       * never rule out anonymization.
        */
       complete: boolean;
       rows: RankTrackingKeywordActuals[];
     };
 
-/** GSC returns queries lower-cased already; normalise both sides regardless. */
+/**
+ * GSC returns queries lower-cased already; normalise both sides regardless.
+ * Also collapses inner whitespace runs to one space — Google folds "seo  tools"
+ * to "seo tools" before matching, so a tracked keyword saved with a stray double
+ * space must fold the same way or it silently never matches its GSC row.
+ */
 function normalizeKeyword(keyword: string): string {
-  return keyword.trim().toLowerCase();
+  return keyword.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 async function getActuals(input: {
@@ -166,8 +177,11 @@ async function getActuals(input: {
         });
       }
 
-      // A short page is the end of the query set: every tracked keyword absent
-      // from what we read genuinely had no impressions in the window.
+      // A short page is the end of the query set GSC was willing to name: every
+      // tracked keyword still absent was either genuinely zero or below
+      // Google's anonymization threshold, and the two look identical from
+      // here — `complete` says the read wasn't truncated, never that an
+      // absence is a proven zero.
       if (result.rows.length < GSC_MAX_ROW_LIMIT) {
         complete = true;
         break;

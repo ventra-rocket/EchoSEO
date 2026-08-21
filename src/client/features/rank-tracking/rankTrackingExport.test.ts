@@ -1,7 +1,8 @@
 /**
  * What the exported table promises. The Search Console columns travel to people
  * who never saw the page they came from, so the file itself has to carry the
- * window and has to distinguish a measured zero from a value never read.
+ * window and has to distinguish a keyword Google reported nothing for from one
+ * the read never reached at all.
  */
 import { describe, expect, it } from "vitest";
 import { buildRankTrackingExport } from "./RankTrackingTableParts";
@@ -63,15 +64,17 @@ describe("buildRankTrackingExport", () => {
     ]);
   });
 
-  it("writes a measured zero when the whole query set was read", () => {
+  it("writes 0 for an absent keyword on a complete read — Google reported nothing, not a proven zero", () => {
     const { rows } = buildRankTrackingExport(
       [row("never searched", null)],
       true,
       false,
       { window: WINDOW, complete: true },
     );
-    // Clicks and impressions are zero because Google reported nothing; average
-    // position stays empty, because no impressions means no position at all.
+    // Clicks and impressions read 0 because Google's report named nothing for
+    // this query; average position stays empty, because no impressions means
+    // no position at all. The file writes the same 0 a genuinely rare,
+    // Search-Console-omitted query would get — see gscCountTooltip for why.
     expect(rows[0].slice(-3)).toEqual([0, 0, ""]);
   });
 

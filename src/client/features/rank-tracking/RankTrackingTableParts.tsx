@@ -160,10 +160,35 @@ export function CpcCell({ value }: { value: number | null }) {
 }
 
 /**
- * A tracked keyword with no Search Console row means two different things, and
- * the difference decides whether a zero is a measurement or a guess: if the
- * whole query set was read, Google recorded nothing for it; if the read was
- * truncated, we simply never looked at that query.
+ * The GscCountCell tooltip for an absent keyword. Exported (not inlined) so the
+ * copy is a pinned, testable contract: a `complete` read only means Google
+ * named every query it was willing to — it is never proof of zero, because
+ * Search Console omits anonymized (privacy-thresholded) queries from the
+ * report at any read depth. Getting this wording wrong is exactly how "0"
+ * turns back into a claim the read cannot support.
+ */
+export function gscCountTooltip(complete: boolean): string {
+  return complete
+    ? "Google reported nothing for this query in the window — shown as 0, though very rare queries are omitted from Search Console entirely and would look the same"
+    : "Outside the queries read from Search Console — unknown, not zero";
+}
+
+/** The GscPositionCell tooltip for an absent keyword — see gscCountTooltip. */
+export function gscPositionTooltip(complete: boolean): string {
+  return complete
+    ? "Google reported nothing for this query in the window, so there is no average position to show — very rare queries are omitted from Search Console entirely and would look the same"
+    : "Outside the queries read from Search Console — no measurement available";
+}
+
+/**
+ * A tracked keyword with no Search Console row means one of three things, and
+ * `complete` rules out only one of them: if the read was truncated, we simply
+ * never looked at that query — *unknown*. If the read was complete, either
+ * Google recorded no impressions for it, or the query fell below Google's
+ * anonymization threshold and was left out of the report entirely — GSC never
+ * says which. The cell still shows 0 for a complete read, since that is by far
+ * the common case and the one this feature exists to surface, but the tooltip
+ * says so rather than claiming a proof the read cannot make.
  */
 export function GscCountCell({
   value,
@@ -174,14 +199,7 @@ export function GscCountCell({
 }) {
   if (value == null) {
     return (
-      <span
-        className="text-base-content/40"
-        title={
-          complete
-            ? "Search Console recorded no impressions for this keyword in the window"
-            : "Outside the queries read from Search Console — unknown, not zero"
-        }
-      >
+      <span className="text-base-content/40" title={gscCountTooltip(complete)}>
         {complete ? "0" : "?"}
       </span>
     );
@@ -203,11 +221,7 @@ export function GscPositionCell({
     return (
       <span
         className="text-base-content/40"
-        title={
-          complete
-            ? "No impressions in the window, so Google reported no average position"
-            : "Outside the queries read from Search Console — no measurement available"
-        }
+        title={gscPositionTooltip(complete)}
       >
         -
       </span>
@@ -228,9 +242,10 @@ export function csvChange(
 
 /**
  * What the exported file has to say about the Search Console columns to stand
- * on its own: the window the numbers cover, and whether an empty cell means
- * "measured zero" or "never read". A CSV travels to people who never saw the
- * table it came from.
+ * on its own: the window the numbers cover, and whether a keyword's absence
+ * from the read is Google reporting nothing for it (written as 0) or the read
+ * never reaching that query at all (left blank). A CSV travels to people who
+ * never saw the table it came from.
  */
 export interface RankTrackingGscExport {
   window: { from: string; to: string };

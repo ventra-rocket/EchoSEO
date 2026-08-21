@@ -55,7 +55,9 @@ export function RankTrackingSearchActualsNote({
       Search Console columns: Google&apos;s own data for{" "}
       <span className="font-mono">{actuals.property}</span>,{" "}
       {actuals.window.from} → {actuals.window.to}. Average position over the
-      window, not the live SERP rank in the position column.
+      window, not the live SERP rank in the position column. Google never names
+      a query rare enough to be anonymized, so a keyword shown at 0 may still
+      have real traffic Search Console won&apos;t report.
       {!actuals.complete && (
         <>
           {" "}

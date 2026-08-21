@@ -29,6 +29,7 @@ import {
   KeywordTrendModal,
   type KeywordTrendTarget,
 } from "./KeywordTrendModal";
+import { resetRankTrackingSearchActuals } from "./useRankTrackingSearchActuals";
 import type { SelectionAnchor } from "@/client/components/table/tableSelection";
 
 export function RankTrackingTable({
@@ -145,6 +146,10 @@ export function RankTrackingTable({
       void queryClient.invalidateQueries({
         queryKey: ["rankTrackingCostEstimate", projectId, configId],
       });
+      // The keywords that remain must not keep showing the overlay read for
+      // the set that included the removed ones — see
+      // resetRankTrackingSearchActuals for why this has to reset, not invalidate.
+      resetRankTrackingSearchActuals(queryClient, projectId, configId);
       toast.success(
         `${result.removed} keyword${result.removed !== 1 ? "s" : ""} removed`,
       );

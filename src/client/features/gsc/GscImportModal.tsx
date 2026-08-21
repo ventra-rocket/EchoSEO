@@ -15,6 +15,7 @@ const BLOCK_LABEL: Record<NonNullable<GscImportCandidate["block"]>, string> = {
   already_imported: "Already imported",
   unverified: "Not verified for you",
   unsupported: "Cannot be crawled",
+  path_scoped: "Scoped to a path",
 };
 
 /**
@@ -256,10 +257,9 @@ function CandidateRow({
                   ? "Domain property"
                   : "URL-prefix property"}{" "}
                 · project {candidate.host}
-                {candidate.droppedPath
-                  ? ` · scoped to ${candidate.droppedPath}, crawls the whole site`
-                  : null}
               </>
+            ) : candidate.block === "path_scoped" ? (
+              "Search Console reports only on this property's own path — connect a Domain property or a root-prefix property to import this site"
             ) : (
               "Not a site this app can crawl"
             )}

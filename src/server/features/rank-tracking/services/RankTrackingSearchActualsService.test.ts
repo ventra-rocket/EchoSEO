@@ -125,7 +125,31 @@ describe("RankTrackingSearchActualsService.getActuals", () => {
     });
   });
 
-  it("reports a complete read when the query set ended, so an absence is a measured zero", async () => {
+  it("matches a tracked keyword to its query ignoring repeated inner whitespace", async () => {
+    // A keyword saved with a stray double space (or a tab) must still join its
+    // GSC row: Google folds "seo  tools" to "seo tools" before matching, so the
+    // tracked side has to fold the same way or it silently reads as absent.
+    getKeywordsForConfig.mockResolvedValue([
+      { id: "kw1", keyword: "seo   tools" },
+      { id: "kw2", keyword: "best\tcoffee\tmaker" },
+    ]);
+    getPerformance.mockResolvedValue(
+      perf([
+        queryRow("seo tools", 12, 340, 8.4),
+        queryRow("best coffee maker", 2, 20, 15),
+      ]),
+    );
+
+    const result = await RankTrackingSearchActualsService.getActuals(INPUT);
+
+    if (result.state !== "ready") throw new Error("expected ready");
+    expect(result.rows.map((row) => row.trackingKeywordId).toSorted()).toEqual([
+      "kw1",
+      "kw2",
+    ]);
+  });
+
+  it("reports a complete read when the query set ended — an absent keyword there is Google reporting nothing, not a proven zero", async () => {
     getPerformance.mockResolvedValue(perf([queryRow("seo tools", 3, 90, 11)]));
 
     const result = await RankTrackingSearchActualsService.getActuals(INPUT);

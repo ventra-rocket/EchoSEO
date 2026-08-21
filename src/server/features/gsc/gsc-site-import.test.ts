@@ -15,7 +15,6 @@ describe("planGscSiteTarget keeps the origin covered by its property", () => {
     "https://example.com/",
     "https://www.example.com/",
     "http://legacy.example.com/",
-    "https://example.com/shop/",
     "https://example.co.uk/",
   ])("%s verifies the origin it maps to", (siteUrl) => {
     const plan = planGscSiteTarget(siteUrl);
@@ -37,7 +36,6 @@ describe("planGscSiteTarget", () => {
       kind: "domain",
       origin: "https://example.com",
       host: "example.com",
-      droppedPath: null,
     });
   });
 
@@ -56,7 +54,6 @@ describe("planGscSiteTarget", () => {
       kind: "url_prefix",
       origin: "https://www.example.com",
       host: "www.example.com",
-      droppedPath: null,
     });
   });
 
@@ -71,12 +68,13 @@ describe("planGscSiteTarget", () => {
     ).toBe(false);
   });
 
-  it("reports the path a scoped property loses to the crawl origin", () => {
-    // The crawl runs on the origin — the matcher ignores path — so the reader is
-    // told, rather than finding pages outside `/shop/` in the report.
-    const plan = planGscSiteTarget("https://example.com/shop/");
-    expect(plan?.origin).toBe("https://example.com");
-    expect(plan?.droppedPath).toBe("/shop/");
+  it("refuses a URL-prefix property scoped to a path, because Search Console never reports beyond it", () => {
+    // `propertyCoversOrigin` credits a URL-prefix property for an origin only
+    // when the property itself is rooted at `/`. Mapping this to the bare
+    // origin anyway — the old behavior — created a project this app described
+    // as covering the whole site while Search Console would only ever report
+    // on `/shop/`. Refusing the plan is the fix; dropping the path was the bug.
+    expect(planGscSiteTarget("https://example.com/shop/")).toBeNull();
   });
 
   it("distinguishes the two property kinds", () => {

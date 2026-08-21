@@ -43,7 +43,10 @@ import { CheckConfirmModal } from "./CheckConfirmModal";
 import { useMetricsRefresh } from "./useMetricsRefresh";
 import { useRankCheckTrigger } from "./useRankCheckTrigger";
 import { useRankRunPolling } from "./useRankRunPolling";
-import { useRankTrackingSearchActuals } from "./useRankTrackingSearchActuals";
+import {
+  resetRankTrackingSearchActuals,
+  useRankTrackingSearchActuals,
+} from "./useRankTrackingSearchActuals";
 
 function deviceVisibility(
   devices: RankTrackingConfig["devices"],
@@ -154,6 +157,10 @@ function RankTrackingDomainDetailInner({
     void queryClient.invalidateQueries({
       queryKey: ["rankTrackingLatestRun", projectId, config.id],
     });
+    // A newly tracked keyword must not merge against the overlay read taken
+    // before it existed — see resetRankTrackingSearchActuals for why this has
+    // to reset, not invalidate.
+    resetRankTrackingSearchActuals(queryClient, projectId, config.id);
     setShowAddKeywords(false);
     captureClientEvent("rank_tracking:keywords_add");
     toast.success(

@@ -27,6 +27,7 @@ import {
 import { AuditService } from "@/server/features/audit/services/AuditService";
 import { AuditTargetRepository } from "@/server/features/audit/repositories/AuditTargetRepository";
 import {
+  isPathScopedGscProperty,
   planGscSiteTarget,
   type GscPropertyKind,
 } from "@/server/features/gsc/gsc-site-import";
@@ -44,8 +45,18 @@ const UNVERIFIED_PERMISSION = "siteUnverifiedUser";
  */
 export const MAX_IMPORT_SITES = 25;
 
-/** Why a listed property cannot be selected, or null when it can. */
-type GscImportBlock = "unverified" | "unsupported" | "already_imported";
+/**
+ * Why a listed property cannot be selected, or null when it can. `path_scoped`
+ * is its own reason rather than folding into `unsupported`: the property is
+ * real and verified, and naming the fix (connect a Domain or root-prefix
+ * property instead) is different from telling the user Search Console never
+ * issued the shape at all.
+ */
+type GscImportBlock =
+  | "unverified"
+  | "unsupported"
+  | "path_scoped"
+  | "already_imported";
 
 export type GscImportCandidate = {
   siteUrl: string;
@@ -53,8 +64,6 @@ export type GscImportCandidate = {
   /** Origin host, which becomes the project's name — null when unmappable. */
   host: string | null;
   origin: string | null;
-  /** Path a scoped property loses to the crawl origin. */
-  droppedPath: string | null;
   block: GscImportBlock | null;
   /** The project already connected to this property, when there is one. */
   existingProjectId: string | null;
@@ -156,7 +165,9 @@ async function listCandidates(
       site.permissionLevel === UNVERIFIED_PERMISSION
         ? "unverified"
         : !plan
-          ? "unsupported"
+          ? isPathScopedGscProperty(site.siteUrl)
+            ? "path_scoped"
+            : "unsupported"
           : existingProjectId
             ? "already_imported"
             : null;
@@ -166,7 +177,6 @@ async function listCandidates(
       kind: plan?.kind ?? null,
       host: plan?.host ?? null,
       origin: plan?.origin ?? null,
-      droppedPath: plan?.droppedPath ?? null,
       block,
       existingProjectId,
       existingProjectName: existingProjectId
@@ -282,7 +292,12 @@ async function importOneSite(input: {
 
   const plan = planGscSiteTarget(siteUrl);
   if (!plan) {
-    return { ...base, detail: "Not a property shape this app can crawl" };
+    return {
+      ...base,
+      detail: isPathScopedGscProperty(siteUrl)
+        ? "Search Console reports only on this property's own path — connect a Domain property or a root-prefix property to import this site"
+        : "Not a property shape this app can crawl",
+    };
   }
 
   const existingProjectId = input.importedBy.get(siteUrl);
@@ -327,9 +342,7 @@ async function importOneSite(input: {
       host: plan.host,
       outcome: "created",
       projectId: project.id,
-      detail: plan.droppedPath
-        ? `Crawls the whole origin — Search Console scopes this property to ${plan.droppedPath}`
-        : null,
+      detail: null,
       audit: "not_requested",
       auditId: null,
     };
