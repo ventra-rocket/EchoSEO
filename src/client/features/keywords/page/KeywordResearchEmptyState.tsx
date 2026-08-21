@@ -1,8 +1,11 @@
 import { Link } from "@tanstack/react-router";
+import { FormattedMessage, type IntlShape, useIntl } from "react-intl";
 import { Clock, Globe, History, Search, X } from "lucide-react";
 import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
-import { DEFAULT_LOCATION_CODE } from "@/client/features/keywords/locations";
-import { LOCATIONS } from "@/client/features/keywords/utils";
+import {
+  DEFAULT_LOCATION_CODE,
+  LOCATION_OPTIONS,
+} from "@/shared/keyword-locations";
 import type { KeywordResearchControllerState } from "./types";
 
 // The slice of the controller these states actually read. Narrower than the
@@ -26,6 +29,19 @@ type Props = {
   projectId: string;
 };
 
+function formatLocationName(
+  intl: IntlShape,
+  locationCode: number,
+  fallback: string,
+): string {
+  const option = LOCATION_OPTIONS.find(({ code }) => code === locationCode);
+  if (!option) return fallback;
+  return (
+    intl.formatDisplayName(option.shortLabel, { type: "region" }) ??
+    option.label
+  );
+}
+
 export function KeywordResearchEmptyState({ controller, projectId }: Props) {
   const { hasSearched, isLoading, lastSearchError, seoKeyMissing } = controller;
 
@@ -48,6 +64,7 @@ export function KeywordResearchEmptyState({ controller, projectId }: Props) {
 
 function NoResultsState({ controller }: { controller: EmptyStateController }) {
   const { lastSearchKeyword, lastSearchLocationCode } = controller;
+  const intl = useIntl();
 
   return (
     <div className="pt-1">
@@ -55,18 +72,27 @@ function NoResultsState({ controller }: { controller: EmptyStateController }) {
         <Globe className="size-10 mx-auto text-base-content/40" />
         <div className="space-y-2">
           <p className="text-lg font-semibold text-base-content">
-            Not enough keyword data for this query yet
+            <FormattedMessage id="keywordResearch.emptyState.noResults.heading" />
           </p>
           <p className="text-sm text-base-content/70">
-            We could not find keyword opportunities for
-            <span className="font-medium text-base-content">
-              {` "${lastSearchKeyword}" `}
-            </span>
-            in
-            <span className="font-medium text-base-content">
-              {` ${LOCATIONS[lastSearchLocationCode] || "this location"}`}
-            </span>
-            .
+            <FormattedMessage
+              id="keywordResearch.emptyState.noResults.body"
+              values={{
+                keyword: lastSearchKeyword,
+                location: formatLocationName(
+                  intl,
+                  lastSearchLocationCode,
+                  intl.formatMessage({
+                    id: "keywordResearch.emptyState.noResults.unknownLocation",
+                  }),
+                ),
+                b: (chunks) => (
+                  <span className="font-medium text-base-content">
+                    {chunks}
+                  </span>
+                ),
+              }}
+            />
           </p>
         </div>
       </div>
@@ -82,6 +108,7 @@ function SearchHistoryState({
   projectId: string;
 }) {
   const { history, historyLoaded, removeHistoryItem } = controller;
+  const intl = useIntl();
 
   if (!historyLoaded) {
     return null;
@@ -95,8 +122,10 @@ function SearchHistoryState({
             <div className="flex items-center gap-2">
               <History className="size-4 text-base-content/45" />
               <span className="text-sm text-base-content/60">
-                {history.length} recent search
-                {history.length !== 1 ? "es" : ""}
+                <FormattedMessage
+                  id="keywordResearch.emptyState.history.recentSearches"
+                  values={{ count: history.length }}
+                />
               </span>
             </div>
           </div>
@@ -126,21 +155,31 @@ function SearchHistoryState({
                       {item.keyword}
                     </p>
                     <p className="truncate text-sm text-base-content/60">
-                      {item.locationName}
+                      {formatLocationName(
+                        intl,
+                        item.locationCode,
+                        item.locationName,
+                      )}
                     </p>
                   </div>
                 </Link>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-xs text-base-content/40">
-                    {new Date(item.timestamp).toLocaleDateString(undefined, {
+                    {intl.formatDate(item.timestamp, {
                       month: "short",
                       day: "numeric",
                     })}
                   </span>
                   <button
                     type="button"
-                    className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 p-1"
+                    className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 p-1"
                     onClick={() => removeHistoryItem(item.timestamp)}
+                    aria-label={intl.formatMessage(
+                      {
+                        id: "keywordResearch.emptyState.history.removeSearch",
+                      },
+                      { keyword: item.keyword },
+                    )}
                   >
                     <X className="size-3" />
                   </button>
@@ -153,11 +192,10 @@ function SearchHistoryState({
         <section className="rounded-2xl border border-dashed border-base-300 bg-base-100/70 p-6 text-center text-base-content/50 space-y-3">
           <Search className="size-10 mx-auto opacity-40" />
           <p className="text-lg font-medium text-base-content/80">
-            Enter a keyword to get started
+            <FormattedMessage id="keywordResearch.emptyState.history.getStarted" />
           </p>
           <p className="text-sm max-w-md mx-auto">
-            Search for any keyword to see volume, difficulty, CPC, and related
-            keyword ideas.
+            <FormattedMessage id="keywordResearch.emptyState.history.getStartedBody" />
           </p>
         </section>
       )}

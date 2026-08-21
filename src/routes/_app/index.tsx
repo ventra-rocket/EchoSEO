@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 import { getProjects } from "@/serverFunctions/projects";
 import {
   clearLastProjectId,
@@ -8,7 +9,7 @@ import {
 } from "@/client/lib/active-project";
 import {
   getErrorCode,
-  getStandardErrorMessage,
+  getLocalizedErrorMessage,
 } from "@/client/lib/error-messages";
 import { AuthConfigErrorCard } from "@/client/components/AuthConfigErrorCard";
 import { UnauthenticatedErrorCard } from "@/client/components/UnauthenticatedErrorCard";
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_app/")({
 });
 
 function IndexRedirect() {
+  const intl = useIntl();
   const navigate = useNavigate();
 
   const { data, error, isError, refetch } = useQuery({
@@ -68,9 +70,10 @@ function IndexRedirect() {
       return (
         <div className="flex items-center justify-center h-full p-4">
           <AuthConfigErrorCard
-            message={getStandardErrorMessage(
+            message={getLocalizedErrorMessage(
+              intl,
               error,
-              "An unexpected error occurred. Please check server logs.",
+              intl.formatMessage({ id: "common.error.code.internal" }),
             )}
             onRetry={() => {
               void refetch();
@@ -84,7 +87,9 @@ function IndexRedirect() {
       return (
         <div className="flex items-center justify-center h-full p-4">
           <UnauthenticatedErrorCard
-            message="Please sign in to access your EchoSEO workspace."
+            message={intl.formatMessage({
+              id: "common.error.code.unauthenticated",
+            })}
             onRetry={() => {
               void refetch();
             }}
@@ -98,7 +103,7 @@ function IndexRedirect() {
         <div className="flex items-center justify-center h-full p-4">
           <div className="flex flex-col items-center gap-3 max-w-xl text-center">
             <p className="text-base-content/80">
-              Redirecting you to billing so you can start a hosted subscription.
+              {intl.formatMessage({ id: "common.auth.redirectingBilling" })}
             </p>
           </div>
         </div>
@@ -109,9 +114,10 @@ function IndexRedirect() {
       <div className="flex items-center justify-center h-full p-4">
         <div className="flex flex-col items-center gap-3 max-w-xl">
           <p className="text-error text-center">
-            {getStandardErrorMessage(
+            {getLocalizedErrorMessage(
+              intl,
               error,
-              "An unexpected error occurred. Please check server logs.",
+              intl.formatMessage({ id: "common.error.code.internal" }),
             )}
           </p>
         </div>

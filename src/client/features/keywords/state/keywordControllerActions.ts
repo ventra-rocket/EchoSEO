@@ -1,7 +1,8 @@
 import { useMemo } from "react";
+import { useIntl } from "react-intl";
 import { toast } from "sonner";
 import { buildCsv, type CsvValue, downloadCsv } from "@/client/lib/csv";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { getLanguageCode } from "@/client/features/keywords/utils";
 import type { KeywordResearchRow } from "@/types/keywords";
@@ -92,6 +93,7 @@ export function getNextSortParams(
 }
 
 export function useSaveAndExportActions(params: SaveExportActionParams) {
+  const intl = useIntl();
   const {
     selectedRows,
     rows,
@@ -103,7 +105,9 @@ export function useSaveAndExportActions(params: SaveExportActionParams) {
 
   const handleSaveKeywords = () => {
     if (selectedRows.size === 0) {
-      toast.error("Select at least one keyword first");
+      toast.error(
+        intl.formatMessage({ id: "keywordUi.saveExport.noSelectionToast" }),
+      );
       return;
     }
     setShowSaveDialog(true);
@@ -136,11 +140,24 @@ export function useSaveAndExportActions(params: SaveExportActionParams) {
             source_feature: "keyword_research",
             keyword_count: selectedRows.size,
           });
-          toast.success(`Saved ${selectedRows.size} keywords`);
+          toast.success(
+            intl.formatMessage(
+              { id: "keywordUi.saveExport.savedToast" },
+              { count: selectedRows.size },
+            ),
+          );
           setShowSaveDialog(false);
         },
         onError: (error: unknown) => {
-          toast.error(getStandardErrorMessage(error, "Save failed."));
+          toast.error(
+            getLocalizedErrorMessage(
+              intl,
+              error,
+              intl.formatMessage({
+                id: "keywordUi.saveExport.saveErrorDefault",
+              }),
+            ),
+          );
         },
       },
     );
@@ -153,7 +170,9 @@ export function useSaveAndExportActions(params: SaveExportActionParams) {
 
   const exportCsv = () => {
     if (sheetsExportRows.length === 0) {
-      toast.error("No data to export");
+      toast.error(
+        intl.formatMessage({ id: "keywordUi.saveExport.noDataToExport" }),
+      );
       return;
     }
     downloadKeywordResearchCsv(sheetsExportRows);

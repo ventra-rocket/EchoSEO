@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useIntl } from "react-intl";
 import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { getLanguageCode } from "@/client/features/keywords/utils";
 import { getSerpAnalysis } from "@/serverFunctions/keywords";
 
@@ -9,6 +10,7 @@ export function useKeywordSerpAnalysis(
   projectId: string,
   locationCode: number,
 ) {
+  const intl = useIntl();
   const [serpKeyword, setSerpKeyword] = useState<string | null>(null);
   const [serpPage, setSerpPage] = useState(0);
   const SERP_PAGE_SIZE = 10;
@@ -33,7 +35,11 @@ export function useKeywordSerpAnalysis(
     serpKeyword ?? serpQuery.data?.requestedKeyword ?? null;
   const serpLoading = serpQuery.isLoading;
   const serpError = serpQuery.isError
-    ? getStandardErrorMessage(serpQuery.error, "Failed to load SERP data.")
+    ? getLocalizedErrorMessage(
+        intl,
+        serpQuery.error,
+        intl.formatMessage({ id: "keywordUi.serp.errorDefault" }),
+      )
     : null;
 
   return {

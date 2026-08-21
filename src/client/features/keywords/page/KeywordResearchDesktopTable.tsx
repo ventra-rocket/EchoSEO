@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useIntl } from "react-intl";
 import {
   createColumnHelper,
   type ColumnDef,
@@ -17,7 +18,6 @@ import {
   type SortField,
 } from "@/client/features/keywords/components";
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
-import { formatNumber } from "@/client/features/keywords/utils";
 import type { KeywordResearchRow } from "@/types/keywords";
 import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
 
@@ -49,6 +49,7 @@ export function KeywordResearchDesktopTable({
   handleRowClick,
 }: Props) {
   const selectAnchorRef = useSelectionAnchor();
+  const intl = useIntl();
   const rowSelection = useMemo<RowSelectionState>(
     () =>
       Object.fromEntries(
@@ -62,7 +63,9 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("keyword", {
         header: () => (
           <SortHeader
-            label="Keyword"
+            label={intl.formatMessage({
+              id: "keywordResearch.table.column.keyword",
+            })}
             field="keyword"
             current={sortField}
             dir={sortDir}
@@ -86,7 +89,9 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("searchVolume", {
         header: () => (
           <SortHeader
-            label="Volume"
+            label={intl.formatMessage({
+              id: "keywordResearch.table.column.volume",
+            })}
             field="searchVolume"
             current={sortField}
             dir={sortDir}
@@ -94,7 +99,10 @@ export function KeywordResearchDesktopTable({
             className="justify-end"
           />
         ),
-        cell: ({ getValue }) => formatNumber(getValue()),
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value == null ? "-" : intl.formatNumber(value);
+        },
         meta: {
           headerClassName: "text-right",
           cellClassName:
@@ -104,8 +112,12 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("cpc", {
         header: () => (
           <SortHeader
-            label="CPC"
-            helpText="Cost per click in USD."
+            label={intl.formatMessage({
+              id: "keywordResearch.table.column.cpc",
+            })}
+            helpText={intl.formatMessage({
+              id: "keywordResearch.table.column.cpcHelp",
+            })}
             field="cpc"
             current={sortField}
             dir={sortDir}
@@ -115,7 +127,12 @@ export function KeywordResearchDesktopTable({
         ),
         cell: ({ getValue }) => {
           const value = getValue();
-          return value == null ? "-" : value.toFixed(2);
+          return value == null
+            ? "-"
+            : intl.formatNumber(value, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
         },
         meta: {
           headerClassName: "text-right",
@@ -126,8 +143,12 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("competition", {
         header: () => (
           <SortHeader
-            label="Comp."
-            helpText="Paid-search competition from Google Ads (0-1): higher means more advertisers bidding."
+            label={intl.formatMessage({
+              id: "keywordResearch.table.column.competition",
+            })}
+            helpText={intl.formatMessage({
+              id: "keywordResearch.table.column.competitionHelp",
+            })}
             field="competition"
             current={sortField}
             dir={sortDir}
@@ -137,7 +158,12 @@ export function KeywordResearchDesktopTable({
         ),
         cell: ({ getValue }) => {
           const value = getValue();
-          return value == null ? "-" : value.toFixed(2);
+          return value == null
+            ? "-"
+            : intl.formatNumber(value, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
         },
         meta: {
           headerClassName: "text-right",
@@ -148,8 +174,12 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("keywordDifficulty", {
         header: () => (
           <SortHeader
-            label="Score"
-            helpText="Organic ranking difficulty (0-100): higher means harder to reach Google's top 10."
+            label={intl.formatMessage({
+              id: "keywordResearch.table.column.difficulty",
+            })}
+            helpText={intl.formatMessage({
+              id: "keywordResearch.table.column.difficultyHelp",
+            })}
             field="keywordDifficulty"
             current={sortField}
             dir={sortDir}
@@ -161,7 +191,9 @@ export function KeywordResearchDesktopTable({
         meta: { headerClassName: "text-right", cellClassName: "text-right" },
       }),
       keywordColumnHelper.accessor("intent", {
-        header: "Intent",
+        header: intl.formatMessage({
+          id: "keywordResearch.table.column.intent",
+        }),
         cell: ({ getValue }) => <IntentBadge intent={getValue()} />,
         meta: {
           headerClassName: "text-center",
@@ -169,7 +201,7 @@ export function KeywordResearchDesktopTable({
         },
       }),
     ],
-    [selectAnchorRef, sortDir, sortField, toggleSort],
+    [intl, selectAnchorRef, sortDir, sortField, toggleSort],
   );
   const table = useAppTable({
     data: filteredRows,

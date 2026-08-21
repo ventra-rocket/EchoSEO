@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 export function TableBulkActionBar({
   selectedCount,
-  selectedLabel = "selected",
+  selectedLabel,
   actions,
   onClear,
   placement = "fixed",
@@ -17,6 +17,8 @@ export function TableBulkActionBar({
 }) {
   const intl = useIntl();
   if (selectedCount === 0) return null;
+  const resolvedSelectedLabel =
+    selectedLabel ?? intl.formatMessage({ id: "common.table.selected" });
 
   const wrapperClass =
     placement === "fixed"
@@ -45,8 +47,10 @@ export function TableBulkActionBar({
           >
             <X className="size-3.5" />
           </button>
-          <span className="font-medium tabular-nums">{selectedCount}</span>
-          <span className="text-base-content/60">{selectedLabel}</span>
+          <span className="font-medium tabular-nums">
+            {intl.formatNumber(selectedCount)}
+          </span>
+          <span className="text-base-content/60">{resolvedSelectedLabel}</span>
         </div>
         {actions}
       </div>
@@ -138,7 +142,7 @@ export function TableBulkExportMenu({
 
 export function TableExportMenu({
   actions,
-  label = "Export",
+  label,
   buttonClassName = "btn btn-sm gap-1",
   menuClassName = "dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-56",
 }: {
@@ -153,11 +157,15 @@ export function TableExportMenu({
   buttonClassName?: string;
   menuClassName?: string;
 }) {
+  const intl = useIntl();
+  const resolvedLabel =
+    label ?? intl.formatMessage({ id: "common.table.export" });
+
   return (
     <div className="dropdown dropdown-end">
       <div tabIndex={0} role="button" className={buttonClassName}>
         <Download className="size-4" />
-        {label}
+        {resolvedLabel}
         <ChevronDown className="size-3 opacity-60" />
       </div>
       <ul tabIndex={0} className={menuClassName}>

@@ -1,5 +1,6 @@
 import { Sheet } from "lucide-react";
 import { useState } from "react";
+import { useIntl } from "react-intl";
 import type { CsvValue } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 
@@ -25,10 +26,13 @@ export function ExportToSheetsButton({
   rows,
   feature,
   disabled,
-  label = "Export to Sheets",
+  label,
   iconOnly,
   className,
 }: Props) {
+  const intl = useIntl();
+  const resolvedLabel =
+    label ?? intl.formatMessage({ id: "common.sheets.export" });
   const [busy, setBusy] = useState(false);
 
   const handleClick = async () => {
@@ -47,11 +51,11 @@ export function ExportToSheetsButton({
       className={`btn btn-ghost btn-xs gap-1 ${className ?? ""}`}
       onClick={handleClick}
       disabled={disabled || rows.length === 0 || busy}
-      title="Copy table and open a new Google Sheet"
-      aria-label={iconOnly ? "Export to Sheets" : undefined}
+      title={intl.formatMessage({ id: "common.sheets.copyAndOpenTitle" })}
+      aria-label={iconOnly ? resolvedLabel : undefined}
     >
       <Sheet className="size-3.5" />
-      {iconOnly ? null : label}
+      {iconOnly ? null : resolvedLabel}
     </button>
   );
 }

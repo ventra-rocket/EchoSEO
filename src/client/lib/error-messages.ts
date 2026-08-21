@@ -1,3 +1,5 @@
+import type { IntlShape } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import { isErrorCode, type ErrorCode } from "@/shared/error-codes";
 import { AUDIT_VERIFICATION_PAGE_THRESHOLD } from "@/shared/audit-limits";
 
@@ -44,6 +46,30 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
     "An unexpected error occurred. Please check server logs and try again.",
 };
 
+const LOCALIZED_ERROR_MESSAGE_IDS: Record<ErrorCode, MessageId> = {
+  UNAUTHENTICATED: "common.error.code.unauthenticated",
+  AUTH_CONFIG_MISSING: "common.error.code.authConfigMissing",
+  PAYMENT_REQUIRED: "common.error.code.paymentRequired",
+  INSUFFICIENT_CREDITS: "common.error.code.insufficientCredits",
+  FORBIDDEN: "common.error.code.forbidden",
+  NOT_FOUND: "common.error.code.notFound",
+  AUDIT_CAPACITY_REACHED: "common.error.code.auditCapacityReached",
+  AUDIT_VERIFICATION_REQUIRED: "common.error.code.auditVerificationRequired",
+  VALIDATION_ERROR: "common.error.code.validation",
+  CRAWL_TARGET_BLOCKED: "common.error.code.crawlTargetBlocked",
+  BACKLINKS_NOT_ENABLED: "common.error.code.backlinksNotEnabled",
+  BACKLINKS_BILLING_ISSUE: "common.error.code.backlinksBillingIssue",
+  AI_SEARCH_NOT_ENABLED: "common.error.code.aiSearchNotEnabled",
+  AI_SEARCH_BILLING_ISSUE: "common.error.code.aiSearchBillingIssue",
+  DATAFORSEO_AUTH_FAILED: "common.error.code.dataforseoAuthFailed",
+  DATAFORSEO_KEY_MISSING: "common.error.code.dataforseoKeyMissing",
+  RATE_LIMITED: "common.error.code.rateLimited",
+  UPSTREAM_UNAVAILABLE: "common.error.code.upstreamUnavailable",
+  TARGET_BEHIND_AUTH: "common.error.code.targetBehindAuth",
+  CONFLICT: "common.error.code.conflict",
+  INTERNAL_ERROR: "common.error.code.internal",
+};
+
 export function getStandardErrorMessage(
   error: unknown,
   fallback: string = STANDARD_MESSAGES.INTERNAL_ERROR,
@@ -52,6 +78,28 @@ export function getStandardErrorMessage(
   if (isErrorCode(error.message)) return STANDARD_MESSAGES[error.message];
   if (error.message) return error.message;
   return fallback;
+}
+
+/**
+ * Resolves shared server error codes through the active message catalog while
+ * preserving custom server messages and caller-owned fallbacks. Converted
+ * surfaces should use this helper; the legacy helper remains for surfaces that
+ * have not entered the i18n gate yet.
+ */
+export function getLocalizedErrorMessage(
+  intl: Pick<IntlShape, "formatMessage">,
+  error: unknown,
+  fallback: string,
+): string {
+  const code = getErrorCode(error);
+  if (!code) return getStandardErrorMessage(error, fallback);
+
+  return intl.formatMessage(
+    { id: LOCALIZED_ERROR_MESSAGE_IDS[code] },
+    code === "AUDIT_VERIFICATION_REQUIRED"
+      ? { threshold: AUDIT_VERIFICATION_PAGE_THRESHOLD }
+      : undefined,
+  );
 }
 
 export function getErrorCode(error: unknown): ErrorCode | null {

@@ -13,6 +13,10 @@ import { rankConfig } from "./vi/rankConfig";
 import { rankCharts } from "./vi/rankCharts";
 import { searchPerformance } from "./vi/searchPerformance";
 import { gsc } from "./vi/gsc";
+import { keywordResearch } from "./vi/keywordResearch";
+import { keywordUi } from "./vi/keywordUi";
+import { savedTable } from "./vi/savedTable";
+import { savedModals } from "./vi/savedModals";
 
 // Vietnamese catalog — machine-translated seed, pending human review (see
 // README.md). Typed as `Messages` so the compiler fails if any English key is
@@ -33,4 +37,8 @@ export const vi: Messages = {
   ...rankCharts,
   ...searchPerformance,
   ...gsc,
+  ...keywordResearch,
+  ...keywordUi,
+  ...savedTable,
+  ...savedModals,
 };

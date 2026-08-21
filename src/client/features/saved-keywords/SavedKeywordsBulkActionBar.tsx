@@ -1,4 +1,5 @@
 import { Copy, FileDown, Sheet, Tags, Trash2 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   TableBulkActionBar,
   TableBulkActionButton,
@@ -24,6 +25,7 @@ export function SavedKeywordsBulkActionBar({
   onClear: () => void;
   exportingSelection: "csv" | "sheets" | null;
 }) {
+  const intl = useIntl();
   if (selectedCount === 0) return null;
   const exportBusy = exportingSelection != null;
 
@@ -38,24 +40,28 @@ export function SavedKeywordsBulkActionBar({
               icon={<Tags className="size-3.5" />}
               onClick={onOpenTags}
             >
-              Tag
+              <FormattedMessage id="saved.table.bulk.tag" />
             </TableBulkActionButton>
 
             <TableBulkExportMenu
               busy={exportBusy}
               actions={[
                 {
-                  label: "Copy keywords",
+                  label: intl.formatMessage({
+                    id: "saved.table.bulk.copyKeywords",
+                  }),
                   icon: <Copy className="size-4" />,
                   onClick: onCopy,
                 },
                 {
-                  label: "Export to Sheets",
+                  label: intl.formatMessage({ id: "common.sheets.export" }),
                   icon: <Sheet className="size-4" />,
                   onClick: onExportSheets,
                 },
                 {
-                  label: "Export CSV",
+                  label: intl.formatMessage({
+                    id: "saved.table.bulk.exportCsv",
+                  }),
                   icon: <FileDown className="size-4" />,
                   onClick: onExportCsv,
                 },
@@ -69,7 +75,7 @@ export function SavedKeywordsBulkActionBar({
               onClick={onDelete}
               variant="danger"
             >
-              Delete
+              <FormattedMessage id="saved.table.bulk.delete" />
             </TableBulkActionButton>
           </div>
         </>

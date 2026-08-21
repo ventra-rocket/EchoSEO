@@ -39,4 +39,8 @@ export const seoProvider: Record<keyof typeof en, string> = {
   "seoProvider.toast.forbidden":
     "Chỉ chủ sở hữu và quản trị viên workspace mới được đổi khóa DataForSEO.",
   "seoProvider.toast.error": "Không lưu được khóa DataForSEO.",
+  "seoProvider.keyMissing.title": "Chưa kết nối khóa API DataForSEO",
+  "seoProvider.keyMissing.description":
+    "Dữ liệu này đến từ DataForSEO. Chưa có yêu cầu nào được gửi nên hiện chưa có gì để báo cáo — hãy thêm khóa để xem kết quả.",
+  "seoProvider.keyMissing.helpLink": "Cách thêm khóa API DataForSEO",
 };

@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useIntl } from "react-intl";
 import { sortBy } from "remeda";
 import {
   Area,
@@ -11,7 +12,6 @@ import {
   YAxis,
 } from "recharts";
 import type { MonthlySearch } from "@/types/keywords";
-import { formatCompactNumber } from "../utils";
 import { FloatingTooltip, useFloatingTooltip } from "./FloatingTooltip";
 
 export type SortField =
@@ -60,6 +60,7 @@ export function HeaderHelpLabel({
 }
 
 export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
+  const intl = useIntl();
   const sorted = sortBy(trend, (item) => item.year * 100 + item.month);
   const last12 = sorted.slice(-12);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -85,32 +86,22 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
     };
   }, []);
 
-  const monthLabels = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
   const data = last12.map((m) => ({
-    month: monthLabels[m.month - 1],
+    // Date-only data (year + month, no day): pin UTC so the tick label can't
+    // shift a month depending on the viewer's timezone offset.
+    month: intl.formatDate(Date.UTC(m.year, m.month - 1, 1), {
+      month: "short",
+      timeZone: "UTC",
+    }),
     year: m.year,
     searchVolume: m.searchVolume,
-    label: `${monthLabels[m.month - 1]} ${m.year}`,
   }));
 
   return (
     <div
       ref={containerRef}
       className="w-full h-[210px] min-w-0"
-      aria-label="Search trend chart"
+      aria-label={intl.formatMessage({ id: "keywordUi.trendChart.ariaLabel" })}
     >
       {chartWidth > 0 ? (
         <AreaChart
@@ -148,7 +139,10 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
           />
           <YAxis
             tickFormatter={(value: number | string) =>
-              formatCompactNumber(Number(value))
+              intl.formatNumber(Number(value), {
+                notation: "compact",
+                maximumFractionDigits: 1,
+              })
             }
             tick={{ fill: "var(--trend-axis-color)", fontSize: 11 }}
             width={44}
@@ -167,7 +161,7 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
           <Area
             type="monotone"
             dataKey="searchVolume"
-            name="Search volume"
+            name={intl.formatMessage({ id: "keywordUi.trendChart.seriesName" })}
             stroke="var(--color-primary)"
             strokeWidth={2}
             fill="url(#trendGrad)"

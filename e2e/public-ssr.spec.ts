@@ -158,6 +158,26 @@ test.describe("public routes server-render their body", () => {
     expect(html).toContain('"@type":"FAQPage"');
   });
 
+  test("a Vietnamese not-found URL keeps Vietnamese document semantics", async ({
+    request,
+    page,
+  }) => {
+    // Unknown routes SSR only the root shell, then hydrate their 404 body.
+    // Check both halves: raw document semantics and the hydrated state after
+    // AppLayout decides whether to mount the cookie-owned dashboard provider.
+    const response = await request.get("/vi/khong-ton-tai");
+    expect(response.status()).toBe(404);
+    const html = await response.text();
+    expect(html).toContain('lang="vi"');
+
+    const navigation = await page.goto("/vi/khong-ton-tai");
+    expect(navigation?.status()).toBe(404);
+    await expect(page.locator("html")).toHaveAttribute("lang", "vi");
+    await expect(
+      page.getByText("Không tìm thấy trang bạn đang tìm."),
+    ).toBeVisible();
+  });
+
   test("the legal pages ship their body in the initial HTML", async ({
     request,
   }) => {

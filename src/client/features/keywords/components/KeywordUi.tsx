@@ -1,5 +1,6 @@
+import { useIntl } from "react-intl";
 import type { KeywordResearchRow } from "@/types/keywords";
-import { formatNumber, scoreTierClass } from "../utils";
+import { scoreTierClass } from "../utils";
 import { IntentBadge } from "./IntentBadge";
 export { SerpAnalysisCard } from "./SerpAnalysisCard";
 
@@ -11,6 +12,8 @@ export {
 } from "./DisplayPrimitives";
 
 export function OverviewStats({ keyword }: { keyword: KeywordResearchRow }) {
+  const intl = useIntl();
+
   return (
     <div className="shrink-0 bg-base-100 border border-base-300 rounded-xl px-4 py-2.5 flex items-center gap-4 min-h-[48px]">
       <div className="flex items-center gap-2 min-w-0 shrink-0">
@@ -24,21 +27,39 @@ export function OverviewStats({ keyword }: { keyword: KeywordResearchRow }) {
 
       <div className="flex items-center gap-4 text-sm flex-wrap min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="text-base-content/50">Vol</span>
+          <span className="text-base-content/50">
+            {intl.formatMessage({ id: "keywordUi.overview.volume" })}
+          </span>
           <span className="font-semibold tabular-nums">
-            {formatNumber(keyword.searchVolume)}
+            {keyword.searchVolume == null
+              ? "-"
+              : intl.formatNumber(keyword.searchVolume)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-base-content/50">CPC</span>
+          <span className="text-base-content/50">
+            {intl.formatMessage({ id: "keywordUi.overview.cpc" })}
+          </span>
           <span className="font-semibold tabular-nums">
-            {keyword.cpc == null ? "-" : `$${keyword.cpc.toFixed(2)}`}
+            {keyword.cpc == null
+              ? "-"
+              : intl.formatNumber(keyword.cpc, {
+                  style: "currency",
+                  currency: "USD",
+                })}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-base-content/50">Comp</span>
+          <span className="text-base-content/50">
+            {intl.formatMessage({ id: "keywordUi.overview.competition" })}
+          </span>
           <span className="font-semibold tabular-nums">
-            {keyword.competition == null ? "-" : keyword.competition.toFixed(2)}
+            {keyword.competition == null
+              ? "-"
+              : intl.formatNumber(keyword.competition, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
           </span>
         </div>
         <IntentBadge intent={keyword.intent} />

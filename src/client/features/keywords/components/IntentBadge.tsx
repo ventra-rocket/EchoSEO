@@ -1,4 +1,6 @@
 import { createPortal } from "react-dom";
+import { useIntl } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import type { KeywordIntent } from "@/types/keywords";
 import { FloatingTooltip, useFloatingTooltip } from "./FloatingTooltip";
 
@@ -10,55 +12,56 @@ const COLORS: Record<KeywordIntent, string> = {
   unknown: "border-base-300 bg-base-200 text-base-content/60",
 };
 
-const SHORT_LABELS: Record<KeywordIntent, string> = {
-  informational: "Info",
-  commercial: "Comm",
-  transactional: "Trans",
-  navigational: "Nav",
-  unknown: "?",
+const SHORT_LABEL_IDS: Record<KeywordIntent, MessageId> = {
+  informational: "keywordUi.intent.informational.short",
+  commercial: "keywordUi.intent.commercial.short",
+  transactional: "keywordUi.intent.transactional.short",
+  navigational: "keywordUi.intent.navigational.short",
+  unknown: "keywordUi.intent.unknown.short",
 };
 
-const DESCRIPTIONS: Record<
+const DESCRIPTION_IDS: Record<
   KeywordIntent,
-  { label: string; description: string }
+  { labelId: MessageId; descriptionId: MessageId }
 > = {
   informational: {
-    label: "Informational",
-    description:
-      "The searcher wants information or answers. Use this for educational content, guides, and comparison-light explainers.",
+    labelId: "keywordUi.intent.informational.label",
+    descriptionId: "keywordUi.intent.informational.description",
   },
   commercial: {
-    label: "Commercial",
-    description:
-      "The searcher is researching options before a purchase. Treat this as buying intent for comparisons, alternatives, and product-led pages.",
+    labelId: "keywordUi.intent.commercial.label",
+    descriptionId: "keywordUi.intent.commercial.description",
   },
   transactional: {
-    label: "Transactional",
-    description:
-      "The searcher is ready to complete an action, often a purchase. Prioritize clear offers, pricing, trials, or conversion paths.",
+    labelId: "keywordUi.intent.transactional.label",
+    descriptionId: "keywordUi.intent.transactional.description",
   },
   navigational: {
-    label: "Navigational",
-    description:
-      "The searcher is looking for a specific site, brand, or page. These queries usually reward matching the expected destination.",
+    labelId: "keywordUi.intent.navigational.label",
+    descriptionId: "keywordUi.intent.navigational.description",
   },
   unknown: {
-    label: "Unknown",
-    description:
-      "Intent was not available for this keyword, so avoid making content strategy decisions from this badge alone.",
+    labelId: "keywordUi.intent.unknown.label",
+    descriptionId: "keywordUi.intent.unknown.description",
   },
 };
 
 export function IntentBadge({ intent }: { intent: KeywordIntent }) {
+  const intl = useIntl();
   const tooltip = useFloatingTooltip<HTMLSpanElement>({ delayMs: 0 });
-  const details = DESCRIPTIONS[intent];
+  const { labelId, descriptionId } = DESCRIPTION_IDS[intent];
+  const label = intl.formatMessage({ id: labelId });
+  const description = intl.formatMessage({ id: descriptionId });
 
   return (
     <span
       ref={tooltip.triggerRef}
       className={`inline-flex h-6 min-w-11 cursor-help items-center justify-center rounded-full border px-2 text-xs font-semibold leading-none ${COLORS[intent]}`}
       tabIndex={0}
-      aria-label={`${details.label} search intent`}
+      aria-label={intl.formatMessage(
+        { id: "keywordUi.intent.ariaLabel" },
+        { label },
+      )}
       aria-describedby={tooltip.isOpen ? tooltip.tooltipId : undefined}
       onMouseEnter={tooltip.open}
       onMouseLeave={tooltip.close}
@@ -68,12 +71,12 @@ export function IntentBadge({ intent }: { intent: KeywordIntent }) {
         if (e.key === "Escape") tooltip.close();
       }}
     >
-      {SHORT_LABELS[intent]}
+      {intl.formatMessage({ id: SHORT_LABEL_IDS[intent] })}
       {tooltip.isOpen && typeof document !== "undefined"
         ? createPortal(
             <FloatingTooltip id={tooltip.tooltipId} position={tooltip.position}>
-              <span className="block font-semibold">{details.label}</span>
-              <span className="mt-1 block">{details.description}</span>
+              <span className="block font-semibold">{label}</span>
+              <span className="mt-1 block">{description}</span>
             </FloatingTooltip>,
             document.body,
           )

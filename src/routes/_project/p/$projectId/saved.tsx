@@ -11,6 +11,7 @@ import type {
   SortingState,
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
+import { useIntl } from "react-intl";
 import { toast } from "sonner";
 import { SavedKeywordsBulkActionBar } from "@/client/features/saved-keywords/SavedKeywordsBulkActionBar";
 import { SavedKeywordsBulkTagsModal } from "@/client/features/saved-keywords/SavedKeywordsBulkTagsModal";
@@ -31,7 +32,7 @@ import {
 import { useSavedKeywordsExport } from "@/client/features/saved-keywords/useSavedKeywordsExport";
 import { useSavedKeywordsFilters } from "@/client/features/saved-keywords/useSavedKeywordsFilters";
 import { useTagManage } from "@/client/features/saved-keywords/useTagManage";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import {
   getSavedKeywords,
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/_project/p/$projectId/saved")({
 const FILTER_DEBOUNCE_MS = 350;
 
 function SavedKeywordsPage() {
+  const intl = useIntl();
   const { projectId } = Route.useParams();
   const queryClient = useQueryClient();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -158,11 +160,20 @@ function SavedKeywordsPage() {
         count: result.deletedCount,
       });
       toast.success(
-        `${result.deletedCount} keyword${result.deletedCount !== 1 ? "s" : ""} removed`,
+        intl.formatMessage(
+          { id: "saved.table.remove.success" },
+          { count: result.deletedCount },
+        ),
       );
     },
     onError: (error) => {
-      setRemoveError(getStandardErrorMessage(error, "Remove failed."));
+      setRemoveError(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "saved.table.remove.errorDefault" }),
+        ),
+      );
     },
   });
 
@@ -185,11 +196,20 @@ function SavedKeywordsPage() {
       setShowTagModal(false);
       void invalidateSavedKeywords();
       toast.success(
-        `Updated tags for ${result.taggedCount} keyword${result.taggedCount !== 1 ? "s" : ""}`,
+        intl.formatMessage(
+          { id: "saved.table.tagUpdate.success" },
+          { count: result.taggedCount },
+        ),
       );
     },
     onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Could not update tags"));
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "saved.table.tagUpdate.errorDefault" }),
+        ),
+      );
     },
   });
 
@@ -198,12 +218,19 @@ function SavedKeywordsPage() {
     onSuccess: (result) => {
       void invalidateSavedKeywords();
       toast.success(
-        `Updated stats for ${result.updated} keyword${result.updated !== 1 ? "s" : ""}`,
+        intl.formatMessage(
+          { id: "saved.table.metrics.success" },
+          { count: result.updated },
+        ),
       );
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(error, "Could not update keyword stats."),
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "saved.table.metrics.errorDefault" }),
+        ),
       );
     },
   });
@@ -315,7 +342,10 @@ function SavedKeywordsPage() {
               selectedRows.map((row) => row.keyword).join("\n"),
             );
             toast.success(
-              `${selectedCount} keyword${selectedCount !== 1 ? "s" : ""} copied`,
+              intl.formatMessage(
+                { id: "saved.table.copy.success" },
+                { count: selectedCount },
+              ),
             );
           }}
           onOpenTags={() => setShowTagModal(true)}

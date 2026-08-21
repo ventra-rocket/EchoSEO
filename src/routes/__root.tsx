@@ -27,8 +27,9 @@ import {
   markRedditSignupConversion,
   unmarkRedditSignupConversion,
 } from "@/client/lib/reddit-attribution";
-import { NotFound } from "@/client/components/NotFound";
+import { LocalizedNotFound } from "@/client/components/NotFound";
 import { I18nProvider } from "@/client/i18n/I18nProvider";
+import { getRouteOwnedLocale } from "@/client/i18n/config";
 import { isPublicSsrPath } from "@/shared/free-seo-check";
 import appCss from "@/client/styles/app.css?url";
 // `no-inline` keeps this out of a base64 data URI: Safari ignores data-URI
@@ -111,7 +112,7 @@ export const Route = createRootRoute({
   }),
   component: AppLayout,
   errorComponent: DefaultCatchBoundary,
-  notFoundComponent: () => <NotFound />,
+  notFoundComponent: LocalizedNotFound,
   shellComponent: RootDocument,
 });
 
@@ -122,18 +123,29 @@ function AppLayout() {
   // singletons (the tanstack-db queryClient and the auth client) are never
   // read or written while rendering, so no visitor's state reaches another's HTML.
   //
-  // Switch on the COMMITTED pathname (the last resolved match), not
-  // `location.pathname`: during an in-flight cross-boundary navigation the
-  // location URL flips to the target before <Outlet/> swaps to it, and switching
-  // on the pending URL would briefly render the still-mounted old tree under the
-  // wrong providers. The matches are what Outlet actually renders, so they cannot
-  // disagree with it.
-  const pathname = useRouterState({
-    select: (state) =>
-      state.matches[state.matches.length - 1]?.pathname ??
-      state.location.pathname,
+  // Switch normal routes on the COMMITTED pathname (the last resolved match),
+  // not `location.pathname`: during an in-flight cross-boundary navigation the
+  // URL flips before <Outlet/> swaps, and switching on the pending URL would
+  // briefly render the old tree under the wrong providers.
+  //
+  // A settled not-found URL has only the root match, however. In that one case
+  // the location is the only language signal; without it `/vi/unknown` mounted
+  // the authenticated cookie provider outside LocalizedNotFound, whose later
+  // `en` effect overwrote the route-owned `vi` document language.
+  const routeState = useRouterState({
+    select: (state) => ({
+      matchedPathname:
+        state.matches[state.matches.length - 1]?.pathname ??
+        state.location.pathname,
+      locationPathname: state.location.pathname,
+      hasOnlyRootMatch: state.matches.length === 1,
+    }),
   });
-  if (isPublicSsrPath(pathname)) {
+  const isPublic =
+    isPublicSsrPath(routeState.matchedPathname) ||
+    (routeState.hasOnlyRootMatch &&
+      getRouteOwnedLocale(routeState.locationPathname) !== undefined);
+  if (isPublic) {
     return <Outlet />;
   }
   return (
@@ -237,27 +249,25 @@ function PostHogBootstrap() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  // Server-render the document language from the committed path so the public
-  // Vietnamese landing ships `lang="vi"` for crawlers. Authenticated pages get
-  // "en" here and then the I18nProvider effect overrides from the cookie
-  // client-side — same end state as before, when only that effect set lang.
+  // The URL owns the document language. This deliberately differs from
+  // AppLayout's committed-match lookup above: that lookup chooses which
+  // provider tree currently wraps <Outlet>, while this one describes the page
+  // URL itself. A not-found route only matches `/`, so deriving `lang` from the
+  // last match rendered Vietnamese 404 copy under `<html lang="en">`.
   const pathname = useRouterState({
-    select: (state) =>
-      state.matches[state.matches.length - 1]?.pathname ??
-      state.location.pathname,
+    select: (state) => state.location.pathname,
   });
-  const lang = pathname.startsWith("/vi/") ? "vi" : "en";
+  const routeLocale = getRouteOwnedLocale(pathname);
+  const lang = routeLocale ?? "en";
 
-  // On a client-side navigation INTO a public page, React skips rewriting
-  // `<html lang>` when the value it computes is unchanged (e.g. arriving on the
-  // English landing while the dashboard's I18nProvider had imperatively set
-  // lang="vi" from the cookie). Reassert it here so a public page always carries
-  // its own language; authenticated pages are left to the I18nProvider effect.
+  // React can preserve an imperatively set dashboard language when navigating
+  // into a public URL. Reassert every URL-owned locale after navigation;
+  // authenticated routes remain owned by I18nProvider's cookie-based effect.
   React.useEffect(() => {
-    if (isPublicSsrPath(pathname)) {
-      document.documentElement.lang = lang;
+    if (routeLocale) {
+      document.documentElement.lang = routeLocale;
     }
-  }, [pathname, lang]);
+  }, [routeLocale]);
 
   return (
     <html lang={lang} suppressHydrationWarning>

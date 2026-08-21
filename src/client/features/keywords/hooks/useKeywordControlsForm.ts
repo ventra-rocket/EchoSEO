@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useForm } from "@tanstack/react-form";
+import { type IntlShape, useIntl } from "react-intl";
 import {
   createFormValidationErrors,
   shouldValidateFieldOnChange,
@@ -41,6 +42,7 @@ function getKeywordSearchValidationErrors(
   value: KeywordControlsValues,
   shouldValidateUntouchedField: boolean,
   validateEmptyKeyword: boolean,
+  intl: IntlShape,
 ) {
   const keywords = parseKeywordInput(value.keyword);
 
@@ -48,7 +50,9 @@ function getKeywordSearchValidationErrors(
     if (!validateEmptyKeyword) return null;
     return createFormValidationErrors({
       fields: {
-        keyword: "Please enter at least one keyword.",
+        keyword: intl.formatMessage({
+          id: "keywordUi.controlsForm.keywordRequired",
+        }),
       },
     });
   }
@@ -58,7 +62,10 @@ function getKeywordSearchValidationErrors(
   if (keywords.length > MAX_KEYWORDS_PER_SUBMIT) {
     return createFormValidationErrors({
       fields: {
-        keyword: `Please enter no more than ${MAX_KEYWORDS_PER_SUBMIT} keywords (one per line).`,
+        keyword: intl.formatMessage(
+          { id: "keywordUi.controlsForm.tooManyKeywords" },
+          { max: MAX_KEYWORDS_PER_SUBMIT },
+        ),
       },
     });
   }
@@ -70,6 +77,7 @@ function getKeywordTabCapacityError(
   value: KeywordControlsValues,
   openKeywordTabs: readonly KeywordTabValidationInput[] | undefined,
   keywordTabsLimit: number | undefined,
+  intl: IntlShape,
 ) {
   if (!openKeywordTabs || keywordTabsLimit == null) return null;
 
@@ -104,7 +112,10 @@ function getKeywordTabCapacityError(
 
   return createFormValidationErrors({
     fields: {
-      keyword: `${skippedCount} keyword${skippedCount === 1 ? "" : "s"} skipped - close a tab to open more (max ${keywordTabsLimit}).`,
+      keyword: intl.formatMessage(
+        { id: "keywordUi.controlsForm.tabsSkipped" },
+        { skipped: skippedCount, max: keywordTabsLimit },
+      ),
     },
   });
 }
@@ -126,6 +137,7 @@ export function useKeywordControlsForm(
   input: UseKeywordControlsFormInput,
   onSubmit: (value: KeywordControlsValues) => void,
 ) {
+  const intl = useIntl();
   const form = useForm({
     defaultValues: {
       keyword: input.keywordInput,
@@ -140,13 +152,15 @@ export function useKeywordControlsForm(
           value,
           shouldValidateFieldOnChange(formApi, "keyword"),
           false,
+          intl,
         ),
       onSubmit: ({ value }) =>
-        getKeywordSearchValidationErrors(value, true, true) ??
+        getKeywordSearchValidationErrors(value, true, true, intl) ??
         getKeywordTabCapacityError(
           value,
           input.getOpenKeywordTabs?.(),
           input.keywordTabsLimit,
+          intl,
         ),
     },
     onSubmit: ({ value }) => {

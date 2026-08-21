@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useIntl } from "react-intl";
 import {
   resolveTagColor,
   tagDotClass,
@@ -37,6 +38,7 @@ export function SavedKeywordsTagFilter({
   onDeleteTag: (tagId: string) => void;
   busyTagIds: Set<string>;
 }) {
+  const intl = useIntl();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [managingTagId, setManagingTagId] = useState<string | null>(null);
@@ -93,10 +95,12 @@ export function SavedKeywordsTagFilter({
         onClick={() => setOpen((v) => !v)}
       >
         <TagIcon className="size-3.5 opacity-70" />
-        <span className="font-medium">Tags</span>
+        <span className="font-medium">
+          {intl.formatMessage({ id: "saved.table.tagFilter.label" })}
+        </span>
         {hasSelection ? (
           <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-content">
-            {selectedTags.length}
+            {intl.formatNumber(selectedTags.length)}
           </span>
         ) : null}
         <ChevronDown className="size-3.5 opacity-60" />
@@ -112,7 +116,9 @@ export function SavedKeywordsTagFilter({
               selected
               onClick={() => onToggleTagFilter(tag.id)}
               trailing={<X className="size-3 opacity-70" />}
-              title="Remove filter"
+              title={intl.formatMessage({
+                id: "saved.table.tagFilter.removeFilterTitle",
+              })}
             />
           ))}
           <button
@@ -120,7 +126,7 @@ export function SavedKeywordsTagFilter({
             className="text-xs text-base-content/60 underline-offset-2 hover:text-base-content hover:underline"
             onClick={onClearSelection}
           >
-            Clear
+            {intl.formatMessage({ id: "saved.table.tagFilter.clearSelected" })}
           </button>
         </div>
       ) : null}
@@ -181,6 +187,7 @@ function TagFilterPopover({
   onDeleteTag: (tagId: string) => void;
   onClearSelection: () => void;
 }) {
+  const intl = useIntl();
   return (
     <div className="absolute right-0 top-full z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-2xl">
       <div className="border-b border-base-300 p-2">
@@ -190,7 +197,9 @@ function TagFilterPopover({
             autoFocus
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search tags…"
+            placeholder={intl.formatMessage({
+              id: "saved.table.tagFilter.searchPlaceholder",
+            })}
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-base-content/40"
           />
           {query ? (
@@ -209,8 +218,10 @@ function TagFilterPopover({
         {filteredTags.length === 0 ? (
           <div className="px-3 py-6 text-center text-xs text-base-content/55">
             {availableTags.length === 0
-              ? "No tags yet. Add tags from a selection of keywords."
-              : "No tags match that search."}
+              ? intl.formatMessage({ id: "saved.table.tagFilter.noTagsYet" })
+              : intl.formatMessage({
+                  id: "saved.table.tagFilter.noSearchMatch",
+                })}
           </div>
         ) : null}
 
@@ -232,14 +243,17 @@ function TagFilterPopover({
       {selectedTagIds.length > 0 ? (
         <div className="flex items-center justify-between border-t border-base-300 px-2 py-1.5 text-xs">
           <span className="text-base-content/55">
-            {selectedTagIds.length} selected
+            {intl.formatMessage(
+              { id: "saved.table.tagFilter.selectedCount" },
+              { count: selectedTagIds.length },
+            )}
           </span>
           <button
             type="button"
             className="rounded px-2 py-1 text-base-content/70 hover:bg-base-200"
             onClick={onClearSelection}
           >
-            Clear all
+            {intl.formatMessage({ id: "saved.table.tagFilter.clearAllTags" })}
           </button>
         </div>
       ) : null}
@@ -266,6 +280,7 @@ function TagFilterRow({
   onUpdate: (input: { name?: string; color?: TagColorKey | null }) => void;
   onDelete: () => void;
 }) {
+  const intl = useIntl();
   const color = resolveTagColor(tag);
   return (
     <div>
@@ -289,7 +304,7 @@ function TagFilterRow({
           />
           <span className="min-w-0 flex-1 truncate text-sm">{tag.name}</span>
           <span className="shrink-0 text-[11px] tabular-nums text-base-content/45">
-            {tag.keywordCount}
+            {intl.formatNumber(tag.keywordCount)}
           </span>
         </button>
         <button
@@ -298,7 +313,10 @@ function TagFilterRow({
             isManaging ? "bg-base-300 text-base-content" : ""
           }`}
           onClick={() => onStartManaging(isManaging ? null : tag.id)}
-          aria-label={`Manage ${tag.name}`}
+          aria-label={intl.formatMessage(
+            { id: "saved.table.tagFilter.manageAriaLabel" },
+            { name: tag.name },
+          )}
         >
           <MoreHorizontal className="size-3.5" />
         </button>

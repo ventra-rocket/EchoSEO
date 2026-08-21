@@ -17,6 +17,7 @@ import {
   type MutableRefObject,
   type ReactNode,
 } from "react";
+import { useIntl } from "react-intl";
 import {
   applyShiftRangeSelection,
   type SelectionAnchor,
@@ -67,19 +68,24 @@ export function makeSelectionColumn<TData>(
     id: "select",
     size: 32,
     enableSorting: false,
-    header: ({ table }) => (
-      <input
-        type="checkbox"
-        className="checkbox checkbox-xs [--radius-selector:0.25rem]"
-        checked={table.getIsAllRowsSelected()}
-        onChange={table.getToggleAllRowsSelectedHandler()}
-        aria-label="Select all rows"
-      />
-    ),
+    header: ({ table }) => <SelectionHeaderCheckbox table={table} />,
     cell: ({ row, table }) => (
       <SelectionCheckbox row={row} table={table} anchorRef={anchorRef} />
     ),
   };
+}
+
+function SelectionHeaderCheckbox<TData>({ table }: { table: Table<TData> }) {
+  const intl = useIntl();
+  return (
+    <input
+      type="checkbox"
+      className="checkbox checkbox-xs [--radius-selector:0.25rem]"
+      checked={table.getIsAllRowsSelected()}
+      onChange={table.getToggleAllRowsSelectedHandler()}
+      aria-label={intl.formatMessage({ id: "common.table.selectAllRows" })}
+    />
+  );
 }
 
 function SelectionCheckbox<TData>({
@@ -91,13 +97,14 @@ function SelectionCheckbox<TData>({
   table: Table<TData>;
   anchorRef: MutableRefObject<SelectionAnchor | null>;
 }) {
+  const intl = useIntl();
   const rangeHandledRef = useRef(false);
   return (
     <input
       type="checkbox"
       className="checkbox checkbox-xs [--radius-selector:0.25rem]"
       checked={row.getIsSelected()}
-      aria-label="Select row"
+      aria-label={intl.formatMessage({ id: "common.table.selectRow" })}
       onClick={(event) => {
         event.stopPropagation();
         rangeHandledRef.current = applyShiftRangeSelection(

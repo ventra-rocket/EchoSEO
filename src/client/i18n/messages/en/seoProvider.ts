@@ -38,4 +38,8 @@ export const seoProvider = {
   "seoProvider.toast.forbidden":
     "Only workspace owners and admins can change the DataForSEO key.",
   "seoProvider.toast.error": "We couldn't save the DataForSEO key.",
+  "seoProvider.keyMissing.title": "No DataForSEO API key connected",
+  "seoProvider.keyMissing.description":
+    "This data comes from DataForSEO. Nothing was requested, so there is nothing to report about it yet — add your key to see results.",
+  "seoProvider.keyMissing.helpLink": "How to add your DataForSEO API key",
 } as const;

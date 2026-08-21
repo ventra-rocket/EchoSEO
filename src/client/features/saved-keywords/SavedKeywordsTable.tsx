@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { Search } from "lucide-react";
 import { useMemo } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   AppDataTable,
   makeSelectionColumn,
@@ -42,13 +43,17 @@ export function SavedKeywordsTable({
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   onSortingChange: OnChangeFn<SortingState>;
 }) {
+  const intl = useIntl();
   const selectAnchorRef = useSelectionAnchor();
   const columns = useMemo<ColumnDef<SavedKeywordRow>[]>(
     () => [
       makeSelectionColumn<SavedKeywordRow>(selectAnchorRef),
       columnHelper.accessor("keyword", {
         header: ({ column }) => (
-          <SortableHeader column={column} label="Keyword" />
+          <SortableHeader
+            column={column}
+            label={intl.formatMessage({ id: "saved.table.column.keyword" })}
+          />
         ),
         cell: ({ getValue }) => (
           <span className="font-medium">{getValue()}</span>
@@ -56,42 +61,68 @@ export function SavedKeywordsTable({
       }),
       columnHelper.accessor("searchVolume", {
         header: ({ column }) => (
-          <SortableHeader column={column} label="Volume" />
+          <SortableHeader
+            column={column}
+            label={intl.formatMessage({ id: "saved.table.column.volume" })}
+          />
         ),
-        cell: ({ getValue }) => formatSavedKeywordNumber(getValue()),
+        cell: ({ getValue }) => formatSavedKeywordNumber(intl, getValue()),
       }),
       columnHelper.accessor("cpc", {
-        header: ({ column }) => <SortableHeader column={column} label="CPC" />,
+        header: ({ column }) => (
+          <SortableHeader
+            column={column}
+            label={intl.formatMessage({ id: "saved.table.column.cpc" })}
+          />
+        ),
         cell: ({ getValue }) => {
           const value = getValue();
-          return value == null ? "-" : `$${value.toFixed(2)}`;
+          return value == null
+            ? "-"
+            : intl.formatNumber(value, {
+                style: "currency",
+                currency: "USD",
+              });
         },
       }),
       columnHelper.accessor("competition", {
         header: ({ column }) => (
           <SortableHeader
             column={column}
-            label="Competition"
-            helpText="Paid-search competition from Google Ads (0-1): higher means more advertisers bidding."
+            label={intl.formatMessage({
+              id: "saved.table.column.competition",
+            })}
+            helpText={intl.formatMessage({
+              id: "saved.table.tooltip.competition",
+            })}
           />
         ),
         cell: ({ getValue }) => {
           const value = getValue();
-          return value == null ? "-" : value.toFixed(2);
+          return value == null
+            ? "-"
+            : intl.formatNumber(value, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
         },
       }),
       columnHelper.accessor("keywordDifficulty", {
         header: ({ column }) => (
           <SortableHeader
             column={column}
-            label="Difficulty"
-            helpText="Organic ranking difficulty (0-100): higher means harder to reach Google's top 10."
+            label={intl.formatMessage({
+              id: "saved.table.column.difficulty",
+            })}
+            helpText={intl.formatMessage({
+              id: "saved.table.tooltip.difficulty",
+            })}
           />
         ),
         cell: ({ getValue }) => <DifficultyBadge value={getValue()} />,
       }),
       columnHelper.accessor("intent", {
-        header: () => "Intent",
+        header: () => intl.formatMessage({ id: "saved.table.column.intent" }),
         cell: ({ getValue }) => (
           <IntentBadge intent={normalizeIntent(getValue())} />
         ),
@@ -99,23 +130,28 @@ export function SavedKeywordsTable({
       }),
       columnHelper.display({
         id: "tags",
-        header: () => "Tags",
+        header: () => intl.formatMessage({ id: "saved.table.column.tags" }),
         cell: ({ row }) => <TagList tags={row.original.tags} />,
         enableSorting: false,
         meta: { cellClassName: "min-w-40 max-w-64" },
       }),
       columnHelper.accessor("fetchedAt", {
         header: ({ column }) => (
-          <SortableHeader column={column} label="Last Fetched" />
+          <SortableHeader
+            column={column}
+            label={intl.formatMessage({
+              id: "saved.table.column.lastFetched",
+            })}
+          />
         ),
         cell: ({ getValue }) => (
           <span className="text-xs text-base-content/55">
-            {formatSavedKeywordDate(getValue())}
+            {formatSavedKeywordDate(intl, getValue())}
           </span>
         ),
       }),
     ],
-    [selectAnchorRef],
+    [intl, selectAnchorRef],
   );
   const table = useAppTable({
     data: rows,
@@ -194,9 +230,13 @@ function SavedKeywordsEmptyState({
     <div className="py-12 text-center text-sm text-base-content/55">
       <Search className="mx-auto mb-2 size-8 opacity-40" />
       <p>
-        {hasActiveFilters
-          ? "No saved keywords match the current filters."
-          : "No saved keywords yet. Use the Keyword Research page to find and save keywords."}
+        <FormattedMessage
+          id={
+            hasActiveFilters
+              ? "saved.table.empty.noMatch"
+              : "saved.table.empty.noneYet"
+          }
+        />
       </p>
     </div>
   );

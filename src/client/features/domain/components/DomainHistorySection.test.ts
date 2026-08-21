@@ -1,7 +1,9 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
 import { DomainHistorySection } from "./DomainHistorySection";
+import { en } from "@/client/i18n/messages/en";
 
 // The states under test link to the help page; the router itself is not.
 vi.mock("@tanstack/react-router", () => ({
@@ -10,9 +12,15 @@ vi.mock("@tanstack/react-router", () => ({
   linkOptions: (options: unknown) => options,
 }));
 
+function renderWithIntl(node: ReactNode): string {
+  return renderToStaticMarkup(
+    createElement(IntlProvider, { locale: "en", messages: en }, node),
+  );
+}
+
 describe("DomainHistorySection", () => {
   it("names the missing key instead of asking for a domain again", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderWithIntl(
       createElement(DomainHistorySection, {
         history: [],
         historyLoaded: true,
@@ -28,7 +36,7 @@ describe("DomainHistorySection", () => {
   });
 
   it("still prompts for a domain when a key is connected", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderWithIntl(
       createElement(DomainHistorySection, {
         history: [],
         historyLoaded: true,
