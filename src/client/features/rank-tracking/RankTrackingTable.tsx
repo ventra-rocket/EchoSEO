@@ -21,7 +21,10 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import { useRankTrackingColumns } from "./RankTrackingColumns";
 import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
-import { buildRankTrackingExport } from "./RankTrackingTableParts";
+import {
+  buildRankTrackingExport,
+  type RankTrackingGscExport,
+} from "./RankTrackingTableParts";
 import {
   KeywordTrendModal,
   type KeywordTrendTarget,
@@ -40,6 +43,7 @@ export function RankTrackingTable({
   projectId,
   locationCode,
   serpDepth,
+  gsc,
 }: {
   totalCount: number;
   rows: RankTrackingRow[];
@@ -52,6 +56,8 @@ export function RankTrackingTable({
   projectId: string;
   locationCode: number;
   serpDepth: number;
+  /** Null until the Search Console overlay resolves, or when it cannot. */
+  gsc: RankTrackingGscExport | null;
 }) {
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
@@ -69,13 +75,14 @@ export function RankTrackingTable({
     [],
   );
 
-  const columns = useRankTrackingColumns(
+  const columns = useRankTrackingColumns({
     showDesktop,
     showMobile,
     domain,
     selectAnchorRef,
-    handleKeywordClick,
-  );
+    onKeywordClick: handleKeywordClick,
+    gscComplete: gsc ? gsc.complete : null,
+  });
 
   const table = useAppTable({
     data: rows,
@@ -98,6 +105,7 @@ export function RankTrackingTable({
       selectedRankRows,
       showDesktop,
       showMobile,
+      gsc,
     );
     void exportTableToSheets({
       headers,
@@ -111,6 +119,7 @@ export function RankTrackingTable({
       selectedRankRows,
       showDesktop,
       showMobile,
+      gsc,
     );
     const csvRows = exportRows.map((row) =>
       row.map((cell, idx) =>

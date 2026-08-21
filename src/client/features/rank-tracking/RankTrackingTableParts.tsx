@@ -159,6 +159,63 @@ export function CpcCell({ value }: { value: number | null }) {
   return <span className="font-mono text-sm">${value.toFixed(2)}</span>;
 }
 
+/**
+ * A tracked keyword with no Search Console row means two different things, and
+ * the difference decides whether a zero is a measurement or a guess: if the
+ * whole query set was read, Google recorded nothing for it; if the read was
+ * truncated, we simply never looked at that query.
+ */
+export function GscCountCell({
+  value,
+  complete,
+}: {
+  value: number | null | undefined;
+  complete: boolean;
+}) {
+  if (value == null) {
+    return (
+      <span
+        className="text-base-content/40"
+        title={
+          complete
+            ? "Search Console recorded no impressions for this keyword in the window"
+            : "Outside the queries read from Search Console — unknown, not zero"
+        }
+      >
+        {complete ? "0" : "?"}
+      </span>
+    );
+  }
+  return (
+    <span className="font-mono text-sm">{compactFormatter.format(value)}</span>
+  );
+}
+
+/** An average over the window. Never a live SERP rank, so no zero substitute. */
+export function GscPositionCell({
+  value,
+  complete,
+}: {
+  value: number | null | undefined;
+  complete: boolean;
+}) {
+  if (value == null) {
+    return (
+      <span
+        className="text-base-content/40"
+        title={
+          complete
+            ? "No impressions in the window, so Google reported no average position"
+            : "Outside the queries read from Search Console — no measurement available"
+        }
+      >
+        -
+      </span>
+    );
+  }
+  return <span className="font-mono text-sm">{value.toFixed(1)}</span>;
+}
+
 /** Numeric change for CSV export — numbers bypass the CSV formula-injection sanitizer */
 export function csvChange(
   current: number | null,
@@ -169,11 +226,24 @@ export function csvChange(
   return previous - current;
 }
 
+/**
+ * What the exported file has to say about the Search Console columns to stand
+ * on its own: the window the numbers cover, and whether an empty cell means
+ * "measured zero" or "never read". A CSV travels to people who never saw the
+ * table it came from.
+ */
+export interface RankTrackingGscExport {
+  window: { from: string; to: string };
+  complete: boolean;
+}
+
 export function buildRankTrackingExport(
   sorted: RankTrackingRow[],
   showDesktop: boolean,
   showMobile: boolean,
+  gsc: RankTrackingGscExport | null = null,
 ): { headers: string[]; rows: (string | number)[][] } {
+  const gscWindow = gsc ? `${gsc.window.from}..${gsc.window.to}` : "";
   const headers = [
     "Keyword",
     "Volume",
@@ -193,6 +263,13 @@ export function buildRankTrackingExport(
           "Mobile Change",
           "Mobile URL",
           "Mobile SERP Features",
+        ]
+      : []),
+    ...(gsc
+      ? [
+          `GSC Clicks (${gscWindow})`,
+          `GSC Impressions (${gscWindow})`,
+          `GSC Avg Position (${gscWindow})`,
         ]
       : []),
   ];
@@ -219,6 +296,15 @@ export function buildRankTrackingExport(
           row.mobile.serpFeatures.join(", "),
         ]
       : []),
+    // A truncated read leaves the cell empty rather than zero: the difference
+    // between "Google recorded nothing" and "we never asked about this query".
+    ...(gsc
+      ? [
+          row.gsc?.clicks ?? (gsc.complete ? 0 : ""),
+          row.gsc?.impressions ?? (gsc.complete ? 0 : ""),
+          row.gsc ? Number(row.gsc.position.toFixed(1)) : "",
+        ]
+      : []),
   ]);
   return { headers, rows };
 }
@@ -227,11 +313,13 @@ export function exportRankTrackingToSheets(
   sorted: RankTrackingRow[],
   showDesktop: boolean,
   showMobile: boolean,
+  gsc: RankTrackingGscExport | null = null,
 ) {
   const { headers, rows } = buildRankTrackingExport(
     sorted,
     showDesktop,
     showMobile,
+    gsc,
   );
   void exportTableToSheets({ headers, rows, feature: "rank_tracking" });
 }
@@ -241,6 +329,7 @@ export function exportRankTrackingCsv(
   showDesktop: boolean,
   showMobile: boolean,
   domain: string,
+  gsc: RankTrackingGscExport | null = null,
 ) {
   if (sorted.length === 0) {
     toast.error("No data to export");
@@ -250,6 +339,7 @@ export function exportRankTrackingCsv(
     sorted,
     showDesktop,
     showMobile,
+    gsc,
   );
   // CSV file download keeps cents-formatted CPC for human readability;
   // clipboard/Sheets export uses raw numbers (see buildRankTrackingExport).

@@ -8,6 +8,8 @@ import {
   DeviceRankCell,
   DeviceUrlCell,
   DifficultyCell,
+  GscCountCell,
+  GscPositionCell,
   SerpFeatureTags,
   VolumeCell,
 } from "./RankTrackingTableParts";
@@ -24,6 +26,12 @@ const HEADER_TOOLTIPS: Record<string, string> = {
     "Current Google ranking position, showing change from the comparison period",
   url: "The page on your site that ranks for this keyword",
   serp: "Special result features appearing on the search results page (e.g. AI Overview, People Also Ask)",
+  gscClicks:
+    "Clicks Search Console recorded for this exact query over the last 28 days — Google's own data, not a SERP check",
+  gscImpressions:
+    "Impressions Search Console recorded for this exact query over the last 28 days",
+  gscPosition:
+    "Average position over the last 28 days, across the impressions the site actually received. An average, not the live rank in the position column",
 };
 
 export function SortableHeader({
@@ -184,13 +192,74 @@ function makeSerpColumn(
   };
 }
 
-export function useRankTrackingColumns(
-  showDesktop: boolean,
-  showMobile: boolean,
-  domain: string,
-  selectAnchorRef: MutableRefObject<SelectionAnchor | null>,
-  onKeywordClick: (row: RankTrackingRow) => void,
-): ColumnDef<RankTrackingRow>[] {
+/**
+ * Search Console columns are only built once the overlay has resolved, and they
+ * carry the source in their own header: a reader scanning this table must not
+ * be able to mistake a 28-day average for the live position two columns left.
+ */
+function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
+  return [
+    {
+      id: "gscClicks",
+      accessorFn: (row) => row.gsc?.clicks ?? null,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="GSC clicks" id="gscClicks" />
+      ),
+      size: 100,
+      cell: ({ row }) => (
+        <GscCountCell value={row.original.gsc?.clicks} complete={complete} />
+      ),
+      sortingFn: nullsLastNumeric,
+    },
+    {
+      id: "gscImpressions",
+      accessorFn: (row) => row.gsc?.impressions ?? null,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="GSC impr." id="gscImpressions" />
+      ),
+      size: 100,
+      cell: ({ row }) => (
+        <GscCountCell
+          value={row.original.gsc?.impressions}
+          complete={complete}
+        />
+      ),
+      sortingFn: nullsLastNumeric,
+    },
+    {
+      id: "gscPosition",
+      accessorFn: (row) => row.gsc?.position ?? null,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="GSC avg pos" id="gscPosition" />
+      ),
+      size: 110,
+      cell: ({ row }) => (
+        <GscPositionCell
+          value={row.original.gsc?.position}
+          complete={complete}
+        />
+      ),
+      sortingFn: nullsLastNumeric,
+    },
+  ];
+}
+
+export function useRankTrackingColumns({
+  showDesktop,
+  showMobile,
+  domain,
+  selectAnchorRef,
+  onKeywordClick,
+  gscComplete,
+}: {
+  showDesktop: boolean;
+  showMobile: boolean;
+  domain: string;
+  selectAnchorRef: MutableRefObject<SelectionAnchor | null>;
+  onKeywordClick: (row: RankTrackingRow) => void;
+  /** Null while the Search Console overlay is unavailable: no columns at all. */
+  gscComplete: boolean | null;
+}): ColumnDef<RankTrackingRow>[] {
   return useMemo(() => {
     const cols: ColumnDef<RankTrackingRow>[] = [
       makeSelectionColumn<RankTrackingRow>(selectAnchorRef),
@@ -205,6 +274,9 @@ export function useRankTrackingColumns(
       cols.push(makeUrlColumn("mobile", domain));
     }
     cols.push(volumeColumn, kdColumn, cpcColumn);
+    if (gscComplete !== null) {
+      cols.push(...makeGscColumns(gscComplete));
+    }
     if (showDesktop) {
       cols.push(makeSerpColumn("desktop"));
     }
@@ -212,5 +284,12 @@ export function useRankTrackingColumns(
       cols.push(makeSerpColumn("mobile"));
     }
     return cols;
-  }, [showDesktop, showMobile, domain, selectAnchorRef, onKeywordClick]);
+  }, [
+    showDesktop,
+    showMobile,
+    domain,
+    selectAnchorRef,
+    onKeywordClick,
+    gscComplete,
+  ]);
 }
