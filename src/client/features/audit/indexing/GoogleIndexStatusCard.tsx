@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ExternalLink, Loader2, Search } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { getAuditIndexStatus, inspectAuditUrl } from "@/serverFunctions/audit";
 
 /**
@@ -32,26 +33,29 @@ export function GoogleIndexStatusCard({
     <div className="card border border-base-300 bg-base-100">
       <div className="card-body gap-3 p-4">
         <div>
-          <h2 className="font-medium">Google Search Console</h2>
+          <h2 className="font-medium">
+            <FormattedMessage id="audit.indexing.heading" />
+          </h2>
           <p className="text-xs text-base-content/60">
-            Check how Google sees your pages. Inspection is read-only —
-            requesting indexing or submitting a sitemap happens in Search
-            Console.
+            <FormattedMessage id="audit.indexing.description" />
           </p>
         </div>
 
         {context.state === "not_connected" && (
           <p className="text-sm text-base-content/60">
-            Connect Google Search Console for this project to check index
-            status.
+            <FormattedMessage id="audit.indexing.notConnected" />
           </p>
         )}
 
         {context.state === "property_mismatch" && (
           <p className="text-sm text-base-content/60">
-            The connected property (
-            <span className="font-mono">{context.property}</span>) does not
-            cover this site, so its index data can't be shown here.
+            <FormattedMessage
+              id="audit.indexing.propertyMismatch"
+              values={{
+                property: context.property,
+                mono: (chunks) => <span className="font-mono">{chunks}</span>,
+              }}
+            />
           </p>
         )}
 
@@ -88,6 +92,7 @@ function ReadyBody({
   startUrl: string;
   missingFromSitemapCount: number;
 }) {
+  const intl = useIntl();
   const [url, setUrl] = useState(startUrl);
 
   const inspect = useMutation({
@@ -100,7 +105,13 @@ function ReadyBody({
   return (
     <div className="space-y-3">
       <p className="text-xs text-base-content/60">
-        Property: <span className="font-mono">{property}</span>
+        <FormattedMessage
+          id="audit.indexing.propertyLabel"
+          values={{
+            property,
+            mono: (chunks) => <span className="font-mono">{chunks}</span>,
+          }}
+        />
       </p>
 
       {canInspect && (
@@ -117,7 +128,9 @@ function ReadyBody({
             value={url}
             onChange={(event) => setUrl(event.currentTarget.value)}
             className="input input-bordered input-sm flex-1"
-            aria-label="URL to inspect"
+            aria-label={intl.formatMessage({
+              id: "audit.indexing.urlInputLabel",
+            })}
           />
           <button
             type="submit"
@@ -129,14 +142,14 @@ function ReadyBody({
             ) : (
               <Search className="size-4" />
             )}
-            Check index status
+            <FormattedMessage id="audit.indexing.checkButton" />
           </button>
         </form>
       )}
 
       {inspect.isError && (
         <p className="text-xs text-error">
-          Could not inspect this URL. Try again shortly.
+          <FormattedMessage id="audit.indexing.inspectError" />
         </p>
       )}
 
@@ -149,13 +162,15 @@ function ReadyBody({
           target="_blank"
           rel="noreferrer"
         >
-          Manage sitemaps in Search Console
+          <FormattedMessage id="audit.indexing.manageSitemaps" />
           <ExternalLink className="size-3.5" />
         </a>
         {missingFromSitemapCount > 0 && (
           <span className="text-xs text-base-content/60">
-            {missingFromSitemapCount} crawled pages are missing from your
-            sitemap (see All Issues).
+            <FormattedMessage
+              id="audit.indexing.missingFromSitemap"
+              values={{ count: missingFromSitemapCount }}
+            />
           </span>
         )}
       </div>
@@ -168,32 +183,33 @@ function InspectionResult({
 }: {
   result: Awaited<ReturnType<typeof inspectAuditUrl>>;
 }) {
+  const intl = useIntl();
+
   if (result.state === "invalid_url") {
     return (
       <p className="text-xs text-warning">
-        Enter a URL on this site to inspect it.
+        <FormattedMessage id="audit.indexing.invalidUrl" />
       </p>
     );
   }
   if (result.state === "not_connected") {
     return (
       <p className="text-xs text-warning">
-        Search Console access was lost — reconnect to inspect URLs.
+        <FormattedMessage id="audit.indexing.inspectNotConnected" />
       </p>
     );
   }
   if (result.state === "property_mismatch") {
     return (
       <p className="text-xs text-warning">
-        The connected property no longer covers this site.
+        <FormattedMessage id="audit.indexing.inspectPropertyMismatch" />
       </p>
     );
   }
   if (result.state === "inspect_failed") {
     return (
       <p className="text-xs text-warning">
-        Google couldn't inspect this URL right now — it may be rate-limited or
-        the property's access changed. Try again shortly.
+        <FormattedMessage id="audit.indexing.inspectFailed" />
       </p>
     );
   }
@@ -202,10 +218,22 @@ function InspectionResult({
   return (
     <div className="rounded border border-base-300 bg-base-200/40 p-3 text-sm">
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-        <Row label="Coverage" value={inspection.coverageState} />
-        <Row label="Verdict" value={inspection.verdict} />
-        <Row label="Indexing" value={inspection.indexingState} />
-        <Row label="Last crawl" value={inspection.lastCrawlTime} />
+        <Row
+          label={intl.formatMessage({ id: "audit.indexing.rowCoverage" })}
+          value={inspection.coverageState}
+        />
+        <Row
+          label={intl.formatMessage({ id: "audit.indexing.rowVerdict" })}
+          value={inspection.verdict}
+        />
+        <Row
+          label={intl.formatMessage({ id: "audit.indexing.rowIndexing" })}
+          value={inspection.indexingState}
+        />
+        <Row
+          label={intl.formatMessage({ id: "audit.indexing.rowLastCrawl" })}
+          value={inspection.lastCrawlTime}
+        />
       </dl>
       {inspection.inspectionResultLink && (
         <a
@@ -214,7 +242,7 @@ function InspectionResult({
           target="_blank"
           rel="noreferrer"
         >
-          Open in Search Console
+          <FormattedMessage id="audit.indexing.openInSearchConsole" />
           <ExternalLink className="size-3.5" />
         </a>
       )}

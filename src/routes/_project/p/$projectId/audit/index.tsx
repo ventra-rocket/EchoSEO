@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   getAuditAccess,
   getAuditResults,
@@ -20,7 +21,7 @@ import { CompetitorsCard } from "@/client/features/audit/competitors/Competitors
 import { ComparisonTable } from "@/client/features/audit/competitors/ComparisonTable";
 import {
   extractHostname,
-  formatStartedAt,
+  parseAuditTimestamp,
   StatusBadge,
 } from "@/client/features/audit/shared";
 import { CrawlProgressCard } from "@/client/features/audit/progress/CrawlProgressCard";
@@ -102,6 +103,8 @@ function AuditDetail({
   onTabChange: (tab: AuditTab) => void;
   onOpenAudit: (auditId: string) => void;
 }) {
+  const intl = useIntl();
+
   const statusQuery = useQuery({
     queryKey: ["audit-status", projectId, auditId],
     queryFn: () => getAuditStatus({ data: { projectId, auditId } }),
@@ -151,10 +154,12 @@ function AuditDetail({
         <div className="mx-auto max-w-3xl space-y-4">
           <div className="alert alert-error">
             <AlertCircle className="size-5" />
-            <span>We could not load this audit. It may have been deleted.</span>
+            <span>
+              <FormattedMessage id="audit.chrome.loadError" />
+            </span>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={onBack}>
-            &larr; Back to audits
+            <FormattedMessage id="audit.chrome.backToAudits" />
           </button>
         </div>
       </div>
@@ -173,10 +178,12 @@ function AuditDetail({
       <div className="mx-auto max-w-5xl space-y-4">
         <div className="space-y-1">
           <button className="btn btn-ghost btn-sm px-0" onClick={onBack}>
-            &larr; All audits
+            <FormattedMessage id="audit.chrome.allAudits" />
           </button>
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-2xl font-semibold">Site Audit</h1>
+            <h1 className="text-2xl font-semibold">
+              <FormattedMessage id="audit.chrome.heading" />
+            </h1>
             <div className="flex items-center gap-2">
               {resultsQuery.data?.audit && (
                 <RecrawlVerifyButton
@@ -194,8 +201,21 @@ function AuditDetail({
           </div>
           {status && (
             <p className="text-sm text-base-content/70">
-              {extractHostname(status.startUrl)} &middot; Started{" "}
-              {formatStartedAt(status.startedAt)}
+              {intl.formatMessage(
+                { id: "audit.chrome.startedAt" },
+                {
+                  hostname: extractHostname(status.startUrl),
+                  startedAt: intl.formatDate(
+                    parseAuditTimestamp(status.startedAt),
+                    {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    },
+                  ),
+                },
+              )}
             </p>
           )}
         </div>
@@ -213,24 +233,36 @@ function AuditDetail({
             <AlertCircle className="size-5" />
             <div className="space-y-1">
               <p className="font-medium">
-                This audit stopped before it finished.
+                <FormattedMessage id="audit.chrome.failed.title" />
               </p>
               {status?.errorMessage ? (
                 <p>
-                  It reported:{" "}
-                  <code className="text-xs break-all">
-                    {status.errorMessage}
-                  </code>
+                  <FormattedMessage
+                    id="audit.chrome.failed.reported"
+                    values={{
+                      errorMessage: status.errorMessage,
+                      mono: (chunks) => (
+                        <code className="text-xs break-all">{chunks}</code>
+                      ),
+                    }}
+                  />
                 </p>
               ) : (
-                <p>No reason was recorded for this run.</p>
+                <p>
+                  <FormattedMessage id="audit.chrome.failed.noReason" />
+                </p>
               )}
               <p>
-                Start it again, and if it stops the same way tell us on the{" "}
-                <Link className="link link-primary" to="/support">
-                  support page
-                </Link>{" "}
-                with the message above.
+                <FormattedMessage
+                  id="audit.chrome.failed.retry"
+                  values={{
+                    support: (chunks) => (
+                      <Link className="link link-primary" to="/support">
+                        {chunks}
+                      </Link>
+                    ),
+                  }}
+                />
               </p>
             </div>
           </div>
@@ -241,21 +273,27 @@ function AuditDetail({
             <AlertCircle className="size-5" />
             <div className="space-y-1">
               <p className="font-medium">
-                {status.pagesCrawled === 0
-                  ? "No page could be read on this site."
-                  : "Only the first page could be read."}
+                <FormattedMessage
+                  id={
+                    status.pagesCrawled === 0
+                      ? "audit.chrome.thinCrawl.noPages"
+                      : "audit.chrome.thinCrawl.onlyFirstPage"
+                  }
+                />
               </p>
               <p>
-                Either the site turns automated clients away, or the start URL
-                links to nothing else we are allowed to follow. Check that{" "}
-                <code className="text-xs">
-                  {extractHostname(status.startUrl)}/robots.txt
-                </code>{" "}
-                permits crawling, then try again — the{" "}
-                <Link className="link link-primary" to="/support">
-                  support page
-                </Link>{" "}
-                can help if it persists.
+                <FormattedMessage
+                  id="audit.chrome.thinCrawl.body"
+                  values={{
+                    hostname: extractHostname(status.startUrl),
+                    mono: (chunks) => <code className="text-xs">{chunks}</code>,
+                    support: (chunks) => (
+                      <Link className="link link-primary" to="/support">
+                        {chunks}
+                      </Link>
+                    ),
+                  }}
+                />
               </p>
             </div>
           </div>

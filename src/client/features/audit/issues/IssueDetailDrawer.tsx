@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AlertCircle, ExternalLink, X } from "lucide-react";
 import { listAuditIssues } from "@/serverFunctions/audit-issues";
@@ -34,6 +35,7 @@ export function IssueDetailDrawer({
   onClose: () => void;
 }) {
   const [page, setPage] = useState(1);
+  const intl = useIntl();
 
   // A panel that covers the screen has to be dismissible from the keyboard,
   // not only by finding the backdrop.
@@ -81,7 +83,9 @@ export function IssueDetailDrawer({
     >
       <button
         type="button"
-        aria-label="Close issue details"
+        aria-label={intl.formatMessage({
+          id: "audit.issues.detail.closeDetails",
+        })}
         className="flex-1 bg-black/40"
         onClick={onClose}
       />
@@ -91,14 +95,17 @@ export function IssueDetailDrawer({
           <div className="space-y-0.5">
             <h3 className="font-medium">{rule.label}</h3>
             <p className="text-sm text-base-content/60">
-              {total.toLocaleString()} affected {total === 1 ? "URL" : "URLs"}
+              <FormattedMessage
+                id="audit.issues.detail.affectedCount"
+                values={{ count: total }}
+              />
             </p>
           </div>
           <button
             type="button"
             className="btn btn-ghost btn-sm btn-square"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={intl.formatMessage({ id: "audit.issues.detail.close" })}
           >
             <X className="size-4" />
           </button>
@@ -117,7 +124,9 @@ export function IssueDetailDrawer({
           {query.isError ? (
             <div className="alert alert-error">
               <AlertCircle className="size-5" />
-              <span>We could not load the affected URLs.</span>
+              <span>
+                <FormattedMessage id="audit.issues.detail.loadError" />
+              </span>
             </div>
           ) : query.isLoading ? (
             <div className="flex justify-center py-10">
@@ -151,7 +160,9 @@ function RemediationPanel({ fix }: { fix: IssueFixText }) {
       <p className="text-sm">{fix.problem}</p>
 
       <div>
-        <h4 className="mb-1 text-sm font-medium">How to fix it</h4>
+        <h4 className="mb-1 text-sm font-medium">
+          <FormattedMessage id="audit.issues.detail.howToFixIt" />
+        </h4>
         <ol className="list-decimal space-y-1 pl-5 text-sm">
           {fix.fixSteps.map((step) => (
             <li key={step}>{step}</li>
@@ -170,13 +181,22 @@ function RemediationPanel({ fix }: { fix: IssueFixText }) {
           rel="noopener noreferrer"
           className="link link-primary inline-flex items-center gap-1"
         >
-          Google documentation
+          <FormattedMessage id="audit.issues.detail.googleDocumentation" />
           <ExternalLink className="size-3" />
         </a>
-        <span>Source last checked {fix.lastReviewedDate}</span>
+        <span>
+          <FormattedMessage
+            id="audit.issues.detail.sourceLastChecked"
+            values={{ date: fix.lastReviewedDate }}
+          />
+        </span>
         {/* Some rules have no translation yet. Saying so beats letting English
             text pass as the reader's language. */}
-        {!fix.localized && <span>(guidance shown in English)</span>}
+        {!fix.localized && (
+          <span>
+            <FormattedMessage id="audit.issues.detail.englishFallback" />
+          </span>
+        )}
       </div>
     </section>
   );
@@ -194,7 +214,10 @@ function Pagination({
   return (
     <div className="flex items-center justify-between">
       <span className="text-xs text-base-content/60">
-        Page {page} of {pageCount}
+        <FormattedMessage
+          id="audit.issues.detail.pageOf"
+          values={{ page, pageCount }}
+        />
       </span>
       <div className="join">
         <button
@@ -203,7 +226,7 @@ function Pagination({
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
-          Previous
+          <FormattedMessage id="audit.issues.detail.previous" />
         </button>
         <button
           type="button"
@@ -211,7 +234,7 @@ function Pagination({
           disabled={page >= pageCount}
           onClick={() => onPageChange(page + 1)}
         >
-          Next
+          <FormattedMessage id="audit.issues.detail.next" />
         </button>
       </div>
     </div>

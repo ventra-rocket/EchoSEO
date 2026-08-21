@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { useIntl } from "react-intl";
 import { classifyPageStatus } from "@/shared/http-status";
 
 export function extractPathname(url: string): string {
@@ -17,21 +18,16 @@ export function extractHostname(url: string): string {
   }
 }
 
-export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-export function formatStartedAt(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+/**
+ * D1 hands back `current_timestamp` as `"YYYY-MM-DD HH:MM:SS"` in **UTC** with
+ * no zone marker, which `new Date(…)` reads as local time — so an audit started
+ * at 06:03 UTC printed as 06:03 in Hanoi, seven hours early. Normalising here
+ * keeps every audit timestamp on one parse, and callers format it through
+ * `intl.formatDate`, so the rendering follows the active locale instead of a
+ * hardcoded `en-US`.
+ */
+export function parseAuditTimestamp(dateStr: string): Date {
+  return new Date(dateStr.replace(" ", "T") + "Z");
 }
 
 // A rough time-remaining estimate for the crawl progress card. Uses the
@@ -51,8 +47,7 @@ export function buildCrawlEta(status: {
     status.pagesCrawled > 0 &&
     status.pagesTotal > status.pagesCrawled
   ) {
-    // started_at is D1's `current_timestamp`: "YYYY-MM-DD HH:MM:SS" in UTC.
-    const startedMs = Date.parse(`${status.startedAt.replace(" ", "T")}Z`);
+    const startedMs = parseAuditTimestamp(status.startedAt).getTime();
     const elapsedMs = Date.now() - startedMs;
     if (Number.isFinite(startedMs) && elapsedMs > 0) {
       const remaining = status.pagesTotal - status.pagesCrawled;
@@ -73,10 +68,13 @@ export function buildCrawlEta(status: {
 }
 
 export function StatusBadge({ status }: { status: string }) {
+  const intl = useIntl();
+
   if (status === "running") {
     return (
       <span className="badge badge-info badge-sm gap-1">
-        <Loader2 className="size-3 animate-spin" /> Running
+        <Loader2 className="size-3 animate-spin" />{" "}
+        {intl.formatMessage({ id: "audit.chrome.status.running" })}
       </span>
     );
   }
@@ -84,14 +82,16 @@ export function StatusBadge({ status }: { status: string }) {
   if (status === "completed") {
     return (
       <span className="badge badge-outline badge-sm gap-1 text-success/80 border-success/30 bg-success/5">
-        <CheckCircle className="size-3" /> Done
+        <CheckCircle className="size-3" />{" "}
+        {intl.formatMessage({ id: "audit.chrome.status.done" })}
       </span>
     );
   }
 
   return (
     <span className="badge badge-error badge-sm gap-1">
-      <AlertCircle className="size-3" /> Failed
+      <AlertCircle className="size-3" />{" "}
+      {intl.formatMessage({ id: "audit.chrome.status.failed" })}
     </span>
   );
 }

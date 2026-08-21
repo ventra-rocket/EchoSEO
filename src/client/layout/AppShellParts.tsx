@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Sidebar, SidebarRail } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
@@ -20,15 +20,19 @@ function SeoApiStatusBanners({
             <div className="alert alert-warning">
               <AlertTriangle className="size-4 shrink-0" />
               <span className="text-sm">
-                Setup needed: add your DataForSEO API key to use EchoSEO
-                features. See the quick steps on the{" "}
-                <Link
-                  {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
-                >
-                  help page
-                </Link>
-                .
+                <FormattedMessage
+                  id="shell.setupNeeded.warning"
+                  values={{
+                    helpLink: (chunks) => (
+                      <Link
+                        {...dataforseoHelpLinkOptions}
+                        className="link link-primary font-medium"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  }}
+                />
               </span>
             </div>
           </div>
@@ -41,15 +45,19 @@ function SeoApiStatusBanners({
             <div className="alert alert-info">
               <AlertTriangle className="size-4 shrink-0" />
               <span className="text-sm">
-                We could not verify your DataForSEO setup. If features are not
-                working, check the setup steps on the{" "}
-                <Link
-                  {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
-                >
-                  help page
-                </Link>
-                .
+                <FormattedMessage
+                  id="shell.setupNeeded.verifyError"
+                  values={{
+                    helpLink: (chunks) => (
+                      <Link
+                        {...dataforseoHelpLinkOptions}
+                        className="link link-primary font-medium"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  }}
+                />
               </span>
             </div>
           </div>

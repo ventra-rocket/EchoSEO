@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { FormattedMessage } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 
 /**
@@ -27,11 +28,16 @@ export function LargeCrawlConfirmModal({
     >
       <div>
         <h3 id="large-crawl-confirm-title" className="text-lg font-semibold">
-          Crawl up to {maxPages.toLocaleString()} pages?
+          <FormattedMessage
+            id="audit.chrome.launch.confirmTitle"
+            values={{ maxPages: maxPages.toLocaleString() }}
+          />
         </h3>
         <p className="mt-1 text-sm text-base-content/60">
-          {startUrl} — a crawl this size is fine, it just takes a while. It runs
-          in the background, so you can leave this page and come back.
+          <FormattedMessage
+            id="audit.chrome.launch.confirmBody"
+            values={{ startUrl }}
+          />
         </p>
       </div>
 
@@ -42,7 +48,7 @@ export function LargeCrawlConfirmModal({
           onClick={onCancel}
           disabled={isStarting}
         >
-          Cancel
+          <FormattedMessage id="audit.chrome.launch.cancel" />
         </button>
         <button
           type="button"
@@ -52,10 +58,11 @@ export function LargeCrawlConfirmModal({
         >
           {isStarting ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Starting...
+              <Loader2 className="size-4 animate-spin" />{" "}
+              <FormattedMessage id="audit.chrome.launch.submitStarting" />
             </>
           ) : (
-            "Start crawl"
+            <FormattedMessage id="audit.chrome.launch.confirmStart" />
           )}
         </button>
       </div>

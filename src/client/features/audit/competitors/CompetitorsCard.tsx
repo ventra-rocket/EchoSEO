@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useState } from "react";
 import { Loader2, Swords, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ export function CompetitorsCard({
   projectId: string;
   auditId: string;
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [domain, setDomain] = useState("");
   const [label, setLabel] = useState("");
@@ -61,14 +63,24 @@ export function CompetitorsCard({
         },
       }),
     onSuccess: (competitor) => {
-      toast.success(`Now comparing against ${hostOf(competitor.origin)}.`);
+      toast.success(
+        intl.formatMessage(
+          { id: "audit.competitors.card.addedToast" },
+          { host: hostOf(competitor.origin) },
+        ),
+      );
       setDomain("");
       setLabel("");
       void invalidate();
     },
     onError: (error) =>
       toast.error(
-        getStandardErrorMessage(error, "Could not add that competitor."),
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({
+            id: "audit.competitors.card.addErrorDefault",
+          }),
+        ),
       ),
   });
 
@@ -76,12 +88,19 @@ export function CompetitorsCard({
     mutationFn: (competitorId: string) =>
       removeAuditCompetitor({ data: { projectId, auditId, competitorId } }),
     onSuccess: () => {
-      toast.success("Competitor removed.");
+      toast.success(
+        intl.formatMessage({ id: "audit.competitors.card.removedToast" }),
+      );
       void invalidate();
     },
     onError: (error) =>
       toast.error(
-        getStandardErrorMessage(error, "Could not remove that competitor."),
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({
+            id: "audit.competitors.card.removeErrorDefault",
+          }),
+        ),
       ),
   });
 
@@ -94,12 +113,14 @@ export function CompetitorsCard({
         <div className="flex items-start gap-3">
           <Swords className="size-5 text-primary shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <h2 className="font-medium">Competitors</h2>
+            <h2 className="font-medium">
+              <FormattedMessage id="audit.competitors.card.title" />
+            </h2>
             <p className="text-sm text-base-content/70">
-              Name up to {MAX_COMPETITORS} domains you compete with. Each of
-              your pages is matched to theirs and scored against the same rules,
-              so the comparison is page against page rather than domain against
-              domain.
+              <FormattedMessage
+                id="audit.competitors.card.description"
+                values={{ max: MAX_COMPETITORS }}
+              />
             </p>
           </div>
         </div>
@@ -107,7 +128,7 @@ export function CompetitorsCard({
         {competitorsQuery.isPending ? (
           <div className="flex items-center gap-2 text-sm text-base-content/60">
             <Loader2 className="size-4 animate-spin" />
-            Loading competitors
+            <FormattedMessage id="audit.competitors.card.loading" />
           </div>
         ) : (
           <ul className="divide-y divide-base-300">
@@ -128,7 +149,10 @@ export function CompetitorsCard({
                   className="btn btn-ghost btn-sm"
                   disabled={busy}
                   onClick={() => remove.mutate(competitor.id)}
-                  aria-label={`Remove ${hostOf(competitor.origin)}`}
+                  aria-label={intl.formatMessage(
+                    { id: "audit.competitors.card.remove" },
+                    { host: hostOf(competitor.origin) },
+                  )}
                 >
                   <Trash2 className="size-4" />
                 </button>
@@ -139,22 +163,24 @@ export function CompetitorsCard({
 
         {isFull ? (
           <p className="text-sm text-base-content/60">
-            Three is the limit. Remove one to compare against a different domain
-            — each competitor means crawling their pages, and a comparison
-            against ten sites is one nobody reads.
+            <FormattedMessage id="audit.competitors.card.limitReached" />
           </p>
         ) : (
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
               className="input input-bordered flex-1"
-              placeholder="competitor.com"
+              placeholder={intl.formatMessage({
+                id: "audit.competitors.card.domainPlaceholder",
+              })}
               value={domain}
               disabled={busy}
               onChange={(event) => setDomain(event.target.value)}
             />
             <input
               className="input input-bordered sm:w-48"
-              placeholder="Name (optional)"
+              placeholder={intl.formatMessage({
+                id: "audit.competitors.card.namePlaceholder",
+              })}
               value={label}
               disabled={busy}
               onChange={(event) => setLabel(event.target.value)}
@@ -165,7 +191,7 @@ export function CompetitorsCard({
               onClick={() => add.mutate()}
             >
               {add.isPending && <Loader2 className="size-4 animate-spin" />}
-              Add
+              <FormattedMessage id="audit.competitors.card.add" />
             </button>
           </div>
         )}

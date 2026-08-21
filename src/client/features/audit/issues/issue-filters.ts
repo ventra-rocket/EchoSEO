@@ -7,6 +7,10 @@
  * list, and that one is filtered and paged by the server.
  */
 
+import type { IntlShape } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
+import { en } from "@/client/i18n/messages/en";
+
 export const ISSUES_PAGE_SIZE = 50;
 
 export interface IssueFilters {
@@ -55,8 +59,29 @@ const GROUP_LABELS: Record<string, string> = {
   "ai-geo": "AI / GEO",
 };
 
+/**
+ * English fallback label, pinned by the test below. Components render
+ * `translatedGroupLabel` instead, which resolves the locale-aware copy.
+ */
 export function groupLabel(group: string): string {
   return GROUP_LABELS[group] ?? group;
+}
+
+const GROUP_LABEL_IDS: Record<string, MessageId> = {
+  indexability: "audit.issues.group.indexability",
+  links: "audit.issues.group.links",
+  redirects: "audit.issues.group.redirects",
+  content: "audit.issues.group.content",
+  sitemaps: "audit.issues.group.sitemaps",
+  "structured-data": "audit.issues.group.structuredData",
+  performance: "audit.issues.group.performance",
+  "ai-geo": "audit.issues.group.aiGeo",
+};
+
+/** Locale-aware group label for the issue group headers and filter chips. */
+export function translatedGroupLabel(intl: IntlShape, group: string): string {
+  const id = GROUP_LABEL_IDS[group];
+  return id ? intl.formatMessage({ id }) : groupLabel(group);
 }
 
 /**
@@ -75,8 +100,12 @@ export const UNCOVERED_GROUPS = [
   "ai-geo",
 ] as const;
 
-export const UNCOVERED_GROUPS_NOTE =
-  "Not covered by this audit yet: redirect chains (the crawl stores only the final URL), structured data (the catalog's entry is guidance only — nothing evaluates it into a finding), and AI/GEO checks (they need robots.txt and llms.txt fetches the audit crawl does not perform).";
+/**
+ * English source of truth lives in the message catalog; components render it
+ * through `<FormattedMessage id="audit.issues.uncoveredNote" />` so it is
+ * locale-aware. Exported here (English only) for the coverage test below.
+ */
+export const UNCOVERED_GROUPS_NOTE = en["audit.issues.uncoveredNote"];
 
 const SEVERITY_ORDER: Record<string, number> = {
   critical: 0,

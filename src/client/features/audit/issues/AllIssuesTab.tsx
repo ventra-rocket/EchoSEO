@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { FormattedMessage } from "react-intl";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import {
   getAuditIssueComparison,
@@ -9,7 +10,6 @@ import {
 import { useLocale } from "@/client/i18n/I18nProvider";
 import {
   compareSeverity,
-  UNCOVERED_GROUPS_NOTE,
   type IssueFilters,
   type IssueFixText,
 } from "@/client/features/audit/issues/issue-filters";
@@ -123,7 +123,9 @@ export function AllIssuesTab({
     return (
       <div className="alert alert-error">
         <AlertCircle className="size-5" />
-        <span>We could not load the issues for this audit.</span>
+        <span>
+          <FormattedMessage id="audit.issues.loadError" />
+        </span>
       </div>
     );
   }
@@ -163,9 +165,11 @@ export function AllIssuesTab({
         <div className="alert alert-success">
           <CheckCircle2 className="size-5" />
           <div className="space-y-1">
-            <p className="font-medium">No issues found.</p>
+            <p className="font-medium">
+              <FormattedMessage id="audit.issues.none.title" />
+            </p>
             <p className="text-sm">
-              Every check this audit runs passed on every crawled page.
+              <FormattedMessage id="audit.issues.none.body" />
             </p>
           </div>
         </div>
@@ -186,7 +190,9 @@ export function AllIssuesTab({
         </>
       )}
 
-      <p className="text-xs text-base-content/50">{UNCOVERED_GROUPS_NOTE}</p>
+      <p className="text-xs text-base-content/50">
+        <FormattedMessage id="audit.issues.uncoveredNote" />
+      </p>
 
       {selectedRule && (
         <IssueDetailDrawer
@@ -220,14 +226,22 @@ function NotMaterializedState({ stillWaiting }: { stillWaiting: boolean }) {
       )}
       <div className="space-y-1">
         <p className="font-medium">
-          {stillWaiting
-            ? "Working out the issues for this crawl…"
-            : "Issue analysis hasn't completed for this crawl."}
+          <FormattedMessage
+            id={
+              stillWaiting
+                ? "audit.issues.notMaterialized.waitingTitle"
+                : "audit.issues.notMaterialized.failedTitle"
+            }
+          />
         </p>
         <p className="text-sm">
-          {stillWaiting
-            ? "The pages are crawled; the checks that turn them into a list of issues run just after. This updates on its own."
-            : "The pages were crawled, but the checks that turn them into a list of issues did not finish. This is not a clean result — run the audit again to get one."}
+          <FormattedMessage
+            id={
+              stillWaiting
+                ? "audit.issues.notMaterialized.waitingBody"
+                : "audit.issues.notMaterialized.failedBody"
+            }
+          />
         </p>
       </div>
     </div>

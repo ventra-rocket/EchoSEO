@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { type IntlShape, useIntl } from "react-intl";
 import {
   deleteAudit,
   getAuditAccess,
@@ -26,6 +27,7 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 function getLaunchValidationErrors(
   value: LaunchFormValues,
   shouldValidateUntouchedField: boolean,
+  intl: IntlShape,
 ) {
   if (value.url.trim()) {
     return null;
@@ -37,7 +39,7 @@ function getLaunchValidationErrors(
 
   return createFormValidationErrors({
     fields: {
-      url: "Please enter a URL.",
+      url: intl.formatMessage({ id: "audit.chrome.launch.urlRequired" }),
     },
   });
 }
@@ -49,6 +51,7 @@ export function useLaunchController({
   projectId: string;
   onAuditStarted: (auditId: string) => void;
 }) {
+  const intl = useIntl();
   // A launch waiting on the large-crawl confirmation. Held as the exact request
   // rather than re-read from the form on confirm, so what the user confirmed is
   // what runs.
@@ -79,12 +82,17 @@ export function useLaunchController({
   async function runLaunch(request: LaunchRequest) {
     try {
       const result = await startMutation.mutateAsync(request);
-      toast.success("Audit started!");
+      toast.success(
+        intl.formatMessage({ id: "audit.chrome.launch.startedToast" }),
+      );
       onAuditStarted(result.auditId);
     } catch (error) {
       launchForm.setErrorMap({
         onSubmit: createFormValidationErrors({
-          form: getStandardErrorMessage(error, "Failed to start audit"),
+          form: getStandardErrorMessage(
+            error,
+            intl.formatMessage({ id: "audit.chrome.launch.startError" }),
+          ),
         }),
       });
     }
@@ -97,8 +105,9 @@ export function useLaunchController({
         getLaunchValidationErrors(
           value,
           shouldValidateFieldOnChange(formApi, "url"),
+          intl,
         ),
-      onSubmit: ({ value }) => getLaunchValidationErrors(value, true),
+      onSubmit: ({ value }) => getLaunchValidationErrors(value, true, intl),
     },
     onSubmit: async ({ formApi, value }) => {
       const effectiveMaxPages = commitMaxPagesInput(launchForm);
@@ -162,6 +171,7 @@ function useLaunchMutations({
   projectId: string;
   historyRefetch: () => Promise<unknown>;
 }) {
+  const intl = useIntl();
   const startMutation = useMutation({
     mutationFn: (data: LaunchRequest) => startAudit({ data }),
   });
@@ -171,7 +181,9 @@ function useLaunchMutations({
       deleteAudit({ data: { projectId, auditId } }),
     onSuccess: () => {
       void historyRefetch();
-      toast.success("Audit deleted");
+      toast.success(
+        intl.formatMessage({ id: "audit.chrome.launch.deletedToast" }),
+      );
     },
   });
 
