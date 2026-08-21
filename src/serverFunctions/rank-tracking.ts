@@ -3,6 +3,7 @@ import { waitUntil } from "cloudflare:workers";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { RankTrackingService } from "@/server/features/rank-tracking/services/RankTrackingService";
 import { getLatestResults } from "@/server/features/rank-tracking/services/rankTrackingResults";
+import { RankTrackingSearchActualsService } from "@/server/features/rank-tracking/services/RankTrackingSearchActualsService";
 import { AppError, asAppError } from "@/server/lib/errors";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { orgMayUsePaidFeatures } from "@/server/billing/subscription";
@@ -15,6 +16,7 @@ import {
   triggerCheckSchema,
   getLatestResultsSchema,
   getLatestRunSchema,
+  getSearchActualsSchema,
   estimateCostSchema,
   addKeywordsSchema,
   removeKeywordsSchema,
@@ -165,6 +167,21 @@ export const getLatestRankResults = createServerFn({ method: "POST" })
       context.projectId,
       data.comparePeriod,
     );
+  });
+
+/**
+ * Search Console actuals for the tracked keywords, fetched separately from the
+ * snapshot rows on purpose: the table renders from D1 immediately, and a
+ * missing grant or an unconnected property costs the overlay only.
+ */
+export const getRankTrackingSearchActuals = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .inputValidator((data: unknown) => getSearchActualsSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    return RankTrackingSearchActualsService.getActuals({
+      projectId: context.projectId,
+      configId: data.configId,
+    });
   });
 
 export const getLatestRankRun = createServerFn({ method: "POST" })

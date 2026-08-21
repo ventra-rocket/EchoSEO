@@ -21,11 +21,15 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import { useRankTrackingColumns } from "./RankTrackingColumns";
 import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
-import { buildRankTrackingExport } from "./RankTrackingTableParts";
+import {
+  buildRankTrackingExport,
+  type RankTrackingGscExport,
+} from "./RankTrackingTableParts";
 import {
   KeywordTrendModal,
   type KeywordTrendTarget,
 } from "./KeywordTrendModal";
+import { resetRankTrackingSearchActuals } from "./useRankTrackingSearchActuals";
 import type { SelectionAnchor } from "@/client/components/table/tableSelection";
 
 export function RankTrackingTable({
@@ -40,6 +44,7 @@ export function RankTrackingTable({
   projectId,
   locationCode,
   serpDepth,
+  gsc,
 }: {
   totalCount: number;
   rows: RankTrackingRow[];
@@ -52,6 +57,8 @@ export function RankTrackingTable({
   projectId: string;
   locationCode: number;
   serpDepth: number;
+  /** Null until the Search Console overlay resolves, or when it cannot. */
+  gsc: RankTrackingGscExport | null;
 }) {
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
@@ -69,13 +76,14 @@ export function RankTrackingTable({
     [],
   );
 
-  const columns = useRankTrackingColumns(
+  const columns = useRankTrackingColumns({
     showDesktop,
     showMobile,
     domain,
     selectAnchorRef,
-    handleKeywordClick,
-  );
+    onKeywordClick: handleKeywordClick,
+    gscComplete: gsc ? gsc.complete : null,
+  });
 
   const table = useAppTable({
     data: rows,
@@ -98,6 +106,7 @@ export function RankTrackingTable({
       selectedRankRows,
       showDesktop,
       showMobile,
+      gsc,
     );
     void exportTableToSheets({
       headers,
@@ -111,6 +120,7 @@ export function RankTrackingTable({
       selectedRankRows,
       showDesktop,
       showMobile,
+      gsc,
     );
     const csvRows = exportRows.map((row) =>
       row.map((cell, idx) =>
@@ -136,6 +146,10 @@ export function RankTrackingTable({
       void queryClient.invalidateQueries({
         queryKey: ["rankTrackingCostEstimate", projectId, configId],
       });
+      // The keywords that remain must not keep showing the overlay read for
+      // the set that included the removed ones — see
+      // resetRankTrackingSearchActuals for why this has to reset, not invalidate.
+      resetRankTrackingSearchActuals(queryClient, projectId, configId);
       toast.success(
         `${result.removed} keyword${result.removed !== 1 ? "s" : ""} removed`,
       );

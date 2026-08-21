@@ -93,6 +93,17 @@ describe("AuditSearchSignalsService.getSignals", () => {
     expect(getPerformance).not.toHaveBeenCalled();
   });
 
+  it("REFUSES a path-scoped property on the target's own host — Search Console reports only on the property's own prefix, not the whole origin", async () => {
+    // Pins propertyCoversOrigin's root-prefix requirement at this consumer:
+    // same host as the audit target, but the property is scoped to /blog/, so
+    // it must still be refused rather than read as partial numbers for the
+    // whole origin.
+    getConnection.mockResolvedValue({ siteUrl: "https://example.com/blog/" });
+    const result = await AuditSearchSignalsService.getSignals(INPUT);
+    expect(result.state).toBe("property_mismatch");
+    expect(getPerformance).not.toHaveBeenCalled();
+  });
+
   it("degrades to not_connected on an expected grant failure", async () => {
     getConnection.mockResolvedValue({ siteUrl: "sc-domain:example.com" });
     getPerformance.mockRejectedValue(new Error("grant-failed"));

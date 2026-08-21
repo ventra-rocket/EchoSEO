@@ -126,6 +126,25 @@ describe("AuditIndexStatusService", () => {
     expect(inspectUrlsMock).not.toHaveBeenCalled();
   });
 
+  it("refuses a same-host property scoped to a path — Search Console reports only on its own prefix, not the whole origin", async () => {
+    // Pins propertyCoversOrigin's root-prefix requirement at this consumer:
+    // same host as the audit's origin, but the property is scoped to /blog/,
+    // so it must still be refused before any inspection.
+    getConnectionMock.mockResolvedValue({
+      siteUrl: "https://example.com/blog/",
+      connectedByUserId: USER_ID,
+      connectedAccountEmail: "e@example.com",
+    });
+
+    const result = await inspect(START_URL);
+
+    expect(result).toEqual({
+      state: "property_mismatch",
+      property: "https://example.com/blog/",
+    });
+    expect(inspectUrlsMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a URL outside the audit origin without inspecting", async () => {
     getConnectionMock.mockResolvedValue(matchingConnection());
 

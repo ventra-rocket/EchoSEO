@@ -6,7 +6,11 @@
  * - `sc-domain:example.com` — a domain property. Covers every subdomain and both
  *   schemes, so there is no single URL in it; one has to be derived.
  * - `https://www.example.com/` — a URL-prefix property. Scheme and host are part
- *   of the property's identity, so neither may be rewritten.
+ *   of the property's identity, so neither may be rewritten — and its path
+ *   matters too: `propertyCoversOrigin` credits a URL-prefix property for an
+ *   origin only when the property itself is rooted at `/`. A property scoped to
+ *   a path, `https://example.com/shop/`, is refused rather than mapped to
+ *   `https://example.com` with the path silently dropped.
  *
  * The invariant every mapping here must hold: **the origin this derives must be
  * covered by the property it came from.** Every Search Console read for the target
@@ -30,15 +34,6 @@ type GscSiteTargetPlan = {
   origin: string;
   /** The origin's host — the project's name and its `domain` column. */
   host: string;
-  /**
-   * Path a URL-prefix property was scoped to, which the crawl origin drops.
-   *
-   * Surfaced rather than swallowed: `propertyCoversOrigin` compares host and
-   * protocol only, so `https://example.com/shop/` does report on the whole origin
-   * and the crawl will legitimately reach beyond `/shop/`. The importer says so
-   * instead of letting the user discover it in a crawl report.
-   */
-  droppedPath: string | null;
 };
 
 /**
@@ -86,7 +81,6 @@ function planDomainProperty(siteUrl: string): GscSiteTargetPlan | null {
     kind: "domain",
     origin: parsed.origin,
     host: parsed.hostname,
-    droppedPath: null,
   };
 }
 
@@ -101,6 +95,14 @@ function planUrlPrefixProperty(siteUrl: string): GscSiteTargetPlan | null {
   // here is a malformed row, not a site.
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
   if (!parsed.hostname) return null;
+  // `propertyCoversOrigin` (`@/shared/gsc-property-match`) credits a URL-prefix
+  // property only when it is rooted at `/`: Search Console reports a
+  // path-scoped property on its own prefix alone, never on the rest of the
+  // host it sits on. Mapping it to the bare origin anyway — the previous
+  // behavior — produced a project this app described as covering the whole
+  // site while Search Console would only ever report on `/shop/`. Refusing it
+  // here, instead of dropping the path, is the fix.
+  if (parsed.pathname !== "/") return null;
 
   return {
     siteUrl,
@@ -109,6 +111,28 @@ function planUrlPrefixProperty(siteUrl: string): GscSiteTargetPlan | null {
     // protocol comparison the verification gate makes.
     origin: parsed.origin,
     host: parsed.hostname.toLowerCase(),
-    droppedPath: parsed.pathname === "/" ? null : parsed.pathname,
   };
+}
+
+/**
+ * True when `siteUrl` is a URL-prefix property Search Console could actually
+ * issue, scoped to a path rather than the root — real and verified, and still
+ * refused by `planUrlPrefixProperty` above, because `propertyCoversOrigin`
+ * credits it only for that one path. Exported so the importer can name this
+ * specific, fixable reason on the picker and the import result, instead of
+ * lumping a too-narrow property in with a shape Search Console never issues.
+ */
+export function isPathScopedGscProperty(siteUrl: string): boolean {
+  const raw = siteUrl.trim();
+  if (raw.toLowerCase().startsWith(DOMAIN_PROPERTY_PREFIX)) return false;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  if (!parsed.hostname) return false;
+  return parsed.pathname !== "/";
 }

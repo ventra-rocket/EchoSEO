@@ -6,7 +6,9 @@
  *
  * - `propertyCoversOrigin` — **whose data is this?** Strict, because reading a
  *   property that does not cover the target attributes one site's Search Console
- *   metrics to another. A URL-prefix property covers only its own protocol+host.
+ *   metrics to another. A URL-prefix property covers an origin only when it is
+ *   rooted at `/`: Search Console reports a path-scoped property on its own
+ *   prefix alone, never on the rest of the host it sits on.
  * - `propertyProvesOwnership` — **may this user spend a large crawl here?** A
  *   proof of control, so it follows down the host tree and ignores the scheme.
  *
@@ -53,8 +55,12 @@ function hostIsAtOrUnder(host: string, domain: string): boolean {
  * Does this property's Search Console data cover this origin?
  *
  * - `sc-domain:<domain>` — the domain, its subdomains, and both protocols.
- * - `https://host/…` — the same protocol and host only. A path is ignored:
- *   verifying `https://example.com/shop/` does report on the whole host.
+ * - `https://host/…` — the same protocol and host, and only when the property
+ *   itself is scoped to the root (`/`). Search Console reports a URL-prefix
+ *   property on URLs under its own prefix and nothing else, so
+ *   `https://example.com/shop/` never reports on `https://example.com` as a
+ *   whole — treating it as if it did would attribute one path's metrics to
+ *   the entire host, exactly the fabricated join this gate exists to refuse.
  */
 export function propertyCoversOrigin(origin: string, siteUrl: string): boolean {
   const originHost = readOriginHost(origin);
@@ -67,7 +73,8 @@ export function propertyCoversOrigin(origin: string, siteUrl: string): boolean {
   if (!property) return false;
   return (
     property.protocol === new URL(origin).protocol &&
-    property.hostname.toLowerCase() === originHost
+    property.hostname.toLowerCase() === originHost &&
+    property.pathname === "/"
   );
 }
 

@@ -159,6 +159,77 @@ export function CpcCell({ value }: { value: number | null }) {
   return <span className="font-mono text-sm">${value.toFixed(2)}</span>;
 }
 
+/**
+ * The GscCountCell tooltip for an absent keyword. Exported (not inlined) so the
+ * copy is a pinned, testable contract: a `complete` read only means Google
+ * named every query it was willing to — it is never proof of zero, because
+ * Search Console omits anonymized (privacy-thresholded) queries from the
+ * report at any read depth. Getting this wording wrong is exactly how "0"
+ * turns back into a claim the read cannot support.
+ */
+export function gscCountTooltip(complete: boolean): string {
+  return complete
+    ? "Google reported nothing for this query in the window — shown as 0, though very rare queries are omitted from Search Console entirely and would look the same"
+    : "Outside the queries read from Search Console — unknown, not zero";
+}
+
+/** The GscPositionCell tooltip for an absent keyword — see gscCountTooltip. */
+export function gscPositionTooltip(complete: boolean): string {
+  return complete
+    ? "Google reported nothing for this query in the window, so there is no average position to show — very rare queries are omitted from Search Console entirely and would look the same"
+    : "Outside the queries read from Search Console — no measurement available";
+}
+
+/**
+ * A tracked keyword with no Search Console row means one of three things, and
+ * `complete` rules out only one of them: if the read was truncated, we simply
+ * never looked at that query — *unknown*. If the read was complete, either
+ * Google recorded no impressions for it, or the query fell below Google's
+ * anonymization threshold and was left out of the report entirely — GSC never
+ * says which. The cell still shows 0 for a complete read, since that is by far
+ * the common case and the one this feature exists to surface, but the tooltip
+ * says so rather than claiming a proof the read cannot make.
+ */
+export function GscCountCell({
+  value,
+  complete,
+}: {
+  value: number | null | undefined;
+  complete: boolean;
+}) {
+  if (value == null) {
+    return (
+      <span className="text-base-content/40" title={gscCountTooltip(complete)}>
+        {complete ? "0" : "?"}
+      </span>
+    );
+  }
+  return (
+    <span className="font-mono text-sm">{compactFormatter.format(value)}</span>
+  );
+}
+
+/** An average over the window. Never a live SERP rank, so no zero substitute. */
+export function GscPositionCell({
+  value,
+  complete,
+}: {
+  value: number | null | undefined;
+  complete: boolean;
+}) {
+  if (value == null) {
+    return (
+      <span
+        className="text-base-content/40"
+        title={gscPositionTooltip(complete)}
+      >
+        -
+      </span>
+    );
+  }
+  return <span className="font-mono text-sm">{value.toFixed(1)}</span>;
+}
+
 /** Numeric change for CSV export — numbers bypass the CSV formula-injection sanitizer */
 export function csvChange(
   current: number | null,
@@ -169,11 +240,25 @@ export function csvChange(
   return previous - current;
 }
 
+/**
+ * What the exported file has to say about the Search Console columns to stand
+ * on its own: the window the numbers cover, and whether a keyword's absence
+ * from the read is Google reporting nothing for it (written as 0) or the read
+ * never reaching that query at all (left blank). A CSV travels to people who
+ * never saw the table it came from.
+ */
+export interface RankTrackingGscExport {
+  window: { from: string; to: string };
+  complete: boolean;
+}
+
 export function buildRankTrackingExport(
   sorted: RankTrackingRow[],
   showDesktop: boolean,
   showMobile: boolean,
+  gsc: RankTrackingGscExport | null = null,
 ): { headers: string[]; rows: (string | number)[][] } {
+  const gscWindow = gsc ? `${gsc.window.from}..${gsc.window.to}` : "";
   const headers = [
     "Keyword",
     "Volume",
@@ -193,6 +278,13 @@ export function buildRankTrackingExport(
           "Mobile Change",
           "Mobile URL",
           "Mobile SERP Features",
+        ]
+      : []),
+    ...(gsc
+      ? [
+          `GSC Clicks (${gscWindow})`,
+          `GSC Impressions (${gscWindow})`,
+          `GSC Avg Position (${gscWindow})`,
         ]
       : []),
   ];
@@ -219,6 +311,15 @@ export function buildRankTrackingExport(
           row.mobile.serpFeatures.join(", "),
         ]
       : []),
+    // A truncated read leaves the cell empty rather than zero: the difference
+    // between "Google recorded nothing" and "we never asked about this query".
+    ...(gsc
+      ? [
+          row.gsc?.clicks ?? (gsc.complete ? 0 : ""),
+          row.gsc?.impressions ?? (gsc.complete ? 0 : ""),
+          row.gsc ? Number(row.gsc.position.toFixed(1)) : "",
+        ]
+      : []),
   ]);
   return { headers, rows };
 }
@@ -227,11 +328,13 @@ export function exportRankTrackingToSheets(
   sorted: RankTrackingRow[],
   showDesktop: boolean,
   showMobile: boolean,
+  gsc: RankTrackingGscExport | null = null,
 ) {
   const { headers, rows } = buildRankTrackingExport(
     sorted,
     showDesktop,
     showMobile,
+    gsc,
   );
   void exportTableToSheets({ headers, rows, feature: "rank_tracking" });
 }
@@ -241,6 +344,7 @@ export function exportRankTrackingCsv(
   showDesktop: boolean,
   showMobile: boolean,
   domain: string,
+  gsc: RankTrackingGscExport | null = null,
 ) {
   if (sorted.length === 0) {
     toast.error("No data to export");
@@ -250,6 +354,7 @@ export function exportRankTrackingCsv(
     sorted,
     showDesktop,
     showMobile,
+    gsc,
   );
   // CSV file download keeps cents-formatted CPC for human readability;
   // clipboard/Sheets export uses raw numbers (see buildRankTrackingExport).

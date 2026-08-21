@@ -270,15 +270,20 @@ describe("GscSiteImportService.importSites", () => {
 
     expect(result.rows[0]?.detail).toContain("already exists");
   });
-  it("reports the path a scoped property loses to the crawl origin", async () => {
+  it("refuses to import a URL-prefix property scoped to a path, because Search Console never reports beyond it", async () => {
+    // The old behavior mapped this to the bare origin and created a project
+    // this app described as covering the whole site, while Search Console
+    // would only ever report on `/shop/`. Refusing it, instead of dropping the
+    // path, is the fix.
     grantHolds({ siteUrl: "https://example.com/shop/" });
 
     const result = await GscSiteImportService.importSites(
       importInput(["https://example.com/shop/"]),
     );
 
-    expect(result.rows[0]?.outcome).toBe("created");
-    expect(result.rows[0]?.detail).toContain("/shop/");
+    expect(result.rows[0]).toMatchObject({ outcome: "failed" });
+    expect(result.rows[0]?.detail).toContain("own path");
+    expect(createProjectMock).not.toHaveBeenCalled();
   });
 
   it("asks for a reconnect instead of failing every row", async () => {
@@ -439,16 +444,21 @@ describe("GscSiteImportService.listCandidates", () => {
     });
   });
 
-  it("carries the mapping through so the UI can show the derived host", async () => {
+  it("blocks a URL-prefix property scoped to a path as path_scoped, because Search Console never reports beyond it", async () => {
+    // Search Console reports a URL-prefix property on its own prefix alone, so
+    // this property is real and verified but cannot back a whole-origin
+    // project. It must be named `path_scoped` — not silently mapped to
+    // `https://www.example.com` the way it used to be, and not lumped in with
+    // `unsupported`, which means Search Console never issued the shape at all.
     grantHolds({ siteUrl: "https://www.example.com/blog/" });
 
     const { candidates } = await GscSiteImportService.listCandidates(ACTOR);
 
     expect(candidates[0]).toMatchObject({
-      kind: "url_prefix",
-      host: "www.example.com",
-      origin: "https://www.example.com",
-      droppedPath: "/blog/",
+      kind: null,
+      host: null,
+      origin: null,
+      block: "path_scoped",
     });
   });
 

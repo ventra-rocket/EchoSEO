@@ -16,6 +16,7 @@ import { RankTrackingDetailHeader } from "./RankTrackingDetailHeader";
 import { RankTrackingOverview } from "./RankTrackingOverview";
 import { RankTrackingTable } from "./RankTrackingTable";
 import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
+import { RankTrackingSearchActualsNote } from "./RankTrackingSearchActualsNote";
 import { isProviderAuthFailureMessage } from "@/shared/provider-failure";
 import {
   countMatrixRuns,
@@ -42,6 +43,10 @@ import { CheckConfirmModal } from "./CheckConfirmModal";
 import { useMetricsRefresh } from "./useMetricsRefresh";
 import { useRankCheckTrigger } from "./useRankCheckTrigger";
 import { useRankRunPolling } from "./useRankRunPolling";
+import {
+  resetRankTrackingSearchActuals,
+  useRankTrackingSearchActuals,
+} from "./useRankTrackingSearchActuals";
 
 function deviceVisibility(
   devices: RankTrackingConfig["devices"],
@@ -152,6 +157,10 @@ function RankTrackingDomainDetailInner({
     void queryClient.invalidateQueries({
       queryKey: ["rankTrackingLatestRun", projectId, config.id],
     });
+    // A newly tracked keyword must not merge against the overlay read taken
+    // before it existed — see resetRankTrackingSearchActuals for why this has
+    // to reset, not invalidate.
+    resetRankTrackingSearchActuals(queryClient, projectId, config.id);
     setShowAddKeywords(false);
     captureClientEvent("rank_tracking:keywords_add");
     toast.success(
@@ -185,7 +194,11 @@ function RankTrackingDomainDetailInner({
     setPendingCheck({ count, keywordIds });
   };
 
-  const rows = resultsData?.rows;
+  const {
+    actuals: searchActuals,
+    rows,
+    exportContext: gscExport,
+  } = useRankTrackingSearchActuals(projectId, config.id, resultsData?.rows);
   const run = resultsData?.run;
   const hasBothDevices = config.devices === "both";
   const { showDesktop, showMobile } = deviceVisibility(
@@ -304,10 +317,16 @@ function RankTrackingDomainDetailInner({
               showDesktop,
               showMobile,
               config.domain,
+              gscExport,
             )
           }
           onExportToSheets={() =>
-            exportRankTrackingToSheets(filtered, showDesktop, showMobile)
+            exportRankTrackingToSheets(
+              filtered,
+              showDesktop,
+              showMobile,
+              gscExport,
+            )
           }
           onCopyKeywords={() => {
             void navigator.clipboard.writeText(
@@ -368,7 +387,17 @@ function RankTrackingDomainDetailInner({
               projectId={projectId}
               locationCode={config.locationCode}
               serpDepth={config.serpDepth}
+              gsc={gscExport}
             />
+          )}
+          {(rows?.length ?? 0) > 0 && effectiveViewMode === "table" && (
+            <div className="pt-3">
+              <RankTrackingSearchActualsNote
+                actuals={searchActuals}
+                projectId={projectId}
+                domain={config.domain}
+              />
+            </div>
           )}
         </div>
       </div>

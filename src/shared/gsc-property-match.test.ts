@@ -29,18 +29,29 @@ describe("propertyCoversOrigin", () => {
     ).toBe(false);
   });
 
-  it("covers a URL-prefix property on the same protocol + host", () => {
+  it("covers a URL-prefix property on the same protocol + host, rooted at /", () => {
     expect(
       propertyCoversOrigin("https://example.com", "https://example.com/"),
     ).toBe(true);
+    // No explicit path is the same as a root path: `new URL` normalises an
+    // empty path to `/`, and Search Console has no "pathless" property shape.
+    expect(
+      propertyCoversOrigin("https://example.com", "https://example.com"),
+    ).toBe(true);
   });
 
-  it("reports on the whole host even for a path-scoped property", () => {
-    // Deliberate: Search Console reports on the property's URLs, and the crawl
-    // legitimately reaches beyond `/shop/`. The importer says so out loud.
+  it("rejects a path-scoped property for the whole host — Search Console reports only on the property's own prefix", () => {
+    // Corrected from the old (wrong) assumption that a URL-prefix property's
+    // path is ignored: Search Console reports `https://example.com/shop/` on
+    // URLs under `/shop/` alone, never on the rest of `example.com`. Treating
+    // it as covering the bare origin would attribute one path's metrics to
+    // the whole host — the fabricated join this gate exists to refuse.
     expect(
       propertyCoversOrigin("https://example.com", "https://example.com/shop/"),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      propertyCoversOrigin("https://example.com", "https://example.com/shop"),
+    ).toBe(false);
   });
 
   it("rejects another protocol, host, or subdomain for a URL-prefix property", () => {

@@ -31,6 +31,15 @@ export interface RankTrackingDeviceResult {
   serpFeatures: string[];
 }
 
+/** Search Console actuals for one tracked keyword. Kept in its own object so a
+ *  GSC average can never be read as one of the SERP position fields above. */
+export interface RankTrackingRowActuals {
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
 export interface RankTrackingRow {
   trackingKeywordId: string;
   keyword: string;
@@ -39,6 +48,9 @@ export interface RankTrackingRow {
   cpc: number | null;
   desktop: RankTrackingDeviceResult;
   mobile: RankTrackingDeviceResult;
+  /** Absent until the Search Console overlay resolves; null once it has and
+   *  this keyword had no row in the window. */
+  gsc?: RankTrackingRowActuals | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +103,11 @@ export const getLatestResultsSchema = z.object({
 });
 
 export const getLatestRunSchema = z.object({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+});
+
+export const getSearchActualsSchema = z.object({
   projectId: z.string().uuid(),
   configId: z.string().uuid(),
 });
