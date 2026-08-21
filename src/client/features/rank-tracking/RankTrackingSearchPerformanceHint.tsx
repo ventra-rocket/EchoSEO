@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { FormattedMessage } from "react-intl";
 
 /**
  * The free answer a keyless user already has, named where they hit the wall.
@@ -18,15 +19,20 @@ export function RankTrackingSearchPerformanceHint({
 }) {
   return (
     <p className="text-sm">
-      No provider key? Search Console already shows how your site ranks —{" "}
-      <Link
-        to="/p/$projectId/search-performance"
-        params={{ projectId }}
-        className="font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        open Search Performance
-      </Link>
-      .
+      <FormattedMessage
+        id="rank.table.searchPerfHint.body"
+        values={{
+          link: (chunks) => (
+            <Link
+              to="/p/$projectId/search-performance"
+              params={{ projectId }}
+              className="font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {chunks}
+            </Link>
+          ),
+        }}
+      />
     </p>
   );
 }

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -20,8 +20,56 @@ import { describe, expect, it } from "vitest";
  * directory may carry prose. A directory joins CONVERTED_DIRS only when it is
  * finished, which also gives the next conversion an objective definition of
  * done instead of someone's reading of a screenshot.
+ *
+ * The first version of this test scanned `.tsx` only, and that was the same
+ * mistake one layer up: five user-visible toasts live in `.ts` hooks
+ * (`useRankCheckTrigger`, `useMetricsRefresh`), so the gate would have called
+ * a directory clean while English toasts fired over a Vietnamese page. A
+ * component is not the only thing a user reads. Hence the second scan below.
  */
-const CONVERTED_DIRS = ["src/client/features/audit", "src/client/layout"];
+const CONVERTED_DIRS = [
+  "src/client/features/audit",
+  "src/client/features/rank-tracking",
+  "src/client/features/gsc",
+  "src/client/features/search-performance",
+  "src/client/layout",
+  // Shared components are only partly converted: the three strings the bulk
+  // action bar renders are done, the other 43 findings under
+  // `src/client/components/` are not, and some of those are code identifiers
+  // (`AUTH_MODE` inside a `<code>` tag) that need the detector taught about
+  // `<code>` before the directory can be listed honestly.
+  "src/client/components/table/TableBulkActionBar.tsx",
+  // Reached from the audit and Search Performance tables, both listed above:
+  // its one English `aria-label` made a converted surface read "Sort by Tiêu
+  // đề" to a screen reader. A shared component is part of every surface that
+  // renders it, so it belongs in whichever gate claims those surfaces are done.
+  "src/client/components/table/SortableHeader.tsx",
+  // A feature directory is not the whole surface: a route file renders the page
+  // heading above it. Converting `features/rank-tracking` left "Rank Tracking /
+  // Track keyword positions across domains" in English at the top of every
+  // Vietnamese rank page, and the directory-shaped gate said nothing. Listed
+  // per file because their siblings — `saved.tsx` most of all — are not
+  // converted yet.
+  "src/routes/_project/p/$projectId/rank-tracking.tsx",
+  "src/routes/_project/p/$projectId/rank-tracking/$configId.tsx",
+];
+
+/**
+ * Prose reaches a user through these calls without ever being JSX. `toast.*` is
+ * the common one; the second argument of `getStandardErrorMessage` is a
+ * user-facing fallback that only renders when a request fails, which is exactly
+ * the state nobody opens while translating.
+ */
+const PROSE_SINKS = new Set([
+  "toast",
+  "toast.error",
+  "toast.info",
+  "toast.loading",
+  "toast.message",
+  "toast.success",
+  "toast.warning",
+  "getStandardErrorMessage",
+]);
 
 /**
  * Attributes a user reads. `title` and `aria-label` matter most: they are the
@@ -73,19 +121,60 @@ const BARE_URL = /^https?:\/\/\S+$/i;
 
 type Finding = { file: string; line: number; text: string };
 
-function tsxFilesIn(dir: string): string[] {
+/**
+ * Takes a directory or a single file, because a surface can be converted before
+ * the directory around it is: listing one finished file is honest, and listing
+ * its directory would claim 43 unconverted strings are done.
+ */
+function sourceFilesIn(target: string): string[] {
+  if (!statSync(target).isDirectory()) return [target];
+
   const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
+  for (const entry of readdirSync(target, { withFileTypes: true })) {
+    const path = join(target, entry.name);
     if (entry.isDirectory()) {
-      out.push(...tsxFilesIn(path));
+      out.push(...sourceFilesIn(path));
       continue;
     }
-    if (entry.name.endsWith(".tsx") && !entry.name.endsWith(".test.tsx")) {
-      out.push(path);
-    }
+    const isSource = entry.name.endsWith(".tsx") || entry.name.endsWith(".ts");
+    const isTest = entry.name.includes(".test.");
+    if (isSource && !isTest) out.push(path);
   }
   return out;
+}
+
+/** `toast.error` reads as a property access; `getStandardErrorMessage` as a bare name. */
+function calleeName(node: ts.CallExpression): string {
+  const callee = node.expression;
+  if (ts.isIdentifier(callee)) return callee.text;
+  if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.name)) {
+    const target = callee.expression;
+    return ts.isIdentifier(target)
+      ? `${target.text}.${callee.name.text}`
+      : callee.name.text;
+  }
+  return "";
+}
+
+/**
+ * A template literal is prose if any of its fixed spans is. `Metrics updated
+ * for ${n} keywords` has to be caught: the interpolation is what makes it look
+ * like a value rather than a sentence.
+ */
+function stringArgumentProse(node: ts.Expression): string | null {
+  if (ts.isStringLiteral(node)) return isProse(node.text) ? node.text : null;
+  if (ts.isNoSubstitutionTemplateLiteral(node)) {
+    return isProse(node.text) ? node.text : null;
+  }
+  if (ts.isTemplateExpression(node)) {
+    const spans = [
+      node.head.text,
+      ...node.templateSpans.map((s) => s.literal.text),
+    ];
+    const prose = spans.find((span) => isProse(span));
+    return prose ? spans.join("${…}") : null;
+  }
+  return null;
 }
 
 function isProse(raw: string): boolean {
@@ -136,6 +225,14 @@ function findHardcodedStrings(file: string): Finding[] {
       }
     }
 
+    if (ts.isCallExpression(node) && PROSE_SINKS.has(calleeName(node))) {
+      const name = calleeName(node);
+      for (const argument of node.arguments) {
+        const prose = stringArgumentProse(argument);
+        if (prose) record(node, `${name}(… "${prose}" …)`);
+      }
+    }
+
     ts.forEachChild(node, visit);
   };
 
@@ -146,7 +243,7 @@ function findHardcodedStrings(file: string): Finding[] {
 describe("converted surfaces hold no hardcoded prose", () => {
   for (const dir of CONVERTED_DIRS) {
     it(`${dir} routes every user-visible string through react-intl`, () => {
-      const findings = tsxFilesIn(dir).flatMap(findHardcodedStrings);
+      const findings = sourceFilesIn(dir).flatMap(findHardcodedStrings);
       const report = findings.map((f) => `${f.file}:${f.line} — ${f.text}`);
       expect(report).toEqual([]);
     });

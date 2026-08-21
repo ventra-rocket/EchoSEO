@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { useIntl } from "react-intl";
 import { SafeExternalLink } from "@/client/components/SafeExternalLink";
 import { GSC_SELF_HOSTED_SETUP_DOCS_URL } from "@/shared/gsc";
 
@@ -7,18 +8,20 @@ import { GSC_SELF_HOSTED_SETUP_DOCS_URL } from "@/shared/gsc";
  * — in both the Integrations card and the onboarding step.
  */
 export function SelfHostedSetupWarning() {
+  const intl = useIntl();
   return (
     <div className="alert alert-warning items-start text-sm">
       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
       <div className="space-y-1">
-        <p className="font-medium">Google OAuth client not configured</p>
+        <p className="font-medium">
+          {intl.formatMessage({ id: "gsc.selfHosted.title" })}
+        </p>
         <p className="text-base-content/70">
-          Add your Google client ID and secret to this EchoSEO deployment before
-          connecting Search Console.
+          {intl.formatMessage({ id: "gsc.selfHosted.body" })}
         </p>
         <SafeExternalLink
           url={GSC_SELF_HOSTED_SETUP_DOCS_URL}
-          label="Open setup guide"
+          label={intl.formatMessage({ id: "gsc.selfHosted.setupGuideLabel" })}
           className="inline-flex items-center gap-1 font-medium underline underline-offset-2"
         />
       </div>

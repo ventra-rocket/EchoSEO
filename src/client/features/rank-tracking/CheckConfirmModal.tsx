@@ -1,4 +1,5 @@
 import { Loader2, Zap } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import {
@@ -23,6 +24,7 @@ export function CheckConfirmModal({
   onRunNow: () => void;
   onCancel: () => void;
 }) {
+  const intl = useIntl();
   const { costUsd } = estimateRankCheckCredits(
     keywordCount,
     devices,
@@ -42,12 +44,16 @@ export function CheckConfirmModal({
     >
       <div>
         <h3 id="rank-check-confirm-title" className="text-lg font-semibold">
-          Check {keywordCount} keyword
-          {keywordCount !== 1 ? "s" : ""}
+          <FormattedMessage
+            id="rank.config.checkModal.title"
+            values={{ count: keywordCount }}
+          />
         </h3>
         <p className="text-sm text-base-content/60 mt-1">
-          {keywordCount} keywords &times; {dc} device
-          {dc !== 1 ? "s" : ""} = {totalChecks} SERP checks
+          <FormattedMessage
+            id="rank.config.checkModal.subtitle"
+            values={{ count: keywordCount, deviceCount: dc, totalChecks }}
+          />
         </p>
       </div>
 
@@ -60,20 +66,42 @@ export function CheckConfirmModal({
           <Zap className="size-5 text-primary" />
         </div>
         <div className="flex-1">
-          <p className="font-medium">Run Now</p>
+          <p className="font-medium">
+            <FormattedMessage id="rank.config.checkModal.runNow" />
+          </p>
           <p className="text-xs text-base-content/60">
-            Results in ~
-            {liveTime < 60 ? `${liveTime}s` : `${Math.ceil(liveTime / 60)} min`}
+            <FormattedMessage
+              id={
+                liveTime < 60
+                  ? "rank.config.checkModal.etaSeconds"
+                  : "rank.config.checkModal.etaMinutes"
+              }
+              values={
+                liveTime < 60
+                  ? { seconds: liveTime }
+                  : { minutes: Math.ceil(liveTime / 60) }
+              }
+            />
           </p>
         </div>
         <div className="text-right">
-          <p className="font-mono font-semibold">~${costUsd.toFixed(2)}</p>
+          <p className="font-mono font-semibold">
+            <FormattedMessage
+              id="rank.config.checkModal.cost"
+              values={{
+                amount: intl.formatNumber(costUsd, {
+                  style: "currency",
+                  currency: "USD",
+                }),
+              }}
+            />
+          </p>
           {isPending && <Loader2 className="size-3 animate-spin ml-auto" />}
         </div>
       </button>
 
       <button className="btn btn-ghost btn-sm self-center" onClick={onCancel}>
-        Cancel
+        <FormattedMessage id="rank.config.action.cancel" />
       </button>
     </Modal>
   );

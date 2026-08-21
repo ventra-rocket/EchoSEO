@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useIntl } from "react-intl";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -22,6 +23,7 @@ export function SearchConsoleConnectionCard({
 }: {
   projectId: string;
 }) {
+  const intl = useIntl();
   const hosted = isHostedClientAuthMode();
   const queryClient = useQueryClient();
   const [picking, setPicking] = React.useState(false);
@@ -59,7 +61,7 @@ export function SearchConsoleConnectionCard({
       setGscSite({ data: { projectId, siteUrl } }),
     onSuccess: () => {
       captureClientEvent("gsc:property_select");
-      toast.success("Search Console connected");
+      toast.success(intl.formatMessage({ id: "gsc.card.connectedToast" }));
       setPicking(false);
       void queryClient.invalidateQueries({ queryKey: connectionKey });
       void queryClient.invalidateQueries({ queryKey: GRANT_STATUS_KEY });
@@ -78,7 +80,7 @@ export function SearchConsoleConnectionCard({
   const disconnectMutation = useMutation({
     mutationFn: () => disconnectGsc({ data: { projectId } }),
     onSuccess: () => {
-      toast.success("Search Console disconnected");
+      toast.success(intl.formatMessage({ id: "gsc.card.disconnectedToast" }));
       setPicking(false);
       void queryClient.invalidateQueries({ queryKey: connectionKey });
       // Disconnect can drop the account-level grant server-side; keep the
@@ -111,7 +113,7 @@ export function SearchConsoleConnectionCard({
       {connectionQuery.isLoading ? (
         <div className="flex items-center gap-2 text-sm text-base-content/50">
           <span className="loading loading-spinner loading-sm" />
-          Checking…
+          {intl.formatMessage({ id: "gsc.card.checking" })}
         </div>
       ) : selfHostedNeedsSetup ? (
         <SelfHostedSetupWarning />
@@ -141,9 +143,12 @@ export function SearchConsoleConnectionCard({
           onRetry={() => void sitesQuery.refetch()}
           secondaryAction={
             connected
-              ? { label: "Cancel", onClick: () => setPicking(false) }
+              ? {
+                  label: intl.formatMessage({ id: "gsc.cancel" }),
+                  onClick: () => setPicking(false),
+                }
               : {
-                  label: "Disconnect",
+                  label: intl.formatMessage({ id: "gsc.disconnect" }),
                   destructive: true,
                   disabled: disconnectMutation.isPending,
                   onClick: () => disconnectMutation.mutate(),
@@ -153,7 +158,7 @@ export function SearchConsoleConnectionCard({
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-base-content/70">
-            Real clicks, impressions, and rankings. No credits used.
+            {intl.formatMessage({ id: "gsc.card.pitch" })}
           </p>
           <button
             type="button"
@@ -161,7 +166,7 @@ export function SearchConsoleConnectionCard({
             className="inline-flex items-center gap-2.5 rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-semibold text-base-content shadow-sm transition hover:bg-base-200 hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <GoogleGlyph className="size-[18px]" />
-            Connect with Google
+            {intl.formatMessage({ id: "gsc.connectWithGoogle" })}
           </button>
         </div>
       )}
@@ -180,15 +185,16 @@ function IntegrationCard({
   status?: "connected" | "disconnected" | "setup_required";
   children: React.ReactNode;
 }) {
+  const intl = useIntl();
   return (
     <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
       <div className="flex items-start justify-between gap-4 p-5 sm:p-6">
         <div>
           <h2 className="text-base font-semibold leading-tight">
-            Google Search Console
+            {intl.formatMessage({ id: "gsc.card.title" })}
           </h2>
           <p className="mt-0.5 text-sm text-base-content/55">
-            Your search data, straight from Google.
+            {intl.formatMessage({ id: "gsc.card.subtitle" })}
           </p>
         </div>
         {status ? <StatusPill status={status} /> : null}
@@ -203,6 +209,7 @@ function StatusPill({
 }: {
   status: "connected" | "disconnected" | "setup_required";
 }) {
+  const intl = useIntl();
   const connected = status === "connected";
   const setupRequired = status === "setup_required";
   return (
@@ -226,11 +233,13 @@ function StatusPill({
               : "bg-base-content/40",
         ].join(" ")}
       />
-      {connected
-        ? "Connected"
-        : setupRequired
-          ? "Setup required"
-          : "Not connected"}
+      {intl.formatMessage({
+        id: connected
+          ? "gsc.card.status.connected"
+          : setupRequired
+            ? "gsc.card.status.setupRequired"
+            : "gsc.card.status.notConnected",
+      })}
     </span>
   );
 }
@@ -252,6 +261,7 @@ function ConnectedState({
   onDisconnect: () => void;
   disconnecting: boolean;
 }) {
+  const intl = useIntl();
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-lg border border-base-300 bg-base-200/40 p-3.5">
@@ -262,7 +272,10 @@ function ConnectedState({
           <p className="truncate font-mono text-sm">{siteUrl}</p>
           {connectedByEmail ? (
             <p className="truncate text-xs text-base-content/55">
-              Connected by {connectedByEmail}
+              {intl.formatMessage(
+                { id: "gsc.connectedState.connectedBy" },
+                { email: connectedByEmail },
+              )}
             </p>
           ) : null}
         </div>
@@ -273,7 +286,7 @@ function ConnectedState({
           className="btn btn-ghost btn-sm"
           onClick={onChange}
         >
-          Change property
+          {intl.formatMessage({ id: "gsc.connectedState.changeProperty" })}
         </button>
         <button
           type="button"
@@ -281,7 +294,7 @@ function ConnectedState({
           onClick={onDisconnect}
           disabled={disconnecting}
         >
-          Disconnect
+          {intl.formatMessage({ id: "gsc.disconnect" })}
         </button>
       </div>
     </div>

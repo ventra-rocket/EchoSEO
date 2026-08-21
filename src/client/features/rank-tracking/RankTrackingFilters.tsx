@@ -1,4 +1,5 @@
 import { RotateCcw } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { LOCATIONS } from "@/client/features/keywords/locations";
 import { devicesLabel } from "@/shared/rank-tracking";
 import type {
@@ -26,10 +27,7 @@ export type DomainListFilters = {
   locationCode: string;
 };
 
-type DomainListFilterOption = {
-  value: string;
-  label: string;
-};
+type DomainListFilterOption = { value: string; label: string };
 
 export const EMPTY_FILTERS: Filters = {
   include: "",
@@ -59,10 +57,11 @@ export function FilterPanel({
   onReset,
 }: {
   filters: Filters;
-  setFilters: (f: Filters) => void;
+  setFilters: (filters: Filters) => void;
   activeFilterCount: number;
   onReset: () => void;
 }) {
+  const intl = useIntl();
   const update = (key: keyof Filters, value: string) =>
     setFilters({ ...filters, [key]: value });
 
@@ -70,10 +69,15 @@ export function FilterPanel({
     <div className="shrink-0 border-b border-base-300 bg-gradient-to-b from-base-100 to-base-200/30 px-4 py-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold">Refine results</p>
+          <p className="text-sm font-semibold">
+            <FormattedMessage id="rank.table.filter.refineResults" />
+          </p>
           {activeFilterCount > 0 && (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {activeFilterCount} active
+              <FormattedMessage
+                id="rank.table.filter.activeCount"
+                values={{ count: activeFilterCount }}
+              />
             </span>
           )}
         </div>
@@ -83,28 +87,32 @@ export function FilterPanel({
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
-          Clear all
+          <FormattedMessage id="rank.table.filter.clearAll" />
         </button>
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-            Include
+            <FormattedMessage id="rank.table.filter.include" />
           </p>
           <input
             className="input input-bordered input-sm w-full bg-base-100"
-            placeholder="e.g. seo, tool"
+            placeholder={intl.formatMessage({
+              id: "rank.table.filter.includePlaceholder",
+            })}
             value={filters.include}
             onChange={(e) => update("include", e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-            Exclude
+            <FormattedMessage id="rank.table.filter.exclude" />
           </p>
           <input
             className="input input-bordered input-sm w-full bg-base-100"
-            placeholder="e.g. free, cheap"
+            placeholder={intl.formatMessage({
+              id: "rank.table.filter.excludePlaceholder",
+            })}
             value={filters.exclude}
             onChange={(e) => update("exclude", e.target.value)}
           />
@@ -112,14 +120,16 @@ export function FilterPanel({
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <RangeFilter
-          title="Desktop position"
+          title={intl.formatMessage({
+            id: "rank.table.filter.desktopPosition",
+          })}
           minValue={filters.minDesktopPos}
           maxValue={filters.maxDesktopPos}
           onMinChange={(v) => update("minDesktopPos", v)}
           onMaxChange={(v) => update("maxDesktopPos", v)}
         />
         <RangeFilter
-          title="Mobile position"
+          title={intl.formatMessage({ id: "rank.table.filter.mobilePosition" })}
           minValue={filters.minMobilePos}
           maxValue={filters.maxMobilePos}
           onMinChange={(v) => update("minMobilePos", v)}
@@ -146,16 +156,19 @@ export function DomainListFilterBar({
   onChange: (filters: DomainListFilters) => void;
   onReset: () => void;
 }) {
+  const intl = useIntl();
   return (
     <div className="border-t border-base-300 px-5 py-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
         <label className="form-control flex-1 gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-            Search
+            <FormattedMessage id="rank.table.domainFilter.search" />
           </span>
           <input
             className="input input-bordered input-sm w-full bg-base-100"
-            placeholder="Domain or website"
+            placeholder={intl.formatMessage({
+              id: "rank.table.domainFilter.searchPlaceholder",
+            })}
             value={filters.query}
             onChange={(event) =>
               onChange({ ...filters, query: event.target.value })
@@ -164,7 +177,7 @@ export function DomainListFilterBar({
         </label>
         <label className="form-control gap-1.5 lg:w-44">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-            Device
+            <FormattedMessage id="rank.table.domainFilter.device" />
           </span>
           <select
             className="select select-bordered select-sm w-full bg-base-100"
@@ -181,7 +194,9 @@ export function DomainListFilterBar({
               }
             }}
           >
-            <option value="all">All devices</option>
+            <option value="all">
+              {intl.formatMessage({ id: "rank.table.domainFilter.allDevices" })}
+            </option>
             {options.devices.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -191,7 +206,7 @@ export function DomainListFilterBar({
         </label>
         <label className="form-control gap-1.5 lg:w-52">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-            Country
+            <FormattedMessage id="rank.table.domainFilter.country" />
           </span>
           <select
             className="select select-bordered select-sm w-full bg-base-100"
@@ -200,7 +215,11 @@ export function DomainListFilterBar({
               onChange({ ...filters, locationCode: event.target.value })
             }
           >
-            <option value="all">All countries</option>
+            <option value="all">
+              {intl.formatMessage({
+                id: "rank.table.domainFilter.allCountries",
+              })}
+            </option>
             {options.locations.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -214,7 +233,7 @@ export function DomainListFilterBar({
             onClick={onReset}
           >
             <RotateCcw className="size-3" />
-            Clear
+            <FormattedMessage id="rank.table.domainFilter.clear" />
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
               {activeFilterCount}
             </span>
@@ -238,6 +257,7 @@ function RangeFilter({
   onMinChange: (v: string) => void;
   onMaxChange: (v: string) => void;
 }) {
+  const intl = useIntl();
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-2.5 space-y-2">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
@@ -246,14 +266,14 @@ function RangeFilter({
       <div className="grid grid-cols-2 gap-2">
         <input
           className="input input-bordered input-xs bg-base-100"
-          placeholder="Min"
+          placeholder={intl.formatMessage({ id: "rank.table.filter.min" })}
           type="number"
           value={minValue}
           onChange={(e) => onMinChange(e.target.value)}
         />
         <input
           className="input input-bordered input-xs bg-base-100"
-          placeholder="Max"
+          placeholder={intl.formatMessage({ id: "rank.table.filter.max" })}
           type="number"
           value={maxValue}
           onChange={(e) => onMaxChange(e.target.value)}

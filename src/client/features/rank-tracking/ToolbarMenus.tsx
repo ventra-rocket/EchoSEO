@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useIntl } from "react-intl";
 import {
   ChevronDown,
   Copy,
@@ -100,16 +101,23 @@ export function MoreMenu({
   metricsRefreshing: boolean;
   hasData: boolean;
 }) {
+  const intl = useIntl();
   return (
     <ToolbarMenu
       icon={<MoreHorizontal className="size-4" />}
-      title="More actions"
+      title={intl.formatMessage({ id: "rank.table.menu.moreActions" })}
     >
       {!checkDisabled && (
         <MenuItem
           icon={<Play className="size-3.5" />}
-          label={checkBusy ? "Running..." : "Check rankings"}
-          description="Fetch current Google positions"
+          label={intl.formatMessage({
+            id: checkBusy
+              ? "rank.table.menu.checkRankingsRunning"
+              : "rank.table.menu.checkRankings",
+          })}
+          description={intl.formatMessage({
+            id: "rank.table.menu.checkRankingsDescription",
+          })}
           onClick={onCheckNow}
           disabled={checkBusy}
         />
@@ -120,8 +128,14 @@ export function MoreMenu({
             className={`size-3.5 ${metricsRefreshing ? "animate-spin" : ""}`}
           />
         }
-        label={metricsRefreshing ? "Refreshing..." : "Update keyword stats"}
-        description="Volume, difficulty & CPC — not rankings"
+        label={intl.formatMessage({
+          id: metricsRefreshing
+            ? "rank.table.menu.updateStatsRunning"
+            : "rank.table.menu.updateStats",
+        })}
+        description={intl.formatMessage({
+          id: "rank.table.menu.updateStatsDescription",
+        })}
         onClick={onRefreshMetrics}
         disabled={metricsRefreshing || !hasData}
       />
@@ -140,23 +154,27 @@ export function ExportMenu({
   onCopyKeywords: () => void;
   hasData: boolean;
 }) {
+  const intl = useIntl();
   return (
-    <ToolbarMenu label="Export" icon={<Download className="size-3.5" />}>
+    <ToolbarMenu
+      label={intl.formatMessage({ id: "rank.table.menu.export" })}
+      icon={<Download className="size-3.5" />}
+    >
       <MenuItem
         icon={<Sheet className="size-3.5" />}
-        label="Export to Sheets"
+        label={intl.formatMessage({ id: "rank.table.export.toSheets" })}
         onClick={onExportToSheets}
         disabled={!hasData}
       />
       <MenuItem
         icon={<FileDown className="size-3.5" />}
-        label="Export CSV"
+        label={intl.formatMessage({ id: "rank.table.export.csv" })}
         onClick={onExport}
         disabled={!hasData}
       />
       <MenuItem
         icon={<Copy className="size-3.5" />}
-        label="Copy keywords"
+        label={intl.formatMessage({ id: "rank.table.menu.copyKeywords" })}
         onClick={onCopyKeywords}
         disabled={!hasData}
       />

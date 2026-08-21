@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IntlProvider } from "react-intl";
+import { IntlProvider, MissingTranslationError } from "react-intl";
 import {
   DEFAULT_LOCALE,
   type Locale,
@@ -44,12 +44,37 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [locale, setLocale],
   );
 
+  /**
+   * Without this, a wrong message id is silent. react-intl's default handler
+   * logs and moves on, and its fallback renders the id itself — so a caller
+   * that passed `intl.formatMessage(...)` where an *id* was expected threw
+   * `MissingTranslationError` on all four columns of the keyword-suggestion
+   * table on every render, while the screen looked perfectly translated,
+   * because the "missing id" it echoed back was the finished sentence.
+   *
+   * Both catalogs are complete by construction: `vi` is typed
+   * `Record<keyof typeof en, string>`, so TypeScript refuses a missing or
+   * misspelled key. A missing translation at runtime therefore cannot be a
+   * translation gap — it is always a bad id. In development that should stop
+   * the render and be seen; in production it must not white-screen a page over
+   * a copy bug, so it is logged with the id that failed.
+   */
+  const handleError = React.useCallback((error: unknown) => {
+    if (error instanceof MissingTranslationError) {
+      if (import.meta.env.DEV) throw error;
+      console.error("i18n: unknown message id", error.message);
+      return;
+    }
+    console.error(error);
+  }, []);
+
   return (
     <LocaleContext.Provider value={value}>
       <IntlProvider
         locale={locale}
         defaultLocale={DEFAULT_LOCALE}
         messages={MESSAGES[locale]}
+        onError={handleError}
       >
         {children}
       </IntlProvider>

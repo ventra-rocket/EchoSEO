@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
+import { type IntlShape, useIntl } from "react-intl";
 import {
   CartesianGrid,
   Line,
@@ -59,13 +60,15 @@ export function RankTrendChart({
   showBottomBand?: boolean;
 }) {
   const { containerRef, width: chartWidth } = useChartWidth();
+  const intl = useIntl();
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-[11px] text-base-content/50">
-        <span>Google position (1 = best)</span>
+        <span>{intl.formatMessage({ id: "rank.charts.trend.axisLabel" })}</span>
         <span className="inline-flex items-center gap-1">
-          Better <span aria-hidden>↑</span>
+          {intl.formatMessage({ id: "rank.charts.trend.better" })}{" "}
+          <span aria-hidden>↑</span>
         </span>
       </div>
       <div ref={containerRef} className="w-full min-w-0" style={{ height }}>
@@ -97,7 +100,7 @@ export function RankTrendChart({
               type="number"
               scale="time"
               domain={["dataMin", "dataMax"]}
-              tickFormatter={formatDateTick}
+              tickFormatter={(value: number) => formatDateTick(intl, value)}
               tick={{ fontSize: 10, fill: "#888" }}
               tickLine={false}
               axisLine={false}
@@ -152,11 +155,11 @@ export function RankTrendChart({
   );
 }
 
-export function formatDateTick(value: number): string {
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+export function formatDateTick(
+  intl: IntlShape,
+  value: Date | number | string,
+): string {
+  return intl.formatDate(value, { month: "short", day: "numeric" });
 }
 
 /** Responsive chart width via ResizeObserver — recharts needs an explicit px
@@ -182,9 +185,9 @@ export function useChartWidth() {
 
 /** 30d / 90d / All range toggle shared by the modal and overview charts. */
 const TREND_RANGES = [
-  { label: "30d", sinceDays: 30 },
-  { label: "90d", sinceDays: 90 },
-  { label: "All", sinceDays: 730 },
+  { id: "rank.charts.range.thirtyDays", sinceDays: 30 },
+  { id: "rank.charts.range.ninetyDays", sinceDays: 90 },
+  { id: "rank.charts.range.all", sinceDays: 730 },
 ] as const;
 
 export function TrendRangeToggle({
@@ -194,18 +197,19 @@ export function TrendRangeToggle({
   value: number;
   onChange: (sinceDays: number) => void;
 }) {
+  const intl = useIntl();
   return (
     <div className="join">
       {TREND_RANGES.map((range) => (
         <button
-          key={range.label}
+          key={range.id}
           type="button"
           className={`btn btn-xs join-item ${
             value === range.sinceDays ? "btn-active" : "btn-ghost"
           }`}
           onClick={() => onChange(range.sinceDays)}
         >
-          {range.label}
+          {intl.formatMessage({ id: range.id })}
         </button>
       ))}
     </div>

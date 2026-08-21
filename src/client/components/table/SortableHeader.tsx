@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { useIntl } from "react-intl";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 
 type SortableColumn = {
@@ -17,13 +18,19 @@ export function SortableHeader({
   helpText?: string;
   align?: "left" | "right";
 }) {
+  const intl = useIntl();
   const sorted = column.getIsSorted();
   const content = (
     <button
       type="button"
       className="inline-flex items-center gap-1 font-medium transition-colors hover:text-base-content"
       onClick={column.getToggleSortingHandler()}
-      aria-label={`Sort by ${label}`}
+      // Every sortable column in the audit and Search Performance tables goes
+      // through here, so an English string at this one line made both surfaces
+      // read "Sort by Tiêu đề" to a Vietnamese screen-reader user while the
+      // visible header was translated. A shared component gets this wrong for
+      // every feature at once, which is also why it is worth fixing once.
+      aria-label={intl.formatMessage({ id: "common.table.sortBy" }, { label })}
       aria-pressed={!!sorted}
     >
       {helpText ? <HeaderHelpLabel label={label} helpText={helpText} /> : label}

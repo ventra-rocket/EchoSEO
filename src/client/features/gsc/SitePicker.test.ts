@@ -1,59 +1,71 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { IntlProvider } from "react-intl";
 import { describe, expect, it } from "vitest";
 
 import { GSC_FAILURE_COPY, SitePicker } from "./SitePicker";
+import { en } from "@/client/i18n/messages/en";
 import type { GscGrantFailureReason } from "@/shared/gsc";
 
+// GSC_FAILURE_COPY carries a message id, not a sentence — react-intl resolves
+// it at render, so SitePicker needs an IntlProvider around it the same way the
+// real app does (mounted once in `src/routes/__root.tsx`).
 function renderFailure(failure: GscGrantFailureReason): string {
   return renderToStaticMarkup(
-    createElement(SitePicker, {
-      loading: false,
-      failure,
-      sites: [],
-      selectedSiteUrl: "",
-      onSelect: () => {},
-      onSave: () => {},
-      saving: false,
-      onConnect: () => {},
-      onRetry: () => {},
-    }),
+    createElement(
+      IntlProvider,
+      { locale: "en", messages: en },
+      createElement(SitePicker, {
+        loading: false,
+        failure,
+        sites: [],
+        selectedSiteUrl: "",
+        onSelect: () => {},
+        onSave: () => {},
+        saving: false,
+        onConnect: () => {},
+        onRetry: () => {},
+      }),
+    ),
   );
 }
 
 describe("GSC_FAILURE_COPY", () => {
   it("offers a connect action, not a reconnect, when nothing was ever connected", () => {
-    const { message, action } = GSC_FAILURE_COPY.not_connected;
+    const { messageId, action } = GSC_FAILURE_COPY.not_connected;
 
     expect(action).toBe("connect");
-    expect(message).not.toMatch(/reconnect/i);
+    expect(en[messageId]).not.toMatch(/reconnect/i);
   });
 
   it("offers a retry and no reconnect for a transient provider failure", () => {
     // The 403-is-quota case lands here. Reconnecting cannot clear a rate limit,
     // so the copy must not send the user through Google's consent screen.
-    const { message, action } = GSC_FAILURE_COPY.provider_error;
+    const { messageId, action } = GSC_FAILURE_COPY.provider_error;
 
     expect(action).toBe("retry");
-    expect(message).toMatch(/try again/i);
-    expect(message).not.toMatch(/reconnect/i);
+    expect(en[messageId]).toMatch(/try again/i);
+    expect(en[messageId]).not.toMatch(/reconnect/i);
   });
 
   it("names the admin-policy possibility when consent is blocked", () => {
-    const { message, action } = GSC_FAILURE_COPY.consent_blocked;
+    const { messageId, action } = GSC_FAILURE_COPY.consent_blocked;
 
     expect(action).toBe("reconnect");
-    expect(message).toMatch(/admin/i);
+    expect(en[messageId]).toMatch(/admin/i);
   });
 
   it("keeps the expiry copy for a spent grant only", () => {
     expect(GSC_FAILURE_COPY.grant_expired).toEqual({
-      message: "Connection expired. Reconnect to continue.",
+      messageId: "gsc.failure.grantExpired",
       action: "reconnect",
     });
+    expect(en["gsc.failure.grantExpired"]).toBe(
+      "Connection expired. Reconnect to continue.",
+    );
 
     const expiryClaims = Object.values(GSC_FAILURE_COPY).filter((copy) =>
-      /expired/i.test(copy.message),
+      /expired/i.test(en[copy.messageId]),
     );
     expect(expiryClaims).toHaveLength(1);
   });

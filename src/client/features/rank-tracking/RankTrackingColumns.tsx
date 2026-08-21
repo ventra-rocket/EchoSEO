@@ -1,5 +1,6 @@
 import { useMemo, type MutableRefObject } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
+import { useIntl } from "react-intl";
 import type { ColumnDef, SortingFn } from "@tanstack/react-table";
 import { makeSelectionColumn } from "@/client/components/table/AppDataTable";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
@@ -15,30 +16,28 @@ import {
 } from "./RankTrackingTableParts";
 import type { SelectionAnchor } from "@/client/components/table/tableSelection";
 
-const HEADER_TOOLTIPS: Record<string, string> = {
-  keyword: "The search term being tracked in Google",
-  volume: "Estimated monthly search volume from Google",
-  kd: "Keyword difficulty score (0-100) — higher means harder to rank",
-  cpc: "Average cost per click in Google Ads (USD)",
-  desktopPosition:
-    "Current Google ranking position, showing change from the comparison period",
-  mobilePosition:
-    "Current Google ranking position, showing change from the comparison period",
-  url: "The page on your site that ranks for this keyword",
-  serp: "Special result features appearing on the search results page (e.g. AI Overview, People Also Ask)",
-  gscClicks:
-    "Clicks Search Console recorded for this exact query over the last 28 days — Google's own data, not a SERP check",
-  gscImpressions:
-    "Impressions Search Console recorded for this exact query over the last 28 days",
-  gscPosition:
-    "Average position over the last 28 days, across the impressions the site actually received. An average, not the live rank in the position column",
+/** Column id -> the message id for its header tooltip. Desktop and mobile
+ *  position share one id: the position column's meaning does not change with
+ *  the device, only which device it is reporting on. */
+const HEADER_TOOLTIP_IDS: Record<string, string> = {
+  keyword: "rank.table.tooltip.keyword",
+  volume: "rank.table.tooltip.volume",
+  kd: "rank.table.tooltip.kd",
+  cpc: "rank.table.tooltip.cpc",
+  desktopPosition: "rank.table.tooltip.position",
+  mobilePosition: "rank.table.tooltip.position",
+  url: "rank.table.tooltip.url",
+  serp: "rank.table.tooltip.serpFeatures",
+  gscClicks: "rank.table.tooltip.gscClicks",
+  gscImpressions: "rank.table.tooltip.gscImpressions",
+  gscPosition: "rank.table.tooltip.gscAvgPosition",
 };
 
 export function SortableHeader({
   column,
   label,
   id,
-  tooltip,
+  tooltipId: tooltipIdOverride,
 }: {
   column: {
     getIsSorted: () => false | "asc" | "desc";
@@ -46,16 +45,30 @@ export function SortableHeader({
   };
   label: string;
   id: string;
-  tooltip?: string;
+  /**
+   * A message **id**, not a formatted string — named `tooltipId` because the
+   * first caller passed `intl.formatMessage(...)` into it and react-intl then
+   * looked up a Vietnamese sentence as an id, throwing
+   * `MissingTranslationError` on every render while the UI looked correct: the
+   * missing-id fallback returns the id, which happened to be the finished
+   * translation. Nothing about the `string` type could catch that; the name
+   * can. Unset falls back to `HEADER_TOOLTIP_IDS[id]`.
+   */
+  tooltipId?: string;
 }) {
+  const intl = useIntl();
   const sorted = column.getIsSorted();
+  const tooltipId = tooltipIdOverride ?? HEADER_TOOLTIP_IDS[id];
   return (
     <button
       type="button"
       className="inline-flex items-center gap-1 text-xs uppercase tracking-wide font-medium text-base-content/60 transition-colors hover:text-base-content"
       onClick={column.getToggleSortingHandler()}
-      title={tooltip ?? HEADER_TOOLTIPS[id]}
-      aria-label={`Sort by ${label}`}
+      title={tooltipId ? intl.formatMessage({ id: tooltipId }) : undefined}
+      aria-label={intl.formatMessage(
+        { id: "rank.table.column.sortByAriaLabel" },
+        { label },
+      )}
       aria-pressed={!!sorted}
     >
       {label}
@@ -80,9 +93,16 @@ const nullsLastNumeric: SortingFn<RankTrackingRow> = (rowA, rowB, columnId) => {
 const volumeColumn: ColumnDef<RankTrackingRow> = {
   id: "volume",
   accessorKey: "searchVolume",
-  header: ({ column }) => (
-    <SortableHeader column={column} label="Volume" id="volume" />
-  ),
+  header: ({ column }) => {
+    const intl = useIntl();
+    return (
+      <SortableHeader
+        column={column}
+        label={intl.formatMessage({ id: "rank.table.column.volume" })}
+        id="volume"
+      />
+    );
+  },
   size: 90,
   cell: ({ getValue }) => <VolumeCell value={getValue<number | null>()} />,
   sortingFn: nullsLastNumeric,
@@ -91,7 +111,16 @@ const volumeColumn: ColumnDef<RankTrackingRow> = {
 const kdColumn: ColumnDef<RankTrackingRow> = {
   id: "kd",
   accessorKey: "keywordDifficulty",
-  header: ({ column }) => <SortableHeader column={column} label="KD" id="kd" />,
+  header: ({ column }) => {
+    const intl = useIntl();
+    return (
+      <SortableHeader
+        column={column}
+        label={intl.formatMessage({ id: "rank.table.column.kd" })}
+        id="kd"
+      />
+    );
+  },
   size: 70,
   cell: ({ getValue }) => <DifficultyCell value={getValue<number | null>()} />,
   sortingFn: nullsLastNumeric,
@@ -100,9 +129,16 @@ const kdColumn: ColumnDef<RankTrackingRow> = {
 const cpcColumn: ColumnDef<RankTrackingRow> = {
   id: "cpc",
   accessorKey: "cpc",
-  header: ({ column }) => (
-    <SortableHeader column={column} label="CPC" id="cpc" />
-  ),
+  header: ({ column }) => {
+    const intl = useIntl();
+    return (
+      <SortableHeader
+        column={column}
+        label={intl.formatMessage({ id: "rank.table.column.cpc" })}
+        id="cpc"
+      />
+    );
+  },
   size: 80,
   cell: ({ getValue }) => <CpcCell value={getValue<number | null>()} />,
   sortingFn: nullsLastNumeric,
@@ -114,19 +150,31 @@ function makeKeywordColumn(
   return {
     id: "keyword",
     accessorKey: "keyword",
-    header: ({ column }) => (
-      <SortableHeader column={column} label="Keyword" id="keyword" />
-    ),
-    cell: ({ row }) => (
-      <button
-        type="button"
-        className="font-medium text-left link link-hover decoration-dotted underline-offset-2"
-        onClick={() => onKeywordClick(row.original)}
-        title="View position history"
-      >
-        {row.original.keyword}
-      </button>
-    ),
+    header: ({ column }) => {
+      const intl = useIntl();
+      return (
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "rank.table.column.keyword" })}
+          id="keyword"
+        />
+      );
+    },
+    cell: ({ row }) => {
+      const intl = useIntl();
+      return (
+        <button
+          type="button"
+          className="font-medium text-left link link-hover decoration-dotted underline-offset-2"
+          onClick={() => onKeywordClick(row.original)}
+          title={intl.formatMessage({
+            id: "rank.table.column.viewPositionHistory",
+          })}
+        >
+          {row.original.keyword}
+        </button>
+      );
+    },
     sortingFn: "alphanumeric",
   };
 }
@@ -138,9 +186,16 @@ function makeDeviceColumn(
   return {
     id,
     accessorFn: (row) => row[device].position,
-    header: ({ column }) => (
-      <SortableHeader column={column} label="Position" id={id} />
-    ),
+    header: ({ column }) => {
+      const intl = useIntl();
+      return (
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "rank.table.column.position" })}
+          id={id}
+        />
+      );
+    },
     size: 120,
     maxSize: 140,
     cell: ({ row }) => <DeviceRankCell result={row.original[device]} />,
@@ -155,14 +210,17 @@ function makeUrlColumn(
   return {
     id: device === "desktop" ? "desktopUrl" : "mobileUrl",
     enableSorting: false,
-    header: () => (
-      <span
-        className="text-xs uppercase tracking-wide font-medium text-base-content/60 cursor-help"
-        title={HEADER_TOOLTIPS.url}
-      >
-        URL
-      </span>
-    ),
+    header: () => {
+      const intl = useIntl();
+      return (
+        <span
+          className="text-xs uppercase tracking-wide font-medium text-base-content/60 cursor-help"
+          title={intl.formatMessage({ id: HEADER_TOOLTIP_IDS.url })}
+        >
+          {intl.formatMessage({ id: "rank.table.column.url" })}
+        </span>
+      );
+    },
     size: 240,
     cell: ({ row }) => (
       <DeviceUrlCell result={row.original[device]} domain={domain} />
@@ -176,14 +234,17 @@ function makeSerpColumn(
   return {
     id: device === "desktop" ? "desktopSerp" : "mobileSerp",
     enableSorting: false,
-    header: () => (
-      <span
-        className="text-xs uppercase tracking-wide font-medium text-base-content/60 cursor-help"
-        title={HEADER_TOOLTIPS.serp}
-      >
-        SERP Features
-      </span>
-    ),
+    header: () => {
+      const intl = useIntl();
+      return (
+        <span
+          className="text-xs uppercase tracking-wide font-medium text-base-content/60 cursor-help"
+          title={intl.formatMessage({ id: HEADER_TOOLTIP_IDS.serp })}
+        >
+          {intl.formatMessage({ id: "rank.table.column.serpFeatures" })}
+        </span>
+      );
+    },
     cell: ({ row }) => {
       const features = row.original[device].serpFeatures;
       if (features.length === 0) return null;
@@ -202,9 +263,16 @@ function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
     {
       id: "gscClicks",
       accessorFn: (row) => row.gsc?.clicks ?? null,
-      header: ({ column }) => (
-        <SortableHeader column={column} label="GSC clicks" id="gscClicks" />
-      ),
+      header: ({ column }) => {
+        const intl = useIntl();
+        return (
+          <SortableHeader
+            column={column}
+            label={intl.formatMessage({ id: "rank.table.column.gscClicks" })}
+            id="gscClicks"
+          />
+        );
+      },
       size: 100,
       cell: ({ row }) => (
         <GscCountCell value={row.original.gsc?.clicks} complete={complete} />
@@ -214,9 +282,18 @@ function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
     {
       id: "gscImpressions",
       accessorFn: (row) => row.gsc?.impressions ?? null,
-      header: ({ column }) => (
-        <SortableHeader column={column} label="GSC impr." id="gscImpressions" />
-      ),
+      header: ({ column }) => {
+        const intl = useIntl();
+        return (
+          <SortableHeader
+            column={column}
+            label={intl.formatMessage({
+              id: "rank.table.column.gscImpressions",
+            })}
+            id="gscImpressions"
+          />
+        );
+      },
       size: 100,
       cell: ({ row }) => (
         <GscCountCell
@@ -229,9 +306,18 @@ function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
     {
       id: "gscPosition",
       accessorFn: (row) => row.gsc?.position ?? null,
-      header: ({ column }) => (
-        <SortableHeader column={column} label="GSC avg pos" id="gscPosition" />
-      ),
+      header: ({ column }) => {
+        const intl = useIntl();
+        return (
+          <SortableHeader
+            column={column}
+            label={intl.formatMessage({
+              id: "rank.table.column.gscAvgPosition",
+            })}
+            id="gscPosition"
+          />
+        );
+      },
       size: 110,
       cell: ({ row }) => (
         <GscPositionCell

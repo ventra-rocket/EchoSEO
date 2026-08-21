@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Download, Loader2, Sheet } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { toast } from "sonner";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { TablePagination } from "@/client/components/table/TablePagination";
@@ -20,6 +21,7 @@ import {
   type ExportTarget,
   type Tab,
 } from "@/client/features/search-performance/SearchPerformanceParts";
+import type { MessageId } from "@/client/i18n/messages";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   exportSearchPerformanceTable,
@@ -36,25 +38,17 @@ import {
   type SearchPerformanceTableDimension,
 } from "@/types/schemas/search-performance";
 
-const RANGE_LABELS: Record<SearchPerformanceDateRange, string> = {
-  last_7_days: "Last 7 days",
-  last_28_days: "Last 28 days",
-  last_3_months: "Last 3 months",
+const RANGE_MESSAGE_IDS: Record<SearchPerformanceDateRange, MessageId> = {
+  last_7_days: "searchPerf.range.last7Days",
+  last_28_days: "searchPerf.range.last28Days",
+  last_3_months: "searchPerf.range.last3Months",
 };
-const RANGE_OPTIONS = SEARCH_PERFORMANCE_RANGES.map((value) => ({
-  value,
-  label: RANGE_LABELS[value],
-}));
 
-const DEVICE_LABELS: Record<SearchPerformanceDevice, string> = {
-  DESKTOP: "Desktop",
-  MOBILE: "Mobile",
-  TABLET: "Tablet",
+const DEVICE_MESSAGE_IDS: Record<SearchPerformanceDevice, MessageId> = {
+  DESKTOP: "searchPerf.device.desktop",
+  MOBILE: "searchPerf.device.mobile",
+  TABLET: "searchPerf.device.tablet",
 };
-const DEVICE_OPTIONS = GSC_DEVICES.map((value) => ({
-  value,
-  label: DEVICE_LABELS[value],
-}));
 
 // Sentinel for "no filter" in the selects; never sent to the server.
 const ALL = "ALL";
@@ -116,6 +110,7 @@ function tableQueryOptions(
 }
 
 export function SearchPerformancePage({ projectId }: { projectId: string }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [range, setRange] =
     useState<SearchPerformanceDateRange>("last_28_days");
@@ -182,25 +177,40 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
       });
       exportDimensionRows(dimension, data.rows, report.range, target);
     } catch (error) {
-      toast.error(getStandardErrorMessage(error, "Export failed"));
+      toast.error(
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "searchPerf.export.failed" }),
+        ),
+      );
     }
   };
+
+  const rangeOptions = SEARCH_PERFORMANCE_RANGES.map((value) => ({
+    value,
+    label: intl.formatMessage({ id: RANGE_MESSAGE_IDS[value] }),
+  }));
+  const deviceOptions = GSC_DEVICES.map((value) => ({
+    value,
+    label: intl.formatMessage({ id: DEVICE_MESSAGE_IDS[value] }),
+  }));
 
   return (
     <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-7xl space-y-4">
         <div>
-          <h1 className="text-2xl font-semibold">Search Performance</h1>
+          <h1 className="text-2xl font-semibold">
+            <FormattedMessage id="searchPerf.title" />
+          </h1>
           <p className="text-sm text-base-content/70">
-            See your site&apos;s clicks, impressions, CTR, and position from
-            Google Search Console.
+            <FormattedMessage id="searchPerf.subtitle" />
           </p>
         </div>
 
         {reportQuery.isPending ? (
           <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-            <Loader2 className="size-4 animate-spin" /> Loading Search Console
-            data…
+            <Loader2 className="size-4 animate-spin" />
+            <FormattedMessage id="searchPerf.loading" />
           </div>
         ) : reportQuery.isError ? (
           <div className="alert alert-error">
@@ -211,9 +221,7 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
         ) : !report?.connected ? (
           <div className="max-w-2xl space-y-4">
             <p className="text-sm text-base-content/70">
-              Find your striking-distance keywords — queries ranking just off
-              the top of page one, where a small improvement can win the most
-              new clicks. Connect Search Console to see them.
+              <FormattedMessage id="searchPerf.strikingDistanceIntro" />
             </p>
             <SearchConsoleConnectionCard projectId={projectId} />
           </div>
@@ -226,17 +234,22 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                   <TabButton
                     active={tab === "striking"}
                     onClick={() => setTab("striking")}
-                    label={`Striking distance (${report.strikingDistance.length})`}
+                    label={intl.formatMessage(
+                      { id: "searchPerf.tab.striking" },
+                      { count: report.strikingDistance.length },
+                    )}
                   />
                   <TabButton
                     active={tab === "queries"}
                     onClick={() => setTab("queries")}
-                    label="Queries"
+                    label={intl.formatMessage({
+                      id: "searchPerf.tab.queries",
+                    })}
                   />
                   <TabButton
                     active={tab === "pages"}
                     onClick={() => setTab("pages")}
-                    label="Pages"
+                    label={intl.formatMessage({ id: "searchPerf.tab.pages" })}
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -251,10 +264,16 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                         isDevice(event.target.value) ? event.target.value : ALL,
                       );
                     }}
-                    aria-label="Device filter"
+                    aria-label={intl.formatMessage({
+                      id: "searchPerf.filter.device",
+                    })}
                   >
-                    <option value={ALL}>All devices</option>
-                    {DEVICE_OPTIONS.map((option) => (
+                    <option value={ALL}>
+                      {intl.formatMessage({
+                        id: "searchPerf.filter.allDevices",
+                      })}
+                    </option>
+                    {deviceOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -264,9 +283,15 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                     className="select select-bordered select-sm w-36"
                     value={country}
                     onChange={(event) => setCountry(event.target.value)}
-                    aria-label="Country filter"
+                    aria-label={intl.formatMessage({
+                      id: "searchPerf.filter.country",
+                    })}
                   >
-                    <option value={ALL}>All countries</option>
+                    <option value={ALL}>
+                      {intl.formatMessage({
+                        id: "searchPerf.filter.allCountries",
+                      })}
+                    </option>
                     {report.countries.map((row) => (
                       <option key={row.key} value={row.key}>
                         {row.key.toUpperCase()}
@@ -281,9 +306,11 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                         setRange(event.target.value);
                       }
                     }}
-                    aria-label="Date range"
+                    aria-label={intl.formatMessage({
+                      id: "searchPerf.filter.dateRange",
+                    })}
                   >
-                    {RANGE_OPTIONS.map((option) => (
+                    {rangeOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -293,12 +320,16 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                     buttonClassName="btn btn-ghost btn-sm gap-1"
                     actions={[
                       {
-                        label: "Export to Sheets",
+                        label: intl.formatMessage({
+                          id: "searchPerf.export.toSheets",
+                        }),
                         icon: <Sheet className="size-4" />,
                         onClick: () => void handleExport("sheets"),
                       },
                       {
-                        label: "Download CSV",
+                        label: intl.formatMessage({
+                          id: "searchPerf.export.downloadCsv",
+                        }),
                         icon: <Download className="size-4" />,
                         onClick: () => void handleExport("csv"),
                       },
@@ -314,7 +345,8 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                 />
               ) : tableQuery.isPending ? (
                 <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-                  <Loader2 className="size-4 animate-spin" /> Loading…
+                  <Loader2 className="size-4 animate-spin" />
+                  <FormattedMessage id="searchPerf.tableLoading" />
                 </div>
               ) : tableQuery.isError ? (
                 <div className="p-4">
@@ -329,7 +361,12 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                   <div className="p-4">
                     <DimensionTable
                       rows={tableRows}
-                      keyLabel={tab === "queries" ? "Query" : "Page"}
+                      keyLabel={intl.formatMessage({
+                        id:
+                          tab === "queries"
+                            ? "searchPerf.metric.query"
+                            : "searchPerf.metric.page",
+                      })}
                     />
                   </div>
                   <TablePagination

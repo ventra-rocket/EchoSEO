@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { Loader2, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
+import { FormattedMessage, useIntl } from "react-intl";
 import { getDomainKeywordSuggestions } from "@/serverFunctions/domain";
 import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import { isLabsLocationCode } from "@/client/features/keywords/locations";
@@ -16,114 +17,16 @@ import {
   makeSelectionColumn,
   useAppTable,
 } from "@/client/components/table/AppDataTable";
-import { SortableHeader } from "./RankTrackingColumns";
+import {
+  buildKeywordSuggestionColumns,
+  type SuggestedKeyword,
+} from "./KeywordSuggestionColumns";
 import {
   applyShiftRangeSelection,
   type SelectionAnchor,
 } from "@/client/components/table/tableSelection";
 
-type SuggestedKeyword = {
-  keyword: string;
-  position: number | null;
-  searchVolume: number | null;
-  traffic: number | null;
-};
-
 const PRE_SELECT_COUNT = 20;
-
-const baseColumns: ColumnDef<SuggestedKeyword>[] = [
-  {
-    id: "keyword",
-    accessorKey: "keyword",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Keyword"
-        id="keyword"
-        tooltip="The search term this domain ranks for"
-      />
-    ),
-    cell: ({ getValue }) => (
-      <span className="font-medium">{getValue<string>()}</span>
-    ),
-    sortingFn: "alphanumeric",
-  },
-  {
-    id: "position",
-    accessorKey: "position",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Position"
-        id="position"
-        tooltip="Current Google ranking position"
-      />
-    ),
-    cell: ({ getValue }) => {
-      const pos = getValue<number | null>();
-      return pos != null ? (
-        pos
-      ) : (
-        <span className="text-base-content/40">—</span>
-      );
-    },
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.original.position ?? 999;
-      const b = rowB.original.position ?? 999;
-      return a - b;
-    },
-  },
-  {
-    id: "searchVolume",
-    accessorKey: "searchVolume",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Volume"
-        id="searchVolume"
-        tooltip="Monthly search volume"
-      />
-    ),
-    cell: ({ getValue }) => {
-      const vol = getValue<number | null>();
-      return vol != null ? (
-        vol.toLocaleString()
-      ) : (
-        <span className="text-base-content/40">—</span>
-      );
-    },
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.original.searchVolume ?? 0;
-      const b = rowB.original.searchVolume ?? 0;
-      return a - b;
-    },
-  },
-  {
-    id: "traffic",
-    accessorKey: "traffic",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Traffic"
-        id="traffic"
-        tooltip="Estimated monthly organic traffic"
-      />
-    ),
-    cell: ({ getValue }) => {
-      const traffic = getValue<number | null>();
-      return traffic != null ? (
-        Math.round(traffic).toLocaleString()
-      ) : (
-        <span className="text-base-content/40">—</span>
-      );
-    },
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.original.traffic ?? 0;
-      const b = rowB.original.traffic ?? 0;
-      return a - b;
-    },
-  },
-];
 
 type Props = {
   configId: string;
@@ -144,6 +47,7 @@ export function KeywordSuggestionStep({
   onDone,
   onClose,
 }: Props) {
+  const intl = useIntl();
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [hasInitialized, setHasInitialized] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([
@@ -154,9 +58,9 @@ export function KeywordSuggestionStep({
   const columns = useMemo<ColumnDef<SuggestedKeyword>[]>(
     () => [
       makeSelectionColumn<SuggestedKeyword>(selectAnchorRef),
-      ...baseColumns,
+      ...buildKeywordSuggestionColumns(intl),
     ],
-    [],
+    [intl],
   );
 
   // Ranked-keyword suggestions are Labs-backed; countries served from Google
@@ -214,12 +118,33 @@ export function KeywordSuggestionStep({
   const addMutation = useMutation({
     mutationFn: (keywords: string[]) =>
       addTrackingKeywords({ data: { projectId, configId, keywords } }),
-    onSuccess: (result) => {
-      toast.success(`Added ${result.added} keywords for tracking`);
+    // `keywords` is what this call was made with, so its length vs
+    // `result.added` reports what the server silently dropped (duplicates or
+    // over the per-config limit) — see AddKeywordsPanel for the same check.
+    onSuccess: (result, keywords) => {
+      if (result.added < keywords.length) {
+        toast.info(
+          intl.formatMessage(
+            { id: "rank.config.addKeywords.skippedToast" },
+            { skipped: keywords.length - result.added },
+          ),
+        );
+      }
+      toast.success(
+        intl.formatMessage(
+          { id: "rank.config.keywordSuggestions.addedToast" },
+          { count: result.added },
+        ),
+      );
       onDone(configId);
     },
     onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Failed to add keywords"));
+      toast.error(
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "rank.config.addKeywords.errorDefault" }),
+        ),
+      );
     },
   });
 
@@ -246,14 +171,17 @@ export function KeywordSuggestionStep({
   if (!labsSupported) {
     return (
       <>
-        {sectionHeader("Add keywords manually")}
+        {sectionHeader(
+          intl.formatMessage({
+            id: "rank.config.keywordSuggestions.title.manual",
+          }),
+        )}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <p className="text-xs text-base-content/50">
-            Ranked-keyword suggestions aren't available for this country.
-            Continue and add the keywords you want to track manually.
+            <FormattedMessage id="rank.config.keywordSuggestions.notSupportedBody" />
           </p>
           <button className="btn btn-primary btn-sm mt-2" onClick={onClose}>
-            Continue
+            <FormattedMessage id="rank.config.keywordSuggestions.continue" />
           </button>
         </div>
       </>
@@ -264,11 +192,15 @@ export function KeywordSuggestionStep({
   if (suggestionsQuery.isLoading) {
     return (
       <>
-        {sectionHeader("Finding your top keywords...")}
+        {sectionHeader(
+          intl.formatMessage({
+            id: "rank.config.keywordSuggestions.title.loading",
+          }),
+        )}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <Loader2 className="size-8 animate-spin text-primary" />
           <p className="text-xs text-base-content/50">
-            This usually takes a few seconds
+            <FormattedMessage id="rank.config.keywordSuggestions.loadingHint" />
           </p>
         </div>
       </>
@@ -279,15 +211,19 @@ export function KeywordSuggestionStep({
   if (suggestionsQuery.isError) {
     return (
       <>
-        {sectionHeader("Couldn't fetch keywords")}
+        {sectionHeader(
+          intl.formatMessage({
+            id: "rank.config.keywordSuggestions.title.error",
+          }),
+        )}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <AlertCircle className="size-8 text-error" />
           <p className="text-xs text-base-content/50">
-            You can skip this step and add keywords manually later.
+            <FormattedMessage id="rank.config.keywordSuggestions.errorBody" />
           </p>
           <div className="flex gap-2 mt-2">
             <button className="btn btn-primary btn-sm" onClick={onClose}>
-              Skip
+              <FormattedMessage id="rank.config.keywordSuggestions.skip" />
             </button>
           </div>
         </div>
@@ -299,14 +235,20 @@ export function KeywordSuggestionStep({
   if (data.length === 0) {
     return (
       <>
-        {sectionHeader("No rankings found")}
+        {sectionHeader(
+          intl.formatMessage({
+            id: "rank.config.keywordSuggestions.title.empty",
+          }),
+        )}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <p className="text-xs text-base-content/50">
-            We couldn't find any keywords {domain} currently ranks for. You can
-            add keywords manually.
+            <FormattedMessage
+              id="rank.config.keywordSuggestions.emptyBody"
+              values={{ domain }}
+            />
           </p>
           <button className="btn btn-primary btn-sm mt-2" onClick={onClose}>
-            Skip
+            <FormattedMessage id="rank.config.keywordSuggestions.skip" />
           </button>
         </div>
       </>
@@ -316,10 +258,17 @@ export function KeywordSuggestionStep({
   // Data loaded
   return (
     <div className="flex flex-col gap-3">
-      {sectionHeader("Choose keywords to track")}
+      {sectionHeader(
+        intl.formatMessage({
+          id: "rank.config.keywordSuggestions.title.choose",
+        }),
+      )}
       <div className="flex items-center justify-between">
         <p className="text-sm text-base-content/60">
-          We found {data.length} keywords {domain} ranks for.
+          <FormattedMessage
+            id="rank.config.keywordSuggestions.foundSummary"
+            values={{ count: data.length, domain }}
+          />
         </p>
       </div>
 
@@ -342,11 +291,14 @@ export function KeywordSuggestionStep({
 
       <div className="flex items-center justify-between gap-3 pt-1">
         <p className="text-xs text-base-content/60">
-          {selectedCount} of {data.length} selected
+          <FormattedMessage
+            id="rank.config.keywordSuggestions.selectedCount"
+            values={{ selected: selectedCount, total: data.length }}
+          />
         </p>
         <div className="flex items-center gap-2">
           <button className="btn btn-ghost btn-sm" onClick={onClose}>
-            Skip
+            <FormattedMessage id="rank.config.keywordSuggestions.skip" />
           </button>
           <button
             type="button"
@@ -357,7 +309,10 @@ export function KeywordSuggestionStep({
             {addMutation.isPending && (
               <Loader2 className="size-3.5 animate-spin" />
             )}
-            Save Keyword{selectedCount !== 1 ? "s" : ""}
+            <FormattedMessage
+              id="rank.config.keywordSuggestions.saveKeywords"
+              values={{ count: selectedCount }}
+            />
           </button>
         </div>
       </div>

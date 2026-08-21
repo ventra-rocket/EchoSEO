@@ -1,5 +1,6 @@
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { MutableRefObject } from "react";
+import type { IntlShape } from "react-intl";
 import { makeSelectionColumn } from "@/client/components/table/AppDataTable";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import type { SelectionAnchor } from "@/client/components/table/tableSelection";
@@ -19,18 +20,23 @@ export type SearchPerformanceTableRow = Extract<
 type DimensionRow = SearchPerformanceTableRow;
 type StrikingRow = Report["strikingDistance"][number];
 
-const numberFormat = new Intl.NumberFormat("en-US");
-
-export function formatCount(value: number): string {
-  return numberFormat.format(Math.round(value));
+export function formatCount(intl: IntlShape, value: number): string {
+  return intl.formatNumber(Math.round(value));
 }
 
-export function formatCtr(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
+export function formatCtr(intl: IntlShape, value: number): string {
+  return intl.formatNumber(value, {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 }
 
-export function formatPosition(value: number): string {
-  return value.toFixed(1);
+export function formatPosition(intl: IntlShape, value: number): string {
+  return intl.formatNumber(value, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 }
 
 const rightAligned = {
@@ -41,6 +47,7 @@ const rightAligned = {
 const dimensionHelper = createColumnHelper<DimensionRow>();
 
 export function buildDimensionColumns(
+  intl: IntlShape,
   keyLabel: string,
 ): ColumnDef<DimensionRow>[] {
   return [
@@ -55,30 +62,46 @@ export function buildDimensionColumns(
     }),
     dimensionHelper.accessor("clicks", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Clicks" align="right" />
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "searchPerf.metric.clicks" })}
+          align="right"
+        />
       ),
-      cell: ({ getValue }) => formatCount(getValue()),
+      cell: ({ getValue }) => formatCount(intl, getValue()),
       meta: rightAligned,
     }),
     dimensionHelper.accessor("impressions", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Impressions" align="right" />
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "searchPerf.metric.impressions" })}
+          align="right"
+        />
       ),
-      cell: ({ getValue }) => formatCount(getValue()),
+      cell: ({ getValue }) => formatCount(intl, getValue()),
       meta: rightAligned,
     }),
     dimensionHelper.accessor("ctr", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="CTR" align="right" />
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "searchPerf.metric.ctr" })}
+          align="right"
+        />
       ),
-      cell: ({ getValue }) => formatCtr(getValue()),
+      cell: ({ getValue }) => formatCtr(intl, getValue()),
       meta: rightAligned,
     }),
     dimensionHelper.accessor("position", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Avg position" align="right" />
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "searchPerf.metric.avgPosition" })}
+          align="right"
+        />
       ),
-      cell: ({ getValue }) => formatPosition(getValue()),
+      cell: ({ getValue }) => formatPosition(intl, getValue()),
       meta: rightAligned,
     }),
   ];
@@ -88,12 +111,13 @@ const strikingHelper = createColumnHelper<StrikingRow>();
 
 export function buildStrikingColumns(
   anchorRef: MutableRefObject<SelectionAnchor | null>,
+  intl: IntlShape,
 ): ColumnDef<StrikingRow>[] {
   return [
     makeSelectionColumn<StrikingRow>(anchorRef),
     strikingHelper.accessor("query", {
       enableSorting: false,
-      header: () => "Query",
+      header: () => intl.formatMessage({ id: "searchPerf.metric.query" }),
       cell: ({ getValue }) => (
         <span className="block max-w-xs truncate" title={getValue()}>
           {getValue()}
@@ -102,7 +126,7 @@ export function buildStrikingColumns(
     }),
     strikingHelper.accessor("page", {
       enableSorting: false,
-      header: () => "Page",
+      header: () => intl.formatMessage({ id: "searchPerf.metric.page" }),
       // GSC page keys are canonical http(s) URLs of the verified property;
       // the scheme check is defense-in-depth before rendering an href.
       cell: ({ getValue }) =>
@@ -124,23 +148,35 @@ export function buildStrikingColumns(
     }),
     strikingHelper.accessor("impressions", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Impressions" align="right" />
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "searchPerf.metric.impressions" })}
+          align="right"
+        />
       ),
-      cell: ({ getValue }) => formatCount(getValue()),
+      cell: ({ getValue }) => formatCount(intl, getValue()),
       meta: rightAligned,
     }),
     strikingHelper.accessor("clicks", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Clicks" align="right" />
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "searchPerf.metric.clicks" })}
+          align="right"
+        />
       ),
-      cell: ({ getValue }) => formatCount(getValue()),
+      cell: ({ getValue }) => formatCount(intl, getValue()),
       meta: rightAligned,
     }),
     strikingHelper.accessor("position", {
       header: ({ column }) => (
-        <SortableHeader column={column} label="Avg position" align="right" />
+        <SortableHeader
+          column={column}
+          label={intl.formatMessage({ id: "searchPerf.metric.avgPosition" })}
+          align="right"
+        />
       ),
-      cell: ({ getValue }) => formatPosition(getValue()),
+      cell: ({ getValue }) => formatPosition(intl, getValue()),
       meta: rightAligned,
     }),
   ];

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FormattedMessage } from "react-intl";
 import { getRankTrackingConfigs } from "@/serverFunctions/rank-tracking";
 import { RankTrackingDomainDetail } from "@/client/features/rank-tracking/RankTrackingDomainDetail";
 import { RankTrackingConfigModal } from "@/client/features/rank-tracking/RankTrackingConfigModal";
@@ -46,10 +47,10 @@ function RankTrackingConfigRoute() {
     return (
       <>
         <p className="text-sm text-base-content/70">
-          Domain configuration not found.
+          <FormattedMessage id="rank.config.detail.notFound" />
         </p>
         <button className="btn btn-ghost btn-sm" onClick={handleBack}>
-          Back to domains
+          <FormattedMessage id="rank.config.detail.backToDomains" />
         </button>
       </>
     );

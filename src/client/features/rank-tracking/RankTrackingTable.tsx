@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { FormattedMessage, useIntl } from "react-intl";
 import { FileDown, Loader2, Sheet, Trash2 } from "lucide-react";
 import { Modal } from "@/client/components/Modal";
 import {
@@ -60,6 +61,7 @@ export function RankTrackingTable({
   /** Null until the Search Console overlay resolves, or when it cannot. */
   gsc: RankTrackingGscExport | null;
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
   const [trendTarget, setTrendTarget] = useState<KeywordTrendTarget | null>(
@@ -151,11 +153,19 @@ export function RankTrackingTable({
       // resetRankTrackingSearchActuals for why this has to reset, not invalidate.
       resetRankTrackingSearchActuals(queryClient, projectId, configId);
       toast.success(
-        `${result.removed} keyword${result.removed !== 1 ? "s" : ""} removed`,
+        intl.formatMessage(
+          { id: "rank.table.remove.success" },
+          { removed: result.removed },
+        ),
       );
     },
     onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Failed to remove keywords"));
+      toast.error(
+        getStandardErrorMessage(
+          error,
+          intl.formatMessage({ id: "rank.table.remove.errorDefault" }),
+        ),
+      );
     },
   });
 
@@ -176,13 +186,12 @@ export function RankTrackingTable({
                 that actually moves the user forward, and name it as the UI
                 labels it. */}
             <p>
-              No keywords tracked yet. Use &quot;Add Keywords&quot; to start,
-              then run a check.
+              <FormattedMessage id="rank.table.empty.noKeywordsYet" />
             </p>
             <RankTrackingSearchPerformanceHint projectId={projectId} />
           </div>
         ) : (
-          "No keywords match your search."
+          <FormattedMessage id="rank.table.empty.noMatch" />
         )}
       </div>
     );
@@ -192,6 +201,9 @@ export function RankTrackingTable({
     <>
       <TableBulkActionBar
         selectedCount={selectedCount}
+        selectedLabel={intl.formatMessage({
+          id: "rank.table.bulk.selectedLabel",
+        })}
         onClear={() => table.resetRowSelection()}
         actions={
           <div className="flex items-center px-1.5">
@@ -200,17 +212,19 @@ export function RankTrackingTable({
               onClick={() => setShowConfirm(true)}
               variant="danger"
             >
-              Remove
+              <FormattedMessage id="rank.table.bulk.remove" />
             </TableBulkActionButton>
             <TableBulkExportMenu
               actions={[
                 {
-                  label: "Export to Sheets",
+                  label: intl.formatMessage({
+                    id: "rank.table.export.toSheets",
+                  }),
                   icon: <Sheet className="size-4" />,
                   onClick: exportSelectionToSheets,
                 },
                 {
-                  label: "Export CSV",
+                  label: intl.formatMessage({ id: "rank.table.export.csv" }),
                   icon: <FileDown className="size-4" />,
                   onClick: exportSelectionCsv,
                 },
@@ -227,19 +241,20 @@ export function RankTrackingTable({
           labelledBy="remove-keywords-title"
         >
           <h3 id="remove-keywords-title" className="text-lg font-semibold">
-            Remove keywords?
+            <FormattedMessage id="rank.table.bulk.removeConfirmTitle" />
           </h3>
           <p className="text-sm text-base-content/70">
-            This will stop tracking {selectedCount} keyword
-            {selectedCount !== 1 ? "s" : ""}. Historical ranking data is
-            preserved but won't appear in the table.
+            <FormattedMessage
+              id="rank.table.bulk.removeConfirmBody"
+              values={{ count: selectedCount }}
+            />
           </p>
           <div className="flex justify-end gap-2">
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setShowConfirm(false)}
             >
-              Cancel
+              <FormattedMessage id="rank.table.bulk.cancel" />
             </button>
             <button
               className="btn btn-error btn-sm gap-1"
@@ -251,8 +266,10 @@ export function RankTrackingTable({
               {removeMutation.isPending && (
                 <Loader2 className="size-3 animate-spin" />
               )}
-              Remove {selectedCount} keyword
-              {selectedCount !== 1 ? "s" : ""}
+              <FormattedMessage
+                id="rank.table.bulk.removeConfirmButton"
+                values={{ count: selectedCount }}
+              />
             </button>
           </div>
         </Modal>
@@ -272,7 +289,10 @@ export function RankTrackingTable({
 
       <AppDataTable table={table} getCellClassName={() => "align-top"} />
       <p className="text-xs text-base-content/60 pt-2">
-        {rows.length} of {totalCount} keywords
+        <FormattedMessage
+          id="rank.table.footer.count"
+          values={{ shown: rows.length, total: totalCount }}
+        />
       </p>
     </>
   );
