@@ -1,0 +1,175 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import ts from "typescript";
+import { describe, expect, it } from "vitest";
+
+/**
+ * The gate that would have caught ten untranslated components.
+ *
+ * On 21/08 the Site Audit surface was converted to react-intl and declared
+ * finished after rendering one completed audit. Ten components under
+ * `features/audit/` still held hardcoded English — the crawl progress card, the
+ * baseline selector, the comparison and page-change panels, the export panel,
+ * IndexNow, the periodic report card. None of them render in the state that
+ * happens to load first, so nothing on screen said they were missed, and a
+ * per-directory grep comes back clean on a page that is already showing two
+ * languages.
+ *
+ * So the check cannot be "did the reviewer see English". It has to be
+ * structural: no JSX text and no user-visible attribute in a converted
+ * directory may carry prose. A directory joins CONVERTED_DIRS only when it is
+ * finished, which also gives the next conversion an objective definition of
+ * done instead of someone's reading of a screenshot.
+ */
+const CONVERTED_DIRS = ["src/client/features/audit", "src/client/layout"];
+
+/**
+ * Attributes a user reads. `title` and `aria-label` matter most: they are the
+ * two that hide from a visual pass entirely, and one of them carried the
+ * "measured zero" claim the rank overlay had to walk back.
+ */
+const USER_VISIBLE_ATTRS = new Set([
+  "alt",
+  "aria-description",
+  "aria-label",
+  "aria-placeholder",
+  "aria-roledescription",
+  "aria-valuetext",
+  "placeholder",
+  "title",
+]);
+
+/**
+ * Proper nouns stay untranslated on purpose, matching the shipped bilingual
+ * report copy: a Vietnamese reader looking for "Lighthouse" in the Cloudflare
+ * dashboard needs to find the same word here. Exact strings only — a set of
+ * substrings would quietly excuse a sentence for containing one brand.
+ */
+const ALLOWED_LITERALS = new Set([
+  "DataForSEO",
+  "EchoSEO",
+  "Google",
+  "Google Search Console",
+  "IndexNow",
+  "Lighthouse",
+  "Search Console",
+  // A unit, not a word: "ms" reads the same in both catalogs, and spelling it
+  // through a message id would make every latency cell a translation lookup.
+  "ms",
+]);
+
+/** Prose is two or more consecutive Latin letters. `·`, `→`, `4/4`, `%` are not. */
+const PROSE = /\p{Script=Latin}{2,}/u;
+
+/**
+ * `&mdash;` and `&ldquo;` are punctuation a reader never reads as words, but
+ * their entity names are Latin letters, so they have to come out before the
+ * prose test rather than be excused one spelling at a time.
+ */
+const HTML_ENTITY = /&[a-z]+\d*;/gi;
+
+/** A bare URL is an example, not a sentence — `https://example.com` is identical in both locales. */
+const BARE_URL = /^https?:\/\/\S+$/i;
+
+type Finding = { file: string; line: number; text: string };
+
+function tsxFilesIn(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...tsxFilesIn(path));
+      continue;
+    }
+    if (entry.name.endsWith(".tsx") && !entry.name.endsWith(".test.tsx")) {
+      out.push(path);
+    }
+  }
+  return out;
+}
+
+function isProse(raw: string): boolean {
+  const text = raw.trim();
+  if (!text || ALLOWED_LITERALS.has(text)) return false;
+  if (BARE_URL.test(text)) return false;
+  return PROSE.test(text.replaceAll(HTML_ENTITY, " ").trim());
+}
+
+function findHardcodedStrings(file: string): Finding[] {
+  const source = readFileSync(file, "utf8");
+  const tree = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const findings: Finding[] = [];
+
+  const record = (node: ts.Node, text: string) => {
+    const { line } = tree.getLineAndCharacterOfPosition(node.getStart(tree));
+    findings.push({ file, line: line + 1, text: text.trim().slice(0, 60) });
+  };
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxText(node) && isProse(node.text)) {
+      record(node, node.text);
+    }
+
+    if (ts.isJsxAttribute(node) && ts.isIdentifier(node.name)) {
+      const name = node.name.text;
+      const value = node.initializer;
+      if (USER_VISIBLE_ATTRS.has(name) && value) {
+        // Only a literal is a finding. An expression is either a formatted
+        // message or a value, and this test cannot tell which — that is what
+        // review is for.
+        if (ts.isStringLiteral(value) && isProse(value.text)) {
+          record(node, `${name}="${value.text}"`);
+        } else if (
+          ts.isJsxExpression(value) &&
+          value.expression &&
+          ts.isStringLiteral(value.expression) &&
+          isProse(value.expression.text)
+        ) {
+          record(node, `${name}={"${value.expression.text}"}`);
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(tree);
+  return findings;
+}
+
+describe("converted surfaces hold no hardcoded prose", () => {
+  for (const dir of CONVERTED_DIRS) {
+    it(`${dir} routes every user-visible string through react-intl`, () => {
+      const findings = tsxFilesIn(dir).flatMap(findHardcodedStrings);
+      const report = findings.map((f) => `${f.file}:${f.line} — ${f.text}`);
+      expect(report).toEqual([]);
+    });
+  }
+
+  it("detects prose, and does not flag brands, symbols or numbers", () => {
+    // Pins the detector itself. Without this the suite could go green because
+    // the walk silently stopped matching, which is the failure mode of every
+    // gate that only ever reports success.
+    expect(isProse("Crawls over 5,000 pages are allowed")).toBe(true);
+    expect(isProse("Đang crawl trang")).toBe(true);
+    expect(isProse("Lighthouse")).toBe(false);
+    expect(isProse("Google Search Console")).toBe(false);
+    expect(isProse(" · ")).toBe(false);
+    expect(isProse("4/4")).toBe(false);
+    expect(isProse("→")).toBe(false);
+    expect(isProse("&mdash;")).toBe(false);
+    expect(isProse("&ldquo;")).toBe(false);
+    expect(isProse("https://example.com")).toBe(false);
+    // An entity beside real words is still a sentence.
+    expect(isProse("&mdash; every issue comes with a fix")).toBe(true);
+    // A URL inside a sentence does not excuse the sentence.
+    expect(isProse("Open https://example.com to continue")).toBe(true);
+    expect(isProse("")).toBe(false);
+  });
+});
