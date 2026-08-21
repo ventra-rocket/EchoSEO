@@ -5,6 +5,8 @@ import { commandCenter } from "./vi/commandCenter";
 import { seoProvider } from "./vi/seoProvider";
 import { audit } from "./vi/audit";
 import { auditChrome } from "./vi/auditChrome";
+import { auditPanels } from "./vi/auditPanels";
+import { auditOps } from "./vi/auditOps";
 
 // Vietnamese catalog — machine-translated seed, pending human review (see
 // README.md). Typed as `Messages` so the compiler fails if any English key is
@@ -17,4 +19,6 @@ export const vi: Messages = {
   ...seoProvider,
   ...audit,
   ...auditChrome,
+  ...auditPanels,
+  ...auditOps,
 };

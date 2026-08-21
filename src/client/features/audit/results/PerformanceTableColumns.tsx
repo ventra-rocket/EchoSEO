@@ -1,4 +1,5 @@
 import type { IntlShape } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
@@ -11,6 +12,14 @@ import {
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
 
 const performanceColumnHelper = createColumnHelper<PerformanceRowData>();
+
+/** The raw "desktop"/"mobile" strategy value is Lighthouse's own device id,
+ * not UI copy — map it through the same labels the device filter already
+ * uses rather than rendering the English enum value verbatim. */
+const DEVICE_LABEL_ID: Record<"desktop" | "mobile", MessageId> = {
+  desktop: "audit.results.filters.option.desktop",
+  mobile: "audit.results.filters.option.mobile",
+};
 
 export function buildPerformanceColumns({
   auditId,
@@ -43,7 +52,9 @@ export function buildPerformanceColumns({
         />
       ),
       cell: ({ getValue }) => (
-        <span className="capitalize text-xs">{getValue()}</span>
+        <span className="text-xs">
+          {intl.formatMessage({ id: DEVICE_LABEL_ID[getValue()] })}
+        </span>
       ),
     }),
     performanceColumnHelper.display({

@@ -1,3 +1,5 @@
+import { useIntl } from "react-intl";
+import { parseAuditTimestamp } from "@/client/features/audit/shared";
 import type { ComparableSnapshot } from "@/server/features/audit/services/AuditComparisonService";
 
 /**
@@ -22,6 +24,7 @@ export function BaselineSelector({
   onChange: (baselineAuditId: string | undefined) => void;
   requireMaterialized?: boolean;
 }) {
+  const intl = useIntl();
   // Only earlier crawls are valid baselines: the delta reads "changes since the
   // baseline", so a later crawl would invert added/resolved. The server rejects
   // a newer baseline too; this keeps it off the menu in the first place.
@@ -35,13 +38,17 @@ export function BaselineSelector({
   return (
     <div className="flex justify-end">
       <label className="flex items-center gap-2 text-xs text-base-content/60">
-        <span>Compare against</span>
+        <span>
+          {intl.formatMessage({ id: "audit.history.baselineSelector.label" })}
+        </span>
         <select
           className="select select-xs select-bordered"
           value={value ?? ""}
           onChange={(event) => onChange(event.target.value || undefined)}
         >
-          <option value="">Previous crawl (auto)</option>
+          <option value="">
+            {intl.formatMessage({ id: "audit.history.baselineSelector.auto" })}
+          </option>
           {options.map((snapshot) => {
             const disabled = requireMaterialized && !snapshot.materialized;
             return (
@@ -50,8 +57,21 @@ export function BaselineSelector({
                 value={snapshot.auditId}
                 disabled={disabled}
               >
-                {crawlDate(snapshot.sealedAt)} · {snapshot.pagesCrawled} pages
-                {disabled ? " · analysis pending" : ""}
+                {intl.formatMessage(
+                  { id: "audit.history.baselineSelector.option" },
+                  {
+                    date: intl.formatDate(
+                      parseAuditTimestamp(snapshot.sealedAt),
+                      { dateStyle: "medium" },
+                    ),
+                    count: snapshot.pagesCrawled,
+                  },
+                )}
+                {disabled
+                  ? intl.formatMessage({
+                      id: "audit.history.baselineSelector.analysisPending",
+                    })
+                  : ""}
               </option>
             );
           })}
@@ -59,8 +79,4 @@ export function BaselineSelector({
       </label>
     </div>
   );
-}
-
-function crawlDate(raw: string): string {
-  return raw.slice(0, 10);
 }

@@ -49,4 +49,10 @@ export const shell: Record<keyof typeof en, string> = {
     "Cần thiết lập: hãy thêm khóa API DataForSEO để dùng các tính năng của EchoSEO. Xem các bước nhanh trên <helpLink>trang trợ giúp</helpLink>.",
   "shell.setupNeeded.verifyError":
     "Chúng tôi không thể xác minh thiết lập DataForSEO của bạn. Nếu tính năng không hoạt động, hãy kiểm tra các bước thiết lập trên <helpLink>trang trợ giúp</helpLink>.",
+
+  "shell.setupModal.title": "Chỉ còn một bước thiết lập",
+  "shell.setupModal.body":
+    "Hãy thêm khóa API DataForSEO để bắt đầu dùng EchoSEO.",
+  "shell.setupModal.dismiss": "Bỏ qua",
+  "shell.setupModal.openGuide": "Mở hướng dẫn thiết lập",
 };

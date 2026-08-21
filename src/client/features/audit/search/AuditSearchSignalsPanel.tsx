@@ -140,14 +140,14 @@ function Metric({
     <div className="rounded-lg border border-base-300 bg-base-200/40 px-3 py-2.5">
       <p className="text-xs text-base-content/60">{label}</p>
       <p className="text-2xl font-semibold tabular-nums">
-        {value.toLocaleString()}
+        {intl.formatNumber(value)}
       </p>
       <p className={`text-xs tabular-nums ${deltaClass}`}>
         {sign}
-        {delta.toLocaleString()}{" "}
+        {intl.formatNumber(delta)}{" "}
         {intl.formatMessage(
           { id: "audit.search.signals.vsPrevious" },
-          { previous: previous.toLocaleString() },
+          { previous: intl.formatNumber(previous) },
         )}
       </p>
     </div>

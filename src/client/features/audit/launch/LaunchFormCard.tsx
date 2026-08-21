@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import {
   MAX_PAGES_LIMIT,
@@ -247,14 +247,18 @@ function VerificationNote({
             id="audit.chrome.launch.verificationConnected"
             values={{
               url: access.verifiedSiteUrl,
-              threshold: access.verificationPageThreshold.toLocaleString(),
+              threshold: (
+                <FormattedNumber value={access.verificationPageThreshold} />
+              ),
             }}
           />
         ) : (
           <FormattedMessage
             id="audit.chrome.launch.verificationRequired"
             values={{
-              threshold: access.verificationPageThreshold.toLocaleString(),
+              threshold: (
+                <FormattedNumber value={access.verificationPageThreshold} />
+              ),
             }}
           />
         )}
@@ -262,7 +266,7 @@ function VerificationNote({
     );
   }
 
-  const limit = gate.threshold.toLocaleString();
+  const limit = <FormattedNumber value={gate.threshold} />;
 
   return (
     <div

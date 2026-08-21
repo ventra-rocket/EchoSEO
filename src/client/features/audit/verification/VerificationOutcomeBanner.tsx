@@ -55,7 +55,7 @@ export function VerificationOutcomeBanner({
 
   const { counts, inconclusive, truncated } = data.outcome;
   const baselineDate = data.baseline.completedAt
-    ? new Date(data.baseline.completedAt).toLocaleDateString()
+    ? intl.formatDate(data.baseline.completedAt, { dateStyle: "medium" })
     : null;
 
   return (

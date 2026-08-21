@@ -190,27 +190,27 @@ function MissingSeoSetupModal({
               id="dataforseo-setup-title"
               className="text-lg font-semibold text-base-content"
             >
-              One quick setup step
+              <FormattedMessage id="shell.setupModal.title" />
             </h2>
             <p
               id="dataforseo-setup-description"
               className="text-sm text-base-content/75"
             >
-              Add your DataForSEO API key to start using EchoSEO.
+              <FormattedMessage id="shell.setupModal.body" />
             </p>
           </div>
         </div>
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Dismiss
+            <FormattedMessage id="shell.setupModal.dismiss" />
           </button>
           <Link
             {...dataforseoHelpLinkOptions}
             className="btn btn-primary"
             onClick={onClose}
           >
-            Open setup guide
+            <FormattedMessage id="shell.setupModal.openGuide" />
             <ExternalLink className="size-4" />
           </Link>
         </div>

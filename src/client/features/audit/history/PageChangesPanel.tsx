@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
+import { useIntl, type IntlShape } from "react-intl";
 import {
   getAuditPageChanges,
   getComparableSnapshots,
 } from "@/serverFunctions/audit-issues";
 import { BaselineSelector } from "@/client/features/audit/history/BaselineSelector";
+import { parseAuditTimestamp } from "@/client/features/audit/shared";
 import type {
   PageChangesComparison,
   ComparableSnapshot,
@@ -30,6 +32,7 @@ export function PageChangesPanel({
   auditId: string;
   projectId: string;
 }) {
+  const intl = useIntl();
   // undefined = auto-pick the most recent prior sealed crawl.
   const [baselineAuditId, setBaselineAuditId] = useState<string | undefined>(
     undefined,
@@ -66,7 +69,7 @@ export function PageChangesPanel({
   return (
     <div className="rounded-lg border border-base-300 bg-base-200/40 p-3 space-y-2">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <Summary comparison={changes} />
+        <Summary comparison={changes} intl={intl} />
         <BaselineSelector
           snapshots={snapshots}
           value={baselineAuditId}
@@ -103,7 +106,7 @@ export function PageChangesPanel({
                     key={`${field.field}-${index}`}
                     className={`badge badge-sm ${badgeClass(field)}`}
                   >
-                    {describeFieldChange(field)}
+                    {describeFieldChange(field, intl)}
                   </span>
                 ))}
               </span>
@@ -114,8 +117,13 @@ export function PageChangesPanel({
 
       {changes.truncated && (
         <p className="text-xs text-base-content/50">
-          Showing the first {changes.changes.length} changed pages of{" "}
-          {changes.totals.changedUrls.toLocaleString()}.
+          {intl.formatMessage(
+            { id: "audit.history.pageChanges.truncated" },
+            {
+              shown: changes.changes.length,
+              total: intl.formatNumber(changes.totals.changedUrls),
+            },
+          )}
         </p>
       )}
     </div>
@@ -124,58 +132,104 @@ export function PageChangesPanel({
 
 function Summary({
   comparison,
+  intl,
 }: {
   comparison: Extract<PageChangesComparison, { state: "comparable" }>;
+  intl: IntlShape;
 }) {
   const { totals, window } = comparison;
   const highlights: string[] = [];
   if (totals.removedFromSitemap > 0) {
-    highlights.push(`${totals.removedFromSitemap} removed from sitemap`);
+    highlights.push(
+      intl.formatMessage(
+        { id: "audit.history.pageChanges.highlightRemovedFromSitemap" },
+        { count: totals.removedFromSitemap },
+      ),
+    );
   }
   if (totals.becameNoindex > 0) {
-    highlights.push(`${totals.becameNoindex} became noindex`);
+    highlights.push(
+      intl.formatMessage(
+        { id: "audit.history.pageChanges.highlightBecameNoindex" },
+        { count: totals.becameNoindex },
+      ),
+    );
   }
   if (totals.statusChanged > 0) {
-    highlights.push(`${totals.statusChanged} status changed`);
+    highlights.push(
+      intl.formatMessage(
+        { id: "audit.history.pageChanges.highlightStatusChanged" },
+        { count: totals.statusChanged },
+      ),
+    );
   }
 
   return (
     <div className="space-y-0.5">
       <p className="text-sm font-medium">
         {totals.changedUrls === 0
-          ? "No page facts changed since the last crawl."
-          : `${totals.changedUrls.toLocaleString()} ${
-              totals.changedUrls === 1 ? "page" : "pages"
-            } changed since ${crawlDate(window.from)}.`}
+          ? intl.formatMessage({ id: "audit.history.pageChanges.summaryNone" })
+          : intl.formatMessage(
+              { id: "audit.history.pageChanges.summaryChanged" },
+              {
+                count: totals.changedUrls,
+                date: intl.formatDate(parseAuditTimestamp(window.from), {
+                  dateStyle: "medium",
+                }),
+              },
+            )}
       </p>
       {highlights.length > 0 && (
         <p className="text-xs text-base-content/60">
-          {highlights.join(" · ")} · Source: crawl
+          {highlights.join(" · ")} ·{" "}
+          {intl.formatMessage({ id: "audit.history.sourceCrawl" })}
         </p>
       )}
     </div>
   );
 }
 
-function describeFieldChange(change: PageFieldChange): string {
+function describeFieldChange(change: PageFieldChange, intl: IntlShape): string {
   switch (change.kind) {
     case "removed-from-sitemap":
-      return "Removed from sitemap";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.field.removedFromSitemap",
+      });
     case "became-noindex":
-      return "Became noindex";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.field.becameNoindex",
+      });
     case "became-indexable":
-      return "Became indexable";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.field.becameIndexable",
+      });
     case "added":
-      return `${fieldLabel(change.field)} added`;
+      return intl.formatMessage(
+        { id: "audit.history.pageChanges.field.added" },
+        { field: fieldLabel(change.field, intl) },
+      );
     case "removed":
-      return `${fieldLabel(change.field)} removed`;
+      return intl.formatMessage(
+        { id: "audit.history.pageChanges.field.removed" },
+        { field: fieldLabel(change.field, intl) },
+      );
     case "changed":
-      return `${fieldLabel(change.field)} changed`;
+      return intl.formatMessage(
+        { id: "audit.history.pageChanges.field.changed" },
+        { field: fieldLabel(change.field, intl) },
+      );
     case "increased":
     case "decreased":
-      return `${fieldLabel(change.field)} ${change.from} → ${change.to}`;
+      return intl.formatMessage(
+        { id: "audit.history.pageChanges.field.rangeChange" },
+        {
+          field: fieldLabel(change.field, intl),
+          from: change.from,
+          to: change.to,
+        },
+      );
     default:
-      return fieldLabel(change.field);
+      return fieldLabel(change.field, intl);
   }
 }
 
@@ -184,24 +238,40 @@ function describeFieldChange(change: PageFieldChange): string {
  * "word count" on purpose: the crawl stores counts, not the H1 text or the page
  * body, so calling them "H1" or "content" would claim a change it cannot see.
  */
-function fieldLabel(field: PageFieldChange["field"]): string {
+function fieldLabel(field: PageFieldChange["field"], intl: IntlShape): string {
   switch (field) {
     case "title":
-      return "Title";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.title",
+      });
     case "metaDescription":
-      return "Meta description";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.metaDescription",
+      });
     case "canonicalUrl":
-      return "Canonical";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.canonicalUrl",
+      });
     case "statusCode":
-      return "Status";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.statusCode",
+      });
     case "h1Count":
-      return "H1 count";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.h1Count",
+      });
     case "wordCount":
-      return "Word count";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.wordCount",
+      });
     case "isIndexable":
-      return "Indexable";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.isIndexable",
+      });
     case "inSitemap":
-      return "Sitemap";
+      return intl.formatMessage({
+        id: "audit.history.pageChanges.fieldLabel.inSitemap",
+      });
     default:
       return field;
   }
@@ -216,8 +286,4 @@ function badgeClass(change: PageFieldChange): string {
   }
   if (change.field === "statusCode") return "badge-warning";
   return "badge-ghost";
-}
-
-function crawlDate(raw: string): string {
-  return raw.slice(0, 10);
 }

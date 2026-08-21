@@ -42,7 +42,7 @@ export const auditChrome: Record<keyof typeof en, string> = {
   "audit.chrome.launch.lighthouseNeedsKey":
     "Lighthouse cần một khóa DataForSEO — hãy thêm khóa trong phần Cài đặt.",
   "audit.chrome.launch.verificationConnected":
-    "Đã kết nối property Search Console ({url}). Có thể crawl tối đa {threshold} trang trên các domain mà property này xác thực — tức host đó và mọi subdomain của nó.",
+    "Đã kết nối property Search Console ({url}). Được phép crawl trên {threshold} trang trên các domain mà property này xác thực — tức host đó và mọi subdomain của nó.",
   "audit.chrome.launch.verificationRequired":
     "Crawl trên {threshold} trang yêu cầu một property Search Console đã xác thực khớp với domain.",
   "audit.chrome.launch.verificationGateMismatch":

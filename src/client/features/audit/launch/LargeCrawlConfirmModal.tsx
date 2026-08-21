@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, FormattedNumber } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 
 /**
@@ -30,7 +30,7 @@ export function LargeCrawlConfirmModal({
         <h3 id="large-crawl-confirm-title" className="text-lg font-semibold">
           <FormattedMessage
             id="audit.chrome.launch.confirmTitle"
-            values={{ maxPages: maxPages.toLocaleString() }}
+            values={{ maxPages: <FormattedNumber value={maxPages} /> }}
           />
         </h3>
         <p className="mt-1 text-sm text-base-content/60">

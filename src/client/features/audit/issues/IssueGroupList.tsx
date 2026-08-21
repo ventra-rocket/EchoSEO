@@ -125,7 +125,7 @@ export function IssueGroupList({
                   </span>
                   <RuleChangeBadges delta={deltaByRule?.[rule.ruleId]} />
                   <span className="text-sm tabular-nums text-base-content/70">
-                    {rule.urlCount.toLocaleString()}
+                    {intl.formatNumber(rule.urlCount)}
                   </span>
                   <ChevronRight className="size-4 shrink-0 text-base-content/40" />
                 </button>
@@ -204,7 +204,9 @@ function GroupFilterBar({
           onClick={() => onSelect(group.group)}
         >
           {translatedGroupLabel(intl, group.group)}
-          <span className="opacity-60">{group.urlTotal.toLocaleString()}</span>
+          <span className="opacity-60">
+            {intl.formatNumber(group.urlTotal)}
+          </span>
         </button>
       ))}
     </div>

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Play } from "lucide-react";
+import { useIntl, type IntlShape } from "react-intl";
 import type { SiteCard as SiteCardData } from "@/server/features/audit/services/SiteCardService";
 
 /**
@@ -29,8 +30,11 @@ export function SiteCard({
   card: SiteCardData | null;
   isCurrent: boolean;
 }) {
+  const intl = useIntl();
   const crawl = card?.crawl ?? null;
-  const host = card ? hostOf(card.origin) : (domain ?? "No domain set");
+  const host = card
+    ? hostOf(card.origin)
+    : (domain ?? intl.formatMessage({ id: "audit.cards.noDomainSet" }));
 
   return (
     <div className="rounded-box border border-base-300 bg-base-100 p-4">
@@ -46,7 +50,7 @@ export function SiteCard({
             </Link>
             {isCurrent ? (
               <span className="shrink-0 rounded-full bg-base-300 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-base-content/60">
-                Current
+                {intl.formatMessage({ id: "audit.cards.currentBadge" })}
               </span>
             ) : null}
           </div>
@@ -60,7 +64,7 @@ export function SiteCard({
             params={{ projectId }}
             className="btn btn-ghost btn-xs shrink-0 gap-1"
           >
-            Report
+            {intl.formatMessage({ id: "audit.cards.reportLink" })}
             <ChevronRight className="size-3.5" />
           </Link>
         ) : null}
@@ -71,17 +75,41 @@ export function SiteCard({
           <div className="mt-4 flex flex-wrap items-start gap-x-8 gap-y-4">
             <HealthBlock health={card?.health ?? null} />
             <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
-              <Counter label="Crawled" value={crawl.crawled} />
-              <Counter label="Redirects" value={crawl.redirected} />
-              <Counter label="Broken" value={crawl.broken} />
-              <Counter label="Blocked" value={crawl.blocked} />
+              <Counter
+                label={intl.formatMessage({
+                  id: "audit.cards.counter.crawled",
+                })}
+                value={crawl.crawled}
+              />
+              <Counter
+                label={intl.formatMessage({
+                  id: "audit.cards.counter.redirects",
+                })}
+                value={crawl.redirected}
+              />
+              <Counter
+                label={intl.formatMessage({ id: "audit.cards.counter.broken" })}
+                value={crawl.broken}
+              />
+              <Counter
+                label={intl.formatMessage({
+                  id: "audit.cards.counter.blocked",
+                })}
+                value={crawl.blocked}
+              />
             </dl>
           </div>
 
           <p className="mt-4 border-t border-base-300 pt-2.5 text-xs text-base-content/60">
-            Crawler EchoSEO · crawl of {formatSealedAt(crawl.sealedAt)}
+            {intl.formatMessage(
+              { id: "audit.cards.footer" },
+              { date: formatSealedAt(crawl.sealedAt, intl) },
+            )}
             {crawl.noindex !== null && crawl.noindex > 0
-              ? ` · ${crawl.noindex} page${crawl.noindex === 1 ? "" : "s"} noindex`
+              ? intl.formatMessage(
+                  { id: "audit.cards.noindexSuffix" },
+                  { count: crawl.noindex },
+                )
               : null}
           </p>
         </>
@@ -98,20 +126,26 @@ export function SiteCard({
  * different fixes, so merging would send the reader to the wrong file.
  */
 function Counter({ label, value }: { label: string; value: number | null }) {
+  const intl = useIntl();
   return (
     <div>
       <dt className="text-xs text-base-content/60">{label}</dt>
       <dd
         className="font-mono text-lg font-bold tabular-nums"
-        title={value === null ? "Not measured on this crawl" : undefined}
+        title={
+          value === null
+            ? intl.formatMessage({ id: "audit.cards.notMeasuredTitle" })
+            : undefined
+        }
       >
-        {value === null ? "—" : value.toLocaleString()}
+        {value === null ? "—" : intl.formatNumber(value)}
       </dd>
     </div>
   );
 }
 
 function HealthBlock({ health }: { health: SiteCardData["health"] }) {
+  const intl = useIntl();
   if (!health) {
     // A sealed crawl whose issues were never materialized. Scoring it 100 would
     // congratulate the owner for a site nobody examined.
@@ -121,7 +155,7 @@ function HealthBlock({ health }: { health: SiteCardData["health"] }) {
           —
         </div>
         <div className="text-xs text-base-content/60">
-          Issues not analysed for this crawl
+          {intl.formatMessage({ id: "audit.cards.health.notAnalysed" })}
         </div>
       </div>
     );
@@ -135,24 +169,45 @@ function HealthBlock({ health }: { health: SiteCardData["health"] }) {
         {health.score}
       </div>
       <div className="text-xs text-base-content/60">
-        {health.score}% of pages with no critical or high issue (
-        {health.pagesClean.toLocaleString()}/
-        {health.pagesCrawled.toLocaleString()})
+        {intl.formatMessage(
+          { id: "audit.cards.health.scoreDescription" },
+          {
+            score: health.score,
+            clean: intl.formatNumber(health.pagesClean),
+            crawled: intl.formatNumber(health.pagesCrawled),
+          },
+        )}
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 font-mono text-xs text-base-content/70">
-        <span>{health.severity.critical} critical</span>
-        <span>{health.severity.high} high</span>
-        <span>{health.severity.low} low</span>
+        <span>
+          {intl.formatMessage(
+            { id: "audit.cards.health.critical" },
+            { count: health.severity.critical },
+          )}
+        </span>
+        <span>
+          {intl.formatMessage(
+            { id: "audit.cards.health.high" },
+            { count: health.severity.high },
+          )}
+        </span>
+        <span>
+          {intl.formatMessage(
+            { id: "audit.cards.health.low" },
+            { count: health.severity.low },
+          )}
+        </span>
       </div>
     </div>
   );
 }
 
 function EmptyState({ projectId }: { projectId: string }) {
+  const intl = useIntl();
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3 rounded-box bg-base-200/40 px-3 py-2.5">
       <p className="text-xs text-base-content/70">
-        No completed crawl yet, so there is nothing measured to show.
+        {intl.formatMessage({ id: "audit.cards.emptyState.body" })}
       </p>
       <Link
         to="/p/$projectId/audit"
@@ -160,7 +215,7 @@ function EmptyState({ projectId }: { projectId: string }) {
         className="btn btn-primary btn-xs gap-1"
       >
         <Play className="size-3" />
-        Run the first audit
+        {intl.formatMessage({ id: "audit.cards.emptyState.cta" })}
       </Link>
     </div>
   );
@@ -177,14 +232,11 @@ function scoreTone(score: number): string {
  * `YYYY-MM-DD HH:MM:SS` in UTC with no zone marker — parsed as-is a browser would
  * read it as local time and show a crawl in the future.
  */
-function formatSealedAt(sealedAt: string): string {
+function formatSealedAt(sealedAt: string, intl: IntlShape): string {
   const parsed = new Date(`${sealedAt.replace(" ", "T")}Z`);
   return Number.isNaN(parsed.getTime())
     ? sealedAt
-    : parsed.toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+    : intl.formatDate(parsed, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function hostOf(origin: string): string {

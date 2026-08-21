@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage, type IntlShape, useIntl } from "react-intl";
 import { AlertCircle, Camera, Loader2 } from "lucide-react";
 import {
   captureAuditScreenshot,
@@ -85,7 +85,7 @@ export function IssueEvidenceScreenshot({
         <figcaption className="text-xs text-base-content/50">
           <FormattedMessage
             id="audit.issues.screenshot.caption"
-            values={{ date: formatCapturedAt(data.capturedAt) }}
+            values={{ date: formatCapturedAt(intl, data.capturedAt) }}
           />
         </figcaption>
       </figure>
@@ -159,8 +159,8 @@ export function IssueEvidenceScreenshot({
   );
 }
 
-function formatCapturedAt(iso: string): string {
+function formatCapturedAt(intl: IntlShape, iso: string): string {
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return iso;
-  return new Date(ms).toLocaleString();
+  return intl.formatDate(ms, { dateStyle: "medium", timeStyle: "short" });
 }

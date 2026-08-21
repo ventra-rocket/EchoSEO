@@ -4,6 +4,8 @@ import { commandCenter } from "./en/commandCenter";
 import { seoProvider } from "./en/seoProvider";
 import { audit } from "./en/audit";
 import { auditChrome } from "./en/auditChrome";
+import { auditPanels } from "./en/auditPanels";
+import { auditOps } from "./en/auditOps";
 
 // English catalog — the source of truth for message IDs. Every other locale is
 // typed against this catalog's keys, so adding a key here forces every locale to
@@ -16,6 +18,8 @@ export const en = {
   ...seoProvider,
   ...audit,
   ...auditChrome,
+  ...auditPanels,
+  ...auditOps,
 } as const;
 
 export type MessageId = keyof typeof en;

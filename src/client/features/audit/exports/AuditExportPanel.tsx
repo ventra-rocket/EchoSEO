@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Download, FileArchive, Loader2 } from "lucide-react";
+import { useIntl } from "react-intl";
 import { getAuditAccess } from "@/serverFunctions/audit";
 import {
   listAuditExports,
@@ -10,13 +11,28 @@ import type { AuditExportJobView } from "@/server/features/audit/services/AuditE
 import type { IssueFilters } from "@/client/features/audit/issues/issue-filters";
 import {
   AUDIT_EXPORT_FORMATS,
-  AUDIT_EXPORT_MEDIA,
   REPORT_LOCALES,
-  REPORT_LOCALE_LABEL,
   type AuditExportFormat,
   type ReportLocale,
 } from "@/shared/audit-export-format";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import type { MessageId } from "@/client/i18n/messages";
+
+/** Export format labels — audit-export-specific, so they live beside the panel
+ * rather than in `@/shared/audit-export-format`, which server code also reads. */
+const FORMAT_LABEL_ID: Record<AuditExportFormat, MessageId> = {
+  zip: "audit.exports.format.zip",
+  pdf: "audit.exports.format.pdf",
+  doc: "audit.exports.format.doc",
+};
+
+/** Report-language option labels. Endonyms — reuses the same ids the
+ * top-bar LanguageSwitcher uses, so "English"/"Tiếng Việt" read identically
+ * everywhere rather than drifting into a second translation. */
+const REPORT_LOCALE_LABEL_ID: Record<ReportLocale, MessageId> = {
+  en: "language.english",
+  vi: "language.vietnamese",
+};
 
 /**
  * Request and download issue exports for an audit.
@@ -36,6 +52,7 @@ export function AuditExportPanel({
   projectId: string;
   filters: IssueFilters;
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const listKey = ["audit-exports", projectId, auditId];
   // Report language. Only the rendered formats read it — the ZIP carries rule
@@ -94,15 +111,17 @@ export function AuditExportPanel({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileArchive className="size-4" />
-          Export
+          {intl.formatMessage({ id: "audit.exports.heading" })}
           <span className="font-normal text-base-content/50">
-            current view · one export at a time
+            {intl.formatMessage({ id: "audit.exports.subheading" })}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             className="select select-bordered select-sm"
-            aria-label="Report language"
+            aria-label={intl.formatMessage({
+              id: "audit.exports.reportLanguageLabel",
+            })}
             value={reportLocale}
             onChange={(event) => {
               // Narrow by lookup rather than assertion: the option values come
@@ -115,7 +134,7 @@ export function AuditExportPanel({
           >
             {REPORT_LOCALES.map((option) => (
               <option key={option} value={option}>
-                {REPORT_LOCALE_LABEL[option]}
+                {intl.formatMessage({ id: REPORT_LOCALE_LABEL_ID[option] })}
               </option>
             ))}
           </select>
@@ -130,7 +149,7 @@ export function AuditExportPanel({
               {request.isPending && request.variables?.format === format && (
                 <span className="loading loading-spinner loading-xs" />
               )}
-              {AUDIT_EXPORT_MEDIA[format].label}
+              {intl.formatMessage({ id: FORMAT_LABEL_ID[format] })}
             </button>
           ))}
         </div>
@@ -142,7 +161,7 @@ export function AuditExportPanel({
           <span>
             {getStandardErrorMessage(
               request.error,
-              "Could not start the export",
+              intl.formatMessage({ id: "audit.exports.startError" }),
             )}
           </span>
         </div>
@@ -160,14 +179,17 @@ export function AuditExportPanel({
 }
 
 function ExportRow({ job }: { job: AuditExportJobView }) {
+  const intl = useIntl();
   return (
     <li className="flex items-center gap-3 py-2">
       <span className="text-base-content/60 tabular-nums">
         {formatTime(job.createdAt)}
       </span>
       <span className="text-base-content/70">
-        {AUDIT_EXPORT_MEDIA[job.format].label}
-        {job.format === "zip" ? null : ` · ${REPORT_LOCALE_LABEL[job.locale]}`}
+        {intl.formatMessage({ id: FORMAT_LABEL_ID[job.format] })}
+        {job.format === "zip"
+          ? null
+          : ` · ${intl.formatMessage({ id: REPORT_LOCALE_LABEL_ID[job.locale] })}`}
       </span>
       <StatusLabel job={job} />
       <span className="ml-auto">
@@ -177,7 +199,7 @@ function ExportRow({ job }: { job: AuditExportJobView }) {
             className="btn btn-primary btn-xs"
           >
             <Download className="size-3.5" />
-            Download
+            {intl.formatMessage({ id: "audit.exports.download" })}
           </a>
         ) : null}
       </span>
@@ -186,27 +208,40 @@ function ExportRow({ job }: { job: AuditExportJobView }) {
 }
 
 function StatusLabel({ job }: { job: AuditExportJobView }) {
+  const intl = useIntl();
   if (job.status === "queued" || job.status === "processing") {
     return (
       <span className="flex items-center gap-1 text-base-content/70">
         <Loader2 className="size-3.5 animate-spin" />
-        Building…
+        {intl.formatMessage({ id: "audit.exports.status.building" })}
       </span>
     );
   }
   if (job.status === "failed") {
-    return <span className="text-error">{job.errorMessage ?? "Failed"}</span>;
+    return (
+      <span className="text-error">
+        {job.errorMessage ??
+          intl.formatMessage({ id: "audit.exports.status.failedDefault" })}
+      </span>
+    );
   }
   if (
     job.status === "expired" ||
     (job.status === "ready" && !job.downloadable)
   ) {
-    return <span className="text-base-content/50">Expired</span>;
+    return (
+      <span className="text-base-content/50">
+        {intl.formatMessage({ id: "audit.exports.status.expired" })}
+      </span>
+    );
   }
   // ready + downloadable
   return (
     <span className="text-base-content/70 tabular-nums">
-      {job.rowCount ?? 0} {job.rowCount === 1 ? "issue" : "issues"}
+      {intl.formatMessage(
+        { id: "audit.exports.status.issueCount" },
+        { count: job.rowCount ?? 0 },
+      )}
     </span>
   );
 }

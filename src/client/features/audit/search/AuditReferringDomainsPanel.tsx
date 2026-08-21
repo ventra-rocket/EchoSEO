@@ -15,7 +15,7 @@ import {
 } from "@/serverFunctions/audit-referring-domains";
 import type { AuditReferringDomainSignals } from "@/server/features/audit/services/AuditReferringDomainsService";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 
 /**
  * Off-page referring-domain signals for this audit's target, sourced only from
@@ -194,7 +194,7 @@ function Metric({
         {label}
       </p>
       <p className="text-2xl font-semibold tabular-nums">
-        {value === null ? "—" : value.toLocaleString()}
+        {value === null ? "—" : <FormattedNumber value={value} />}
       </p>
     </div>
   );
@@ -213,7 +213,7 @@ function TrendLine({ trend }: { trend: ReadySignals["trend"] }) {
     <p className="text-sm">
       <span className={`font-medium tabular-nums ${deltaClass}`}>
         {sign}
-        {trend.delta.toLocaleString()}
+        <FormattedNumber value={trend.delta} />
       </span>{" "}
       <span className="text-base-content/60">
         <FormattedMessage

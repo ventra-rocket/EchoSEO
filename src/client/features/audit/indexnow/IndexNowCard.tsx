@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Loader2, Send, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { toast } from "sonner";
+import { useIntl, type IntlShape } from "react-intl";
 import {
   getIndexNowStatus,
   setupIndexNow,
@@ -12,6 +13,11 @@ import {
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
+
+const ACTION_STATUS_LABEL_ID = {
+  succeeded: "audit.indexnow.action.succeeded",
+  failed: "audit.indexnow.action.failed",
+} as const;
 
 /**
  * Owner/admin IndexNow surface for an audit's target: generate a key, host the
@@ -26,6 +32,7 @@ export function IndexNowCard({
   projectId: string;
   auditId: string;
 }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [verified, setVerified] = useState<boolean | null>(null);
 
@@ -45,18 +52,35 @@ export function IndexNowCard({
       void invalidate();
     },
     onError: (error) =>
-      toast.error(errorMessage(error, "Could not set up IndexNow.")),
+      toast.error(
+        errorMessage(
+          error,
+          intl.formatMessage({ id: "audit.indexnow.setupError" }),
+        ),
+      ),
   });
 
   const verify = useMutation({
     mutationFn: () => verifyIndexNowKey({ data: { projectId, auditId } }),
     onSuccess: (result) => {
       setVerified(result.verified);
-      if (result.verified) toast.success("IndexNow key file verified.");
-      else toast.error("Key file is not reachable at the host yet.");
+      if (result.verified) {
+        toast.success(
+          intl.formatMessage({ id: "audit.indexnow.verifiedToast" }),
+        );
+      } else {
+        toast.error(
+          intl.formatMessage({ id: "audit.indexnow.notReachableToast" }),
+        );
+      }
     },
     onError: (error) =>
-      toast.error(errorMessage(error, "Verification failed.")),
+      toast.error(
+        errorMessage(
+          error,
+          intl.formatMessage({ id: "audit.indexnow.verificationFailedError" }),
+        ),
+      ),
   });
 
   const submit = useMutation({
@@ -64,20 +88,41 @@ export function IndexNowCard({
     onSuccess: (result) => {
       if (result.outcome === "not_verified") {
         toast.error(
-          "Place the IndexNow key file at your host and verify it before submitting.",
+          intl.formatMessage({ id: "audit.indexnow.notVerifiedToast" }),
         );
         return;
       }
       if (result.submittedCount === 0) {
-        toast.info("No indexable URLs to submit for this audit.");
+        toast.info(intl.formatMessage({ id: "audit.indexnow.noUrlsToast" }));
       } else if (result.status === "succeeded") {
-        toast.success(`Submitted ${result.submittedCount} URLs to IndexNow.`);
+        toast.success(
+          intl.formatMessage(
+            { id: "audit.indexnow.submittedToast" },
+            { count: result.submittedCount },
+          ),
+        );
       } else {
-        toast.error(`IndexNow returned ${result.httpStatus ?? "an error"}.`);
+        toast.error(
+          intl.formatMessage(
+            { id: "audit.indexnow.returnedError" },
+            {
+              status:
+                result.httpStatus != null
+                  ? intl.formatNumber(result.httpStatus)
+                  : intl.formatMessage({ id: "audit.indexnow.genericError" }),
+            },
+          ),
+        );
       }
       void invalidate();
     },
-    onError: (error) => toast.error(errorMessage(error, "Submission failed.")),
+    onError: (error) =>
+      toast.error(
+        errorMessage(
+          error,
+          intl.formatMessage({ id: "audit.indexnow.submissionFailedError" }),
+        ),
+      ),
   });
 
   const data = statusQuery.data;
@@ -87,11 +132,11 @@ export function IndexNowCard({
     <div className="card border border-base-300 bg-base-100">
       <div className="card-body gap-3 p-4">
         <div>
-          <h2 className="font-medium">IndexNow</h2>
+          <h2 className="font-medium">
+            {intl.formatMessage({ id: "audit.indexnow.heading" })}
+          </h2>
           <p className="text-xs text-base-content/60">
-            Notify participating engines (Bing, Yandex, and others — not Google)
-            that your indexable pages changed. A receipt means accepted, not
-            indexed.
+            {intl.formatMessage({ id: "audit.indexnow.description" })}
           </p>
         </div>
 
@@ -105,13 +150,15 @@ export function IndexNowCard({
             {setup.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : null}
-            Set up IndexNow
+            {intl.formatMessage({ id: "audit.indexnow.setupButton" })}
           </button>
         ) : (
           <>
             <div className="space-y-1 text-sm">
               <p className="text-xs text-base-content/60">
-                Host this file at your domain root, then verify:
+                {intl.formatMessage({
+                  id: "audit.indexnow.hostFileInstructions",
+                })}
               </p>
               <code
                 className="block truncate rounded bg-base-200 px-2 py-1 text-xs"
@@ -119,7 +166,11 @@ export function IndexNowCard({
               >
                 {data.keyLocation}
               </code>
-              <p className="text-xs text-base-content/60">File contents:</p>
+              <p className="text-xs text-base-content/60">
+                {intl.formatMessage({
+                  id: "audit.indexnow.fileContentsLabel",
+                })}
+              </p>
               <code className="block truncate rounded bg-base-200 px-2 py-1 text-xs">
                 {data.key}
               </code>
@@ -139,7 +190,9 @@ export function IndexNowCard({
                 ) : (
                   <ShieldQuestion className="size-4" />
                 )}
-                Check verification
+                {intl.formatMessage({
+                  id: "audit.indexnow.checkVerificationButton",
+                })}
               </button>
               <button
                 type="button"
@@ -152,41 +205,31 @@ export function IndexNowCard({
                 ) : (
                   <Send className="size-4" />
                 )}
-                Submit {data.submittableCount} URLs
+                {intl.formatMessage(
+                  { id: "audit.indexnow.submitButton" },
+                  { count: data.submittableCount },
+                )}
               </button>
             </div>
 
             {verified === false && (
               <p className="text-xs text-warning">
-                Key file not reachable yet — place it at the host and re-check.
+                {intl.formatMessage({
+                  id: "audit.indexnow.notReachableNotice",
+                })}
               </p>
             )}
 
             {data.recentActions.length > 0 && (
               <div className="space-y-1">
                 <p className="text-xs text-base-content/60">
-                  Recent submissions
+                  {intl.formatMessage({
+                    id: "audit.indexnow.recentSubmissionsHeading",
+                  })}
                 </p>
                 <ul className="divide-y divide-base-300 rounded border border-base-300 text-xs">
                   {data.recentActions.map((action) => (
-                    <li
-                      key={action.id}
-                      className="flex items-center justify-between gap-2 px-2 py-1"
-                    >
-                      <span className="text-base-content/70">
-                        {new Date(action.createdAt).toLocaleString()}
-                      </span>
-                      <span>{action.submittedCount} URLs</span>
-                      <span
-                        className={
-                          action.status === "succeeded"
-                            ? "text-success"
-                            : "text-error"
-                        }
-                      >
-                        {action.status}
-                      </span>
-                    </li>
+                    <ActionRow key={action.id} action={action} intl={intl} />
                   ))}
                 </ul>
               </div>
@@ -195,5 +238,42 @@ export function IndexNowCard({
         )}
       </div>
     </div>
+  );
+}
+
+function ActionRow({
+  action,
+  intl,
+}: {
+  action: {
+    id: string;
+    createdAt: string;
+    submittedCount: number;
+    status: "succeeded" | "failed";
+  };
+  intl: IntlShape;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-2 px-2 py-1">
+      <span className="text-base-content/70">
+        {intl.formatDate(action.createdAt, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}
+      </span>
+      <span>
+        {intl.formatMessage(
+          { id: "audit.indexnow.actionSubmittedCount" },
+          { count: action.submittedCount },
+        )}
+      </span>
+      <span
+        className={
+          action.status === "succeeded" ? "text-success" : "text-error"
+        }
+      >
+        {intl.formatMessage({ id: ACTION_STATUS_LABEL_ID[action.status] })}
+      </span>
+    </li>
   );
 }

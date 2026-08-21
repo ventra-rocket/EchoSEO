@@ -11,6 +11,7 @@
  */
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 import { getCrawlProgress } from "@/serverFunctions/audit";
 import {
   buildCrawlEta,
@@ -35,6 +36,7 @@ export function CrawlProgressCard({
     startedAt: string;
   };
 }) {
+  const intl = useIntl();
   const crawlProgressQuery = useQuery({
     queryKey: ["audit-crawl-progress", projectId, auditId],
     queryFn: () => getCrawlProgress({ data: { projectId, auditId } }),
@@ -60,21 +62,22 @@ export function CrawlProgressCard({
   const isLighthousePhase = status.currentPhase === "lighthouse";
   const phaseLabel =
     status.currentPhase === "discovery"
-      ? "Discovery"
+      ? intl.formatMessage({ id: "audit.progress.phase.discovery" })
       : status.currentPhase === "crawling"
-        ? "Crawling"
+        ? intl.formatMessage({ id: "audit.progress.phase.crawling" })
         : status.currentPhase === "lighthouse"
-          ? "Lighthouse"
+          ? intl.formatMessage({ id: "audit.progress.phase.lighthouse" })
           : status.currentPhase === "finalizing"
-            ? "Finalizing"
-            : (status.currentPhase ?? "Running");
+            ? intl.formatMessage({ id: "audit.progress.phase.finalizing" })
+            : (status.currentPhase ??
+              intl.formatMessage({ id: "audit.progress.phase.running" }));
   const progress = isLighthousePhase ? lighthouseProgress : crawlProgress;
-  const etaLabel = buildCrawlEta(status);
+  const eta = buildCrawlEta(status);
   const heading = isLighthousePhase
-    ? "Running Lighthouse checks"
+    ? intl.formatMessage({ id: "audit.progress.heading.lighthouse" })
     : totalIsMeasured
-      ? "Crawling pages"
-      : "Reading sitemaps";
+      ? intl.formatMessage({ id: "audit.progress.heading.crawling" })
+      : intl.formatMessage({ id: "audit.progress.heading.discovery" });
 
   return (
     <div className="space-y-3">
@@ -97,45 +100,90 @@ export function CrawlProgressCard({
           <div className="flex items-center justify-between text-sm">
             {isLighthousePhase ? (
               <span>
-                {lighthouseDone} / {status.lighthouseTotal} checks
+                {intl.formatMessage(
+                  { id: "audit.progress.lighthouseCount" },
+                  { done: lighthouseDone, total: status.lighthouseTotal },
+                )}
                 {status.lighthouseFailed > 0
-                  ? ` (${status.lighthouseFailed} failed)`
+                  ? intl.formatMessage(
+                      { id: "audit.progress.lighthouseFailedSuffix" },
+                      { failed: status.lighthouseFailed },
+                    )
                   : ""}
               </span>
             ) : totalIsMeasured ? (
               <span>
-                {status.pagesCrawled} / {status.pagesTotal} pages
+                {intl.formatMessage(
+                  { id: "audit.progress.pagesCount" },
+                  { crawled: status.pagesCrawled, total: status.pagesTotal },
+                )}
               </span>
             ) : (
               <span>
                 {phase?.discoveredUrls === undefined
-                  ? "Reading robots.txt and sitemaps"
-                  : `${phase.discoveredUrls.toLocaleString()} URL${phase.discoveredUrls === 1 ? "" : "s"} found in ${(phase.sitemapDocsFetched ?? 0).toLocaleString()} sitemap document${phase.sitemapDocsFetched === 1 ? "" : "s"}`}
+                  ? intl.formatMessage({
+                      id: "audit.progress.discovery.readingSitemaps",
+                    })
+                  : intl.formatMessage(
+                      { id: "audit.progress.discovery.summary" },
+                      {
+                        urlCount: phase.discoveredUrls,
+                        docCount: phase.sitemapDocsFetched ?? 0,
+                      },
+                    )}
               </span>
             )}
             <span className="text-base-content/60">{progress}%</span>
           </div>
 
-          {etaLabel && (
-            <p className="text-xs text-base-content/50">{etaLabel}</p>
+          {eta && (
+            <p className="text-xs text-base-content/50">
+              {eta.kind === "estimating"
+                ? intl.formatMessage({ id: "audit.progress.eta.estimating" })
+                : eta.kind === "eta"
+                  ? intl.formatMessage(
+                      { id: "audit.progress.eta.minutes" },
+                      { minutes: eta.minutes },
+                    )
+                  : intl.formatMessage(
+                      { id: "audit.progress.eta.seconds" },
+                      { seconds: eta.seconds },
+                    )}
+            </p>
           )}
 
           {phase?.queued !== undefined && phase.visited !== undefined && (
             // The number that separates a slow crawl from a stalled one.
             <p className="text-xs text-base-content/50">
-              {phase.queued.toLocaleString()} queued ·{" "}
-              {phase.visited.toLocaleString()} visited
+              {intl.formatMessage(
+                { id: "audit.progress.queueStatus" },
+                {
+                  queued: intl.formatNumber(phase.queued),
+                  visited: intl.formatNumber(phase.visited),
+                },
+              )}
             </p>
           )}
 
           {phase?.offeredRate !== undefined && (
-            // Plain English, because the numbers are for anyone watching, not
-            // just the workflow trace: the rate the crawl settled at, and how
-            // hard the site pushed back to get there. See issue #88.
+            // The numbers are for anyone watching, not just the workflow
+            // trace: the rate the crawl settled at, and how hard the site
+            // pushed back to get there. See issue #88.
             <p className="text-xs text-base-content/50">
-              Crawling at {phase.offeredRate.toFixed(1)} pages/s
+              {intl.formatMessage(
+                { id: "audit.progress.crawlRate" },
+                {
+                  rate: intl.formatNumber(phase.offeredRate, {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  }),
+                },
+              )}
               {phase.refusedRequests
-                ? ` · the site refused ${phase.refusedRequests.toLocaleString()} request${phase.refusedRequests === 1 ? "" : "s"} so far`
+                ? intl.formatMessage(
+                    { id: "audit.progress.refusedRequestsSuffix" },
+                    { count: phase.refusedRequests },
+                  )
                 : ""}
             </p>
           )}
@@ -146,10 +194,20 @@ export function CrawlProgressCard({
         <div className="card bg-base-100 border border-base-300">
           <div className="card-body gap-2 p-4">
             <h3 className="text-sm font-medium text-base-content/70">
-              Crawled Pages ({crawledUrls.length})
+              {intl.formatMessage(
+                { id: "audit.progress.crawledPagesHeading" },
+                { count: crawledUrls.length },
+              )}
             </h3>
             <p className="text-xs text-base-content/50">
-              Updated {new Date(crawledUrls[0].crawledAt).toLocaleTimeString()}
+              {intl.formatMessage(
+                { id: "audit.progress.updated" },
+                {
+                  time: intl.formatDate(crawledUrls[0].crawledAt, {
+                    timeStyle: "short",
+                  }),
+                },
+              )}
             </p>
             <div className="max-h-[400px] overflow-y-auto -mx-1">
               {crawledUrls.map((entry, i) => (

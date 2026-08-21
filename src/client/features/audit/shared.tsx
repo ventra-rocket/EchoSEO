@@ -25,8 +25,18 @@ export function extractHostname(url: string): string {
  * keeps every audit timestamp on one parse, and callers format it through
  * `intl.formatDate`, so the rendering follows the active locale instead of a
  * hardcoded `en-US`.
+ *
+ * `started_at` is a plain `text` column, though, and callers outside the D1
+ * default (tests, backfills) write it as a full ISO string with its own zone
+ * designator (`Z` or `±HH:MM`). Appending `Z` to one of those produces
+ * `"…ZZ"` or `"…+07:00Z"`, both `Invalid Date`. Only the zone-less D1 shape
+ * needs the marker added; anything already zoned passes through untouched.
  */
 export function parseAuditTimestamp(dateStr: string): Date {
+  const hasZoneDesignator = /(?:Z|[+-]\d{2}:\d{2})$/.test(dateStr);
+  if (hasZoneDesignator) {
+    return new Date(dateStr);
+  }
   return new Date(dateStr.replace(" ", "T") + "Z");
 }
 
@@ -34,14 +44,21 @@ export function parseAuditTimestamp(dateStr: string): Date {
 // observed crawl rate (pages per elapsed ms), which already amortises the
 // step.sleep pauses that have already happened, so it self-corrects as the
 // crawl runs. Only meaningful once pages are landing against a known total;
-// before that (or during discovery) it returns a soft "Estimating…" so the
-// card isn't blank while the user waits.
+// before that (or during discovery) it returns a soft "estimating" state so
+// the card isn't blank while the user waits. Returns a discriminated result
+// instead of a formatted sentence: the caller renders it through react-intl,
+// and an English sentence baked in here could not be translated.
+type CrawlEta =
+  | { kind: "eta"; minutes: number }
+  | { kind: "eta_seconds"; seconds: number }
+  | { kind: "estimating" };
+
 export function buildCrawlEta(status: {
   pagesCrawled: number;
   pagesTotal: number;
   currentPhase: string | null;
   startedAt: string;
-}): string | null {
+}): CrawlEta | null {
   if (
     status.currentPhase === "crawling" &&
     status.pagesCrawled > 0 &&
@@ -54,15 +71,18 @@ export function buildCrawlEta(status: {
       const etaMs = (elapsedMs / status.pagesCrawled) * remaining;
       const mins = Math.round(etaMs / 60_000);
       return mins >= 1
-        ? `~${mins} min remaining`
-        : `~${Math.max(5, Math.round(etaMs / 1_000))} sec remaining`;
+        ? { kind: "eta", minutes: mins }
+        : {
+            kind: "eta_seconds",
+            seconds: Math.max(5, Math.round(etaMs / 1_000)),
+          };
     }
   }
   if (
     status.currentPhase === "discovery" ||
     (status.currentPhase === "crawling" && status.pagesCrawled === 0)
   ) {
-    return "Estimating…";
+    return { kind: "estimating" };
   }
   return null;
 }

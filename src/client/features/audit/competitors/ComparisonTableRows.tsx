@@ -80,8 +80,15 @@ function CompetitorRulesTable({ pair }: { pair: CompetitorPair }) {
     <table className="table table-sm">
       <thead>
         <tr>
+          {/* The rule labels below come from the server rule catalogue, which has
+              no Vietnamese translation yet. Saying so is the same disclosure the
+              issue drawer and the rendered report already make — a reader must
+              not be left wondering whether a screen half-translated itself. */}
           <th>
-            <FormattedMessage id="audit.competitors.table.columnRule" />
+            <FormattedMessage id="audit.competitors.table.columnRule" />{" "}
+            <span className="font-normal text-base-content/50">
+              <FormattedMessage id="audit.issues.detail.englishFallback" />
+            </span>
           </th>
           <th className="w-16 text-center">
             <FormattedMessage id="audit.competitors.table.columnYou" />

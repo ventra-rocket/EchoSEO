@@ -49,4 +49,10 @@ export const shell = {
     "Setup needed: add your DataForSEO API key to use EchoSEO features. See the quick steps on the <helpLink>help page</helpLink>.",
   "shell.setupNeeded.verifyError":
     "We could not verify your DataForSEO setup. If features are not working, check the setup steps on the <helpLink>help page</helpLink>.",
+
+  "shell.setupModal.title": "One quick setup step",
+  "shell.setupModal.body":
+    "Add your DataForSEO API key to start using EchoSEO.",
+  "shell.setupModal.dismiss": "Dismiss",
+  "shell.setupModal.openGuide": "Open setup guide",
 } as const;
