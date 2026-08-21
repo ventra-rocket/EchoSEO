@@ -11,6 +11,7 @@ import { rankTable } from "./en/rankTable";
 import { rankConfig } from "./en/rankConfig";
 import { rankCharts } from "./en/rankCharts";
 import { searchPerformance } from "./en/searchPerformance";
+import { gsc } from "./en/gsc";
 
 // English catalog — the source of truth for message IDs. Every other locale is
 // typed against this catalog's keys, so adding a key here forces every locale to
@@ -30,6 +31,7 @@ export const en = {
   ...rankConfig,
   ...rankCharts,
   ...searchPerformance,
+  ...gsc,
 } as const;
 
 export type MessageId = keyof typeof en;

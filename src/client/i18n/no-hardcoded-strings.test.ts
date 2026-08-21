@@ -30,6 +30,7 @@ import { describe, expect, it } from "vitest";
 const CONVERTED_DIRS = [
   "src/client/features/audit",
   "src/client/features/rank-tracking",
+  "src/client/features/gsc",
   "src/client/features/search-performance",
   "src/client/layout",
   // Shared components are only partly converted: the three strings the bulk
@@ -38,6 +39,11 @@ const CONVERTED_DIRS = [
   // (`AUTH_MODE` inside a `<code>` tag) that need the detector taught about
   // `<code>` before the directory can be listed honestly.
   "src/client/components/table/TableBulkActionBar.tsx",
+  // Reached from the audit and Search Performance tables, both listed above:
+  // its one English `aria-label` made a converted surface read "Sort by Tiêu
+  // đề" to a screen reader. A shared component is part of every surface that
+  // renders it, so it belongs in whichever gate claims those surfaces are done.
+  "src/client/components/table/SortableHeader.tsx",
   // A feature directory is not the whole surface: a route file renders the page
   // heading above it. Converting `features/rank-tracking` left "Rank Tracking /
   // Track keyword positions across domains" in English at the top of every

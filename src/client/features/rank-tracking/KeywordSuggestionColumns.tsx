@@ -32,9 +32,7 @@ export function buildKeywordSuggestionColumns(
             id: "rank.config.keywordSuggestions.column.keyword",
           })}
           id="keyword"
-          tooltip={intl.formatMessage({
-            id: "rank.config.keywordSuggestions.column.keywordTooltip",
-          })}
+          tooltipId="rank.config.keywordSuggestions.column.keywordTooltip"
         />
       ),
       cell: ({ getValue }) => (
@@ -52,9 +50,7 @@ export function buildKeywordSuggestionColumns(
             id: "rank.config.keywordSuggestions.column.position",
           })}
           id="position"
-          tooltip={intl.formatMessage({
-            id: "rank.config.keywordSuggestions.column.positionTooltip",
-          })}
+          tooltipId="rank.config.keywordSuggestions.column.positionTooltip"
         />
       ),
       cell: ({ getValue }) => {
@@ -81,9 +77,7 @@ export function buildKeywordSuggestionColumns(
             id: "rank.config.keywordSuggestions.column.volume",
           })}
           id="searchVolume"
-          tooltip={intl.formatMessage({
-            id: "rank.config.keywordSuggestions.column.volumeTooltip",
-          })}
+          tooltipId="rank.config.keywordSuggestions.column.volumeTooltip"
         />
       ),
       cell: ({ getValue }) => {
@@ -110,9 +104,7 @@ export function buildKeywordSuggestionColumns(
             id: "rank.config.keywordSuggestions.column.traffic",
           })}
           id="traffic"
-          tooltip={intl.formatMessage({
-            id: "rank.config.keywordSuggestions.column.trafficTooltip",
-          })}
+          tooltipId="rank.config.keywordSuggestions.column.trafficTooltip"
         />
       ),
       cell: ({ getValue }) => {

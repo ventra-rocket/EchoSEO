@@ -37,7 +37,7 @@ export function SortableHeader({
   column,
   label,
   id,
-  tooltip,
+  tooltipId: tooltipIdOverride,
 }: {
   column: {
     getIsSorted: () => false | "asc" | "desc";
@@ -45,13 +45,20 @@ export function SortableHeader({
   };
   label: string;
   id: string;
-  /** Message id override for the header tooltip. Unset falls back to
-   *  HEADER_TOOLTIP_IDS[id]; no current caller passes this. */
-  tooltip?: string;
+  /**
+   * A message **id**, not a formatted string — named `tooltipId` because the
+   * first caller passed `intl.formatMessage(...)` into it and react-intl then
+   * looked up a Vietnamese sentence as an id, throwing
+   * `MissingTranslationError` on every render while the UI looked correct: the
+   * missing-id fallback returns the id, which happened to be the finished
+   * translation. Nothing about the `string` type could catch that; the name
+   * can. Unset falls back to `HEADER_TOOLTIP_IDS[id]`.
+   */
+  tooltipId?: string;
 }) {
   const intl = useIntl();
   const sorted = column.getIsSorted();
-  const tooltipId = tooltip ?? HEADER_TOOLTIP_IDS[id];
+  const tooltipId = tooltipIdOverride ?? HEADER_TOOLTIP_IDS[id];
   return (
     <button
       type="button"

@@ -1,21 +1,28 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { useIntl } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { startGscLink } from "@/client/features/gsc/startGscLink";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import type { MessageId } from "@/client/i18n/messages";
 import type {
   GscImportCandidate,
   GscImportRow,
 } from "@/server/features/gsc/services/GscSiteImportService";
 import { importGscSites, listGscImportCandidates } from "@/serverFunctions/gsc";
 
-const BLOCK_LABEL: Record<NonNullable<GscImportCandidate["block"]>, string> = {
-  already_imported: "Already imported",
-  unverified: "Not verified for you",
-  unsupported: "Cannot be crawled",
-  path_scoped: "Scoped to a path",
+// Message ids, not sentences: the block reason is resolved through react-intl
+// at render, matching GSC_FAILURE_COPY in SitePicker.tsx.
+const BLOCK_LABEL_ID: Record<
+  NonNullable<GscImportCandidate["block"]>,
+  MessageId
+> = {
+  already_imported: "gsc.import.block.alreadyImported",
+  unverified: "gsc.import.block.unverified",
+  unsupported: "gsc.import.block.unsupported",
+  path_scoped: "gsc.import.block.pathScoped",
 };
 
 /**
@@ -29,6 +36,7 @@ const BLOCK_LABEL: Record<NonNullable<GscImportCandidate["block"]>, string> = {
  * imported" is the answer to a question nobody asked — which two, and why, is.
  */
 export function GscImportModal({ onClose }: { onClose: () => void }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [selected, setSelected] = React.useState<Record<string, true>>({});
   const [startAudits, setStartAudits] = React.useState(false);
@@ -89,12 +97,10 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
             className="flex items-center gap-2 text-lg font-semibold"
           >
             <GoogleGlyph className="size-4" />
-            Import from Search Console
+            {intl.formatMessage({ id: "gsc.import.title" })}
           </h2>
           <p className="mt-1 text-sm text-base-content/60">
-            Each property becomes its own project, connected to that property —
-            which is what lets its Search Console numbers, audits and reports be
-            about one site.
+            {intl.formatMessage({ id: "gsc.import.description" })}
           </p>
         </div>
 
@@ -108,12 +114,12 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
           <p className="rounded-box border border-error/40 bg-error/10 px-4 py-3 text-sm">
             {getStandardErrorMessage(
               candidatesQuery.error,
-              "Could not read your Search Console properties.",
+              intl.formatMessage({ id: "gsc.import.loadError" }),
             )}
           </p>
         ) : candidates.length === 0 ? (
           <p className="rounded-box border border-base-300 px-4 py-3 text-sm text-base-content/70">
-            This Google account has no Search Console properties.
+            {intl.formatMessage({ id: "gsc.import.empty" })}
           </p>
         ) : (
           <>
@@ -137,11 +143,17 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
               >
                 {selectedUrls.length === importable.length &&
                 importable.length > 0
-                  ? "Clear selection"
-                  : `Select all ${importable.length}`}
+                  ? intl.formatMessage({ id: "gsc.import.clearSelection" })
+                  : intl.formatMessage(
+                      { id: "gsc.import.selectAll" },
+                      { count: importable.length },
+                    )}
               </button>
               <span className="text-xs text-base-content/60">
-                {selectedUrls.length} selected
+                {intl.formatMessage(
+                  { id: "gsc.import.selectedCount" },
+                  { count: selectedUrls.length },
+                )}
               </span>
             </div>
 
@@ -176,10 +188,9 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
                 onChange={(event) => setStartAudits(event.target.checked)}
               />
               <span>
-                Run a first crawl on each imported site
+                {intl.formatMessage({ id: "gsc.import.startAudits.label" })}
                 <span className="block text-xs text-base-content/60">
-                  Crawls start one at a time. Past the hourly launch limit the
-                  remaining sites are still imported and say so.
+                  {intl.formatMessage({ id: "gsc.import.startAudits.hint" })}
                 </span>
               </span>
             </label>
@@ -188,7 +199,7 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
               <p className="rounded-box border border-error/40 bg-error/10 px-4 py-3 text-sm">
                 {getStandardErrorMessage(
                   importMutation.error,
-                  "Could not import those properties.",
+                  intl.formatMessage({ id: "gsc.import.submitError" }),
                 )}
               </p>
             ) : null}
@@ -200,7 +211,7 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
                 onClick={onClose}
                 disabled={busy}
               >
-                Cancel
+                {intl.formatMessage({ id: "gsc.cancel" })}
               </button>
               <button
                 type="button"
@@ -209,7 +220,12 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
                 onClick={() => importMutation.mutate()}
               >
                 {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                Import {selectedUrls.length || ""}
+                {selectedUrls.length > 0
+                  ? intl.formatMessage(
+                      { id: "gsc.import.submitButtonCount" },
+                      { count: selectedUrls.length },
+                    )
+                  : intl.formatMessage({ id: "gsc.import.submitButton" })}
               </button>
             </div>
           </>
@@ -230,6 +246,7 @@ function CandidateRow({
   disabled: boolean;
   onToggle: () => void;
 }) {
+  const intl = useIntl();
   const blocked = candidate.block !== null;
 
   return (
@@ -251,18 +268,26 @@ function CandidateRow({
             {candidate.siteUrl}
           </span>
           <span className="block text-xs text-base-content/60">
-            {candidate.host ? (
-              <>
-                {candidate.kind === "domain"
-                  ? "Domain property"
-                  : "URL-prefix property"}{" "}
-                · project {candidate.host}
-              </>
-            ) : candidate.block === "path_scoped" ? (
-              "Search Console reports only on this property's own path — connect a Domain property or a root-prefix property to import this site"
-            ) : (
-              "Not a site this app can crawl"
-            )}
+            {candidate.host
+              ? intl.formatMessage(
+                  { id: "gsc.import.candidate.propertyMeta" },
+                  {
+                    kind: intl.formatMessage({
+                      id:
+                        candidate.kind === "domain"
+                          ? "gsc.import.candidate.kind.domain"
+                          : "gsc.import.candidate.kind.urlPrefix",
+                    }),
+                    host: candidate.host,
+                  },
+                )
+              : candidate.block === "path_scoped"
+                ? intl.formatMessage({
+                    id: "gsc.import.candidate.pathScopedReason",
+                  })
+                : intl.formatMessage({
+                    id: "gsc.import.candidate.notCrawlable",
+                  })}
           </span>
         </span>
         {candidate.block ? (
@@ -270,7 +295,7 @@ function CandidateRow({
             {candidate.block === "already_imported" &&
             candidate.existingProjectName
               ? candidate.existingProjectName
-              : BLOCK_LABEL[candidate.block]}
+              : intl.formatMessage({ id: BLOCK_LABEL_ID[candidate.block] })}
           </span>
         ) : null}
       </label>
@@ -285,10 +310,11 @@ function ImportOutcome({
   rows: GscImportRow[];
   onClose: () => void;
 }) {
+  const intl = useIntl();
   return (
     <div className="space-y-4">
       <h2 id="gsc-import-title" className="text-lg font-semibold">
-        Import result
+        {intl.formatMessage({ id: "gsc.import.outcome.title" })}
       </h2>
 
       <ul className="max-h-80 divide-y divide-base-300 overflow-y-auto rounded-box border border-base-300">
@@ -307,19 +333,33 @@ function ImportOutcome({
               </span>
               <span className="block text-xs text-base-content/60">
                 {row.outcome === "created"
-                  ? `Project ${row.host} created`
+                  ? intl.formatMessage(
+                      { id: "gsc.import.outcome.created" },
+                      { host: row.host },
+                    )
                   : row.outcome === "skipped_duplicate"
-                    ? "Already imported — left alone"
-                    : (row.detail ?? "Could not be imported")}
+                    ? intl.formatMessage({ id: "gsc.import.outcome.duplicate" })
+                    : (row.detail ??
+                      intl.formatMessage({
+                        id: "gsc.import.outcome.failedDefault",
+                      }))}
                 {row.outcome === "created" && row.detail
                   ? ` · ${row.detail}`
                   : null}
-                {row.audit === "started" ? " · first crawl running" : null}
+                {row.audit === "started"
+                  ? intl.formatMessage({
+                      id: "gsc.import.outcome.auditStarted",
+                    })
+                  : null}
                 {row.audit === "throttled"
-                  ? " · crawl not started: hourly limit reached"
+                  ? intl.formatMessage({
+                      id: "gsc.import.outcome.auditThrottled",
+                    })
                   : null}
                 {row.audit === "unavailable"
-                  ? " · crawl not started for this workspace"
+                  ? intl.formatMessage({
+                      id: "gsc.import.outcome.auditUnavailable",
+                    })
                   : null}
               </span>
             </span>
@@ -333,7 +373,7 @@ function ImportOutcome({
           className="btn btn-primary btn-sm"
           onClick={onClose}
         >
-          Done
+          {intl.formatMessage({ id: "gsc.import.outcome.done" })}
         </button>
       </div>
     </div>
@@ -341,11 +381,11 @@ function ImportOutcome({
 }
 
 function ReconnectPrompt() {
+  const intl = useIntl();
   return (
     <div className="space-y-3 rounded-box border border-warning/40 bg-warning/10 px-4 py-3">
       <p className="text-sm">
-        Your Google connection can no longer reach Search Console. Reconnect it
-        and the property list comes back.
+        {intl.formatMessage({ id: "gsc.import.reconnectPrompt.body" })}
       </p>
       <button
         type="button"
@@ -353,7 +393,7 @@ function ReconnectPrompt() {
         onClick={() => void startGscLink(window.location.href)}
       >
         <GoogleGlyph className="size-4" />
-        Reconnect Google
+        {intl.formatMessage({ id: "gsc.import.reconnectPrompt.button" })}
       </button>
     </div>
   );

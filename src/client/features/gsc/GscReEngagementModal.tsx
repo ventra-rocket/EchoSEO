@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { startGscLink } from "@/client/features/gsc/startGscLink";
@@ -26,6 +27,7 @@ export function GscReEngagementModal({
   projectId: string | null;
   suppressed: boolean;
 }) {
+  const intl = useIntl();
   const hosted = isHostedClientAuthMode();
   const queryClient = useQueryClient();
   const [closed, setClosed] = React.useState(false);
@@ -103,17 +105,16 @@ export function GscReEngagementModal({
     >
       <div className="space-y-1">
         <h2 id="gsc-nudge-title" className="text-lg font-semibold">
-          New: Connect Google Search Console
+          {intl.formatMessage({ id: "gsc.reEngagement.title" })}
         </h2>
         <p className="text-sm text-base-content/70">
-          Bring your real clicks, impressions, and rankings into EchoSEO and
-          query them from Claude or Codex over MCP. It never uses credits.
+          {intl.formatMessage({ id: "gsc.reEngagement.body" })}
         </p>
       </div>
 
       <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" className="btn btn-ghost" onClick={handleDismiss}>
-          Maybe later
+          {intl.formatMessage({ id: "gsc.reEngagement.maybeLater" })}
         </button>
         <button
           type="button"
@@ -121,7 +122,7 @@ export function GscReEngagementModal({
           className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-semibold text-base-content shadow-sm transition hover:bg-base-200 hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <GoogleGlyph className="size-[18px]" />
-          Connect with Google
+          {intl.formatMessage({ id: "gsc.connectWithGoogle" })}
         </button>
       </div>
     </Modal>

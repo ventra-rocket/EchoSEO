@@ -10,4 +10,5 @@ export const common: Record<keyof typeof en, string> = {
   "common.table.bulkActions": "Thao tác hàng loạt",
   "common.table.clearSelection": "Bỏ chọn",
   "common.table.export": "Xuất",
+  "common.table.sortBy": "Sắp xếp theo {label}",
 };

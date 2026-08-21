@@ -8,4 +8,6 @@ export const common = {
   "common.table.bulkActions": "Bulk actions",
   "common.table.clearSelection": "Clear selection",
   "common.table.export": "Export",
+  // The accessible name of every sortable column header in the app.
+  "common.table.sortBy": "Sort by {label}",
 } as const;

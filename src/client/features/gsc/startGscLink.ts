@@ -1,5 +1,7 @@
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { readClientLocale } from "@/client/i18n/config";
+import { MESSAGES } from "@/client/i18n/messages";
 import { authClient } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { startSelfHostedGscLink } from "@/serverFunctions/gsc";
@@ -11,6 +13,12 @@ import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
  * Google returns the user afterward. Shared by the connect card, the onboarding
  * step, and the re-engagement nudge so the link/error/redirect flow stays in
  * one place — callers keep their own analytics/dismissal at the call site.
+ *
+ * A plain async function, not a component or a hook, so it has no useIntl().
+ * It reads its own fallback copy straight from the message catalog instead of
+ * taking a caller-supplied string — the same "reads its own ids" approach as
+ * the shared components in i18n/messages/en/common.ts, so a caller cannot
+ * forget to localize it.
  */
 export async function startGscLink(callbackURL: string): Promise<void> {
   try {
@@ -25,7 +33,10 @@ export async function startGscLink(callbackURL: string): Promise<void> {
       callbackURL,
     });
     if (res.error) {
-      toast.error(res.error.message ?? "Could not start Google sign-in");
+      toast.error(
+        res.error.message ??
+          MESSAGES[readClientLocale()]["gsc.startLink.error"],
+      );
       return;
     }
     if (res.data?.url) {

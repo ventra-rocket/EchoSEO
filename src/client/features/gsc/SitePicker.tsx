@@ -1,4 +1,6 @@
+import { useIntl } from "react-intl";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
+import type { MessageId } from "@/client/i18n/messages";
 import type { GscGrantFailureReason } from "@/shared/gsc";
 
 type SiteOption = {
@@ -20,28 +22,28 @@ type SecondaryAction = {
  * where a fresh grant can fix the problem: sending a rate-limited or
  * policy-blocked user back through Google's consent screen puts them in a loop
  * that cannot succeed, which is what this table exists to prevent.
+ *
+ * `messageId` rather than `message`: the copy is resolved through react-intl
+ * at render, not baked in as an English sentence here.
  */
 export const GSC_FAILURE_COPY: Record<
   GscGrantFailureReason,
-  { message: string; action: "connect" | "reconnect" | "retry" }
+  { messageId: MessageId; action: "connect" | "reconnect" | "retry" }
 > = {
   not_connected: {
-    message:
-      "No Google account is connected yet. Connect one to pick a Search Console property.",
+    messageId: "gsc.failure.notConnected",
     action: "connect",
   },
   consent_blocked: {
-    message:
-      "Google refused Search Console access for this account. If your organisation manages the account, an admin has to allow this app; otherwise reconnect and accept the Search Console permission.",
+    messageId: "gsc.failure.consentBlocked",
     action: "reconnect",
   },
   grant_expired: {
-    message: "Connection expired. Reconnect to continue.",
+    messageId: "gsc.failure.grantExpired",
     action: "reconnect",
   },
   provider_error: {
-    message:
-      "Search Console did not answer. This is usually a short rate limit — try again in a minute.",
+    messageId: "gsc.failure.providerError",
     action: "retry",
   },
 };
@@ -76,22 +78,26 @@ export function SitePicker({
   onRetry: () => void;
   secondaryAction?: SecondaryAction;
 }) {
+  const intl = useIntl();
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-base-content/50">
         <span className="loading loading-spinner loading-sm" />
-        Loading properties…
+        {intl.formatMessage({ id: "gsc.sitePicker.loading" })}
       </div>
     );
   }
   if (failure) {
-    const { message, action } = GSC_FAILURE_COPY[failure];
+    const { messageId, action } = GSC_FAILURE_COPY[failure];
     return (
       <div className="space-y-3">
-        <p className="text-sm text-error">{message}</p>
+        <p className="text-sm text-error">
+          {intl.formatMessage({ id: messageId })}
+        </p>
         {action === "retry" ? (
           <button type="button" onClick={onRetry} className="btn btn-sm">
-            Try again
+            {intl.formatMessage({ id: "gsc.tryAgain" })}
           </button>
         ) : (
           <button
@@ -100,9 +106,12 @@ export function SitePicker({
             className="inline-flex items-center gap-2.5 rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:bg-base-200"
           >
             <GoogleGlyph className="size-[18px]" />
-            {action === "connect"
-              ? "Connect with Google"
-              : "Reconnect with Google"}
+            {intl.formatMessage({
+              id:
+                action === "connect"
+                  ? "gsc.connectWithGoogle"
+                  : "gsc.reconnectWithGoogle",
+            })}
           </button>
         )}
       </div>
@@ -112,7 +121,7 @@ export function SitePicker({
     <div className="space-y-4">
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium text-base-content/80">
-          Property
+          {intl.formatMessage({ id: "gsc.sitePicker.propertyLabel" })}
         </span>
         <select
           className="select select-bordered w-full max-w-md"
@@ -120,7 +129,7 @@ export function SitePicker({
           onChange={(e) => onSelect(e.target.value)}
         >
           <option value="" disabled>
-            Select a property…
+            {intl.formatMessage({ id: "gsc.sitePicker.selectPlaceholder" })}
           </option>
           {sites.map((site) => (
             <option
@@ -129,7 +138,9 @@ export function SitePicker({
               disabled={!site.selectable}
             >
               {site.siteUrl}
-              {site.selectable ? "" : "  (no access)"}
+              {site.selectable
+                ? ""
+                : intl.formatMessage({ id: "gsc.sitePicker.noAccessSuffix" })}
             </option>
           ))}
         </select>
@@ -141,7 +152,11 @@ export function SitePicker({
           onClick={onSave}
           disabled={!selectedSiteUrl || saving}
         >
-          {saving ? "Saving…" : "Save property"}
+          {intl.formatMessage({
+            id: saving
+              ? "gsc.sitePicker.saving"
+              : "gsc.sitePicker.saveProperty",
+          })}
         </button>
         {secondaryAction ? (
           <button
