@@ -22,7 +22,7 @@ import {
   type Tab,
 } from "@/client/features/search-performance/SearchPerformanceParts";
 import type { MessageId } from "@/client/i18n/messages";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import {
   exportSearchPerformanceTable,
   getSearchPerformanceReport,
@@ -178,7 +178,8 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
       exportDimensionRows(dimension, data.rows, report.range, target);
     } catch (error) {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "searchPerf.export.failed" }),
         ),
@@ -215,7 +216,11 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
         ) : reportQuery.isError ? (
           <div className="alert alert-error">
             <span className="text-sm">
-              {getStandardErrorMessage(reportQuery.error)}
+              {getLocalizedErrorMessage(
+                intl,
+                reportQuery.error,
+                intl.formatMessage({ id: "common.error.default" }),
+              )}
             </span>
           </div>
         ) : !report?.connected ? (
@@ -352,7 +357,11 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                 <div className="p-4">
                   <div className="alert alert-error">
                     <span className="text-sm">
-                      {getStandardErrorMessage(tableQuery.error)}
+                      {getLocalizedErrorMessage(
+                        intl,
+                        tableQuery.error,
+                        intl.formatMessage({ id: "common.error.default" }),
+                      )}
                     </span>
                   </div>
                 </div>

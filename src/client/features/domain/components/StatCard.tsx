@@ -1,9 +1,18 @@
-export function StatCard({ label, value }: { label: string; value: string }) {
+import { FormattedMessage } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
+
+export function StatCard({
+  labelId,
+  value,
+}: {
+  labelId: MessageId;
+  value: string;
+}) {
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body p-4">
         <p className="text-xs uppercase tracking-wide text-base-content/60">
-          {label}
+          <FormattedMessage id={labelId} />
         </p>
         <p className="text-2xl font-semibold">{value}</p>
       </div>

@@ -14,7 +14,7 @@ import {
   refreshAuditReferringDomains,
 } from "@/serverFunctions/audit-referring-domains";
 import type { AuditReferringDomainSignals } from "@/server/features/audit/services/AuditReferringDomainsService";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 
 /**
@@ -90,7 +90,8 @@ export function AuditReferringDomainsPanel({
   const triggerArea = access.isError ? (
     <Notice>
       <FormattedMessage id="audit.search.referring.accessCheckFailed" />{" "}
-      {getStandardErrorMessage(
+      {getLocalizedErrorMessage(
+        intl,
         access.error,
         intl.formatMessage({ id: "audit.search.referring.tryAgainShortly" }),
       )}
@@ -107,7 +108,8 @@ export function AuditReferringDomainsPanel({
       isPending={refresh.isPending}
       errorMessage={
         refresh.isError
-          ? getStandardErrorMessage(
+          ? getLocalizedErrorMessage(
+              intl,
               refresh.error,
               intl.formatMessage({
                 id: "audit.search.referring.refreshError",

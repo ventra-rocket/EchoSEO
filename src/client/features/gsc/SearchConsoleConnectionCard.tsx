@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useIntl } from "react-intl";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { SelfHostedSetupWarning } from "@/client/features/gsc/SelfHostedSetupWarning";
@@ -74,7 +74,14 @@ export function SearchConsoleConnectionCard({
         queryKey: ["searchPerformanceTable", projectId],
       });
     },
-    onError: (error) => toast.error(getStandardErrorMessage(error)),
+    onError: (error) =>
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "common.error.default" }),
+        ),
+      ),
   });
 
   const disconnectMutation = useMutation({
@@ -93,7 +100,14 @@ export function SearchConsoleConnectionCard({
         queryKey: ["searchPerformanceTable", projectId],
       });
     },
-    onError: (error) => toast.error(getStandardErrorMessage(error)),
+    onError: (error) =>
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "common.error.default" }),
+        ),
+      ),
   });
 
   const handleConnect = () => void startGscLink(window.location.href);

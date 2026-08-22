@@ -3,7 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useState } from "react";
 import { Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import {
   getCompetitorComparison,
   runCompetitorComparison,
@@ -59,7 +59,8 @@ export function ComparisonTable({
     },
     onError: (error) =>
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({
             id: "audit.competitors.table.compareErrorDefault",
@@ -94,7 +95,8 @@ export function ComparisonTable({
     },
     onError: (error) =>
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({
             id: "audit.competitors.table.saveUrlErrorDefault",

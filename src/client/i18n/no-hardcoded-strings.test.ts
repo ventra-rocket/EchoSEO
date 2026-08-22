@@ -44,8 +44,12 @@ const CONVERTED_DIRS = [
   // Keyword Research renders this shared provider gate before any owned page
   // state when a workspace has no DataForSEO key. Listing only `keywords/`
   // would have declared the real first-run screen translated while its main
-  // card stayed English.
-  "src/client/features/access-gate/DataforseoKeyMissingState.tsx",
+  // card stayed English. The whole directory is listed now, not just that one
+  // file: `useAccessGate.ts` next to it resolved every provider-gate failure
+  // through the English-only legacy error map, so four converted surfaces
+  // rendered an English sentence under a translated heading. One shared hook,
+  // four broken surfaces, and a per-file entry that could not see it.
+  "src/client/features/access-gate",
   // A feature directory is not the whole surface: a route file renders the page
   // heading above it. Converting `features/rank-tracking` left "Rank Tracking /
   // Track keyword positions across domains" in English at the top of every
@@ -72,6 +76,14 @@ const CONVERTED_DIRS = [
   "src/routes/forgot-password.tsx",
   "src/routes/reset-password.tsx",
   "src/routes/_authenticated.oauth-consent.tsx",
+  // The two provider-backed data surfaces. Their live result states need a
+  // DataForSEO key, so conversion was verified with the real components and
+  // catalogs under fixture-shaped props plus the key-missing gate that a
+  // keyless workspace actually reaches — not by opening a populated table.
+  "src/client/features/domain",
+  "src/client/features/backlinks",
+  "src/routes/_project/p/$projectId/domain.tsx",
+  "src/routes/_project/p/$projectId/backlinks.tsx",
 ];
 
 /**

@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
+import { useIntl } from "react-intl";
 import {
   AppDataTable,
   useAppTable,
@@ -7,11 +8,7 @@ import {
 import { ExternalUrlCell } from "@/client/components/table/url";
 import { SortableHeader } from "@/client/features/domain/components/SortableHeader";
 import { useDomainRenderDebug } from "@/client/features/domain/domainDebug";
-import {
-  formatNumber,
-  formatRounded,
-  toPageSortMode,
-} from "@/client/features/domain/utils";
+import { toPageSortMode } from "@/client/features/domain/utils";
 import type {
   DomainSortMode,
   PageRow,
@@ -35,12 +32,14 @@ function DomainPagesTableComponent({
   currentSortOrder,
   onSortClick,
 }: Props) {
+  const intl = useIntl();
   const renderStarted = performance.now();
   const columns = useMemo<ColumnDef<PageRow>[]>(
     () => [
       pageColumnHelper.display({
         id: "page",
-        header: () => "Page",
+        header: () =>
+          intl.formatMessage({ id: "domainTables.pages.column.page" }),
         cell: ({ row }) => (
           <ExternalUrlCell
             value={row.original.relativePath ?? row.original.page}
@@ -56,27 +55,37 @@ function DomainPagesTableComponent({
       pageColumnHelper.accessor("organicTraffic", {
         header: () => (
           <SortableHeader
-            label="Organic Traffic"
+            label={intl.formatMessage({
+              id: "domainTables.pages.column.organicTraffic",
+            })}
             isActive={toPageSortMode(sortMode) === "traffic"}
             order={currentSortOrder}
             onClick={() => onSortClick("traffic")}
           />
         ),
-        cell: ({ getValue }) => formatRounded(getValue()),
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value == null ? "-" : intl.formatNumber(Math.round(value));
+        },
       }),
       pageColumnHelper.accessor("keywords", {
         header: () => (
           <SortableHeader
-            label="Keywords"
+            label={intl.formatMessage({
+              id: "domainTables.pages.column.keywords",
+            })}
             isActive={toPageSortMode(sortMode) === "keywords"}
             order={currentSortOrder}
             onClick={() => onSortClick("volume")}
           />
         ),
-        cell: ({ getValue }) => formatNumber(getValue()),
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value == null ? "-" : intl.formatNumber(value);
+        },
       }),
     ],
-    [currentSortOrder, domain, onSortClick, sortMode],
+    [currentSortOrder, domain, intl, onSortClick, sortMode],
   );
   const table = useAppTable({
     data: rows.slice(0, 100),
@@ -95,7 +104,7 @@ function DomainPagesTableComponent({
       className="table table-zebra table-sm"
       empty={
         <div className="py-6 text-center text-base-content/60">
-          No pages match this search.
+          {intl.formatMessage({ id: "domainTables.pages.empty" })}
         </div>
       }
     />

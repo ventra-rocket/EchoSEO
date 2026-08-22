@@ -1,12 +1,18 @@
+import type { IntlShape } from "react-intl";
 import { normalizeDomainTarget } from "@/client/features/domain/utils";
 import { createFormValidationErrors } from "@/client/lib/forms";
 import type { DomainControlsValues } from "@/client/features/domain/types";
 
-export function getDomainSearchValidationErrors(value: DomainControlsValues) {
+export function getDomainSearchValidationErrors(
+  value: DomainControlsValues,
+  intl: IntlShape,
+) {
   if (!value.domain.trim()) {
     return createFormValidationErrors({
       fields: {
-        domain: "Please enter a domain",
+        domain: intl.formatMessage({
+          id: "domainOverview.search.validation.domainRequired",
+        }),
       },
     });
   }
@@ -14,7 +20,9 @@ export function getDomainSearchValidationErrors(value: DomainControlsValues) {
   if (!normalizeDomainTarget(value.domain)) {
     return createFormValidationErrors({
       fields: {
-        domain: "Please enter a valid URL or domain (e.g. example.com)",
+        domain: intl.formatMessage({
+          id: "domainOverview.search.validation.domainInvalid",
+        }),
       },
     });
   }
@@ -26,6 +34,7 @@ export function getDomainSearchChangeValidationErrors(
   value: DomainControlsValues,
   shouldValidateUntouchedField: boolean,
   shouldValidateFormat: boolean,
+  intl: IntlShape,
 ) {
   if (!value.domain.trim()) {
     if (!shouldValidateUntouchedField) {
@@ -34,7 +43,9 @@ export function getDomainSearchChangeValidationErrors(
 
     return createFormValidationErrors({
       fields: {
-        domain: "Please enter a domain",
+        domain: intl.formatMessage({
+          id: "domainOverview.search.validation.domainRequired",
+        }),
       },
     });
   }
@@ -43,5 +54,5 @@ export function getDomainSearchChangeValidationErrors(
     return null;
   }
 
-  return getDomainSearchValidationErrors(value);
+  return getDomainSearchValidationErrors(value, intl);
 }

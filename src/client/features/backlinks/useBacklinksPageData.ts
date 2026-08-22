@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useIntl, type IntlShape } from "react-intl";
 import type {
   BacklinksPageProps,
   BacklinksSearchState,
@@ -8,7 +9,7 @@ import { useAccessGate } from "@/client/features/access-gate/useAccessGate";
 import { useSeoApiKeyStatus } from "@/client/features/access-gate/useSeoApiKeyStatus";
 import {
   getErrorCode,
-  getStandardErrorMessage,
+  getLocalizedErrorMessage,
 } from "@/client/lib/error-messages";
 import {
   getBacklinksOverview,
@@ -43,15 +44,18 @@ type UseBacklinksPageDataArgs = {
 const BACKLINKS_QUERY_STALE_TIME_MS = 5 * 60 * 1000;
 
 function getBacklinksErrorMessage(
+  intl: IntlShape,
   error: unknown,
   fallback: string,
 ): string | null {
   if (!error) return null;
   if (getErrorCode(error) === "VALIDATION_ERROR") {
-    return "Enter a valid domain or page URL.";
+    return intl.formatMessage({
+      id: "backlinksOverview.error.invalidTarget",
+    });
   }
 
-  return getStandardErrorMessage(error, fallback);
+  return getLocalizedErrorMessage(intl, error, fallback);
 }
 
 /**
@@ -77,10 +81,13 @@ export function useBacklinksPageData({
   searchState,
   filters,
 }: UseBacklinksPageDataArgs) {
+  const intl = useIntl();
   const accessGate = useAccessGate({
     queryKey: ["backlinksAccessStatus", projectId],
     queryFn: () => getBacklinksAccessSetupStatus({ data: { projectId } }),
-    statusErrorFallback: "Could not load Backlinks setup status.",
+    statusErrorFallback: intl.formatMessage({
+      id: "backlinksOverview.error.setupStatusFallback",
+    }),
   });
   const backlinksEnabled = accessGate.enabled;
   const retryAccessGate = accessGate.onRetry;
@@ -215,8 +222,9 @@ export function useBacklinksPageData({
   });
 
   const overviewErrorMessage = getBacklinksErrorMessage(
+    intl,
     overviewQuery.error,
-    "Could not load backlinks data.",
+    intl.formatMessage({ id: "backlinksOverview.error.overviewFallback" }),
   );
   const backlinksDisabledByError =
     getErrorCode(overviewQuery.error) === "BACKLINKS_NOT_ENABLED";
@@ -227,8 +235,9 @@ export function useBacklinksPageData({
         ? referringDomainsQuery
         : topPagesQuery;
   const activeTabErrorMessage = getBacklinksErrorMessage(
+    intl,
     activeTabQuery.error,
-    "Could not load this tab.",
+    intl.formatMessage({ id: "backlinksOverview.error.tabFallback" }),
   );
   const backlinksDisabledByTabError =
     getErrorCode(activeTabQuery.error) === "BACKLINKS_NOT_ENABLED";

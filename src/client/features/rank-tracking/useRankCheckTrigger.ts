@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useIntl } from "react-intl";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { triggerRankCheck } from "@/serverFunctions/rank-tracking";
 
@@ -52,7 +52,8 @@ export function useRankCheckTrigger({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "rank.config.checkTrigger.errorDefault" }),
         ),

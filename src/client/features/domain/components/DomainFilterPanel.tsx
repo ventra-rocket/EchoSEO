@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
+import { useIntl } from "react-intl";
 import {
   FilterNumberInput,
   FilterRangeGroup,
@@ -16,17 +17,18 @@ import {
   useDomainRenderDebug,
 } from "@/client/features/domain/domainDebug";
 import { MAX_DATAFORSEO_FILTER_CONDITIONS } from "@/types/schemas/domain";
+import type { MessageId } from "@/client/i18n/messages";
 
 type FilterValues = Record<string, string>;
 
 type FilterTextField<TValues extends FilterValues> = {
   key: keyof TValues;
-  label: string;
-  placeholder: string;
+  labelId: MessageId;
+  placeholderId: MessageId;
 };
 
 type FilterRangeField<TValues extends FilterValues> = {
-  title: string;
+  titleId: MessageId;
   minKey: keyof TValues;
   maxKey: keyof TValues;
   step?: string;
@@ -61,6 +63,7 @@ export function DomainFilterPanel<TValues extends FilterValues>({
   onClear,
   renderExtra,
 }: Props<TValues>) {
+  const intl = useIntl();
   const appliedKey = useMemo(
     () => fields.map((key) => appliedFilters[key]).join("|"),
     [appliedFilters, fields],
@@ -137,6 +140,13 @@ export function DomainFilterPanel<TValues extends FilterValues>({
     [debugName],
   );
 
+  const minPlaceholder = intl.formatMessage({
+    id: "domainTables.filterPanel.min",
+  });
+  const maxPlaceholder = intl.formatMessage({
+    id: "domainTables.filterPanel.max",
+  });
+
   return (
     <div
       className="border-b border-base-300 bg-gradient-to-b from-base-100 to-base-200/30 px-4 py-3 space-y-3"
@@ -144,15 +154,23 @@ export function DomainFilterPanel<TValues extends FilterValues>({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold">Refine table results</p>
+          <p className="text-sm font-semibold">
+            {intl.formatMessage({ id: "domainTables.filterPanel.title" })}
+          </p>
           {activeFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {activeFilterCount} active
+              {intl.formatMessage(
+                { id: "domainTables.filterPanel.activeCount" },
+                { count: activeFilterCount },
+              )}
             </span>
           ) : null}
           {meta.dirtyCount > 0 ? (
             <span className="badge badge-xs badge-warning border-0">
-              {meta.dirtyCount} unapplied
+              {intl.formatMessage(
+                { id: "domainTables.filterPanel.unappliedCount" },
+                { count: meta.dirtyCount },
+              )}
             </span>
           ) : null}
         </div>
@@ -163,7 +181,7 @@ export function DomainFilterPanel<TValues extends FilterValues>({
           disabled={activeFilterCount === 0 && !meta.isDirty}
         >
           <RotateCcw className="size-3" />
-          Clear all
+          {intl.formatMessage({ id: "domainTables.filterPanel.clearAll" })}
         </button>
       </div>
 
@@ -171,8 +189,8 @@ export function DomainFilterPanel<TValues extends FilterValues>({
         {textFields.map((field) => (
           <FilterTextInput
             key={String(field.key)}
-            label={field.label}
-            placeholder={field.placeholder}
+            label={intl.formatMessage({ id: field.labelId })}
+            placeholder={intl.formatMessage({ id: field.placeholderId })}
             value={draftFilters[field.key]}
             onChange={(value) => handleValueChange(field.key, value)}
           />
@@ -181,17 +199,20 @@ export function DomainFilterPanel<TValues extends FilterValues>({
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {rangeFields.map((field) => (
-          <FilterRangeGroup key={String(field.minKey)} title={field.title}>
+          <FilterRangeGroup
+            key={String(field.minKey)}
+            title={intl.formatMessage({ id: field.titleId })}
+          >
             <FilterNumberInput
               value={draftFilters[field.minKey]}
               onChange={(value) => handleValueChange(field.minKey, value)}
-              placeholder="Min"
+              placeholder={minPlaceholder}
               step={field.step}
             />
             <FilterNumberInput
               value={draftFilters[field.maxKey]}
               onChange={(value) => handleValueChange(field.maxKey, value)}
-              placeholder="Max"
+              placeholder={maxPlaceholder}
               step={field.step}
             />
           </FilterRangeGroup>
@@ -204,15 +225,25 @@ export function DomainFilterPanel<TValues extends FilterValues>({
         <div className="alert alert-warning py-2 text-xs">
           <AlertTriangle className="size-4 shrink-0" />
           <span>
-            Too many filter conditions ({meta.conditionCount} of{" "}
-            {MAX_DATAFORSEO_FILTER_CONDITIONS} max). Remove some terms or ranges
-            before applying.
+            {intl.formatMessage(
+              { id: "domainTables.filterPanel.overLimit" },
+              {
+                count: meta.conditionCount,
+                max: MAX_DATAFORSEO_FILTER_CONDITIONS,
+              },
+            )}
           </span>
         </div>
       ) : null}
       <div className="flex items-center justify-between gap-2 pt-1">
         <span className="text-xs text-base-content/50 tabular-nums">
-          {meta.conditionCount} / {MAX_DATAFORSEO_FILTER_CONDITIONS} conditions
+          {intl.formatMessage(
+            { id: "domainTables.filterPanel.conditionCount" },
+            {
+              count: meta.conditionCount,
+              max: MAX_DATAFORSEO_FILTER_CONDITIONS,
+            },
+          )}
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -221,7 +252,7 @@ export function DomainFilterPanel<TValues extends FilterValues>({
             onClick={cancelFilterEdits}
             disabled={!meta.isDirty}
           >
-            Cancel
+            {intl.formatMessage({ id: "domainTables.filterPanel.cancel" })}
           </button>
           <button
             type="button"
@@ -230,14 +261,17 @@ export function DomainFilterPanel<TValues extends FilterValues>({
             disabled={!meta.isDirty || meta.overLimit}
             title={
               meta.overLimit
-                ? `DataForSEO accepts at most ${MAX_DATAFORSEO_FILTER_CONDITIONS} filter conditions per request`
+                ? intl.formatMessage(
+                    { id: "domainTables.filterPanel.applyDisabledTitle" },
+                    { max: MAX_DATAFORSEO_FILTER_CONDITIONS },
+                  )
                 : undefined
             }
           >
-            Apply filters
+            {intl.formatMessage({ id: "domainTables.filterPanel.apply" })}
             {meta.isDirty ? (
               <span className="badge badge-xs ml-1 border-0 bg-primary-content/20">
-                {meta.dirtyCount}
+                {intl.formatNumber(meta.dirtyCount)}
               </span>
             ) : null}
           </button>

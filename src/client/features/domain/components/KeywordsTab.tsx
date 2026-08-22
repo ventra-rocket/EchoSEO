@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Copy, Download, FileSpreadsheet, Save, Sheet } from "lucide-react";
 import { toast } from "sonner";
+import { useIntl } from "react-intl";
 import {
   TableBulkActionBar,
   TableBulkActionButton,
@@ -46,21 +47,42 @@ const EMPTY_KEYWORDS: KeywordRow[] = [];
 const KEYWORD_TEXT_FILTERS = [
   {
     key: "include",
-    label: "Include Terms",
-    placeholder: "audit, checker, template",
+    labelId: "domainTables.keywords.filter.includeLabel",
+    placeholderId: "domainTables.keywords.filter.includePlaceholder",
   },
   {
     key: "exclude",
-    label: "Exclude Terms",
-    placeholder: "jobs, salary, course",
+    labelId: "domainTables.keywords.filter.excludeLabel",
+    placeholderId: "domainTables.keywords.filter.excludePlaceholder",
   },
 ] as const;
 const KEYWORD_RANGE_FILTERS = [
-  { title: "Traffic", minKey: "minTraffic", maxKey: "maxTraffic" },
-  { title: "Volume", minKey: "minVol", maxKey: "maxVol" },
-  { title: "CPC (USD)", minKey: "minCpc", maxKey: "maxCpc", step: "0.01" },
-  { title: "Score (KD)", minKey: "minKd", maxKey: "maxKd" },
-  { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
+  {
+    titleId: "domainTables.keywords.filter.trafficTitle",
+    minKey: "minTraffic",
+    maxKey: "maxTraffic",
+  },
+  {
+    titleId: "domainTables.keywords.filter.volumeTitle",
+    minKey: "minVol",
+    maxKey: "maxVol",
+  },
+  {
+    titleId: "domainTables.keywords.filter.cpcTitle",
+    minKey: "minCpc",
+    maxKey: "maxCpc",
+    step: "0.01",
+  },
+  {
+    titleId: "domainTables.keywords.filter.scoreTitle",
+    minKey: "minKd",
+    maxKey: "maxKd",
+  },
+  {
+    titleId: "domainTables.keywords.filter.rankTitle",
+    minKey: "minRank",
+    maxKey: "maxRank",
+  },
 ] as const;
 
 type Props = {
@@ -90,6 +112,7 @@ export function KeywordsTab({
   onPageSizeChange,
   seoKeyMissing,
 }: Props) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(
     new Set(),
@@ -166,8 +189,10 @@ export function KeywordsTab({
       projectId,
       locationCode: routeState.locationCode,
       languageCode,
+      intl,
     });
   }, [
+    intl,
     languageCode,
     projectId,
     routeState.locationCode,
@@ -213,7 +238,9 @@ export function KeywordsTab({
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
-    toast.success("Copied data");
+    toast.success(
+      intl.formatMessage({ id: "domainTables.export.copiedToast" }),
+    );
   };
   const handleExportToSheets = () => {
     void exportTableToSheets({
@@ -272,17 +299,19 @@ export function KeywordsTab({
               onClick={handleSaveKeywords}
               disabled={!canSaveKeywords}
             >
-              Save Keywords
+              {intl.formatMessage({ id: "domainTables.keywords.bulk.save" })}
             </TableBulkActionButton>
             <TableBulkExportMenu
               actions={[
                 {
-                  label: "Export to Sheets",
+                  label: intl.formatMessage({ id: "common.sheets.export" }),
                   icon: <Sheet className="size-4" />,
                   onClick: handleExportSelectionToSheets,
                 },
                 {
-                  label: "Download CSV",
+                  label: intl.formatMessage({
+                    id: "domainTables.export.downloadCsv",
+                  }),
                   icon: <Download className="size-4" />,
                   onClick: handleDownloadSelectionCsv,
                 },
@@ -296,29 +325,34 @@ export function KeywordsTab({
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((prev) => !prev)}
         activeFilterCount={activeFilterCount}
-        countLabel="keywords"
-        totalCount={totalCount}
-        fallbackCount={rows.length}
+        resultSummary={intl.formatMessage(
+          { id: "domainTables.keywords.resultCount" },
+          { count: totalCount ?? rows.length },
+        )}
         isLoading={isLoading}
         showTableLoading={showTableLoading}
         exportActions={[
           {
-            label: "Export to Sheets",
+            label: intl.formatMessage({ id: "common.sheets.export" }),
             icon: <Sheet className="size-4" />,
             onClick: handleExportToSheets,
           },
           {
-            label: "Copy data (JSON)",
+            label: intl.formatMessage({ id: "domainTables.export.copyJson" }),
             icon: <Copy className="size-4" />,
             onClick: handleCopy,
           },
           {
-            label: "Download CSV",
+            label: intl.formatMessage({
+              id: "domainTables.export.downloadCsv",
+            }),
             icon: <Download className="size-4" />,
             onClick: () => handleDownload("csv"),
           },
           {
-            label: "Download Excel",
+            label: intl.formatMessage({
+              id: "domainTables.export.downloadExcel",
+            }),
             icon: <FileSpreadsheet className="size-4" />,
             onClick: () => handleDownload("xls"),
           },

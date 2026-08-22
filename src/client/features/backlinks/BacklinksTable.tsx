@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useIntl } from "react-intl";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import {
   AppDataTable,
@@ -88,9 +89,10 @@ export function BacklinksTable({
   /** Present in the one-per-domain view; null when listing all links. */
   expansion: BacklinksDomainExpansion | null;
 }) {
+  const intl = useIntl();
   const columns = useMemo(
-    () => buildBacklinksColumns(domainRatings, expansion?.toggleDomain),
-    [domainRatings, expansion?.toggleDomain],
+    () => buildBacklinksColumns(intl, domainRatings, expansion?.toggleDomain),
+    [intl, domainRatings, expansion?.toggleDomain],
   );
   const displayRows = useMemo(
     () => buildDisplayRows(rows, expansion),
@@ -106,7 +108,7 @@ export function BacklinksTable({
   });
 
   if (rows.length === 0) {
-    return <EmptyTableState label="No backlinks match this filter." />;
+    return <EmptyTableState labelId="backlinksTables.empty.backlinks" />;
   }
 
   return (

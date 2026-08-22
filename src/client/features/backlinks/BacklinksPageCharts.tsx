@@ -8,18 +8,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
-import {
-  formatCompactDate,
-  formatMonthLabel,
-  formatTooltipValue,
-} from "./backlinksPageUtils";
 
 export function BacklinksTrendChart({
   data,
 }: {
   data: BacklinksOverviewData["trends"];
 }) {
+  const intl = useIntl();
   const { containerRef, chartWidth } = useChartWidth();
 
   if (data.length === 0) {
@@ -30,7 +27,9 @@ export function BacklinksTrendChart({
     <div
       ref={containerRef}
       className="h-56 min-w-0"
-      aria-label="Backlink trend chart"
+      aria-label={intl.formatMessage({
+        id: "backlinksOverview.chart.trendAriaLabel",
+      })}
     >
       {chartWidth > 0 ? (
         <LineChart
@@ -46,19 +45,23 @@ export function BacklinksTrendChart({
           />
           <XAxis
             dataKey="date"
-            tickFormatter={formatChartTick}
+            tickFormatter={(value: unknown) => formatChartTick(intl, value)}
             minTickGap={24}
           />
-          <YAxis yAxisId="left" tickFormatter={formatAxisValue} width={60} />
+          <YAxis
+            yAxisId="left"
+            tickFormatter={(value: unknown) => formatAxisValue(intl, value)}
+            width={60}
+          />
           <YAxis
             yAxisId="right"
             orientation="right"
-            tickFormatter={formatAxisValue}
+            tickFormatter={(value: unknown) => formatAxisValue(intl, value)}
             width={60}
           />
           <Tooltip
-            formatter={formatTooltipValue}
-            labelFormatter={formatChartLabel}
+            formatter={(value: unknown) => formatTooltipValue(intl, value)}
+            labelFormatter={(value: unknown) => formatChartLabel(intl, value)}
           />
           <Legend />
           <Line
@@ -68,7 +71,9 @@ export function BacklinksTrendChart({
             stroke="#2563eb"
             strokeWidth={2}
             dot={false}
-            name="Backlinks"
+            name={intl.formatMessage({
+              id: "backlinksOverview.chart.legend.backlinks",
+            })}
           />
           <Line
             yAxisId="right"
@@ -77,7 +82,9 @@ export function BacklinksTrendChart({
             stroke="#14b8a6"
             strokeWidth={2}
             dot={false}
-            name="Referring domains"
+            name={intl.formatMessage({
+              id: "backlinksOverview.chart.legend.referringDomains",
+            })}
           />
         </LineChart>
       ) : null}
@@ -90,6 +97,7 @@ export function BacklinksNewLostChart({
 }: {
   data: BacklinksOverviewData["newLostTrends"];
 }) {
+  const intl = useIntl();
   const { containerRef, chartWidth } = useChartWidth();
 
   if (data.length === 0) {
@@ -100,7 +108,9 @@ export function BacklinksNewLostChart({
     <div
       ref={containerRef}
       className="h-56 min-w-0"
-      aria-label="New and lost backlinks chart"
+      aria-label={intl.formatMessage({
+        id: "backlinksOverview.chart.newLostAriaLabel",
+      })}
     >
       {chartWidth > 0 ? (
         <LineChart
@@ -116,13 +126,16 @@ export function BacklinksNewLostChart({
           />
           <XAxis
             dataKey="date"
-            tickFormatter={formatChartTick}
+            tickFormatter={(value: unknown) => formatChartTick(intl, value)}
             minTickGap={24}
           />
-          <YAxis tickFormatter={formatAxisValue} width={60} />
+          <YAxis
+            tickFormatter={(value: unknown) => formatAxisValue(intl, value)}
+            width={60}
+          />
           <Tooltip
-            formatter={formatTooltipValue}
-            labelFormatter={formatChartLabel}
+            formatter={(value: unknown) => formatTooltipValue(intl, value)}
+            labelFormatter={(value: unknown) => formatChartLabel(intl, value)}
           />
           <Legend />
           <Line
@@ -131,7 +144,9 @@ export function BacklinksNewLostChart({
             stroke="#ef4444"
             strokeWidth={2}
             dot={false}
-            name="Lost backlinks"
+            name={intl.formatMessage({
+              id: "backlinksOverview.chart.legend.lostBacklinks",
+            })}
           />
           <Line
             type="monotone"
@@ -139,7 +154,9 @@ export function BacklinksNewLostChart({
             stroke="#16a34a"
             strokeWidth={2}
             dot={false}
-            name="New backlinks"
+            name={intl.formatMessage({
+              id: "backlinksOverview.chart.legend.newBacklinks",
+            })}
           />
         </LineChart>
       ) : null}
@@ -177,22 +194,46 @@ function useChartWidth() {
 function EmptyChartState() {
   return (
     <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-base-300 text-sm text-base-content/55">
-      Not enough historical data yet.
+      <FormattedMessage id="backlinksOverview.chart.empty" />
     </div>
   );
 }
 
-function formatAxisValue(value: unknown) {
+function formatAxisValue(intl: IntlShape, value: unknown) {
   if (typeof value !== "number") return "";
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
-  return String(value);
+  return intl.formatNumber(value, {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
 }
 
-function formatChartTick(value: unknown) {
-  return typeof value === "string" ? formatMonthLabel(value) : "";
+function formatChartTick(intl: IntlShape, value: unknown) {
+  return typeof value === "string" ? formatMonthTick(intl, value) : "";
 }
 
-function formatChartLabel(value: unknown) {
-  return typeof value === "string" ? formatCompactDate(value) : "";
+function formatChartLabel(intl: IntlShape, value: unknown) {
+  return typeof value === "string" ? formatDateLabel(intl, value) : "";
+}
+
+function formatTooltipValue(intl: IntlShape, value: unknown) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "number") return intl.formatNumber(value);
+  if (typeof value === "string") return value;
+  return "-";
+}
+
+function formatMonthTick(intl: IntlShape, value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return intl.formatDate(parsed, { month: "short", year: "2-digit" });
+}
+
+function formatDateLabel(intl: IntlShape, value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return intl.formatDate(parsed, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }

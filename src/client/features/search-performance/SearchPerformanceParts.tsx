@@ -23,7 +23,7 @@ import {
   type SearchPerformanceTableRow,
 } from "@/client/features/search-performance/SearchPerformanceColumns";
 import { buildCsv, downloadCsv, type CsvValue } from "@/client/lib/csv";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
 import {
@@ -354,7 +354,8 @@ export function StrikingDistanceTable({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "searchPerf.striking.saveError" }),
         ),

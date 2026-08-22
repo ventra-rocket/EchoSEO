@@ -22,7 +22,7 @@ import {
   createFormValidationErrors,
   shouldValidateFieldOnChange,
 } from "@/client/lib/forms";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 
 function getLaunchValidationErrors(
   value: LaunchFormValues,
@@ -89,7 +89,8 @@ export function useLaunchController({
     } catch (error) {
       launchForm.setErrorMap({
         onSubmit: createFormValidationErrors({
-          form: getStandardErrorMessage(
+          form: getLocalizedErrorMessage(
+            intl,
             error,
             intl.formatMessage({ id: "audit.chrome.launch.startError" }),
           ),

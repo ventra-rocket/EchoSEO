@@ -18,7 +18,7 @@ import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { removeTrackingKeywords } from "@/serverFunctions/rank-tracking";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import { useRankTrackingColumns } from "./RankTrackingColumns";
 import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
@@ -161,7 +161,8 @@ export function RankTrackingTable({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "rank.table.remove.errorDefault" }),
         ),

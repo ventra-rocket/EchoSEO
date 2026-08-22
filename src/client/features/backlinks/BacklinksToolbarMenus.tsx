@@ -6,6 +6,7 @@ import {
   MoreHorizontal,
   Sheet,
 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import type { CsvValue } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
@@ -22,6 +23,7 @@ export function BacklinksExportMenu({
   headers: string[];
   rows: CsvValue[][];
 }) {
+  const intl = useIntl();
   const [isExportingSheets, setIsExportingSheets] = useState(false);
   const canExport = rows.length > 0 && !isExportingSheets;
 
@@ -45,10 +47,12 @@ export function BacklinksExportMenu({
         tabIndex={0}
         role="button"
         className={`btn btn-sm btn-ghost gap-1 ${rows.length === 0 ? "btn-disabled" : ""}`}
-        aria-label="Export backlinks table"
+        aria-label={intl.formatMessage({
+          id: "backlinksTables.export.ariaLabel",
+        })}
       >
         <Download className="size-4" />
-        Export
+        <FormattedMessage id="common.table.export" />
         <ChevronDown className="size-3 opacity-60" />
       </div>
       <ul
@@ -67,7 +71,7 @@ export function BacklinksExportMenu({
             ) : (
               <Sheet className="size-4" />
             )}
-            Export to Sheets
+            <FormattedMessage id="common.sheets.export" />
           </button>
         </li>
         <li>
@@ -84,7 +88,7 @@ export function BacklinksExportMenu({
             disabled={rows.length === 0}
           >
             <Download className="size-4" />
-            Export CSV
+            <FormattedMessage id="saved.table.bulk.exportCsv" />
           </button>
         </li>
       </ul>
@@ -101,14 +105,18 @@ export function BacklinksActionsMenu({
   loadRatings: (domains: string[]) => void | Promise<void>;
   ratableDomains: string[];
 }) {
+  const intl = useIntl();
+  const actionsLabel = intl.formatMessage({
+    id: "backlinksTables.actions.ariaLabel",
+  });
   return (
     <div className="dropdown dropdown-end">
       <div
         tabIndex={0}
         role="button"
         className="btn btn-sm btn-ghost btn-square"
-        aria-label="Backlinks table actions"
-        title="Backlinks table actions"
+        aria-label={actionsLabel}
+        title={actionsLabel}
       >
         <MoreHorizontal className="size-4" />
       </div>
@@ -122,14 +130,16 @@ export function BacklinksActionsMenu({
             type="button"
             onClick={() => void loadRatings(ratableDomains)}
             disabled={isLoadingRatings}
-            title="Look up Ahrefs Domain Rating for each domain in the table"
+            title={intl.formatMessage({
+              id: "backlinksTables.actions.ahrefsDrTitle",
+            })}
           >
             {isLoadingRatings ? (
               <span className="loading loading-spinner loading-xs" />
             ) : (
               <Gauge className="size-4" />
             )}
-            Ahrefs DR
+            <FormattedMessage id="backlinksTables.metric.ahrefsDr" />
           </button>
         </li>
       </ul>

@@ -1,5 +1,6 @@
 import { toast } from "sonner";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import type { IntlShape } from "react-intl";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import type { KeywordRow } from "@/client/features/domain/types";
 
@@ -28,6 +29,7 @@ export function saveSelectedKeywords({
   projectId,
   locationCode,
   languageCode,
+  intl,
 }: {
   selectedKeywords: Set<string>;
   filteredKeywords: KeywordRow[];
@@ -35,9 +37,15 @@ export function saveSelectedKeywords({
   projectId: string;
   locationCode: number;
   languageCode: string;
+  // Shares the id set keywordControllerActions.ts already ships for this
+  // exact flow (empty selection / saved count / save failure) rather than a
+  // second spelling of the same three facts.
+  intl: Pick<IntlShape, "formatMessage">;
 }) {
   if (selectedKeywords.size === 0) {
-    toast.error("Select at least one keyword first");
+    toast.error(
+      intl.formatMessage({ id: "keywordUi.saveExport.noSelectionToast" }),
+    );
     return;
   }
 
@@ -63,10 +71,21 @@ export function saveSelectedKeywords({
           source_feature: "domain_overview",
           keyword_count: selectedKeywords.size,
         });
-        toast.success(`Saved ${selectedKeywords.size} keywords`);
+        toast.success(
+          intl.formatMessage(
+            { id: "keywordUi.saveExport.savedToast" },
+            { count: selectedKeywords.size },
+          ),
+        );
       },
       onError: (error: unknown) => {
-        toast.error(getStandardErrorMessage(error, "Save failed."));
+        toast.error(
+          getLocalizedErrorMessage(
+            intl,
+            error,
+            intl.formatMessage({ id: "keywordUi.saveExport.saveErrorDefault" }),
+          ),
+        );
       },
     },
   );

@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { useIntl } from "react-intl";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 
 type AccessGateStatus = {
   enabled: boolean;
@@ -28,8 +29,16 @@ export function useAccessGate(config: {
     staleTime: 60 * 1000,
   });
 
+  // A shared hook is a shared defect: every surface that gates on a provider
+  // (backlinks, domain, keywords, ai-search) rendered this sentence, and the
+  // legacy resolver returns English from a hardcoded map no matter what locale
+  // the reader is in. Measured on a Vietnamese backlinks page whose heading,
+  // subtitle and Retry button were already translated while the error body
+  // below them was not. The directory-shaped gate never caught it because only
+  // one file in this directory was listed, and this one is a `.ts` hook.
+  const intl = useIntl();
   const statusErrorMessage = error
-    ? getStandardErrorMessage(error, config.statusErrorFallback)
+    ? getLocalizedErrorMessage(intl, error, config.statusErrorFallback)
     : null;
   const onRetry = useCallback(() => {
     void refetch();

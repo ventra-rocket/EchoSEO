@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Clock, History, Link2, X } from "lucide-react";
+import { FormattedDate, FormattedMessage } from "react-intl";
 import type { BacklinksSearchHistoryItem } from "@/client/hooks/useBacklinksSearchHistory";
 
 type Props = {
@@ -24,7 +25,7 @@ export function BacklinksHistorySection({
       <section className="rounded-2xl border border-dashed border-base-300 bg-base-100/70 p-6 text-center text-base-content/55 space-y-2">
         <Link2 className="size-9 mx-auto opacity-35" />
         <p className="text-base font-medium text-base-content/80">
-          Enter a domain or URL to get started
+          <FormattedMessage id="backlinksOverview.history.empty" />
         </p>
       </section>
     );
@@ -36,7 +37,10 @@ export function BacklinksHistorySection({
         <div className="flex items-center gap-2">
           <History className="size-4 text-base-content/45" />
           <span className="text-sm text-base-content/60">
-            {history.length} recent search{history.length !== 1 ? "es" : ""}
+            <FormattedMessage
+              id="backlinksOverview.history.count"
+              values={{ count: history.length }}
+            />
           </span>
         </div>
       </div>
@@ -68,16 +72,23 @@ export function BacklinksHistorySection({
                   {item.target}
                 </p>
                 <p className="text-sm text-base-content/60 truncate">
-                  {item.scope === "domain" ? "Site-wide" : "Exact page"}
+                  <FormattedMessage
+                    id={
+                      item.scope === "domain"
+                        ? "backlinksOverview.scope.domain"
+                        : "backlinksOverview.scope.page"
+                    }
+                  />
                 </p>
               </div>
             </Link>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-base-content/40">
-                {new Date(item.timestamp).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                })}
+                <FormattedDate
+                  value={item.timestamp}
+                  month="short"
+                  day="numeric"
+                />
               </span>
               <button
                 type="button"
