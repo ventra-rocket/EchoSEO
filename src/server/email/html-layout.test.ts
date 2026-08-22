@@ -189,4 +189,40 @@ describe("mail-client compatibility", () => {
     expect(emailDivider()).toContain('role="presentation"');
     expect(emailFooter("")).toContain('role="presentation"');
   });
+
+  describe("document frame", () => {
+    const doc = emailHtmlDocument("Subject", emailParagraph("body"), "vi");
+
+    it("caps the content column instead of pinning it", () => {
+      // Measured in a browser before this changed: a fixed `width:600px` here
+      // overflowed a 375px viewport by 273px, because a table cell sizes to a
+      // fixed-width child rather than clamping it. A percentage width with a
+      // cap fits both a phone and a desktop reading pane.
+      expect(doc).toContain("max-width:600px");
+      // `max-width:600px` contains `width:600px`, so match the bare property.
+      expect(doc).not.toMatch(/[^-]width:600px/);
+    });
+
+    it("hands Outlook a real fixed-width table, since Word ignores max-width", () => {
+      expect(doc).toContain("<!--[if mso]>");
+      expect(doc).toContain('width="600"');
+      expect(doc).toContain("<!--[if mso]></td></tr></table><![endif]-->");
+    });
+
+    it("repeats the base font on a cell because Gmail drops body styles", () => {
+      // Gmail re-parents the markup and discards <body>'s style, so a font
+      // declared only there arrives as Gmail's default.
+      const bodyTag = doc.slice(
+        doc.indexOf("<body"),
+        doc.indexOf(">", doc.indexOf("<body")),
+      );
+      expect(bodyTag).toContain("padding:0");
+      const cells = doc.match(/<td style="font-family[^"]*"/g) ?? [];
+      expect(cells.length).toBeGreaterThan(0);
+    });
+
+    it("keeps the frame out of the accessibility tree", () => {
+      expect(doc.match(/role="presentation"/g)?.length ?? 0).toBeGreaterThan(1);
+    });
+  });
 });
