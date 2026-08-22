@@ -66,6 +66,18 @@ export const CROSS_PAGE_RULES: Array<Rule<CrossPageSignals>> = [
     guideQuote:
       "For Google Search, the lack of content means that Google can't index the crawled URLs, and already indexed URLs that are unreachable will be removed from Google's index within days.",
     lastReviewedDate: "2026-07-20",
+    locales: {
+      vi: {
+        label: "URL phản hồi khi được crawl",
+        problem:
+          "Trình crawl không nhận được phản hồi nào cho URL này sau tất cả các lần thử — nó đã được thử lại trước khi báo lỗi, nên một lần mất kết nối đơn lẻ không dẫn tới đây. Request thất bại, timeout, hoặc host không phân giải được. Google cũng xử lý y như vậy: một URL không truy cập được thì không thể ở lại trong index.",
+        fixSteps: [
+          "Tự mở URL này và xác nhận host có phân giải được và server có phản hồi hay không.",
+          "Kiểm tra bản ghi DNS, quy tắc firewall và rate limiting xem có gì đang chặn crawler tự động.",
+          "Nếu URL thực sự không còn, hãy trả về 404 hoặc 410 thay vì không phản hồi, và bỏ các liên kết trỏ tới nó.",
+        ],
+      },
+    },
   },
   {
     id: "audit-broken-internal-link",
@@ -86,6 +98,18 @@ export const CROSS_PAGE_RULES: Array<Rule<CrossPageSignals>> = [
     guideQuote:
       "Google doesn't use the content from URLs that return 4xx status codes.",
     lastReviewedDate: "2026-07-20",
+    locales: {
+      vi: {
+        label: "Liên kết nội bộ trỏ tới trang còn hoạt động",
+        problem:
+          "Trang này liên kết tới các URL nội bộ trả về mã 4xx khi được crawl. Người xem đi vào đường cùng, và Google sẽ không dùng nội dung phía sau những liên kết đó.",
+        fixSteps: [
+          "Sửa từng liên kết hỏng sang URL đang thực sự phục vụ nội dung.",
+          "Nếu đích đã chuyển hẳn, hãy redirect URL cũ (301) và vẫn sửa liên kết để trỏ thẳng tới đích mới.",
+          "Nếu đích thực sự không còn, hãy bỏ liên kết thay vì để nó trỏ vào trang lỗi.",
+        ],
+      },
+    },
   },
   {
     id: "audit-orphan-page",
@@ -112,6 +136,18 @@ export const CROSS_PAGE_RULES: Array<Rule<CrossPageSignals>> = [
     guideQuote:
       "Google uses links as a signal when determining the relevancy of pages and to find new pages to crawl.",
     lastReviewedDate: "2026-07-20",
+    locales: {
+      vi: {
+        label: "Trang được liên kết từ đâu đó trong site",
+        problem:
+          "Không trang nào khác trong phạm vi đã crawl liên kết tới trang này, nên nó chỉ được tìm thấy qua sitemap hoặc URL bắt đầu. Google phát hiện và đánh giá trang một phần dựa trên các liên kết trỏ tới nó.",
+        fixSteps: [
+          "Liên kết tới trang này từ một trang cha, trang hub hoặc menu điều hướng có liên quan.",
+          "Dùng anchor text mô tả rõ trang đích nói về cái gì.",
+          "Nếu trang không nhằm để được tìm thấy, hãy bỏ nó khỏi sitemap hoặc đánh noindex, thay vì để nó không có liên kết nào.",
+        ],
+      },
+    },
   },
   {
     id: "audit-missing-from-sitemap",
@@ -138,5 +174,17 @@ export const CROSS_PAGE_RULES: Array<Rule<CrossPageSignals>> = [
     guideQuote:
       "A sitemap is a file where you provide information about the pages, videos, and other files on your site, and the relationships between them.",
     lastReviewedDate: "2026-07-20",
+    locales: {
+      vi: {
+        label: "Trang có thể index được liệt kê trong sitemap",
+        problem:
+          "Trang này index được và trả về 200, nhưng các sitemap tìm thấy cho site không liệt kê nó. Sitemap là cách bạn cho Google biết những URL nào bạn cho là đáng crawl.",
+        fixSteps: [
+          "Thêm URL này vào sitemap, hoặc tạo lại sitemap nếu nó được sinh tự động.",
+          "Chỉ giữ trong sitemap các URL canonical và index được — không thêm trang bị redirect hay noindex.",
+          "Trỏ tới sitemap từ robots.txt và submit nó trong Search Console.",
+        ],
+      },
+    },
   },
 ];
