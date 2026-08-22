@@ -1,8 +1,10 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useIntl } from "react-intl";
 import {
   AuthPageCard,
+  AuthTextField,
   AuthMethodChooser,
   authRedirectSearchSchema,
   useAuthPageState,
@@ -13,9 +15,13 @@ import { authClient } from "@/lib/auth-client";
 import { getSignInSearch, getVerifyEmailSearch } from "@/lib/auth-redirect";
 import { z } from "zod";
 
+// Zod messages below are message ids, not prose: the schema lives at module
+// scope (no `useIntl()` here), so each field's error carries its id through
+// `field.state.meta.errors` and is only formatted into text at the render
+// site, where the active intl is available.
 const signInSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(1, "Enter your password."),
+  email: z.string().trim().email("auth.validation.email"),
+  password: z.string().min(1, "auth.signIn.validation.passwordRequired"),
 });
 
 export const Route = createFileRoute("/_auth/sign-in")({
@@ -24,6 +30,7 @@ export const Route = createFileRoute("/_auth/sign-in")({
 });
 
 function SignInPage() {
+  const intl = useIntl();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { redirectTo, oauthQuery, isHostedMode, isGoogleAuthEnabled } =
@@ -76,16 +83,29 @@ function SignInPage() {
           return;
         }
 
+        // better-auth's client error is `{status, message?}` from
+        // better-fetch, never one of our own AppError codes, so
+        // getLocalizedErrorMessage's code lookup never matches it — and
+        // `message` is untranslated server prose that came back empty for a
+        // wrong-credentials attempt against the local dev auth API. Every
+        // response error therefore resolves to one fixed, localized sentence
+        // instead of surfacing `result.error.message` verbatim; 429 is the
+        // one status worth naming, reusing the shared rate-limit copy rather
+        // than re-spelling it.
+        const messageId =
+          result.error.status === 429
+            ? "common.error.code.rateLimited"
+            : "auth.signIn.error.default";
         formApi.setErrorMap({
           onSubmit: {
-            form: result.error.message || "We couldn't sign you in.",
+            form: intl.formatMessage({ id: messageId }),
             fields: {},
           },
         });
       } catch {
         formApi.setErrorMap({
           onSubmit: {
-            form: "Unable to sign in right now. Please try again.",
+            form: intl.formatMessage({ id: "auth.signIn.error.network" }),
             fields: {},
           },
         });
@@ -107,20 +127,24 @@ function SignInPage() {
       });
 
       if (result.error) {
-        setSocialError(
-          result.error.message || "Google sign in is not available right now.",
-        );
+        const messageId =
+          result.error.status === 429
+            ? "common.error.code.rateLimited"
+            : "auth.signIn.error.googleUnavailable";
+        setSocialError(intl.formatMessage({ id: messageId }));
         setIsStartingGoogle(false);
       }
     } catch {
-      setSocialError("Google sign in is not available right now.");
+      setSocialError(
+        intl.formatMessage({ id: "auth.signIn.error.googleUnavailable" }),
+      );
       setIsStartingGoogle(false);
     }
   }
 
   return (
     <AuthPageCard
-      title="Sign in"
+      title={intl.formatMessage({ id: "auth.signIn.title" })}
       footer={
         isHostedMode ? (
           <div
@@ -136,7 +160,7 @@ function SignInPage() {
                 search={getSignInSearch(redirectTo)}
                 className="text-base-content underline underline-offset-2 hover:text-base-content/80 transition-colors"
               >
-                Forgot password?
+                {intl.formatMessage({ id: "auth.signIn.forgotPassword" })}
               </Link>
             ) : null}
             <Link
@@ -144,7 +168,7 @@ function SignInPage() {
               search={getSignInSearch(redirectTo)}
               className="text-base-content underline underline-offset-2 hover:text-base-content/80 transition-colors"
             >
-              Create account
+              {intl.formatMessage({ id: "auth.createAccount" })}
             </Link>
           </div>
         ) : null
@@ -153,7 +177,8 @@ function SignInPage() {
       {!showEmailForm ? (
         <>
           <AuthMethodChooser
-            googleLabel="Continue with Google"
+            googleLabel={intl.formatMessage({ id: "auth.continueWithGoogle" })}
+            emailLabel={intl.formatMessage({ id: "auth.continueWithEmail" })}
             showGoogle={isGoogleAuthEnabled}
             disabled={!isHostedMode}
             isBusy={isStartingGoogle}
@@ -178,51 +203,33 @@ function SignInPage() {
           }}
         >
           <form.Field name="email">
-            {(field) => {
-              const error = getFieldError(field.state.meta.errors);
-
-              return (
-                <div>
-                  <input
-                    type="email"
-                    className="input input-bordered w-full"
-                    placeholder="Email address..."
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    autoComplete="email"
-                    disabled={!isHostedMode}
-                    required
-                  />
-                  {error ? (
-                    <p className="mt-1 text-sm text-error">{error}</p>
-                  ) : null}
-                </div>
-              );
-            }}
+            {(field) => (
+              <AuthTextField
+                type="email"
+                placeholderId="auth.field.emailPlaceholder"
+                value={field.state.value}
+                onChange={field.handleChange}
+                autoComplete="email"
+                disabled={!isHostedMode}
+                required
+                errorId={getFieldError(field.state.meta.errors)}
+              />
+            )}
           </form.Field>
 
           <form.Field name="password">
-            {(field) => {
-              const error = getFieldError(field.state.meta.errors);
-
-              return (
-                <div>
-                  <input
-                    type="password"
-                    className="input input-bordered w-full"
-                    placeholder="Password..."
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    autoComplete="current-password"
-                    disabled={!isHostedMode}
-                    required
-                  />
-                  {error ? (
-                    <p className="mt-1 text-sm text-error">{error}</p>
-                  ) : null}
-                </div>
-              );
-            }}
+            {(field) => (
+              <AuthTextField
+                type="password"
+                placeholderId="auth.field.passwordPlaceholder"
+                value={field.state.value}
+                onChange={field.handleChange}
+                autoComplete="current-password"
+                disabled={!isHostedMode}
+                required
+                errorId={getFieldError(field.state.meta.errors)}
+              />
+            )}
           </form.Field>
 
           <form.Subscribe
@@ -242,7 +249,9 @@ function SignInPage() {
                     className="btn btn-soft w-full"
                     disabled={!isHostedMode || isSubmitting}
                   >
-                    {isSubmitting ? "Signing in..." : "Sign in"}
+                    {isSubmitting
+                      ? intl.formatMessage({ id: "auth.signIn.submitPending" })
+                      : intl.formatMessage({ id: "auth.signIn.title" })}
                   </button>
                 </>
               );

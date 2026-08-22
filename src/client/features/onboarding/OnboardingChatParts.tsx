@@ -6,40 +6,66 @@ import {
   type KeyboardEvent,
 } from "react";
 import { ArrowUp, Check, Globe, Loader2, Sparkles } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import { FREE_ONBOARDING_QUESTION_LIMIT } from "@/shared/onboardingChat";
 
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
 
+// The paid plan's monthly price. Was written as a literal "$10" twice — the
+// headline figure and the "Includes $10 of usage credits" sentence — which is
+// how the two drift apart. One number, formatted per locale at both sites.
+const PAID_PLAN_PRICE_USD = 10;
+
+// One message id per bullet in the upgrade sidebar's feature list. An array of
+// ids (rather than an array of strings mapped through `intl.formatMessage`)
+// keeps the id visible at the definition site and lets `<FormattedMessage>`
+// render each bullet directly.
+const UPGRADE_FEATURE_IDS: readonly MessageId[] = [
+  "onboardingChat.upgrade.feature.core",
+  "onboardingChat.upgrade.feature.gsc",
+  "onboardingChat.upgrade.feature.mcp",
+  "onboardingChat.upgrade.feature.creditsRollover",
+];
+
+/**
+ * A suggestion chip's stable identity (`key`, compared for dedup/highlighting)
+ * separated from its localized display text (`label`). `label` also becomes
+ * the literal chat message sent when the chip is clicked — see the identity
+ * vs. display-text split in OnboardingChatConversation.tsx.
+ */
+export type SuggestionOption = { key: string; label: string };
+
 export function SuggestedQuestions({
   questions,
-  primaryQuestions = [],
+  primaryKeys = [],
   onSelect,
 }: {
-  questions: string[];
-  primaryQuestions?: string[];
-  onSelect: (question: string) => void;
+  questions: SuggestionOption[];
+  primaryKeys?: string[];
+  onSelect: (question: SuggestionOption) => void;
 }) {
   return (
     <div className="ml-10 flex flex-wrap gap-2">
       {questions.map((question) =>
-        primaryQuestions.includes(question) ? (
+        primaryKeys.includes(question.key) ? (
           <button
-            key={question}
+            key={question.key}
             type="button"
             className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
             onClick={() => onSelect(question)}
           >
             <Sparkles className="size-3.5" />
-            {question}
+            {question.label}
           </button>
         ) : (
           <button
-            key={question}
+            key={question.key}
             type="button"
             className="rounded-full border border-base-300 bg-base-100 px-3 py-1.5 text-xs font-medium text-base-content/70 transition-colors hover:border-primary/50 hover:text-base-content"
             onClick={() => onSelect(question)}
           >
-            {question}
+            {question.label}
           </button>
         ),
       )}
@@ -65,43 +91,60 @@ export function WelcomeMessage({
       </div>
       <div className="min-w-0 flex-1 space-y-3 pt-0.5 text-sm">
         <div className="space-y-3 text-base-content/80">
-          <p>Hey, I’m Sam — welcome to EchoSEO.</p>
           <p>
-            To get full access to EchoSEO, you need to upgrade to the paid plan.
-            But, I’m here if you have any questions.
+            <FormattedMessage id="onboardingChat.welcome.greeting" />
           </p>
           <p>
-            You can also{" "}
-            <a
-              href={DISCORD_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="link link-primary"
-            >
-              join the Discord
-            </a>{" "}
-            or email{" "}
-            <a
-              href="mailto:ventrarocket.work@gmail.com"
-              className="link link-primary"
-            >
-              ventrarocket.work@gmail.com
-            </a>{" "}
-            if you have any questions I can’t help you with.
+            <FormattedMessage id="onboardingChat.welcome.upgradeExplainer" />
           </p>
           <p>
-            Want me to analyze{" "}
-            <span className="font-medium text-base-content">{domain}</span> and
-            draft a strategy, or do you have questions first? Pick one below to
-            get started.
+            <FormattedMessage
+              id="onboardingChat.welcome.helpLinks"
+              values={{
+                discordLink: (chunks) => (
+                  <a
+                    href={DISCORD_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="link link-primary"
+                  >
+                    {chunks}
+                  </a>
+                ),
+                emailLink: (chunks) => (
+                  <a
+                    href="mailto:ventrarocket.work@gmail.com"
+                    className="link link-primary"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              }}
+            />
+          </p>
+          <p>
+            <FormattedMessage
+              id="onboardingChat.welcome.analyzePrompt"
+              values={{
+                domain: (
+                  <span className="font-medium text-base-content">
+                    {domain}
+                  </span>
+                ),
+              }}
+            />
           </p>
         </div>
 
         <div className="rounded-box border border-base-300 bg-base-200/50 p-3 text-xs lg:hidden">
-          <p className="font-medium">Want Sam to keep going?</p>
+          <p className="font-medium">
+            <FormattedMessage id="onboardingChat.welcome.mobileCalloutTitle" />
+          </p>
           <p className="mt-0.5 text-base-content/70">
-            Upgrade to run keyword research, rank tracking, and site audits on{" "}
-            {domain}.
+            <FormattedMessage
+              id="onboardingChat.welcome.mobileCalloutBody"
+              values={{ domain }}
+            />
           </p>
           <button
             type="button"
@@ -109,7 +152,13 @@ export function WelcomeMessage({
             disabled={isStartingCheckout}
             onClick={onUpgrade}
           >
-            {isStartingCheckout ? "Redirecting..." : "Upgrade"}
+            <FormattedMessage
+              id={
+                isStartingCheckout
+                  ? "onboardingChat.upgrade.redirecting"
+                  : "onboardingChat.upgrade.cta"
+              }
+            />
           </button>
           {checkoutError ? (
             <p className="mt-2 text-error">{checkoutError}</p>
@@ -133,14 +182,20 @@ export function UpgradeSidebar({
   isStartingCheckout: boolean;
   onUpgrade: () => void;
 }) {
-  const features = [
-    "Keyword research, backlinks, rank tracking & site audits",
-    "Google Search Console — read-only, no credits, no Google Cloud setup",
-    "Connect Claude, Cursor, Codex & other MCP clients",
-    "Top-up credits roll over and never expire",
-  ];
+  const intl = useIntl();
   const used = Math.min(questionsUsed, FREE_ONBOARDING_QUESTION_LIMIT);
   const progress = (used / FREE_ONBOARDING_QUESTION_LIMIT) * 100;
+  // Computed once, reused both as the large standalone price and inside the
+  // "Includes {price}..." sentence below. `intl.formatNumber` rather than
+  // `<FormattedNumber style="currency">`: same output, and it matches every
+  // other currency site in the app (RankTrackingTableParts, CheckConfirmModal,
+  // SavedKeywordsTable) instead of tripping the DOM `style`-prop lint rule.
+  const priceDisplay = intl.formatNumber(PAID_PLAN_PRICE_USD, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
 
   return (
     <aside className="hidden w-96 flex-shrink-0 flex-col border-r border-base-300 bg-base-200/20 lg:flex">
@@ -149,7 +204,9 @@ export function UpgradeSidebar({
           <Globe className="size-4" />
         </span>
         <div className="min-w-0">
-          <p className="font-medium text-base-content/80">Previewing EchoSEO</p>
+          <p className="font-medium text-base-content/80">
+            <FormattedMessage id="onboardingChat.upgrade.previewingLabel" />
+          </p>
           <p className="truncate" title={domain}>
             {domain}
           </p>
@@ -159,23 +216,31 @@ export function UpgradeSidebar({
       <div className="flex flex-1 flex-col gap-5 px-6 py-6">
         <div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-semibold tracking-tight">$10</span>
-            <span className="text-sm text-base-content/55">/month</span>
+            <span className="text-3xl font-semibold tracking-tight">
+              {priceDisplay}
+            </span>
+            <span className="text-sm text-base-content/55">
+              <FormattedMessage id="onboardingChat.upgrade.perMonthSuffix" />
+            </span>
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-base-content/55">
-            Includes $10 of usage credits every month, plus a 30-day money-back
-            guarantee.
+            <FormattedMessage
+              id="onboardingChat.upgrade.priceIncludes"
+              values={{ price: priceDisplay }}
+            />
           </p>
         </div>
 
         <ul className="space-y-3 border-t border-base-300 pt-5">
-          {features.map((label) => (
+          {UPGRADE_FEATURE_IDS.map((id) => (
             <li
-              key={label}
+              key={id}
               className="flex gap-2.5 text-sm leading-snug text-base-content/75"
             >
               <Check className="mt-0.5 size-4 flex-shrink-0 text-primary" />
-              <span>{label}</span>
+              <span>
+                <FormattedMessage id={id} />
+              </span>
             </li>
           ))}
         </ul>
@@ -187,19 +252,30 @@ export function UpgradeSidebar({
             disabled={isStartingCheckout}
             onClick={onUpgrade}
           >
-            {isStartingCheckout ? "Redirecting..." : "Upgrade to continue"}
+            <FormattedMessage
+              id={
+                isStartingCheckout
+                  ? "onboardingChat.upgrade.redirecting"
+                  : "onboardingChat.upgrade.ctaFull"
+              }
+            />
           </button>
           <p className="text-center text-xs leading-relaxed text-base-content/55">
-            Want advice from other EchoSEO users?{" "}
-            <a
-              href={DISCORD_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="link link-primary"
-            >
-              Join the Discord
-            </a>
-            .
+            <FormattedMessage
+              id="onboardingChat.upgrade.discordPrompt"
+              values={{
+                discordLink: (chunks) => (
+                  <a
+                    href={DISCORD_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="link link-primary"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              }}
+            />
           </p>
         </div>
       </div>
@@ -212,7 +288,10 @@ export function UpgradeSidebar({
           />
         </div>
         <p className="text-xs text-base-content/55">
-          {used} of {FREE_ONBOARDING_QUESTION_LIMIT} free questions used
+          <FormattedMessage
+            id="onboardingChat.upgrade.questionsUsed"
+            values={{ used, limit: FREE_ONBOARDING_QUESTION_LIMIT }}
+          />
         </p>
       </div>
     </aside>
@@ -231,10 +310,13 @@ export function ChatGate({
     <div className="flex-shrink-0 border-t border-base-300 px-5 py-4">
       <div className="mx-auto w-full max-w-2xl rounded-box border border-primary/30 bg-primary/5 p-4 text-center">
         <p className="text-sm font-medium">
-          That’s all {FREE_ONBOARDING_QUESTION_LIMIT} free questions
+          <FormattedMessage
+            id="onboardingChat.gate.allQuestionsUsed"
+            values={{ limit: FREE_ONBOARDING_QUESTION_LIMIT }}
+          />
         </p>
         <p className="mx-auto mt-1 max-w-md text-xs text-base-content/70">
-          Upgrade to keep working with Sam and unlock the full EchoSEO app.
+          <FormattedMessage id="onboardingChat.gate.description" />
         </p>
         <button
           type="button"
@@ -242,10 +324,16 @@ export function ChatGate({
           disabled={isStartingCheckout}
           onClick={onUpgrade}
         >
-          {isStartingCheckout ? "Redirecting..." : "Upgrade to continue"}
+          <FormattedMessage
+            id={
+              isStartingCheckout
+                ? "onboardingChat.upgrade.redirecting"
+                : "onboardingChat.upgrade.ctaFull"
+            }
+          />
         </button>
         <p className="mt-2 text-xs text-base-content/45">
-          30-day money-back guarantee
+          <FormattedMessage id="onboardingChat.gate.moneyBackGuarantee" />
         </p>
       </div>
     </div>
@@ -259,6 +347,7 @@ export function ChatComposer({
   busy: boolean;
   onSend: (text: string) => void;
 }) {
+  const intl = useIntl();
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -301,12 +390,16 @@ export function ChatComposer({
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKey}
         rows={1}
-        placeholder="Ask Sam about your strategy or EchoSEO…"
+        placeholder={intl.formatMessage({
+          id: "onboardingChat.composer.placeholder",
+        })}
         className="max-h-40 flex-1 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-relaxed outline-none placeholder:text-base-content/50 focus:outline-none"
       />
       <button
         type="submit"
-        aria-label="Send message"
+        aria-label={intl.formatMessage({
+          id: "onboardingChat.composer.sendAriaLabel",
+        })}
         disabled={busy || !value.trim()}
         className="btn btn-primary btn-circle btn-sm"
       >

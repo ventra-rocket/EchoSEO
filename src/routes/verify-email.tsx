@@ -1,5 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useIntl } from "react-intl";
+import type { IntlShape } from "react-intl";
 import { toast } from "sonner";
 import {
   AuthPageCard,
@@ -29,17 +31,26 @@ export const Route = createFileRoute("/verify-email")({
   component: VerifyEmailPage,
 });
 
-function getVerificationErrorMessage(error: string | undefined) {
+function getVerificationErrorMessage(
+  error: string | undefined,
+  intl: IntlShape,
+) {
   switch ((error ?? "").toLowerCase()) {
     case "invalid_token":
-      return "This link is no longer valid. Request a new email to keep going.";
+      return intl.formatMessage({
+        id: "authRecovery.verifyEmail.error.invalidToken",
+      });
     case "token_expired":
-      return "This link has expired. Request a new email to keep going.";
+      return intl.formatMessage({
+        id: "authRecovery.verifyEmail.error.tokenExpired",
+      });
     case "user_not_found":
-      return "We couldn't find this account anymore. Try creating it again.";
+      return intl.formatMessage({
+        id: "authRecovery.verifyEmail.error.userNotFound",
+      });
     default:
       return error
-        ? "We couldn't confirm this email. Request a new email and try again."
+        ? intl.formatMessage({ id: "authRecovery.verifyEmail.error.unknown" })
         : null;
   }
 }
@@ -50,38 +61,50 @@ function getVerifyEmailPageCopy({
   isPending,
   isRedirecting,
   email,
+  intl,
 }: {
   isHostedMode: boolean;
   errorMessage: string | null;
   isPending: boolean;
   isRedirecting: boolean;
   email: string | undefined;
+  intl: IntlShape;
 }) {
   if (!isHostedMode) {
     return {
-      title: "Verify email",
-      helperText: "Email confirmation isn't available right now.",
+      title: intl.formatMessage({ id: "authRecovery.verifyEmail.title" }),
+      helperText: intl.formatMessage({
+        id: "authRecovery.verifyEmail.notAvailable",
+      }),
     };
   }
 
   if (errorMessage) {
     return {
-      title: "We couldn't confirm your email",
+      title: intl.formatMessage({
+        id: "authRecovery.verifyEmail.error.title",
+      }),
       helperText: errorMessage,
     };
   }
 
   if (isRedirecting) {
     return {
-      title: "Email confirmed",
-      helperText: "You're all set. Taking you to your account now.",
+      title: intl.formatMessage({
+        id: "authRecovery.verifyEmail.confirmed.title",
+      }),
+      helperText: intl.formatMessage({
+        id: "authRecovery.verifyEmail.confirmed.helper",
+      }),
     };
   }
 
   if (isPending) {
     return {
-      title: "Verify email",
-      helperText: "Checking your email confirmation.",
+      title: intl.formatMessage({ id: "authRecovery.verifyEmail.title" }),
+      helperText: intl.formatMessage({
+        id: "authRecovery.verifyEmail.checking",
+      }),
     };
   }
 
@@ -90,20 +113,28 @@ function getVerifyEmailPageCopy({
   // unverified hosted user would be bounced straight back by the verification
   // gate.
   return {
-    title: "Verify your email",
+    title: intl.formatMessage({
+      id: "authRecovery.verifyEmail.pending.title",
+    }),
     helperText: email
-      ? `Click the link we sent to ${email} to verify your email.`
-      : "Check your inbox for the link to verify your email.",
+      ? intl.formatMessage(
+          { id: "authRecovery.verifyEmail.pending.helperWithEmail" },
+          { email },
+        )
+      : intl.formatMessage({
+          id: "authRecovery.verifyEmail.pending.helperNoEmail",
+        }),
   };
 }
 
 function VerifyEmailPage() {
+  const intl = useIntl();
   const search = Route.useSearch();
   const redirectTo = normalizeAuthRedirect(search.redirect);
   const isHostedMode = isHostedClientAuthMode();
   const { data: session, isPending } = useSession();
   const bypassEmailVerification = isEmailVerificationBypassed();
-  const errorMessage = getVerificationErrorMessage(search.error);
+  const errorMessage = getVerificationErrorMessage(search.error, intl);
   const verificationIssueType = search.error
     ? verificationIssueSchema.parse(search.error)
     : null;
@@ -120,6 +151,7 @@ function VerifyEmailPage() {
     isPending,
     isRedirecting,
     email,
+    intl,
   });
 
   useEffect(() => {
@@ -172,14 +204,23 @@ function VerifyEmailPage() {
         callbackURL: callbackURL.toString(),
       });
       if (result.error) {
-        toast.error(result.error.message || "We couldn't send another email.");
+        toast.error(
+          result.error.message ||
+            intl.formatMessage({
+              id: "authRecovery.verifyEmail.resendErrorFallback",
+            }),
+        );
         return;
       }
       captureClientEvent("auth:verification_resend");
-      toast.success("A new email is on the way.");
+      toast.success(
+        intl.formatMessage({ id: "authRecovery.verifyEmail.resendSuccess" }),
+      );
     } catch {
       toast.error(
-        "We couldn't send another email right now. Please try again.",
+        intl.formatMessage({
+          id: "authRecovery.verifyEmail.resendErrorRetry",
+        }),
       );
     } finally {
       setIsResending(false);
@@ -198,7 +239,7 @@ function VerifyEmailPage() {
               search={getSignInSearch(redirectTo)}
               className="text-base-content/50 hover:text-base-content transition-colors"
             >
-              Back to sign in
+              {intl.formatMessage({ id: "authRecovery.backToSignIn" })}
             </Link>
           </p>
         }
@@ -213,7 +254,7 @@ function VerifyEmailPage() {
               search={getSignInSearch(redirectTo)}
               className="btn btn-soft w-full"
             >
-              Back to sign in
+              {intl.formatMessage({ id: "authRecovery.backToSignIn" })}
             </Link>
           </div>
         ) : isPending || isRedirecting ? (
@@ -227,7 +268,11 @@ function VerifyEmailPage() {
             onClick={() => void handleResend()}
             disabled={isResending}
           >
-            {isResending ? "Sending email..." : "Resend email"}
+            {isResending
+              ? intl.formatMessage({
+                  id: "authRecovery.verifyEmail.resending",
+                })
+              : intl.formatMessage({ id: "authRecovery.verifyEmail.resend" })}
           </button>
         ) : null}
       </AuthPageCard>

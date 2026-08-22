@@ -1,17 +1,23 @@
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import type { ReactNode } from "react";
-import { Fragment } from "react";
+import { useIntl, type IntlShape } from "react-intl";
 import {
+  CLIENT_WEBSITE_COUNT_OPTION_LABELS,
   CLIENT_WEBSITE_COUNT_OPTIONS,
   CLIENT_WORK_FOR,
+  INTEREST_OPTION_LABELS,
   INTEREST_OPTIONS,
   ONBOARDING_LAST_STEP,
   type OnboardingAnswers,
+  SOURCE_OPTION_LABELS,
   SOURCE_OPTIONS,
+  WORK_FOR_OPTION_LABELS,
   WORK_FOR_OPTIONS,
 } from "@/client/features/onboarding/onboardingModel";
 import { SearchConsoleOnboardingStep } from "@/client/features/onboarding/SearchConsoleOnboardingStep";
+import { OnboardingChoiceGroup } from "@/client/features/onboarding/OnboardingChoiceGroup";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
+import type { MessageId } from "@/client/i18n/messages";
 
 type PostSignupOnboardingProps = {
   firstName: string;
@@ -29,6 +35,24 @@ type PostSignupOnboardingProps = {
   accountMenu: ReactNode;
 };
 
+/** Cap for step 0; shared by the `maxSelections` prop and its own copy. */
+const MAX_INTERESTS = 3;
+
+/**
+ * Resolves each canonical, DB-stored option value to its current-locale
+ * label. The value itself never changes — only the label a user sees.
+ */
+function localizedOptions<T extends string>(
+  intl: IntlShape,
+  options: readonly T[],
+  labels: Record<T, MessageId>,
+): { value: T; label: string }[] {
+  return options.map((value) => ({
+    value,
+    label: intl.formatMessage({ id: labels[value] }),
+  }));
+}
+
 export function PostSignupOnboarding({
   firstName,
   title,
@@ -44,6 +68,7 @@ export function PostSignupOnboarding({
   isSaving,
   accountMenu,
 }: PostSignupOnboardingProps) {
+  const intl = useIntl();
   const canContinue =
     step === 0
       ? answers.selectedInterests.length > 0
@@ -72,19 +97,20 @@ export function PostSignupOnboarding({
 
         <div className="text-center space-y-3">
           <EchoSeoLogo className="mx-auto size-10" />
-          <h1 className="text-xl font-semibold">You’re in! 🎉</h1>
+          <h1 className="text-xl font-semibold">
+            {intl.formatMessage({ id: "onboarding.upgrade.title" })}
+          </h1>
           <p className="text-sm text-base-content/60">
-            Your subscription’s active.
+            {intl.formatMessage({ id: "onboarding.upgrade.subtitle" })}
           </p>
         </div>
 
         <div className="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
           <h2 className="text-lg font-semibold">
-            Finish setting up your account
+            {intl.formatMessage({ id: "onboarding.upgrade.cardTitle" })}
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-base-content/70">
-            Two quick steps left — connect Google Search Console, then set up
-            MCP for your agent.
+            {intl.formatMessage({ id: "onboarding.upgrade.cardBody" })}
           </p>
           <div className="mt-5 flex justify-end">
             <button
@@ -92,7 +118,7 @@ export function PostSignupOnboarding({
               className="btn btn-soft"
               onClick={onUpgradeAcknowledged}
             >
-              Continue
+              {intl.formatMessage({ id: "onboarding.action.continue" })}
               <ArrowRight className="size-4" />
             </button>
           </div>
@@ -108,26 +134,42 @@ export function PostSignupOnboarding({
       <div className="text-center space-y-3">
         <EchoSeoLogo className="mx-auto size-10" />
         <p className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-          Step {step + 1} of {ONBOARDING_LAST_STEP + 1}
+          {intl.formatMessage(
+            { id: "onboarding.progress.step" },
+            { step: step + 1, total: ONBOARDING_LAST_STEP + 1 },
+          )}
         </p>
         <h1 className="text-xl font-semibold">
           {title ??
             (firstName
-              ? `Welcome to EchoSEO, ${firstName}!`
-              : "Welcome to EchoSEO!")}
+              ? intl.formatMessage(
+                  { id: "onboarding.welcome.namedTitle" },
+                  { firstName },
+                )
+              : intl.formatMessage({ id: "onboarding.welcome.title" }))}
         </h1>
         <p className="text-sm text-base-content/60">
-          {helperText ?? "A few quick answers to set things up."}
+          {helperText ??
+            intl.formatMessage({ id: "onboarding.welcome.helper" })}
         </p>
       </div>
 
       <div className="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
         {step === 0 ? (
           <OnboardingChoiceGroup
-            title="What tasks matter to you most?"
-            description="Pick up to 3."
-            maxSelections={3}
-            options={[...INTEREST_OPTIONS]}
+            title={intl.formatMessage({
+              id: "onboarding.step.interests.title",
+            })}
+            description={intl.formatMessage(
+              { id: "onboarding.step.interests.description" },
+              { max: MAX_INTERESTS },
+            )}
+            maxSelections={MAX_INTERESTS}
+            options={localizedOptions(
+              intl,
+              INTEREST_OPTIONS,
+              INTEREST_OPTION_LABELS,
+            )}
             selectedValues={answers.selectedInterests}
             onToggle={(value) => {
               updateAnswers({
@@ -142,16 +184,26 @@ export function PostSignupOnboarding({
           />
         ) : step === 1 ? (
           <OnboardingChoiceGroup
-            title="Who are you doing SEO for?"
-            options={[...WORK_FOR_OPTIONS]}
+            title={intl.formatMessage({ id: "onboarding.step.workFor.title" })}
+            options={localizedOptions(
+              intl,
+              WORK_FOR_OPTIONS,
+              WORK_FOR_OPTION_LABELS,
+            )}
             selectedValues={answers.workFor ? [answers.workFor] : []}
             onToggle={(workFor) => updateAnswers({ workFor })}
             otherValue={answers.workForOther}
             onOtherChange={(workForOther) => updateAnswers({ workForOther })}
             followUp={{
               showForValue: CLIENT_WORK_FOR,
-              label: "About how many client sites do you work on?",
-              options: [...CLIENT_WEBSITE_COUNT_OPTIONS],
+              label: intl.formatMessage({
+                id: "onboarding.step.workFor.clientCountLabel",
+              }),
+              options: localizedOptions(
+                intl,
+                CLIENT_WEBSITE_COUNT_OPTIONS,
+                CLIENT_WEBSITE_COUNT_OPTION_LABELS,
+              ),
               value: answers.clientWebsiteCount,
               onChange: (clientWebsiteCount) =>
                 updateAnswers({ clientWebsiteCount }),
@@ -159,8 +211,12 @@ export function PostSignupOnboarding({
           />
         ) : step === 2 ? (
           <OnboardingChoiceGroup
-            title="How did you find EchoSEO?"
-            options={[...SOURCE_OPTIONS]}
+            title={intl.formatMessage({ id: "onboarding.step.source.title" })}
+            options={localizedOptions(
+              intl,
+              SOURCE_OPTIONS,
+              SOURCE_OPTION_LABELS,
+            )}
             selectedValues={answers.source ? [answers.source] : []}
             onToggle={(source) => updateAnswers({ source })}
             otherValue={answers.sourceOther}
@@ -185,7 +241,7 @@ export function PostSignupOnboarding({
               disabled={step === 0 || isSaving}
               onClick={onBack}
             >
-              Back
+              {intl.formatMessage({ id: "onboarding.action.back" })}
             </button>
             <div className="flex items-center gap-2">
               <button
@@ -194,7 +250,7 @@ export function PostSignupOnboarding({
                 disabled={isSaving}
                 onClick={onSkip}
               >
-                Skip
+                {intl.formatMessage({ id: "onboarding.action.skip" })}
               </button>
               <button
                 type="button"
@@ -202,7 +258,7 @@ export function PostSignupOnboarding({
                 disabled={!canContinue || isSaving}
                 onClick={onNext}
               >
-                Continue
+                {intl.formatMessage({ id: "onboarding.action.continue" })}
                 <ArrowRight className="size-4" />
               </button>
             </div>
@@ -224,10 +280,13 @@ function McpRecommendation({
   onSetup: () => void;
   onSkip: () => void;
 }) {
-  const capabilities = [
-    "Keyword research",
-    "Competitor research",
-    "Link prospecting",
+  const intl = useIntl();
+  // Two of these are the same fact as the step-0 interest options — one id
+  // each, reused here rather than re-spelled.
+  const capabilityIds: MessageId[] = [
+    "onboarding.option.keywordResearch",
+    "onboarding.option.competitorResearch",
+    "onboarding.mcp.capability.linkProspecting",
   ];
 
   return (
@@ -239,21 +298,24 @@ function McpRecommendation({
         onClick={onBack}
       >
         <ArrowLeft className="size-4" />
-        Back
+        {intl.formatMessage({ id: "onboarding.action.back" })}
       </button>
-      <h2 className="text-lg font-semibold">Set up EchoSEO MCP?</h2>
+      <h2 className="text-lg font-semibold">
+        {intl.formatMessage({ id: "onboarding.mcp.title" })}
+      </h2>
       <p className="mt-1.5 text-sm leading-relaxed text-base-content/70">
-        The most powerful way to use EchoSEO — use AI to supercharge your SEO
-        skills.
+        {intl.formatMessage({ id: "onboarding.mcp.pitch" })}
       </p>
 
       <ul className="mt-4 w-full space-y-2">
-        {capabilities.map((capability) => (
-          <li key={capability} className="flex items-center gap-2.5 text-sm">
+        {capabilityIds.map((capabilityId) => (
+          <li key={capabilityId} className="flex items-center gap-2.5 text-sm">
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-base-200 text-base-content">
               <Check className="size-3" />
             </span>
-            <span className="text-base-content/80">{capability}</span>
+            <span className="text-base-content/80">
+              {intl.formatMessage({ id: capabilityId })}
+            </span>
           </li>
         ))}
       </ul>
@@ -264,7 +326,7 @@ function McpRecommendation({
         disabled={isSaving}
         onClick={onSetup}
       >
-        Yes, set up MCP
+        {intl.formatMessage({ id: "onboarding.mcp.setup" })}
         <ArrowRight className="size-4" />
       </button>
       <button
@@ -273,129 +335,8 @@ function McpRecommendation({
         disabled={isSaving}
         onClick={onSkip}
       >
-        Not now
+        {intl.formatMessage({ id: "onboarding.mcp.notNow" })}
       </button>
-    </div>
-  );
-}
-
-function OnboardingChoiceGroup({
-  title,
-  description,
-  options,
-  selectedValues,
-  onToggle,
-  otherValue,
-  onOtherChange,
-  multiple = false,
-  maxSelections,
-  followUp,
-}: {
-  title: string;
-  description?: string;
-  options: string[];
-  selectedValues: string[];
-  onToggle: (value: string) => void;
-  otherValue: string;
-  onOtherChange: (value: string) => void;
-  multiple?: boolean;
-  maxSelections?: number;
-  followUp?: {
-    showForValue: string;
-    label: string;
-    options: string[];
-    value: string;
-    onChange: (value: string) => void;
-  };
-}) {
-  const isOtherSelected = selectedValues.includes("Other");
-  const showFollowUp =
-    followUp !== undefined && selectedValues.includes(followUp.showForValue);
-  const atLimit =
-    maxSelections !== undefined && selectedValues.length >= maxSelections;
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {description ? (
-          <p className="mt-1 text-sm text-base-content/60">{description}</p>
-        ) : null}
-      </div>
-
-      <div className="grid gap-2">
-        {options.map((option) => {
-          const selected = selectedValues.includes(option);
-          const disabled = atLimit && !selected;
-          const showFollowUpHere =
-            showFollowUp && followUp?.showForValue === option;
-
-          return (
-            <Fragment key={option}>
-              <button
-                type="button"
-                className={`flex min-h-11 items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                  selected
-                    ? "border-base-content bg-base-200 text-base-content"
-                    : disabled
-                      ? "border-base-300 text-base-content/35 cursor-not-allowed"
-                      : "border-base-300 text-base-content/75 hover:border-base-content/40 hover:bg-base-200/60"
-                }`}
-                aria-pressed={selected}
-                disabled={disabled}
-                onClick={() => onToggle(option)}
-              >
-                <span>{option}</span>
-                {selected ? <Check className="size-4 shrink-0" /> : null}
-              </button>
-
-              {showFollowUpHere && followUp ? (
-                <div className="rounded-lg border border-base-300 bg-base-200/40 px-3 py-2.5">
-                  <p className="text-sm text-base-content/70">
-                    {followUp.label}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {followUp.options.map((followUpOption) => {
-                      const followUpSelected =
-                        followUp.value === followUpOption;
-
-                      return (
-                        <button
-                          key={followUpOption}
-                          type="button"
-                          className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                            followUpSelected
-                              ? "border-base-content bg-base-200 text-base-content"
-                              : "border-base-300 text-base-content/75 hover:border-base-content/40 hover:bg-base-200/60"
-                          }`}
-                          aria-pressed={followUpSelected}
-                          onClick={() =>
-                            followUp.onChange(
-                              followUpSelected ? "" : followUpOption,
-                            )
-                          }
-                        >
-                          {followUpOption}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </Fragment>
-          );
-        })}
-      </div>
-
-      {isOtherSelected ? (
-        <input
-          type="text"
-          className="input input-bordered w-full"
-          placeholder={multiple ? "Tell us what else..." : "Tell us more..."}
-          value={otherValue}
-          onChange={(event) => onOtherChange(event.target.value)}
-        />
-      ) : null}
     </div>
   );
 }
