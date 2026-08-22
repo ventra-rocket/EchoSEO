@@ -8,27 +8,46 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatCount } from "@/client/features/ai-search/platformLabels";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 
 type Props = {
   result: BrandLookupResult;
 };
 
+/**
+ * Month/year only, no day — pinned to UTC so the label never rolls to the
+ * adjacent month for a reader west of Greenwich. A named, exported function
+ * (not inlined in the `useMemo` below) so BrandLookupMentionTrendCard.test.ts
+ * can assert the localized labels directly: recharts' `ResponsiveContainer`
+ * measures 0×0 and renders nothing under `renderToStaticMarkup`, so the chart
+ * itself can't be asserted on without a real browser.
+ */
+export function buildMentionTrendChartData(
+  intl: IntlShape,
+  monthlyVolume: BrandLookupResult["monthlyVolume"],
+): Array<{ label: string; volume: number }> {
+  return monthlyVolume.map((entry) => ({
+    label: intl.formatDate(Date.UTC(entry.year, entry.month - 1, 1), {
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }),
+    volume: entry.volume ?? 0,
+  }));
+}
+
 export function BrandLookupMentionTrendCard({ result }: Props) {
+  const intl = useIntl();
   const chartData = useMemo(
-    () =>
-      result.monthlyVolume.map((entry) => ({
-        label: `${entry.year}-${String(entry.month).padStart(2, "0")}`,
-        volume: entry.volume ?? 0,
-      })),
-    [result.monthlyVolume],
+    () => buildMentionTrendChartData(intl, result.monthlyVolume),
+    [result.monthlyVolume, intl],
   );
 
   if (chartData.length === 0) {
     return (
       <div className="flex h-56 items-center justify-center text-sm text-base-content/60">
-        Not enough historical data yet.
+        <FormattedMessage id="aiBrandLookup.mentionTrend.empty" />
       </div>
     );
   }
@@ -74,7 +93,10 @@ export function BrandLookupMentionTrendCard({ result }: Props) {
   );
 }
 
-function MentionTooltip({
+/** Exported so BrandLookupMentionTrendCard.test.ts can assert the ICU plural
+ * directly — recharts only mounts this on a live hover, which a static
+ * server-rendered markup can't simulate. */
+export function MentionTooltip({
   active,
   payload,
   label,
@@ -88,7 +110,10 @@ function MentionTooltip({
     <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
       <p className="text-xs text-base-content/60">{label}</p>
       <p className="text-sm font-medium tabular-nums">
-        {formatCount(payload[0].value)} mentions
+        <FormattedMessage
+          id="aiBrandLookup.mentionTrend.tooltip"
+          values={{ count: payload[0].value }}
+        />
       </p>
     </div>
   );

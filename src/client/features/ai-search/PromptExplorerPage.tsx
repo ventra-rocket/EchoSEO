@@ -7,13 +7,16 @@ import {
   Columns3,
   SearchCheck,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { explorePrompt } from "@/serverFunctions/ai-search";
 import {
   HostedPlanGate,
   type HostedPlanGateState,
 } from "@/client/features/billing/HostedPlanGate";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
+import type { MessageId } from "@/client/i18n/messages";
 import { PromptExplorerForm } from "@/client/features/ai-search/components/PromptExplorerForm";
 import { PromptExplorerResults } from "@/client/features/ai-search/components/PromptExplorerResults";
 import { PromptExplorerLoadingState } from "@/client/features/ai-search/components/PromptExplorerLoadingState";
@@ -44,21 +47,25 @@ type Props = {
   onSubmit: (values: PromptExplorerFormValues) => void;
 };
 
-const PROMPT_EXPLORER_BULLETS = [
+const PROMPT_EXPLORER_BULLETS: Array<{
+  icon: LucideIcon;
+  titleId: MessageId;
+  bodyId: MessageId;
+}> = [
   {
     icon: Columns3,
-    title: "Four models side-by-side",
-    body: "Run one prompt across ChatGPT, Claude, Gemini, and Perplexity and compare answers in a single view.",
+    titleId: "aiPromptExplorer.paidGate.bullets.models.title",
+    bodyId: "aiPromptExplorer.paidGate.bullets.models.body",
   },
   {
     icon: SearchCheck,
-    title: "See what the models cite",
-    body: "Every answer lists the sources it drew from, so you can audit where each model gets its information.",
+    titleId: "aiPromptExplorer.paidGate.bullets.citations.title",
+    bodyId: "aiPromptExplorer.paidGate.bullets.citations.body",
   },
   {
     icon: Sparkles,
-    title: "Check brand mentions",
-    body: "Highlight a brand to instantly see whether it shows up in the answer text or the cited sources.",
+    titleId: "aiPromptExplorer.paidGate.bullets.brand.title",
+    bodyId: "aiPromptExplorer.paidGate.bullets.brand.body",
   },
 ];
 
@@ -76,6 +83,7 @@ function PromptExplorerPageInner({
   onSubmit,
   planGate,
 }: Props & { planGate: HostedPlanGateState }) {
+  const intl = useIntl();
   const [form, setForm] = useState<PromptExplorerFormValues>(urlState);
   const [validationError, setValidationError] = useState<string | null>(null);
   const access = useAiSearchAccess(projectId);
@@ -167,17 +175,28 @@ function PromptExplorerPageInner({
     event.preventDefault();
     const trimmed = form.prompt.trim();
     if (trimmed.length === 0) {
-      setValidationError("Enter a prompt");
+      setValidationError(
+        intl.formatMessage({
+          id: "aiPromptExplorer.form.validation.emptyPrompt",
+        }),
+      );
       return;
     }
     if (trimmed.length > PROMPT_EXPLORER_MAX_PROMPT_LENGTH) {
       setValidationError(
-        `Keep prompts under ${PROMPT_EXPLORER_MAX_PROMPT_LENGTH} characters`,
+        intl.formatMessage(
+          { id: "aiPromptExplorer.form.validation.tooLong" },
+          { max: PROMPT_EXPLORER_MAX_PROMPT_LENGTH },
+        ),
       );
       return;
     }
     if (form.models.length === 0) {
-      setValidationError("Select at least one model");
+      setValidationError(
+        intl.formatMessage({
+          id: "aiPromptExplorer.form.validation.noModels",
+        }),
+      );
       return;
     }
     setValidationError(null);
@@ -189,7 +208,11 @@ function PromptExplorerPageInner({
   };
 
   const errorMessage = exploreQuery.isError
-    ? getStandardErrorMessage(exploreQuery.error)
+    ? getLocalizedErrorMessage(
+        intl,
+        exploreQuery.error,
+        intl.formatMessage({ id: "aiPromptExplorer.explore.errorDefault" }),
+      )
     : null;
   // See BrandLookupPage: a key-gated query stays `isPending` while idle, so a
   // keyless user would spin forever. Fall through to the setup CTA when there is
@@ -214,10 +237,11 @@ function PromptExplorerPageInner({
     <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-7xl space-y-4">
         <div>
-          <h1 className="text-2xl font-semibold">Prompt Explorer</h1>
+          <h1 className="text-2xl font-semibold">
+            <FormattedMessage id="nav.promptExplorer" />
+          </h1>
           <p className="text-sm text-base-content/70">
-            Ask any prompt across ChatGPT, Claude, Gemini, and Perplexity
-            side-by-side.
+            <FormattedMessage id="aiPromptExplorer.page.subtitle" />
           </p>
         </div>
 
@@ -231,8 +255,8 @@ function PromptExplorerPageInner({
           />
         ) : planGate.isFreePlan ? (
           <AiSearchPaidPlanGate
-            feature="Prompt Explorer"
-            description="Ask one prompt across ChatGPT, Claude, Gemini, and Perplexity at the same time and compare their answers — including which sources each model cites."
+            featureId="nav.promptExplorer"
+            descriptionId="aiPromptExplorer.paidGate.description"
             bullets={PROMPT_EXPLORER_BULLETS}
           />
         ) : (
@@ -277,7 +301,7 @@ function PromptExplorerPageInner({
                     className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
                   >
                     <ArrowLeft className="size-4" />
-                    Recent searches
+                    <FormattedMessage id="aiPromptExplorer.page.recentSearches" />
                   </Link>
                 </div>
                 <PromptExplorerResults result={resultData} />

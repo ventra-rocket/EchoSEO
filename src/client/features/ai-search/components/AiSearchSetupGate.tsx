@@ -1,4 +1,9 @@
+import { FormattedMessage, useIntl } from "react-intl";
 import { AccessGate } from "@/client/features/access-gate/AccessGate";
+
+// EchoSEO's managed/hosted price for long-term LLM Mentions access, quoted in
+// the DataForSEO setup gate below.
+const MANAGED_AI_SEARCH_PRICE_USD = 10;
 
 export function AiSearchSetupGate({
   errorMessage,
@@ -9,19 +14,39 @@ export function AiSearchSetupGate({
   isRefetching: boolean;
   onRetry: () => void;
 }) {
+  const intl = useIntl();
+  const priceDisplay = intl.formatNumber(MANAGED_AI_SEARCH_PRICE_USD, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
   return (
     <AccessGate
-      title="Enable AI Optimization"
-      bodyText="AI Optimization is not enabled for your DataForSEO account yet. You can enable it in DataForSEO, or use managed EchoSEO for long-term LLM Mentions access at $10/month."
-      helperText={
-        <>
-          We are also planning an API so self-hosted apps can use EchoSEO's LLM
-          Mentions data directly. Until then, <InlineManagedOpenSeoLink />.
-        </>
+      title={intl.formatMessage({ id: "aiPromptExplorer.setupGate.title" })}
+      bodyText={
+        <FormattedMessage
+          id="aiPromptExplorer.setupGate.body"
+          values={{ price: priceDisplay }}
+        />
       }
-      buttonLabel="Confirm AI Optimization Access"
+      helperText={
+        <FormattedMessage
+          id="aiPromptExplorer.setupGate.helper"
+          values={{ link: <InlineManagedOpenSeoLink /> }}
+        />
+      }
+      buttonLabel={intl.formatMessage({
+        id: "aiPromptExplorer.setupGate.confirmButton",
+      })}
+      refetchingLabel={intl.formatMessage({
+        id: "aiPromptExplorer.setupGate.confirming",
+      })}
       externalUrl="https://app.dataforseo.com/api-access-subscriptions"
-      externalLabel="Open DataForSEO API Access"
+      externalLabel={intl.formatMessage({
+        id: "aiPromptExplorer.setupGate.externalLabel",
+      })}
       errorMessage={errorMessage}
       isRefetching={isRefetching}
       onRetry={onRetry}
@@ -37,7 +62,7 @@ function InlineManagedOpenSeoLink() {
       target="_blank"
       rel="noreferrer"
     >
-      use managed EchoSEO
+      <FormattedMessage id="aiPromptExplorer.setupGate.helperLink" />
     </a>
   );
 }

@@ -1,13 +1,15 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { FormattedMessage, useIntl } from "react-intl";
 import { toast } from "sonner";
 import { Modal } from "@/client/components/Modal";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { setLastProjectId } from "@/client/lib/active-project";
 import { createProject } from "@/serverFunctions/projects";
 
 export function CreateProjectModal({ onClose }: { onClose: () => void }) {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [name, setName] = React.useState("");
@@ -22,7 +24,9 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
       setLastProjectId(created.id);
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       onClose();
-      toast.success("Project created");
+      toast.success(
+        intl.formatMessage({ id: "projectsSettings.createProject.success" }),
+      );
       // Land on the new project's settings so they can connect Search Console
       // and finish setting up the workspace.
       void navigate({
@@ -31,7 +35,13 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
       });
     },
     onError: (error) =>
-      toast.error(getStandardErrorMessage(error, "Failed to create project")),
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "projectsSettings.createProject.error" }),
+        ),
+      ),
   });
 
   const isPending = createMutation.isPending;
@@ -40,7 +50,11 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
     event.preventDefault();
     if (isPending) return;
     if (!name.trim()) {
-      toast.error("Project name is required");
+      toast.error(
+        intl.formatMessage({
+          id: "projectsSettings.validation.nameRequired",
+        }),
+      );
       return;
     }
     createMutation.mutate();
@@ -54,16 +68,20 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <h2 id="create-project-title" className="text-lg font-semibold">
-          New project
+          <FormattedMessage id="projectsSettings.newProject.action" />
         </h2>
 
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium">Name</span>
+          <span className="font-medium">
+            <FormattedMessage id="projectsSettings.field.name" />
+          </span>
           <input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Acme Inc."
+            placeholder={intl.formatMessage({
+              id: "projectsSettings.field.namePlaceholder",
+            })}
             maxLength={120}
             autoFocus
             className="input input-bordered w-full"
@@ -72,19 +90,23 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
 
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium">
-            Domain <span className="text-base-content/50">(optional)</span>
+            <FormattedMessage id="projectsSettings.field.domain" />{" "}
+            <span className="text-base-content/50">
+              <FormattedMessage id="projectsSettings.field.domainOptional" />
+            </span>
           </span>
           <input
             type="text"
             value={domain}
             onChange={(event) => setDomain(event.target.value)}
-            placeholder="example.com"
+            placeholder={intl.formatMessage({
+              id: "projectsSettings.field.domainPlaceholder",
+            })}
             maxLength={255}
             className="input input-bordered w-full"
           />
           <span className="text-xs text-base-content/50">
-            You can connect Search Console and set up rank tracking after
-            creating the project.
+            <FormattedMessage id="projectsSettings.createProject.hint" />
           </span>
         </label>
 
@@ -95,14 +117,14 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             disabled={isPending}
           >
-            Cancel
+            <FormattedMessage id="projectsSettings.action.cancel" />
           </button>
           <button
             type="submit"
             className="btn btn-primary btn-sm"
             disabled={isPending}
           >
-            Create project
+            <FormattedMessage id="projectsSettings.createProject.submit" />
           </button>
         </div>
       </form>

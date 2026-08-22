@@ -1,3 +1,5 @@
+import { useIntl } from "react-intl";
+import { categoryLabel } from "./utils";
 import type { LighthouseMetrics, LighthouseScores } from "./types";
 
 export function LighthouseIssuesSummary({
@@ -7,6 +9,7 @@ export function LighthouseIssuesSummary({
   scores?: LighthouseScores | null;
   metrics?: LighthouseMetrics | null;
 }) {
+  const intl = useIntl();
   const metricItems = getMetricItems(metrics);
 
   if (!scores && metricItems.length === 0) {
@@ -17,10 +20,19 @@ export function LighthouseIssuesSummary({
     <>
       {scores ? (
         <div className="grid grid-cols-4 gap-3">
-          <ScoreGauge label="Performance" score={scores.performance} />
-          <ScoreGauge label="Accessibility" score={scores.accessibility} />
-          <ScoreGauge label="Best Practices" score={scores["best-practices"]} />
-          <ScoreGauge label="SEO" score={scores.seo} />
+          <ScoreGauge
+            label={categoryLabel(intl, "performance")}
+            score={scores.performance}
+          />
+          <ScoreGauge
+            label={categoryLabel(intl, "accessibility")}
+            score={scores.accessibility}
+          />
+          <ScoreGauge
+            label={categoryLabel(intl, "best-practices")}
+            score={scores["best-practices"]}
+          />
+          <ScoreGauge label={categoryLabel(intl, "seo")} score={scores.seo} />
         </div>
       ) : null}
       {metricItems.length > 0 ? (
@@ -59,6 +71,7 @@ function scoreStrokeColor(score: number | null) {
 }
 
 function ScoreGauge({ label, score }: { label: string; score: number | null }) {
+  const intl = useIntl();
   const displayScore = score ?? 0;
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
@@ -92,7 +105,7 @@ function ScoreGauge({ label, score }: { label: string; score: number | null }) {
         <span
           className={`absolute inset-0 flex items-center justify-center text-lg font-bold ${scoreColor(score)}`}
         >
-          {score ?? "-"}
+          {score != null ? intl.formatNumber(score) : "-"}
         </span>
       </div>
       <span className="text-[11px] text-base-content/55 text-center leading-tight">
@@ -102,6 +115,12 @@ function ScoreGauge({ label, score }: { label: string; score: number | null }) {
   );
 }
 
+// FCP / LCP / TBT / SI / TTI / CLS / INP / TTFB are Lighthouse's own lab
+// metric abbreviations — the same category as the Core Web Vitals acronyms
+// this conversion leaves untranslated everywhere else, so they stay literal
+// here too. Each `value` is Lighthouse's own pre-formatted `displayValue`
+// (e.g. "3.1 s"), not a number EchoSEO formats, so it renders as received —
+// same rule as `issue.title`/`issue.description` in LighthouseIssueRow.tsx.
 function getMetricItems(metrics?: LighthouseMetrics | null) {
   if (!metrics) return [];
 

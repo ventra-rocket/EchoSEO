@@ -25,6 +25,14 @@ import { domainOverview } from "./vi/domainOverview";
 import { domainTables } from "./vi/domainTables";
 import { backlinksOverview } from "./vi/backlinksOverview";
 import { backlinksTables } from "./vi/backlinksTables";
+import { aiBrandLookup } from "./vi/aiBrandLookup";
+import { aiCitations } from "./vi/aiCitations";
+import { aiPromptExplorer } from "./vi/aiPromptExplorer";
+import { aiWorkspace } from "./vi/aiWorkspace";
+import { projectsSettings } from "./vi/projectsSettings";
+import { billingPlans } from "./vi/billingPlans";
+import { lighthouseIssues } from "./vi/lighthouseIssues";
+import { helpSupport } from "./vi/helpSupport";
 
 // Vietnamese catalog — machine-translated seed, pending human review (see
 // README.md). Typed as `Messages` so the compiler fails if any English key is
@@ -57,4 +65,12 @@ export const vi: Messages = {
   ...domainTables,
   ...backlinksOverview,
   ...backlinksTables,
+  ...aiBrandLookup,
+  ...aiCitations,
+  ...aiPromptExplorer,
+  ...aiWorkspace,
+  ...projectsSettings,
+  ...billingPlans,
+  ...lighthouseIssues,
+  ...helpSupport,
 };

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { AutumnProvider, useCustomer } from "autumn-js/react";
+import { FormattedMessage } from "react-intl";
 import { useSession } from "@/lib/auth-client";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
 import {
@@ -54,19 +55,21 @@ function FreePlanBannerContent() {
       search={{ upgrade: true }}
       className="link link-primary font-medium"
     >
-      Upgrade your plan
+      <FormattedMessage id="billingPlans.subscribe.upgradeTitle" />
     </Link>
   ) : (
     <Link to={BILLING_ROUTE} className="link link-primary font-medium">
-      Buy more credits
+      <FormattedMessage id="billingPlans.freeBanner.buyMoreCreditsLink" />
     </Link>
   );
 
   if (isOutOfCredits) {
     return (
       <BannerShell variant="error">
-        You&rsquo;ve used all your credits. {creditsActionLink} to continue
-        using EchoSEO.
+        <FormattedMessage
+          id="billingPlans.freeBanner.outOfCredits"
+          values={{ link: creditsActionLink }}
+        />
       </BannerShell>
     );
   }
@@ -74,8 +77,10 @@ function FreePlanBannerContent() {
   if (isLowCredits) {
     return (
       <BannerShell variant="warning">
-        You&rsquo;re running low on credits. {creditsActionLink} to keep using
-        EchoSEO.
+        <FormattedMessage
+          id="billingPlans.freeBanner.lowCredits"
+          values={{ link: creditsActionLink }}
+        />
       </BannerShell>
     );
   }
@@ -83,19 +88,25 @@ function FreePlanBannerContent() {
   if (isFreePlan) {
     return (
       <BannerShell variant="info">
-        We hope you&rsquo;re enjoying EchoSEO!{" "}
-        <Link
-          to={SUBSCRIBE_ROUTE}
-          search={{ upgrade: true }}
-          className="link link-primary font-medium"
-        >
-          Upgrade anytime
-        </Link>{" "}
-        or{" "}
-        <Link to="/support" className="link link-primary font-medium">
-          reach out with questions
-        </Link>
-        .
+        <FormattedMessage
+          id="billingPlans.freeBanner.enjoying"
+          values={{
+            upgradeLink: (chunks) => (
+              <Link
+                to={SUBSCRIBE_ROUTE}
+                search={{ upgrade: true }}
+                className="link link-primary font-medium"
+              >
+                {chunks}
+              </Link>
+            ),
+            supportLink: (chunks) => (
+              <Link to="/support" className="link link-primary font-medium">
+                {chunks}
+              </Link>
+            ),
+          }}
+        />
       </BannerShell>
     );
   }

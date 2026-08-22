@@ -97,11 +97,3 @@ const COUNTRY_LABELS: Record<WebSearchCountryCode, string> = {
 export function formatCountryLabel(code: WebSearchCountryCode): string {
   return COUNTRY_LABELS[code];
 }
-
-const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
-
-/** Render a count for display. Null/undefined renders as an em-dash. */
-export function formatCount(value: number | null | undefined): string {
-  if (value == null) return "—";
-  return NUMBER_FORMATTER.format(value);
-}

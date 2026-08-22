@@ -3,13 +3,17 @@ import { useAgentChat } from "@cloudflare/ai-chat/react";
 import type { UIMessage } from "ai";
 import { Loader2, Send, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Markdown } from "@/client/components/Markdown";
+import type { MessageId } from "@/client/i18n/messages";
 import { createAssistantWorkspaceName } from "@/shared/assistant-workspace";
 
-const SUGGESTIONS = [
-  "Create a focused 30-day SEO workflow for this project.",
-  "What evidence should I inspect before choosing new keywords?",
-  "Turn an audit finding into a safe remediation workflow.",
+// Each suggestion's resolved (localized) label doubles as the literal chat
+// message sent when it's clicked, so only the message id needs to be stored.
+const SUGGESTION_IDS: MessageId[] = [
+  "aiWorkspace.conversation.suggestion.workflow",
+  "aiWorkspace.conversation.suggestion.evidence",
+  "aiWorkspace.conversation.suggestion.remediation",
 ];
 
 export function AssistantWorkspaceConversation({
@@ -19,6 +23,7 @@ export function AssistantWorkspaceConversation({
   projectId: string;
   userId: string;
 }) {
+  const intl = useIntl();
   const agent = useAgent({
     agent: "assistant-workspace",
     name: createAssistantWorkspaceName(projectId, userId),
@@ -35,11 +40,14 @@ export function AssistantWorkspaceConversation({
   return (
     <div className="flex min-h-[32rem] flex-col">
       <div className="border-b border-base-300 bg-base-200/50 px-4 py-3 text-sm text-base-content/70">
-        <span className="font-medium text-base-content">
-          Assisted and read-only.
-        </span>{" "}
-        Nothing here publishes, changes settings, starts jobs, or spends
-        data-provider credits.
+        <FormattedMessage
+          id="aiWorkspace.conversation.disclaimer"
+          values={{
+            b: (chunks) => (
+              <span className="font-medium text-base-content">{chunks}</span>
+            ),
+          }}
+        />
       </div>
       <div className="flex-1 space-y-5 px-4 py-5 md:px-6" aria-live="polite">
         {messages.length === 0 ? (
@@ -49,26 +57,29 @@ export function AssistantWorkspaceConversation({
                 <Sparkles className="size-5" aria-hidden="true" />
               </div>
               <div>
-                <h2 className="font-semibold">Build a safer SEO workflow</h2>
+                <h2 className="font-semibold">
+                  <FormattedMessage id="aiWorkspace.conversation.emptyState.title" />
+                </h2>
                 <p className="mt-1 max-w-2xl text-sm text-base-content/70">
-                  Ask for a plan, decision framework, or a way to interpret
-                  existing EchoSEO evidence. You remain in control of every
-                  action.
+                  <FormattedMessage id="aiWorkspace.conversation.emptyState.body" />
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  className="btn btn-outline btn-sm min-h-11 text-left"
-                  disabled={busy}
-                  onClick={() => submit(suggestion)}
-                >
-                  {suggestion}
-                </button>
-              ))}
+              {SUGGESTION_IDS.map((id) => {
+                const suggestion = intl.formatMessage({ id });
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className="btn btn-outline btn-sm min-h-11 text-left"
+                    disabled={busy}
+                    onClick={() => submit(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -78,12 +89,12 @@ export function AssistantWorkspaceConversation({
         {busy ? (
           <div className="flex items-center gap-2 text-sm text-base-content/60">
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            Preparing the workflow…
+            <FormattedMessage id="aiWorkspace.conversation.preparing" />
           </div>
         ) : null}
         {status === "error" ? (
           <div className="alert alert-error text-sm" role="alert">
-            The assistant connection failed. Refresh the page and try again.
+            <FormattedMessage id="aiWorkspace.conversation.connectionError" />
           </div>
         ) : null}
       </div>
@@ -95,13 +106,15 @@ export function AssistantWorkspaceConversation({
         }}
       >
         <label className="sr-only" htmlFor="assistant-workspace-message">
-          Ask the workflow assistant
+          <FormattedMessage id="aiWorkspace.conversation.composer.label" />
         </label>
         <div className="flex gap-2">
           <textarea
             id="assistant-workspace-message"
             className="textarea textarea-bordered min-h-11 flex-1 resize-none"
-            placeholder="Ask for an SEO workflow…"
+            placeholder={intl.formatMessage({
+              id: "aiWorkspace.conversation.composer.placeholder",
+            })}
             value={draft}
             disabled={busy}
             rows={2}
@@ -113,7 +126,7 @@ export function AssistantWorkspaceConversation({
             disabled={busy || !draft.trim()}
           >
             <Send className="size-4" aria-hidden="true" />
-            Send
+            <FormattedMessage id="aiWorkspace.conversation.composer.send" />
           </button>
         </div>
       </form>

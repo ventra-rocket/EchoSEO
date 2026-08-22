@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
+import { useIntl } from "react-intl";
 import {
   HISTORY_ITEM_LINK_CLASS,
   SearchHistorySection,
@@ -14,12 +15,13 @@ type Props = {
 };
 
 export function BrandLookupHistorySection({ projectId, ...props }: Props) {
+  const intl = useIntl();
   return (
     <SearchHistorySection
       {...props}
       emptyIcon={Sparkles}
-      emptyMessage="Search a brand name or domain to see how AI cites it"
-      noun="lookup"
+      emptyMessageId="aiBrandLookup.history.emptyMessage"
+      nounId="aiBrandLookup.history.noun"
       renderItemLink={(item, content) => (
         <Link
           from="/p/$projectId/brand-lookup"
@@ -43,7 +45,10 @@ export function BrandLookupHistorySection({ projectId, ...props }: Props) {
           <p className="truncate font-medium text-base-content">{item.query}</p>
           {item.competitors.length > 0 ? (
             <p className="truncate text-xs text-base-content/50">
-              vs {item.competitors.join(", ")}
+              {intl.formatMessage(
+                { id: "aiBrandLookup.history.competitorsPrefix" },
+                { competitors: item.competitors.join(", ") },
+              )}
             </p>
           ) : null}
         </div>

@@ -7,15 +7,21 @@ import {
   BarChart3,
   Quote,
   TrendingUp,
+  type LucideIcon,
 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { lookupBrand } from "@/serverFunctions/ai-search";
 import {
   HostedPlanGate,
   type HostedPlanGateState,
 } from "@/client/features/billing/HostedPlanGate";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
+import type { MessageId } from "@/client/i18n/messages";
 import { BrandLookupResults } from "@/client/features/ai-search/components/BrandLookupResults";
-import { BrandLookupSearchCard } from "@/client/features/ai-search/components/BrandLookupSearchCard";
+import {
+  BrandLookupSearchCard,
+  type BrandLookupValidationError,
+} from "@/client/features/ai-search/components/BrandLookupSearchCard";
 import { BrandLookupHistorySection } from "@/client/features/ai-search/components/BrandLookupHistorySection";
 import { AiSearchLoadingState } from "@/client/features/ai-search/components/AiSearchLoadingState";
 import { AiSearchPaidPlanGate } from "@/client/features/ai-search/components/AiSearchPaidPlanGate";
@@ -37,21 +43,25 @@ type Props = {
   onSearchChange: (nextQuery: string, nextCompetitors: string[]) => void;
 };
 
-const BRAND_LOOKUP_BULLETS = [
+const BRAND_LOOKUP_BULLETS: Array<{
+  icon: LucideIcon;
+  titleId: MessageId;
+  bodyId: MessageId;
+}> = [
   {
     icon: TrendingUp,
-    title: "Track AI visibility",
-    body: "See estimated counts for ChatGPT and Google AI Overview answers that cite your brand, and watch the trend month over month.",
+    titleId: "aiBrandLookup.gate.bullet.visibility.title",
+    bodyId: "aiBrandLookup.gate.bullet.visibility.body",
   },
   {
     icon: Quote,
-    title: "See the prompts",
-    body: "View sample user questions where LLMs reference your brand or domain.",
+    titleId: "aiBrandLookup.gate.bullet.prompts.title",
+    bodyId: "aiBrandLookup.gate.bullet.prompts.body",
   },
   {
     icon: BarChart3,
-    title: "Map the competition",
-    body: "Spot the pages LLMs cite alongside you so you know who's competing for attention in AI answers.",
+    titleId: "aiBrandLookup.gate.bullet.competitors.title",
+    bodyId: "aiBrandLookup.gate.bullet.competitors.body",
   },
 ];
 
@@ -70,16 +80,15 @@ function BrandLookupPageInner({
   onSearchChange,
   planGate,
 }: Props & { planGate: HostedPlanGateState }) {
+  const intl = useIntl();
   const [query, setQuery] = useState(initialQuery);
   // Raw comma-separated competitor text; parsed into a deduped array on submit.
   const [competitorsInput, setCompetitorsInput] = useState(
     initialCompetitors.join(", "),
   );
   // Field-tagged so the error styling lands on the input that caused it.
-  const [validationError, setValidationError] = useState<{
-    field: "query" | "competitors";
-    message: string;
-  } | null>(null);
+  const [validationError, setValidationError] =
+    useState<BrandLookupValidationError | null>(null);
 
   const access = useAiSearchAccess(projectId);
   const seoApiKeyStatus = useSeoApiKeyStatus();
@@ -146,14 +155,15 @@ function BrandLookupPageInner({
     if (trimmed.length === 0) {
       setValidationError({
         field: "query",
-        message: "Enter a brand name or domain",
+        messageId: "aiBrandLookup.search.error.queryRequired",
       });
       return;
     }
     if (trimmed.length > BRAND_LOOKUP_MAX_INPUT_LENGTH) {
       setValidationError({
         field: "query",
-        message: `Keep it under ${BRAND_LOOKUP_MAX_INPUT_LENGTH} characters`,
+        messageId: "aiBrandLookup.search.error.queryTooLong",
+        values: { max: BRAND_LOOKUP_MAX_INPUT_LENGTH },
       });
       return;
     }
@@ -168,7 +178,8 @@ function BrandLookupPageInner({
     if (tooLong) {
       setValidationError({
         field: "competitors",
-        message: `Keep each competitor under ${BRAND_LOOKUP_MAX_INPUT_LENGTH} characters`,
+        messageId: "aiBrandLookup.search.error.competitorTooLong",
+        values: { max: BRAND_LOOKUP_MAX_INPUT_LENGTH },
       });
       return;
     }
@@ -180,7 +191,8 @@ function BrandLookupPageInner({
     if (matchesTarget) {
       setValidationError({
         field: "competitors",
-        message: `"${matchesTarget}" matches the brand you're looking up — remove it from competitors`,
+        messageId: "aiBrandLookup.search.error.competitorMatchesTarget",
+        values: { competitor: matchesTarget },
       });
       return;
     }
@@ -209,7 +221,11 @@ function BrandLookupPageInner({
     seoApiKeyStatus.data?.configured !== false;
   const errorMessage =
     hasActiveQuery && lookupQuery.isError
-      ? getStandardErrorMessage(lookupQuery.error)
+      ? getLocalizedErrorMessage(
+          intl,
+          lookupQuery.error,
+          intl.formatMessage({ id: "aiBrandLookup.results.lookupError" }),
+        )
       : null;
   const resultData = hasActiveQuery ? lookupQuery.data : undefined;
 
@@ -219,9 +235,11 @@ function BrandLookupPageInner({
     <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-7xl space-y-4">
         <div>
-          <h1 className="text-2xl font-semibold">Brand Lookup</h1>
+          <h1 className="text-2xl font-semibold">
+            <FormattedMessage id="nav.brandLookup" />
+          </h1>
           <p className="text-sm text-base-content/70">
-            See how AI search cites any brand name or domain.
+            <FormattedMessage id="aiBrandLookup.page.subtitle" />
           </p>
         </div>
 
@@ -235,8 +253,8 @@ function BrandLookupPageInner({
           />
         ) : planGate.isFreePlan ? (
           <AiSearchPaidPlanGate
-            feature="Brand Lookup"
-            description="See how ChatGPT and Google AI Overview cite any brand or domain — total mentions, sample prompts where it appears, and the pages cited alongside it."
+            featureId="nav.brandLookup"
+            descriptionId="aiBrandLookup.gate.description"
             bullets={BRAND_LOOKUP_BULLETS}
           />
         ) : (
@@ -281,7 +299,7 @@ function BrandLookupPageInner({
                     className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
                   >
                     <ArrowLeft className="size-4" />
-                    Recent searches
+                    <FormattedMessage id="aiBrandLookup.results.recentSearches" />
                   </Link>
                 </div>
                 <BrandLookupResults result={resultData} projectId={projectId} />

@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { toast } from "sonner";
+import type { MessageId } from "@/client/i18n/messages";
 import { DataForSeoKeyCard } from "@/client/features/seo-credentials/DataForSeoKeyCard";
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
 import { authClient, useSession } from "@/lib/auth-client";
@@ -13,15 +15,16 @@ export const Route = createFileRoute("/_app/settings")({
 
 const THEME_OPTIONS: {
   value: ThemePreference;
-  label: string;
+  labelId: MessageId;
   icon: typeof Sun;
 }[] = [
-  { value: "system", label: "System", icon: Monitor },
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", labelId: "common.theme.system", icon: Monitor },
+  { value: "light", labelId: "common.theme.light", icon: Sun },
+  { value: "dark", labelId: "common.theme.dark", icon: Moon },
 ];
 
 function SettingsPage() {
+  const intl = useIntl();
   const isHosted = isHostedClientAuthMode();
   const { themePreference, setThemePreference } = useThemePreference();
   const { data: session, isPending: isSessionPending } = useSession();
@@ -36,12 +39,26 @@ function SettingsPage() {
         analyticsOptedOut: !enabled,
       });
       if (result.error) {
-        toast.error("We couldn't update your analytics setting.");
+        toast.error(
+          intl.formatMessage({
+            id: "projectsSettings.settings.analyticsUpdateError",
+          }),
+        );
       } else {
-        toast.success(enabled ? "Analytics enabled" : "Analytics disabled");
+        toast.success(
+          intl.formatMessage({
+            id: enabled
+              ? "projectsSettings.settings.analyticsEnabledToast"
+              : "projectsSettings.settings.analyticsDisabledToast",
+          }),
+        );
       }
     } catch {
-      toast.error("We couldn't update your analytics setting.");
+      toast.error(
+        intl.formatMessage({
+          id: "projectsSettings.settings.analyticsUpdateError",
+        }),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -50,17 +67,23 @@ function SettingsPage() {
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
       <div className="mx-auto max-w-xl space-y-10">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          <FormattedMessage id="account.settings" />
+        </h1>
 
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-base-content/50">
-            Appearance
+            <FormattedMessage id="projectsSettings.settings.appearance" />
           </h2>
           <div className="flex items-center justify-between gap-6">
-            <span className="text-sm">Theme</span>
+            <span className="text-sm">
+              <FormattedMessage id="common.theme.title" />
+            </span>
             <div
               role="radiogroup"
-              aria-label="Theme preference"
+              aria-label={intl.formatMessage({
+                id: "common.theme.preferenceAria",
+              })}
               className="flex gap-0.5 rounded-lg bg-base-200 p-0.5"
             >
               {THEME_OPTIONS.map((option) => {
@@ -73,7 +96,7 @@ function SettingsPage() {
                     type="button"
                     role="radio"
                     aria-checked={isActive}
-                    aria-label={option.label}
+                    aria-label={intl.formatMessage({ id: option.labelId })}
                     className={`flex cursor-pointer items-center justify-center rounded-md px-3 py-1.5 transition-colors ${
                       isActive
                         ? "bg-base-100 text-base-content shadow-sm"
@@ -92,13 +115,15 @@ function SettingsPage() {
         {isHosted ? (
           <section className="space-y-3">
             <h2 className="text-sm font-medium text-base-content/50">
-              Analytics
+              <FormattedMessage id="projectsSettings.settings.analytics" />
             </h2>
             <div className="flex items-start justify-between gap-6">
               <div>
-                <p className="text-sm">Help improve EchoSEO</p>
+                <p className="text-sm">
+                  <FormattedMessage id="projectsSettings.settings.analyticsPitch" />
+                </p>
                 <p className="mt-1 text-sm text-base-content/60">
-                  Share analytics and usage data.
+                  <FormattedMessage id="projectsSettings.settings.analyticsDescription" />
                 </p>
               </div>
               <input
@@ -109,7 +134,9 @@ function SettingsPage() {
                 onChange={(event) => {
                   void updateAnalyticsPreference(event.currentTarget.checked);
                 }}
-                aria-label="Enable product analytics"
+                aria-label={intl.formatMessage({
+                  id: "projectsSettings.settings.analyticsToggleAria",
+                })}
               />
             </div>
           </section>

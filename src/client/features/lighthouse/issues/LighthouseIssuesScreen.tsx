@@ -1,12 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useIntl } from "react-intl";
 import {
   exportAuditLighthouseIssues,
   getAuditLighthouseIssues,
 } from "@/serverFunctions/lighthouse";
 import { downloadFile } from "@/client/lib/download";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import type { CategoryTab, ExportPayload, LighthouseIssue } from "./types";
 import { categoryLabel, issuesToCsv, issuesToTable } from "./utils";
 import {
@@ -28,6 +30,7 @@ type LighthouseIssuesScreenProps = {
 export function LighthouseIssuesScreen(props: LighthouseIssuesScreenProps) {
   const { projectId, resultId, category, backLabel, onBack, onCategoryChange } =
     props;
+  const intl = useIntl();
 
   const issuesQuery = useQuery({
     queryKey: ["auditLighthouseIssues", projectId, resultId],
@@ -69,14 +72,17 @@ export function LighthouseIssuesScreen(props: LighthouseIssuesScreenProps) {
     allIssues: issuesQuery.data?.issues ?? [],
   });
 
-  const issuesErrorMessage =
-    issuesQuery.error instanceof Error
-      ? issuesQuery.error.message
-      : "Failed to load Lighthouse issues.";
+  const issuesErrorMessage = getLocalizedErrorMessage(
+    intl,
+    issuesQuery.error,
+    intl.formatMessage({ id: "lighthouseIssues.screen.loadError" }),
+  );
   const showsLegacyPayloadNotice =
     issuesQuery.data != null && !issuesQuery.data.hasIssueDetails;
   const emptyMessage = showsLegacyPayloadNotice
-    ? "This audit was saved without issue-level Lighthouse details. Re-run the audit to populate this screen."
+    ? intl.formatMessage({
+        id: "lighthouseIssues.screen.legacyPayloadEmptyMessage",
+      })
     : undefined;
 
   return (
@@ -105,9 +111,9 @@ export function LighthouseIssuesScreen(props: LighthouseIssuesScreenProps) {
               <div className="alert alert-warning">
                 <TriangleAlert className="size-4" />
                 <span>
-                  This Lighthouse run was stored before issue details were
-                  preserved. Re-run the audit to see category counts and issue
-                  cards.
+                  {intl.formatMessage({
+                    id: "lighthouseIssues.screen.legacyPayloadWarning",
+                  })}
                 </span>
               </div>
             ) : null}
@@ -154,11 +160,12 @@ function useLighthouseIssuesActions({
     ) => Promise<{ filename: string; content: string }>;
   };
 }) {
+  const intl = useIntl();
   const visibleIssues =
     category === "all"
       ? allIssues
       : allIssues.filter((issue) => issue.category === category);
-  const selectedCategoryLabel = categoryLabel(category);
+  const selectedCategoryLabel = categoryLabel(intl, category);
   const categoryCounts = getCategoryCounts(allIssues);
   const severityCounts = getSeverityCounts(visibleIssues);
 
@@ -166,11 +173,19 @@ function useLighthouseIssuesActions({
     try {
       const exported = await exportMutation.mutateAsync(data);
       downloadFile(exported.content, exported.filename, "application/json");
-      toast.success("Download started");
+      toast.success(
+        intl.formatMessage({ id: "lighthouseIssues.actions.downloadStarted" }),
+      );
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to export payload";
-      toast.error(message);
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({
+            id: "lighthouseIssues.actions.exportErrorDefault",
+          }),
+        ),
+      );
     }
   };
 
@@ -180,7 +195,9 @@ function useLighthouseIssuesActions({
   ) => {
     const filename = `lighthouse-${variant}-${category}-issues.csv`;
     downloadFile(issuesToCsv(rows), filename, "text/csv");
-    toast.success("CSV download started");
+    toast.success(
+      intl.formatMessage({ id: "lighthouseIssues.actions.csvDownloadStarted" }),
+    );
   };
 
   const runExportSheets = (
@@ -201,9 +218,15 @@ function useLighthouseIssuesActions({
       await navigator.clipboard.writeText(exported.content);
       toast.success(toastMessage);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to copy payload";
-      toast.error(message);
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({
+            id: "lighthouseIssues.actions.copyErrorDefault",
+          }),
+        ),
+      );
     }
   };
 

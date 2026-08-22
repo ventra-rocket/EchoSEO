@@ -10,19 +10,11 @@ export type CreditFeature =
   | "onboarding"
   | "issue_explainer";
 
-const CREDIT_FEATURE_LABELS: Record<string, string> = {
-  keyword_research: "Keyword Research",
-  domain_overview: "Domain Overview",
-  backlinks: "Backlinks",
-  site_audit: "Site Audit",
-  rank_tracking: "Rank Tracking",
-  ai_citations: "AI Citations",
-  ai_prompt_responses: "AI Prompt Responses",
-  ai_search: "AI Search",
-  local_seo: "Local SEO",
-  onboarding: "Onboarding",
-  issue_explainer: "Issue Explainer",
-};
+// The English display labels that used to live here moved into the message
+// catalogs as `billingPlans.creditFeature.*`: a shared module cannot know the
+// reader's locale, and a Record<string, string> of prose is invisible to the
+// hardcoded-string gate. This file keeps only the machine-facing mapping; the
+// catalog owns one id per key below, and `CreditFeature` is what ties them.
 
 /**
  * Maps a DataForSEO API response path (e.g. ["v3", "dataforseo_labs", "google", "related_keywords", "live"])
@@ -70,8 +62,4 @@ export function mapDataforseoPathToCreditFeature(
     default:
       return "site_audit";
   }
-}
-
-export function creditFeatureLabel(key: string) {
-  return CREDIT_FEATURE_LABELS[key] ?? "Other";
 }

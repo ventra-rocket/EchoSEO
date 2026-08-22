@@ -1,6 +1,7 @@
 import { useAggregateEvents } from "autumn-js/react";
 import { useEffect, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 import {
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
@@ -13,6 +14,7 @@ const BILLING_USAGE_FEATURE_IDS: string[] = [
 ];
 
 export function BillingUsageChart() {
+  const intl = useIntl();
   const containerRef = useRef<HTMLDivElement>(null);
   const [chartWidth, setChartWidth] = useState(0);
 
@@ -46,22 +48,38 @@ export function BillingUsageChart() {
 
   const totalSpend = chartData.reduce((sum, d) => sum + d.credits, 0);
 
+  // Closures over `intl` — recharts calls these as plain functions (axis tick
+  // formatters), not components, so they can't call useIntl() themselves.
+  const formatShortDate = (timestamp: number) =>
+    intl.formatDate(timestamp, { month: "short", day: "numeric" });
+  const formatUsdAxis = (value: number) =>
+    intl.formatNumber(value, {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-4 space-y-3">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="font-semibold">Usage</span>
-        <span className="text-xs text-base-content/50">Last 30 days</span>
+        <span className="font-semibold">
+          <FormattedMessage id="billingPlans.usage.title" />
+        </span>
+        <span className="text-xs text-base-content/50">
+          <FormattedMessage id="billingPlans.usage.last30Days" />
+        </span>
       </div>
 
       <div className="text-2xl font-semibold tabular-nums">
-        ${totalSpend.toFixed(2)}
+        {intl.formatNumber(totalSpend, { style: "currency", currency: "USD" })}
       </div>
 
       <div ref={containerRef} className="w-full h-32 min-w-0">
         {eventsQuery.isLoading ? null : chartData.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <span className="text-sm text-base-content/40">
-              No usage recorded yet
+              <FormattedMessage id="billingPlans.usage.noneRecorded" />
             </span>
           </div>
         ) : chartWidth > 0 ? (
@@ -93,7 +111,7 @@ export function BillingUsageChart() {
               width={44}
             />
             <Tooltip
-              content={<UsageTooltip />}
+              content={<UsageTooltip intl={intl} />}
               cursor={{ fill: "rgba(150,150,150,0.1)" }}
             />
             <Bar
@@ -113,35 +131,26 @@ function UsageTooltip({
   active,
   payload,
   label,
+  intl,
 }: {
   active?: boolean;
   payload?: Array<{ value: number }>;
   label?: number;
+  intl: IntlShape;
 }) {
   if (!active || !payload?.length || label == null) return null;
 
   return (
     <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
       <p className="text-xs text-base-content/60">
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })}
+        {intl.formatDate(label, { month: "short", day: "numeric" })}
       </p>
       <p className="text-sm font-medium tabular-nums">
-        ${payload[0].value.toFixed(2)}
+        {intl.formatNumber(payload[0].value, {
+          style: "currency",
+          currency: "USD",
+        })}
       </p>
     </div>
   );
-}
-
-function formatShortDate(timestamp: number) {
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatUsdAxis(value: number) {
-  return `$${value % 1 === 0 ? value : value.toFixed(2)}`;
 }

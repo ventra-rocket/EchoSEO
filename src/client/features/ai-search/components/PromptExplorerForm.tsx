@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import {
   formatCountryLabel,
   formatModelLabel,
@@ -50,6 +51,7 @@ export function PromptExplorerForm({
   isLoading,
   validationError,
 }: Props) {
+  const intl = useIntl();
   const toggleModel = (model: PromptExplorerModel) => {
     if (form.models.includes(model)) {
       onModelsChange(form.models.filter((m) => m !== model));
@@ -72,7 +74,7 @@ export function PromptExplorerForm({
             className="block text-sm font-medium"
             htmlFor="prompt-explorer-prompt"
           >
-            Prompt
+            <FormattedMessage id="aiPromptExplorer.form.promptLabel" />
           </label>
           <textarea
             id="prompt-explorer-prompt"
@@ -87,7 +89,9 @@ export function PromptExplorerForm({
             autoFocus
           />
           <div className="flex items-center justify-between text-xs text-base-content/60">
-            <span>What your customers might ask AI.</span>
+            <span>
+              <FormattedMessage id="aiPromptExplorer.form.promptHint" />
+            </span>
             <span
               className={`tabular-nums ${promptOverLimit ? "font-medium text-error" : ""}`}
             >
@@ -102,7 +106,7 @@ export function PromptExplorerForm({
               className="block text-sm font-medium"
               htmlFor="prompt-explorer-brand"
             >
-              Highlight brand (optional)
+              <FormattedMessage id="aiPromptExplorer.form.brandLabel" />
             </label>
             <input
               id="prompt-explorer-brand"
@@ -114,12 +118,14 @@ export function PromptExplorerForm({
               spellCheck={false}
             />
             <p className="text-xs text-base-content/60">
-              We&apos;ll flag whether each model mentions this brand.
+              <FormattedMessage id="aiPromptExplorer.form.brandHint" />
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <span className="block text-sm font-medium">Models</span>
+            <span className="block text-sm font-medium">
+              <FormattedMessage id="aiPromptExplorer.form.modelsLabel" />
+            </span>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1.5">
               {PROMPT_EXPLORER_MODELS.map((model) => {
                 const isActive = form.models.includes(model);
@@ -152,12 +158,14 @@ export function PromptExplorerForm({
                 onChange={(event) => onWebSearchChange(event.target.checked)}
               />
               <span className="text-sm">
-                Allow web search (more current answers)
+                <FormattedMessage id="aiPromptExplorer.form.webSearchLabel" />
               </span>
             </label>
             <select
               id="prompt-explorer-country"
-              aria-label="Web search location"
+              aria-label={intl.formatMessage({
+                id: "aiPromptExplorer.form.webSearchLocationAria",
+              })}
               className="select select-bordered select-sm min-w-0 sm:max-w-xs"
               value={form.webSearchCountryCode}
               onChange={(event) =>
@@ -177,7 +185,11 @@ export function PromptExplorerForm({
             className="btn btn-primary"
             disabled={isLoading || form.models.length === 0}
           >
-            {isLoading ? "Running…" : "Run"}
+            {isLoading ? (
+              <FormattedMessage id="aiPromptExplorer.form.submitting" />
+            ) : (
+              <FormattedMessage id="aiPromptExplorer.form.submit" />
+            )}
           </button>
         </div>
 

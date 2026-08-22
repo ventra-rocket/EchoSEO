@@ -5,6 +5,7 @@ import {
   Globe,
   XCircle,
 } from "lucide-react";
+import { FormattedMessage } from "react-intl";
 import { MarkdownAnswer } from "@/client/features/ai-search/components/MarkdownAnswer";
 import {
   formatModelLabel,
@@ -86,7 +87,10 @@ function ModelResultCard({
       {modelResult.citations.length > 0 ? (
         <div className="border-t border-base-200 bg-base-200/30 px-5 py-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-base-content/50">
-            Cited sources ({modelResult.citations.length})
+            <FormattedMessage
+              id="aiPromptExplorer.results.citedSourcesHeading"
+              values={{ count: modelResult.citations.length }}
+            />
           </p>
           <ul className="space-y-1.5">
             {modelResult.citations.map((citation, index) => (
@@ -122,7 +126,7 @@ function ModelResultCard({
       {modelResult.fanOutQueries.length > 0 ? (
         <div className="border-t border-base-200 px-5 py-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-base-content/50">
-            Related queries the model considered
+            <FormattedMessage id="aiPromptExplorer.results.relatedQueriesHeading" />
           </p>
           <div className="flex flex-wrap gap-1.5">
             {modelResult.fanOutQueries.map((query, index) => (
@@ -167,7 +171,9 @@ function ModelHeader({
           <code className="text-xs text-base-content/50">{modelName}</code>
         ) : null}
         {status === "error" ? (
-          <span className="badge badge-error badge-sm">Error</span>
+          <span className="badge badge-error badge-sm">
+            <FormattedMessage id="aiPromptExplorer.results.errorBadge" />
+          </span>
         ) : null}
         <BrandMentionBadge
           mentioned={brandMentioned}
@@ -176,13 +182,16 @@ function ModelHeader({
         {webSearch ? (
           <span className="inline-flex items-center gap-1 text-xs text-base-content/60">
             <Globe className="size-3" />
-            web search
+            <FormattedMessage id="aiPromptExplorer.results.webSearchBadge" />
           </span>
         ) : null}
       </div>
       {tokens != null ? (
         <span className="text-xs tabular-nums text-base-content/50">
-          {tokens.toLocaleString()} tokens
+          <FormattedMessage
+            id="aiPromptExplorer.results.tokensCount"
+            values={{ count: tokens }}
+          />
         </span>
       ) : null}
     </header>
@@ -208,7 +217,10 @@ function BrandMentionBadge({
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-base-200 px-2 py-0.5 text-xs text-base-content/60">
       <XCircle className="size-3" />
-      no {highlightBrand}
+      <FormattedMessage
+        id="aiPromptExplorer.results.brandNotMentioned"
+        values={{ brand: highlightBrand }}
+      />
     </span>
   );
 }

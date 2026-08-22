@@ -2,9 +2,10 @@ import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { toast } from "sonner";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import {
   clearLastProjectId,
   getLastProjectId,
@@ -40,11 +41,11 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
           className="inline-flex items-center gap-1 text-sm text-base-content/60 transition-colors hover:text-base-content"
         >
           <ChevronLeft className="size-4" />
-          Projects
+          <FormattedMessage id="projectsSettings.page.title" />
         </Link>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Project settings
+            <FormattedMessage id="projectsSettings.route.heading" />
           </h1>
           <p className="text-sm text-base-content/60">{project.name}</p>
         </div>
@@ -55,7 +56,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
 
       <section id="search-console" className="space-y-3 scroll-mt-6">
         <h2 className="text-sm font-medium text-base-content/50">
-          Search Console
+          <FormattedMessage id="projectsSettings.section.searchConsole" />
         </h2>
         <SearchConsoleConnectionCard projectId={projectId} />
       </section>
@@ -66,6 +67,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
 }
 
 function GeneralSection({ project }: { project: ProjectSummary }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [name, setName] = React.useState(project.name);
   const [domain, setDomain] = React.useState(project.domain ?? "");
@@ -81,10 +83,18 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project updated");
+      toast.success(
+        intl.formatMessage({ id: "projectsSettings.general.updateSuccess" }),
+      );
     },
     onError: (error) =>
-      toast.error(getStandardErrorMessage(error, "Failed to update project")),
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "projectsSettings.general.updateError" }),
+        ),
+      ),
   });
 
   const isDirty =
@@ -95,7 +105,11 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
     event.preventDefault();
     if (updateMutation.isPending) return;
     if (!name.trim()) {
-      toast.error("Project name is required");
+      toast.error(
+        intl.formatMessage({
+          id: "projectsSettings.validation.nameRequired",
+        }),
+      );
       return;
     }
     updateMutation.mutate();
@@ -103,10 +117,14 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-medium text-base-content/50">General</h2>
+      <h2 className="text-sm font-medium text-base-content/50">
+        <FormattedMessage id="projectsSettings.section.general" />
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium">Name</span>
+          <span className="font-medium">
+            <FormattedMessage id="projectsSettings.field.name" />
+          </span>
           <input
             type="text"
             value={name}
@@ -118,13 +136,18 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
 
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium">
-            Domain <span className="text-base-content/50">(optional)</span>
+            <FormattedMessage id="projectsSettings.field.domain" />{" "}
+            <span className="text-base-content/50">
+              <FormattedMessage id="projectsSettings.field.domainOptional" />
+            </span>
           </span>
           <input
             type="text"
             value={domain}
             onChange={(event) => setDomain(event.target.value)}
-            placeholder="example.com"
+            placeholder={intl.formatMessage({
+              id: "projectsSettings.field.domainPlaceholder",
+            })}
             maxLength={255}
             className="input input-bordered w-full"
           />
@@ -136,7 +159,7 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
             className="btn btn-primary btn-sm"
             disabled={updateMutation.isPending || !isDirty}
           >
-            Save changes
+            <FormattedMessage id="projectsSettings.general.save" />
           </button>
         </div>
       </form>
@@ -151,6 +174,7 @@ function DangerSection({
   project: ProjectSummary;
   canArchive: boolean;
 }) {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = React.useState(false);
@@ -160,29 +184,42 @@ function DangerSection({
     onSuccess: async () => {
       if (getLastProjectId() === project.id) clearLastProjectId();
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project archived");
+      toast.success(
+        intl.formatMessage({ id: "projectsSettings.danger.archiveSuccess" }),
+      );
       // Re-resolve to a remaining project via the landing redirect.
       void navigate({ to: "/" });
     },
     onError: (error) =>
-      toast.error(getStandardErrorMessage(error, "Failed to archive project")),
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "projectsSettings.danger.archiveError" }),
+        ),
+      ),
   });
 
   return (
     <section className="space-y-3 border-t border-base-300 pt-8">
       <h2 className="text-sm font-medium text-base-content/50">
-        Archive project
+        <FormattedMessage id="projectsSettings.danger.title" />
       </h2>
 
       {confirming ? (
         <div className="space-y-3">
           <p className="text-sm text-base-content/70">
-            Archiving{" "}
-            <span className="font-medium text-base-content">
-              {project.name}
-            </span>{" "}
-            removes it from your workspace and stops its scheduled rank
-            tracking. You can restore it later from the Projects page.
+            <FormattedMessage
+              id="projectsSettings.danger.confirmBody"
+              values={{
+                name: project.name,
+                b: (chunks) => (
+                  <span className="font-medium text-base-content">
+                    {chunks}
+                  </span>
+                ),
+              }}
+            />
           </p>
           <div className="flex gap-2">
             <button
@@ -191,7 +228,7 @@ function DangerSection({
               onClick={() => archiveMutation.mutate()}
               disabled={archiveMutation.isPending}
             >
-              Yes, archive project
+              <FormattedMessage id="projectsSettings.danger.confirmButton" />
             </button>
             <button
               type="button"
@@ -199,16 +236,20 @@ function DangerSection({
               onClick={() => setConfirming(false)}
               disabled={archiveMutation.isPending}
             >
-              Cancel
+              <FormattedMessage id="projectsSettings.action.cancel" />
             </button>
           </div>
         </div>
       ) : (
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-base-content/60">
-            {canArchive
-              ? "Archive this project to remove it from your workspace."
-              : "You can't archive your only project."}
+            <FormattedMessage
+              id={
+                canArchive
+                  ? "projectsSettings.danger.canArchiveHint"
+                  : "projectsSettings.danger.cannotArchiveHint"
+              }
+            />
           </p>
           <button
             type="button"
@@ -216,7 +257,7 @@ function DangerSection({
             onClick={() => setConfirming(true)}
             disabled={!canArchive}
           >
-            Archive project
+            <FormattedMessage id="projectsSettings.danger.title" />
           </button>
         </div>
       )}

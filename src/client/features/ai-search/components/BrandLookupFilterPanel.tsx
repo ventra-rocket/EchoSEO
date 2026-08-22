@@ -1,4 +1,5 @@
 import { RotateCcw } from "lucide-react";
+import { useIntl } from "react-intl";
 import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterTypes";
 import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupFiltersState } from "@/client/features/ai-search/useBrandLookupFilters";
@@ -50,14 +51,27 @@ function FilterRangeInputs({
   minName: string;
   maxName: string;
 }) {
+  const intl = useIntl();
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-2.5 space-y-2">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
         {title}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <CompactRangeInput form={form} name={minName} placeholder="Min" />
-        <CompactRangeInput form={form} name={maxName} placeholder="Max" />
+        <CompactRangeInput
+          form={form}
+          name={minName}
+          placeholder={intl.formatMessage({
+            id: "aiCitations.filterPanel.min",
+          })}
+        />
+        <CompactRangeInput
+          form={form}
+          name={maxName}
+          placeholder={intl.formatMessage({
+            id: "aiCitations.filterPanel.max",
+          })}
+        />
       </div>
     </div>
   );
@@ -91,10 +105,11 @@ function CompactRangeInput({
 }
 
 function PlatformToggle({ form }: { form: AnyForm }) {
+  const intl = useIntl();
   return (
     <div className="space-y-1.5">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-        Platform
+        {intl.formatMessage({ id: "aiCitations.filterPanel.platformLabel" })}
       </p>
       <form.Field name="platform">
         {(field: {
@@ -109,7 +124,11 @@ function PlatformToggle({ form }: { form: AnyForm }) {
                 className={`btn btn-xs ${field.state.value === value ? "btn-soft" : "btn-ghost"}`}
                 onClick={() => field.handleChange(value)}
               >
-                {value === "" ? "All" : formatPlatformLabel(value)}
+                {value === ""
+                  ? intl.formatMessage({
+                      id: "aiCitations.filterPanel.platformAll",
+                    })
+                  : formatPlatformLabel(value)}
               </button>
             ))}
           </div>
@@ -124,20 +143,29 @@ function TopPagesFilters({
 }: {
   form: BrandLookupFiltersState["pages"]["form"];
 }) {
+  const intl = useIntl();
   return (
     <>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <FilterTextInput
           form={form}
           name="include"
-          label="Include Terms"
-          placeholder="reddit, forbes"
+          label={intl.formatMessage({
+            id: "aiCitations.filterPanel.includeLabel",
+          })}
+          placeholder={intl.formatMessage({
+            id: "aiCitations.filterPanel.pages.includePlaceholder",
+          })}
         />
         <FilterTextInput
           form={form}
           name="exclude"
-          label="Exclude Terms"
-          placeholder="pinterest, /tag"
+          label={intl.formatMessage({
+            id: "aiCitations.filterPanel.excludeLabel",
+          })}
+          placeholder={intl.formatMessage({
+            id: "aiCitations.filterPanel.pages.excludePlaceholder",
+          })}
         />
       </div>
 
@@ -146,7 +174,9 @@ function TopPagesFilters({
         <div className="min-w-[220px]">
           <FilterRangeInputs
             form={form}
-            title="Source mentions"
+            title={intl.formatMessage({
+              id: "aiCitations.filterPanel.pages.mentionsTitle",
+            })}
             minName="minMentions"
             maxName="maxMentions"
           />
@@ -161,20 +191,29 @@ function QueriesFilters({
 }: {
   form: BrandLookupFiltersState["queries"]["form"];
 }) {
+  const intl = useIntl();
   return (
     <>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <FilterTextInput
           form={form}
           name="include"
-          label="Include Terms"
-          placeholder="pricing, reviews"
+          label={intl.formatMessage({
+            id: "aiCitations.filterPanel.includeLabel",
+          })}
+          placeholder={intl.formatMessage({
+            id: "aiCitations.filterPanel.queries.includePlaceholder",
+          })}
         />
         <FilterTextInput
           form={form}
           name="exclude"
-          label="Exclude Terms"
-          placeholder="login, download"
+          label={intl.formatMessage({
+            id: "aiCitations.filterPanel.excludeLabel",
+          })}
+          placeholder={intl.formatMessage({
+            id: "aiCitations.filterPanel.queries.excludePlaceholder",
+          })}
         />
       </div>
 
@@ -183,7 +222,9 @@ function QueriesFilters({
         <div className="min-w-[220px]">
           <FilterRangeInputs
             form={form}
-            title="AI search volume"
+            title={intl.formatMessage({
+              id: "aiCitations.filterPanel.queries.volumeTitle",
+            })}
             minName="minVolume"
             maxName="maxVolume"
           />
@@ -200,16 +241,22 @@ export function BrandLookupFilterPanel({
   activeTab: CitationTab;
   filters: BrandLookupFiltersState;
 }) {
+  const intl = useIntl();
   const current = filters[activeTab];
 
   return (
     <div className="shrink-0 border-b border-base-300 bg-gradient-to-b from-base-100 to-base-200/30 px-4 py-3 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold">Refine results</p>
+          <p className="text-sm font-semibold">
+            {intl.formatMessage({ id: "aiCitations.filterPanel.heading" })}
+          </p>
           {current.activeFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {current.activeFilterCount} active
+              {intl.formatMessage(
+                { id: "aiCitations.filterPanel.activeCount" },
+                { count: current.activeFilterCount },
+              )}
             </span>
           ) : null}
         </div>
@@ -220,7 +267,7 @@ export function BrandLookupFilterPanel({
           disabled={current.activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
-          Clear all
+          {intl.formatMessage({ id: "aiCitations.filterPanel.clearAll" })}
         </button>
       </div>
 

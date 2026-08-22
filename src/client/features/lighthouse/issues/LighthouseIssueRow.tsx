@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useIntl, type IntlShape } from "react-intl";
 import {
   ChevronRight,
   ExternalLink,
@@ -6,9 +7,11 @@ import {
   Info,
   TriangleAlert,
 } from "lucide-react";
+import { categoryLabel, severityLabel } from "./utils";
 import type { LighthouseIssue } from "./types";
 
 export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
+  const intl = useIntl();
   const [open, setOpen] = useState(false);
   const hasDetails = !!(issue.description || issue.items.length > 0);
 
@@ -27,14 +30,18 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
         </td>
         <td className="py-3 pr-3">
           <span
-            className={`badge badge-sm border ${severityBadgeClass(issue.severity)} gap-1`}
+            className={`badge badge-sm border ${severityBadgeClass(issue.severity)} gap-1 lowercase`}
           >
             {severityIcon(issue.severity)}
-            {issue.severity}
+            {severityLabel(intl, issue.severity)}
           </span>
         </td>
         <td className="py-3 pr-3">
           <div>
+            {/* Lighthouse's own audit title and displayValue — the exact
+                sentence Lighthouse wrote, not EchoSEO's copy. Rendered
+                exactly as received; see the notice above the table for the
+                on-screen disclosure. */}
             <p className="font-medium text-sm leading-snug">{issue.title}</p>
             {issue.displayValue ? (
               <p className="text-xs text-base-content/50 mt-0.5">
@@ -44,21 +51,25 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
           </div>
         </td>
         <td className="py-3 pr-3 hidden sm:table-cell">
-          <span className="text-xs text-base-content/50">{issue.category}</span>
+          <span className="text-xs text-base-content/50">
+            {categoryLabel(intl, issue.category)}
+          </span>
         </td>
         <td className="py-3 pr-3 hidden md:table-cell text-right">
           {issue.impactMs != null || issue.impactBytes != null ? (
             <span className="text-xs tabular-nums text-base-content/50">
-              {issue.impactMs ? formatMs(issue.impactMs) : null}
+              {issue.impactMs ? formatImpactMs(intl, issue.impactMs) : null}
               {issue.impactMs && issue.impactBytes ? " / " : null}
-              {issue.impactBytes ? formatBytes(issue.impactBytes) : null}
+              {issue.impactBytes
+                ? formatImpactBytes(intl, issue.impactBytes)
+                : null}
             </span>
           ) : null}
         </td>
         <td className="py-3 pr-4 text-right">
           {issue.score != null ? (
             <span className="text-xs tabular-nums text-base-content/50">
-              {issue.score}
+              {intl.formatNumber(issue.score)}
             </span>
           ) : null}
         </td>
@@ -75,7 +86,10 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
               {issue.items.length > 0 ? (
                 <details className="text-sm">
                   <summary className="cursor-pointer font-medium text-base-content/60 text-xs">
-                    Affected items ({issue.items.length})
+                    {intl.formatMessage(
+                      { id: "lighthouseIssues.row.affectedItems" },
+                      { count: issue.items.length },
+                    )}
                   </summary>
                   <div className="mt-2 space-y-1.5">
                     {issue.items.map((item, itemIndex) => (
@@ -97,16 +111,60 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
   );
 }
 
-function formatMs(ms: number) {
-  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${ms}ms`;
+/**
+ * `ms`/`bytes` are raw numbers EchoSEO reads out of the stored payload's
+ * `details.overallSavingsMs`/`overallSavingsBytes` (see
+ * lighthouseStoredPayload.ts), not Lighthouse's own pre-formatted text — the
+ * displayed `issue.displayValue` string is Lighthouse's, but this compact
+ * "impact" cell is EchoSEO's own composition, so it goes through
+ * `intl.formatNumber` rather than a hand-rolled `.toFixed()` suffix.
+ * `unitDisplay: "narrow"` keeps the dense table cell tight ("290ms", "3.1s")
+ * in English; Vietnamese has no narrower form for these units than the full
+ * word, so it renders "290 mili giây" regardless — CLDR's own answer for
+ * what actually reads clearly in that locale, not a compromise this code
+ * makes.
+ */
+function formatImpactMs(intl: IntlShape, ms: number): string {
+  if (ms >= 1000) {
+    return intl.formatNumber(ms / 1000, {
+      style: "unit",
+      unit: "second",
+      unitDisplay: "narrow",
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  }
+  return intl.formatNumber(ms, {
+    style: "unit",
+    unit: "millisecond",
+    unitDisplay: "narrow",
+  });
 }
 
-function formatBytes(bytes: number) {
-  if (bytes === 0) return "0 B";
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${bytes} B`;
+/** Same reasoning as `formatImpactMs` above, for `issue.impactBytes`. */
+function formatImpactBytes(intl: IntlShape, bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return intl.formatNumber(bytes / (1024 * 1024), {
+      style: "unit",
+      unit: "megabyte",
+      unitDisplay: "narrow",
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  }
+  if (bytes >= 1024) {
+    return intl.formatNumber(bytes / 1024, {
+      style: "unit",
+      unit: "kilobyte",
+      unitDisplay: "narrow",
+      maximumFractionDigits: 0,
+    });
+  }
+  return intl.formatNumber(bytes, {
+    style: "unit",
+    unit: "byte",
+    unitDisplay: "narrow",
+  });
 }
 
 function renderInlineMarkdown(markdown: string): ReactNode {
