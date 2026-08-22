@@ -23,14 +23,17 @@
  */
 import { escapeHtml } from "@/server/services/seo-check/output-encode";
 
-const BODY_STYLE = [
-  "margin:0",
-  "padding:24px",
+// Typography only, so it can be applied to both <body> and the wrapper cell
+// without doubling the frame. Gmail drops <body> styles, which is why the cell
+// needs its own copy; the padding lives on the outer table cell alone.
+const TEXT_STYLE = [
   "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
   "font-size:15px",
   "line-height:1.5",
   "color:#1f2937",
 ].join(";");
+
+const BODY_STYLE = ["margin:0", "padding:0", TEXT_STYLE].join(";");
 
 /** Body text. Everything else derives its colour from this one. */
 const TEXT_COLOR = "#1f2937";
@@ -48,6 +51,13 @@ const ZEBRA_BG = "#f9fafb";
 const FONT_STACK =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
 
+/**
+ * Content width. 600px is the email convention: it fits the Outlook desktop
+ * reading pane without a horizontal scrollbar and leaves room for a phone at
+ * 320px once the wrapper's padding is subtracted.
+ */
+const CONTENT_WIDTH_PX = 600;
+
 export function emailHtmlDocument(
   title: string,
   bodyHtml: string,
@@ -61,8 +71,29 @@ export function emailHtmlDocument(
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
     `<title>${escapeHtml(title)}</title>`,
     "</head>",
+    // Gmail strips <body> and re-parents the markup into its own container, so
+    // padding and the base font set on <body> are not reliably delivered. The
+    // wrapper below carries both instead: every rule that matters survives
+    // because it sits on a table cell inside the content Gmail keeps.
     `<body style="${BODY_STYLE}">`,
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">',
+    '<tr><td align="center" style="padding:24px">',
+    // Measured, not assumed: a fixed `width:600px` here overflowed a 375px
+    // viewport by 273px, because a table cell sizes itself to a fixed-width
+    // child rather than clamping it, so `max-width:100%` had nothing smaller to
+    // resolve against. A percentage width capped by `max-width` fits every
+    // client that understands CSS; the MSO conditional below hands Outlook's
+    // Word renderer a real 600px table instead, since it ignores `max-width`.
+    // The comment is inert everywhere else.
+    `<!--[if mso]><table role="presentation" width="${CONTENT_WIDTH_PX}" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->`,
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${CONTENT_WIDTH_PX}px;border-collapse:collapse">`,
+    `<tr><td style="${TEXT_STYLE}">`,
     bodyHtml,
+    "</td></tr>",
+    "</table>",
+    "<!--[if mso]></td></tr></table><![endif]-->",
+    "</td></tr>",
+    "</table>",
     "</body>",
     "</html>",
   ].join("\n");

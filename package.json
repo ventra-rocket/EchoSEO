@@ -38,7 +38,8 @@
     "cleanup:default-projects:d1": "tsx scripts/d1-default-project-cleanup.ts",
     "seed:rank-tracking": "tsx scripts/seed-rank-tracking.ts",
     "deps:check": "pnpm install --frozen-lockfile --lockfile-only",
-    "ci:check": "pnpm run deps:check && prettier --check . && knip && tsc --noEmit && oxlint . --type-aware"
+    "ci:check": "pnpm run deps:check && prettier --check . && knip && tsc --noEmit && oxlint . --type-aware",
+    "email:preview": "tsx scripts/preview-weekly-email.ts"
   },
   "cloudflare": {
     "bindings": {
