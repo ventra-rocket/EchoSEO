@@ -229,7 +229,14 @@ export function OnboardingChatConversation({
   // in the Worker (src/server.ts) before it reaches the DO; billing gates come
   // back as normal assistant messages rather than HTTP errors.
   const agent = useAgent({ agent: "onboarding-chat", name: projectId });
-  const { messages, sendMessage, status } = useAgentChat({ agent });
+  // The reader's locale travels with every message: the agent's replies are
+  // model prose, so the only way they arrive in Vietnamese is for the prompt to
+  // say so. The SDK persists this body across tool continuations, so a reply
+  // that pauses for a tool call does not switch language halfway through.
+  const { messages, sendMessage, status } = useAgentChat({
+    agent,
+    body: { locale: intl.locale },
+  });
 
   // This chat is only ever the pre-upgrade free preview: once a user upgrades
   // they are routed into the GSC onboarding step and never return here, so
