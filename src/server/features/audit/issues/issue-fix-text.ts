@@ -25,9 +25,11 @@ interface IssueFixText {
   lastReviewedDate: string;
   /**
    * False when the requested locale had no translation and English was served
-   * instead. The cross-page rules carry no locale overrides yet, so a Vietnamese
-   * viewer sees English for them — the UI says so rather than passing the text
-   * off as translated.
+   * instead, so the UI can admit it rather than passing English off as the
+   * reader's language. Every catalogue is fully translated today; the flag
+   * stays because a newly added rule reaches this function before anyone
+   * writes its override, and silently showing English would be the wrong
+   * default.
    */
   localized: boolean;
 }

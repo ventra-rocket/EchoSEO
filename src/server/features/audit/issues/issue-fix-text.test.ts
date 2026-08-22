@@ -48,14 +48,21 @@ describe("getIssueFixText", () => {
     expect(getIssueFixText("not-a-rule")).toBeNull();
   });
 
-  it("reports untranslated text as untranslated", () => {
-    // The cross-page rules carry no locale overrides yet. A Vietnamese reader
-    // gets English, and the flag is what lets the UI admit that instead of
-    // presenting English as a translation.
-    const fix = getIssueFixText("audit-orphan-page", "vi");
+  it("serves cross-page guidance in Vietnamese, not English with a disclaimer", () => {
+    // These four rules shipped untranslated while the per-page catalogue was
+    // fully localized, because the localization gate enumerated catalogues by
+    // hand and this one lives in a different directory. The flag is what the
+    // issue drawer and the PDF read to decide whether to print "(guidance shown
+    // in English)", so it is the thing worth pinning.
+    for (const rule of CROSS_PAGE_RULES) {
+      const fix = getIssueFixText(rule.id, "vi");
 
-    expect(fix).not.toBeNull();
-    expect(fix?.localized).toBe(false);
+      expect(fix?.localized).toBe(true);
+      // A real translation, not the English string copied across.
+      expect(fix?.label).not.toBe(rule.label);
+      expect(fix?.problem).not.toBe(rule.problem);
+      expect(fix?.fixSteps).toHaveLength(rule.fixSteps.length);
+    }
   });
 
   it("leaves English text identical to the catalog", () => {

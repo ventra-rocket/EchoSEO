@@ -101,17 +101,27 @@ describe("buildReportHtml", () => {
     expect(html).toContain("Phát hiện kỹ thuật");
   });
 
-  it("says so when part of a Vietnamese report is still English", () => {
-    // The cross-page rules carry no Vietnamese overrides, so the document must
-    // admit that rather than passing English off as translated.
+  it("prints Vietnamese guidance without an English-fallback notice", () => {
+    // Every rule catalogue is translated now, so a Vietnamese report has
+    // nothing to disclaim. This used to assert the opposite: the cross-page
+    // rules had no overrides and the document admitted it. Keeping the old
+    // assertion would have pinned the defect in place.
     const html = buildReportHtml({
       ...base,
       locale: "vi",
       occurrences: [occurrence()],
     });
 
-    expect(html).toContain("chưa có bản dịch tiếng Việt");
+    expect(html).toContain("URL phản hồi khi được crawl");
+    expect(html).not.toContain("chưa có bản dịch tiếng Việt");
   });
+
+  // The English-fallback notice itself is deliberately left untested. It fires
+  // only for a rule that exists in a catalogue but has no `locales.vi`, and the
+  // localization gate in seo-rules/__tests__ now fails the build for exactly
+  // that state — so the only way to reach this branch is the window between a
+  // developer adding a rule and adding its translation. Fabricating a catalogue
+  // entry here to exercise it would test the fixture, not the report.
 
   it("states no counts it did not measure when there are no issues", () => {
     const html = buildReportHtml({ ...base, occurrences: [] });
