@@ -2,10 +2,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { AutumnProvider } from "autumn-js/react";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { DEFAULT_LOCATION_CODE } from "@/shared/keyword-locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { useSession } from "@/lib/auth-client";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { saveOnboardingSite } from "@/serverFunctions/onboardingChat";
 import { OnboardingAccountMenu } from "./OnboardingAccountMenu";
 import { OnboardingChatConversation } from "./OnboardingChatConversation";
@@ -25,6 +27,7 @@ function StrategyShell({ children }: { children: React.ReactNode }) {
 }
 
 export function OnboardingChat() {
+  const intl = useIntl();
   const stateQuery = useQuery(onboardingChatStateQueryOptions());
   const { data: session } = useSession();
   const accountMenu = <OnboardingAccountMenu email={session?.user?.email} />;
@@ -33,7 +36,11 @@ export function OnboardingChat() {
     return (
       <StrategyShell>
         <div className="flex flex-1 items-center justify-center p-6 text-sm text-error">
-          Couldn’t load your strategy. Please refresh to try again.
+          {getLocalizedErrorMessage(
+            intl,
+            stateQuery.error,
+            intl.formatMessage({ id: "onboardingChat.shell.loadError" }),
+          )}
         </div>
       </StrategyShell>
     );
@@ -44,7 +51,7 @@ export function OnboardingChat() {
       <StrategyShell>
         <div className="flex flex-1 items-center justify-center gap-2 p-6 text-sm text-base-content/60">
           <Loader2 className="size-4 animate-spin" />
-          Loading…
+          <FormattedMessage id="onboardingChat.shell.loading" />
         </div>
       </StrategyShell>
     );
@@ -67,6 +74,7 @@ export function OnboardingChat() {
 }
 
 function SiteForm({ projectId }: { projectId: string }) {
+  const intl = useIntl();
   const [domain, setDomain] = useState("");
   const [locationCode, setLocationCode] = useState(DEFAULT_LOCATION_CODE);
 
@@ -89,19 +97,25 @@ function SiteForm({ projectId }: { projectId: string }) {
       >
         <div className="space-y-3 text-center">
           <EchoSeoLogo className="mx-auto size-10" />
-          <h1 className="text-xl font-semibold">Tell us about your website.</h1>
+          <h1 className="text-xl font-semibold">
+            <FormattedMessage id="onboardingChat.siteForm.title" />
+          </h1>
           <p className="text-sm text-base-content/60">
-            If you have multiple websites, you can set that up later.
+            <FormattedMessage id="onboardingChat.siteForm.subtitle" />
           </p>
         </div>
 
         <div className="space-y-4 rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
           <label className="block space-y-1">
-            <span className="text-sm font-medium">Your website</span>
+            <span className="text-sm font-medium">
+              <FormattedMessage id="onboardingChat.siteForm.domainLabel" />
+            </span>
             <input
               type="text"
               className="input input-bordered w-full"
-              placeholder="example.com"
+              placeholder={intl.formatMessage({
+                id: "onboardingChat.siteForm.domainPlaceholder",
+              })}
               value={domain}
               onChange={(event) => setDomain(event.target.value)}
             />
@@ -109,17 +123,35 @@ function SiteForm({ projectId }: { projectId: string }) {
 
           <label className="block space-y-1">
             <span className="text-sm font-medium">
-              This is the country we will use when getting SEO data.
+              <FormattedMessage id="onboardingChat.siteForm.locationLabel" />
             </span>
             <LocationSelect value={locationCode} onChange={setLocationCode} />
           </label>
+
+          {save.isError ? (
+            <p className="text-sm text-error">
+              {getLocalizedErrorMessage(
+                intl,
+                save.error,
+                intl.formatMessage({
+                  id: "onboardingChat.siteForm.saveErrorDefault",
+                }),
+              )}
+            </p>
+          ) : null}
 
           <button
             type="submit"
             className="btn btn-primary w-full"
             disabled={!domain.trim() || save.isPending}
           >
-            {save.isPending ? "Saving…" : "Continue"}
+            <FormattedMessage
+              id={
+                save.isPending
+                  ? "onboardingChat.siteForm.saving"
+                  : "onboardingChat.siteForm.submit"
+              }
+            />
           </button>
         </div>
       </form>

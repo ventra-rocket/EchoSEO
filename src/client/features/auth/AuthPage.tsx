@@ -5,6 +5,8 @@ import {
 } from "@/lib/auth-redirect";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
+import { useIntl } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 
 export const authRedirectSearchSchema = z.object({
   redirect: z.string().optional(),
@@ -120,6 +122,64 @@ export function AuthPageCard({
       {children}
 
       {footer ? <div className="text-center">{footer}</div> : null}
+    </div>
+  );
+}
+
+// The same input-plus-error row rendered six times across the two auth routes
+// (name, email, password, confirm on sign-up; email and password on sign-in).
+// `placeholderId` is authored at the callsite so it stays a checked
+// `MessageId`; `errorId` arrives from a zod schema whose messages are ids, and
+// that indirection cannot be proven to the compiler, so it is a plain `string`
+// — the same convention `mutationErrorMessageId` already uses in
+// DataForSeoKeyCard. `errorValues` exists for the one field whose message
+// interpolates: the password-length rule reports its own bounds.
+export function AuthTextField({
+  type,
+  placeholderId,
+  value,
+  onChange,
+  autoComplete,
+  disabled,
+  required,
+  minLength,
+  maxLength,
+  errorId,
+  errorValues,
+}: {
+  type: "text" | "email" | "password";
+  placeholderId: MessageId;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  disabled?: boolean;
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  errorId?: string | null;
+  errorValues?: Record<string, number>;
+}) {
+  const intl = useIntl();
+
+  return (
+    <div>
+      <input
+        type={type}
+        className="input input-bordered w-full"
+        placeholder={intl.formatMessage({ id: placeholderId })}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        autoComplete={autoComplete}
+        disabled={disabled}
+        required={required}
+        minLength={minLength}
+        maxLength={maxLength}
+      />
+      {errorId ? (
+        <p className="mt-1 text-sm text-error">
+          {intl.formatMessage({ id: errorId }, errorValues)}
+        </p>
+      ) : null}
     </div>
   );
 }

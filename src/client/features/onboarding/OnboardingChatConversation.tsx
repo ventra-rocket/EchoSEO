@@ -10,8 +10,10 @@ import {
   AlertTriangle,
   ChevronRight,
 } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Markdown } from "@/client/components/Markdown";
 import { captureClientEvent } from "@/client/lib/posthog";
+import type { MessageId } from "@/client/i18n/messages";
 import { AUTUMN_PAID_PLAN_ID } from "@/shared/billing";
 import { FREE_ONBOARDING_QUESTION_LIMIT } from "@/shared/onboardingChat";
 import {
@@ -20,6 +22,7 @@ import {
   SuggestedQuestions,
   UpgradeSidebar,
   WelcomeMessage,
+  type SuggestionOption,
 } from "./OnboardingChatParts";
 
 // Whether an assistant message already shows something — visible text or a tool
@@ -58,7 +61,15 @@ function ReasoningBlock({
             className={`size-3 transition-transform ${expanded ? "rotate-90" : ""}`}
           />
         )}
-        <span>{isStreaming ? "Thinking…" : "Thought process"}</span>
+        <span>
+          <FormattedMessage
+            id={
+              isStreaming
+                ? "onboardingChat.reasoning.thinking"
+                : "onboardingChat.reasoning.thoughtProcess"
+            }
+          />
+        </span>
       </button>
       {expanded ? (
         <div className="mt-1.5 whitespace-pre-wrap border-l-2 border-base-300 pl-3 text-xs text-base-content/50">
@@ -72,42 +83,47 @@ function ReasoningBlock({
 // Friendly labels for each tool Sam can run, so the chat shows what it's doing
 // rather than going silent while it gathers site data. `running` shows while the
 // call is in flight; `done` stays as a persistent badge once it finishes.
-const TOOL_LABELS: Record<string, { running: string; done: string }> = {
-  "tool-read_website": { running: "Reading site", done: "Read site" },
-  "tool-get_seo_metrics": {
-    running: "Getting SEO metrics",
-    done: "SEO metrics",
-  },
-  "tool-research_keywords": {
-    running: "Researching keywords",
-    done: "Keyword research",
-  },
-  "tool-get_domain_overview": {
-    running: "Analyzing domain",
-    done: "Domain overview",
-  },
-  "tool-get_serp_results": {
-    running: "Checking search results",
-    done: "Search results",
-  },
-  "tool-find_serp_competitors": {
-    running: "Finding competitors",
-    done: "Competitors",
-  },
-  "tool-get_competitor_keywords": {
-    running: "Analyzing competitor",
-    done: "Competitor keywords",
-  },
-  "tool-get_backlinks_overview": {
-    running: "Checking backlinks",
-    done: "Backlinks overview",
-  },
-};
+const TOOL_LABEL_IDS: Record<string, { running: MessageId; done: MessageId }> =
+  {
+    "tool-read_website": {
+      running: "onboardingChat.tool.readWebsite.running",
+      done: "onboardingChat.tool.readWebsite.done",
+    },
+    "tool-get_seo_metrics": {
+      running: "onboardingChat.tool.seoMetrics.running",
+      done: "onboardingChat.tool.seoMetrics.done",
+    },
+    "tool-research_keywords": {
+      running: "onboardingChat.tool.researchKeywords.running",
+      done: "onboardingChat.tool.researchKeywords.done",
+    },
+    "tool-get_domain_overview": {
+      running: "onboardingChat.tool.domainOverview.running",
+      done: "onboardingChat.tool.domainOverview.done",
+    },
+    "tool-get_serp_results": {
+      running: "onboardingChat.tool.serpResults.running",
+      done: "onboardingChat.tool.serpResults.done",
+    },
+    "tool-find_serp_competitors": {
+      running: "onboardingChat.tool.competitors.running",
+      done: "onboardingChat.tool.competitors.done",
+    },
+    "tool-get_competitor_keywords": {
+      running: "onboardingChat.tool.competitorKeywords.running",
+      done: "onboardingChat.tool.competitorKeywords.done",
+    },
+    "tool-get_backlinks_overview": {
+      running: "onboardingChat.tool.backlinksOverview.running",
+      done: "onboardingChat.tool.backlinksOverview.done",
+    },
+  };
 
 // A small inline badge for one tool call, rendered in document order inside the
 // assistant bubble so the sequence of work stays visible after it completes.
 function ToolBadge({ part }: { part: UIMessage["parts"][number] }) {
-  const labels = TOOL_LABELS[part.type];
+  const intl = useIntl();
+  const labels = TOOL_LABEL_IDS[part.type];
   if (!labels) return null;
   const state = "state" in part ? part.state : undefined;
   const isError = state === "output-error";
@@ -126,7 +142,9 @@ function ToolBadge({ part }: { part: UIMessage["parts"][number] }) {
       ) : (
         <Check className="size-3" />
       )}
-      <span>{isRunning ? `${labels.running}…` : labels.done}</span>
+      <span>
+        {intl.formatMessage({ id: isRunning ? labels.running : labels.done })}
+      </span>
     </span>
   );
 }
@@ -177,19 +195,26 @@ function ChatBubble({ message }: { message: UIMessage }) {
   );
 }
 
-const SUGGESTED_QUESTIONS = [
-  "How will EchoSEO help me get more traffic?",
-  "Compare EchoSEO and Claude",
-  "What do I get after I upgrade?",
-  "How does the Google Search Console integration work?",
-  "Right fit for consultants and agencies?",
+// Canonical (locale-independent) identities for the two highlighted chips, so
+// business logic — dedup, "did they already ask for their strategy" — never
+// compares translated display text.
+const STRATEGY_SUGGESTION_KEY = "strategy";
+const COMPETITOR_SUGGESTION_KEY = "competitor";
+const PRIMARY_SUGGESTION_KEYS = [
+  STRATEGY_SUGGESTION_KEY,
+  COMPETITOR_SUGGESTION_KEY,
 ];
 
-// Highlighted (primary) chips shown first, before the general questions.
-// STRATEGY_SUGGESTION drops out once the user has asked for their strategy.
-const STRATEGY_SUGGESTION = "What do you recommend for my site?";
-const COMPETITOR_SUGGESTION = "Compare against my competitors";
-const PRIMARY_SUGGESTIONS = [STRATEGY_SUGGESTION, COMPETITOR_SUGGESTION];
+// General suggestion chips, in the order they appear after the two primary
+// ones. Each pairs a stable key with its message id; the localized label is
+// resolved with `intl.formatMessage` inside the component below.
+const SUGGESTION_IDS: { key: string; id: MessageId }[] = [
+  { key: "traffic", id: "onboardingChat.suggestion.traffic" },
+  { key: "compareClaude", id: "onboardingChat.suggestion.compareClaude" },
+  { key: "afterUpgrade", id: "onboardingChat.suggestion.afterUpgrade" },
+  { key: "gscIntegration", id: "onboardingChat.suggestion.gscIntegration" },
+  { key: "agencyFit", id: "onboardingChat.suggestion.agencyFit" },
+];
 
 export function OnboardingChatConversation({
   projectId,
@@ -198,6 +223,7 @@ export function OnboardingChatConversation({
   projectId: string;
   domain: string;
 }) {
+  const intl = useIntl();
   // The conversation lives in a Durable Object (Agents SDK), keyed by projectId,
   // so history persists across reloads. The WebSocket connection is authorized
   // in the Worker (src/server.ts) before it reaches the DO; billing gates come
@@ -211,7 +237,7 @@ export function OnboardingChatConversation({
   const customerQuery = useCustomer();
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
-  const [usedSuggestions, setUsedSuggestions] = useState<string[]>([]);
+  const [usedSuggestionKeys, setUsedSuggestionKeys] = useState<string[]>([]);
   // Set once the user asks for their strategy (welcome CTA or the strategy
   // chip) so we don't keep offering the "What do you recommend" chip.
   const [strategyRequested, setStrategyRequested] = useState(false);
@@ -242,7 +268,9 @@ export function OnboardingChatConversation({
     } catch (checkoutErr) {
       console.error("Failed to start checkout", checkoutErr);
       setCheckoutError(
-        "We couldn't start checkout. Please refresh and try again.",
+        intl.formatMessage({
+          id: "onboardingChat.conversation.checkoutErrorDefault",
+        }),
       );
       setIsStartingCheckout(false);
     }
@@ -257,13 +285,28 @@ export function OnboardingChatConversation({
   }, [messages, status]);
 
   const lastMessage = messages[messages.length - 1];
-  const suggestionPool = [
-    ...(strategyRequested ? [] : [STRATEGY_SUGGESTION]),
-    COMPETITOR_SUGGESTION,
-    ...SUGGESTED_QUESTIONS,
+  // The chip's resolved (localized) label doubles as the literal chat message
+  // sent when it's clicked — see the identity vs. display-text split in
+  // SuggestionOption. Only STRATEGY_SUGGESTION_KEY / COMPETITOR_SUGGESTION_KEY
+  // ever drive business logic; the label is display + send text only.
+  const strategySuggestion: SuggestionOption = {
+    key: STRATEGY_SUGGESTION_KEY,
+    label: intl.formatMessage({ id: "onboardingChat.suggestion.strategy" }),
+  };
+  const competitorSuggestion: SuggestionOption = {
+    key: COMPETITOR_SUGGESTION_KEY,
+    label: intl.formatMessage({ id: "onboardingChat.suggestion.competitors" }),
+  };
+  const suggestionPool: SuggestionOption[] = [
+    ...(strategyRequested ? [] : [strategySuggestion]),
+    competitorSuggestion,
+    ...SUGGESTION_IDS.map(({ key, id }) => ({
+      key,
+      label: intl.formatMessage({ id }),
+    })),
   ];
   const remainingSuggestions = suggestionPool.filter(
-    (question) => !usedSuggestions.includes(question),
+    (question) => !usedSuggestionKeys.includes(question.key),
   );
   // Show the typing indicator from the moment the user sends until the
   // assistant's reply shows something — covers the "submitted" wait (last
@@ -328,7 +371,7 @@ export function OnboardingChatConversation({
                   {/* Billing gates (free-question cap / out-of-credits) come
                       back as normal assistant messages now, so this only covers
                       genuine failures. */}
-                  Something went wrong. Please refresh and try again.
+                  <FormattedMessage id="onboardingChat.conversation.genericError" />
                 </p>
               </div>
             ) : null}
@@ -336,17 +379,17 @@ export function OnboardingChatConversation({
             {showSuggestions ? (
               <SuggestedQuestions
                 questions={remainingSuggestions}
-                primaryQuestions={PRIMARY_SUGGESTIONS}
+                primaryKeys={PRIMARY_SUGGESTION_KEYS}
                 onSelect={(question) => {
-                  setUsedSuggestions((current) =>
-                    current.includes(question)
+                  setUsedSuggestionKeys((current) =>
+                    current.includes(question.key)
                       ? current
-                      : [...current, question],
+                      : [...current, question.key],
                   );
-                  if (question === STRATEGY_SUGGESTION) {
+                  if (question.key === STRATEGY_SUGGESTION_KEY) {
                     setStrategyRequested(true);
                   }
-                  sendText(question);
+                  sendText(question.label);
                 }}
               />
             ) : null}
@@ -363,15 +406,22 @@ export function OnboardingChatConversation({
             <div className="mx-auto w-full max-w-2xl space-y-2">
               {showRemainingHint ? (
                 <p className="px-1 text-xs text-base-content/50">
-                  {remaining} free question{remaining === 1 ? "" : "s"} left.{" "}
-                  <button
-                    type="button"
-                    className="link link-primary"
-                    disabled={isStartingCheckout}
-                    onClick={() => void startCheckout()}
-                  >
-                    Upgrade for full access
-                  </button>
+                  <FormattedMessage
+                    id="onboardingChat.composer.remainingHint"
+                    values={{
+                      remaining,
+                      upgradeLink: (chunks) => (
+                        <button
+                          type="button"
+                          className="link link-primary"
+                          disabled={isStartingCheckout}
+                          onClick={() => void startCheckout()}
+                        >
+                          {chunks}
+                        </button>
+                      ),
+                    }}
+                  />
                 </p>
               ) : null}
               <ChatComposer busy={isBusy} onSend={sendText} />

@@ -1,5 +1,8 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useIntl } from "react-intl";
+import type { IntlShape } from "react-intl";
 import {
   AuthPageCard,
   AuthPageShell,
@@ -11,9 +14,16 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
 
-const forgotPasswordSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
-});
+function buildForgotPasswordSchema(intl: IntlShape) {
+  return z.object({
+    email: z
+      .string()
+      .trim()
+      .email(
+        intl.formatMessage({ id: "authRecovery.forgotPassword.emailInvalid" }),
+      ),
+  });
+}
 
 export const Route = createFileRoute("/forgot-password")({
   validateSearch: authRedirectSearchSchema,
@@ -21,9 +31,14 @@ export const Route = createFileRoute("/forgot-password")({
 });
 
 function ForgotPasswordPage() {
+  const intl = useIntl();
   const search = Route.useSearch();
   const redirectTo = normalizeAuthRedirect(search.redirect);
   const isHostedMode = isHostedClientAuthMode();
+  const forgotPasswordSchema = useMemo(
+    () => buildForgotPasswordSchema(intl),
+    [intl],
+  );
 
   const form = useForm({
     defaultValues: {
@@ -45,7 +60,11 @@ function ForgotPasswordPage() {
         if (result.error) {
           formApi.setErrorMap({
             onSubmit: {
-              form: result.error.message || "We couldn't send the reset email.",
+              form:
+                result.error.message ||
+                intl.formatMessage({
+                  id: "authRecovery.forgotPassword.submitError",
+                }),
               fields: {},
             },
           });
@@ -54,7 +73,9 @@ function ForgotPasswordPage() {
       } catch {
         formApi.setErrorMap({
           onSubmit: {
-            form: "We couldn't send the reset email right now. Please try again.",
+            form: intl.formatMessage({
+              id: "authRecovery.forgotPassword.submitErrorRetry",
+            }),
             fields: {},
           },
         });
@@ -77,13 +98,24 @@ function ForgotPasswordPage() {
 
           return (
             <AuthPageCard
-              title={isSuccess ? "Check your email" : "Forgot password"}
+              title={intl.formatMessage({
+                id: isSuccess
+                  ? "authRecovery.forgotPassword.success.title"
+                  : "authRecovery.forgotPassword.title",
+              })}
               helperText={
                 isSuccess
-                  ? `If an account exists for ${submittedEmail}, we sent a reset link.`
+                  ? intl.formatMessage(
+                      { id: "authRecovery.forgotPassword.success.helper" },
+                      { email: submittedEmail },
+                    )
                   : isHostedMode
-                    ? "Enter your email and we'll send you a password reset link."
-                    : "Password reset isn't available right now."
+                    ? intl.formatMessage({
+                        id: "authRecovery.forgotPassword.helper",
+                      })
+                    : intl.formatMessage({
+                        id: "authRecovery.passwordResetNotAvailable",
+                      })
               }
               footer={
                 <p className="text-sm">
@@ -92,7 +124,7 @@ function ForgotPasswordPage() {
                     search={getSignInSearch(redirectTo)}
                     className="text-base-content/50 hover:text-base-content transition-colors"
                   >
-                    Back to sign in
+                    {intl.formatMessage({ id: "authRecovery.backToSignIn" })}
                   </Link>
                 </p>
               }
@@ -100,8 +132,9 @@ function ForgotPasswordPage() {
               {isSuccess ? (
                 <div className="alert alert-success">
                   <span>
-                    If an account exists for that email, you'll receive password
-                    reset instructions shortly.
+                    {intl.formatMessage({
+                      id: "authRecovery.forgotPassword.successAlert",
+                    })}
                   </span>
                 </div>
               ) : (
@@ -121,7 +154,9 @@ function ForgotPasswordPage() {
                           <input
                             type="email"
                             className="input input-bordered w-full"
-                            placeholder="Email address..."
+                            placeholder={intl.formatMessage({
+                              id: "authRecovery.forgotPassword.emailPlaceholder",
+                            })}
                             value={field.state.value}
                             onChange={(event) =>
                               field.handleChange(event.target.value)
@@ -145,7 +180,13 @@ function ForgotPasswordPage() {
                     className="btn btn-soft w-full"
                     disabled={!isHostedMode || isSubmitting}
                   >
-                    {isSubmitting ? "Sending reset link..." : "Send reset link"}
+                    {isSubmitting
+                      ? intl.formatMessage({
+                          id: "authRecovery.forgotPassword.submitting",
+                        })
+                      : intl.formatMessage({
+                          id: "authRecovery.forgotPassword.submit",
+                        })}
                   </button>
                 </form>
               )}

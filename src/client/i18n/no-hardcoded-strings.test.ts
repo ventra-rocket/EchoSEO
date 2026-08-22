@@ -56,6 +56,22 @@ const CONVERTED_DIRS = [
   "src/routes/_project/p/$projectId/keywords.tsx",
   "src/routes/_project/p/$projectId/saved.tsx",
   "src/routes/_project/p/$projectId/rank-tracking/$configId.tsx",
+  // The pre-login path. Every entry above sits behind a login that was itself
+  // English, so a Vietnamese user met sign-up, verification and onboarding
+  // before any translated screen. Listed per route file because the auth
+  // routes are siblings of unconverted ones (`subscribe`, `billing`).
+  "src/client/features/onboarding",
+  // Both auth routes render their inputs through this directory's shared
+  // `AuthTextField`, so it belongs to the pre-login surface the same way
+  // `src/client/components` belongs to the dashboard. It holds message ids
+  // rather than copy, which is why it enters the gate clean.
+  "src/client/features/auth",
+  "src/routes/_auth.sign-in.tsx",
+  "src/routes/_auth.sign-up.tsx",
+  "src/routes/verify-email.tsx",
+  "src/routes/forgot-password.tsx",
+  "src/routes/reset-password.tsx",
+  "src/routes/_authenticated.oauth-consent.tsx",
 ];
 
 /**

@@ -1,5 +1,8 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useIntl } from "react-intl";
+import type { IntlShape } from "react-intl";
 import {
   AuthPageCard,
   AuthPageShell,
@@ -15,24 +18,34 @@ import {
 } from "@/lib/auth-options";
 import { z } from "zod";
 
-const resetPasswordSchema = z
-  .object({
-    password: z
-      .string()
-      .min(
-        HOSTED_PASSWORD_MIN_LENGTH,
-        `Password must be at least ${HOSTED_PASSWORD_MIN_LENGTH} characters.`,
-      )
-      .max(
-        HOSTED_PASSWORD_MAX_LENGTH,
-        `Password must be at most ${HOSTED_PASSWORD_MAX_LENGTH} characters.`,
-      ),
-    confirmPassword: z.string(),
-  })
-  .refine((value) => value.password === value.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-  });
+function buildResetPasswordSchema(intl: IntlShape) {
+  return z
+    .object({
+      password: z
+        .string()
+        .min(
+          HOSTED_PASSWORD_MIN_LENGTH,
+          intl.formatMessage(
+            { id: "authRecovery.resetPassword.passwordTooShort" },
+            { min: HOSTED_PASSWORD_MIN_LENGTH },
+          ),
+        )
+        .max(
+          HOSTED_PASSWORD_MAX_LENGTH,
+          intl.formatMessage(
+            { id: "authRecovery.resetPassword.passwordTooLong" },
+            { max: HOSTED_PASSWORD_MAX_LENGTH },
+          ),
+        ),
+      confirmPassword: z.string(),
+    })
+    .refine((value) => value.password === value.confirmPassword, {
+      message: intl.formatMessage({
+        id: "authRecovery.resetPassword.passwordMismatch",
+      }),
+      path: ["confirmPassword"],
+    });
+}
 
 const resetPasswordSearchSchema = authRedirectSearchSchema.extend({
   error: z.string().optional(),
@@ -44,15 +57,24 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
 });
 
-function getResetPasswordErrorMessage(error: string | undefined) {
+function getResetPasswordErrorMessage(
+  error: string | undefined,
+  intl: IntlShape,
+) {
   switch ((error ?? "").toLowerCase()) {
     case "invalid_token":
-      return "This reset link is no longer valid. Request a new one to keep going.";
+      return intl.formatMessage({
+        id: "authRecovery.resetPassword.error.invalidToken",
+      });
     case "token_expired":
-      return "This reset link has expired. Request a new one to keep going.";
+      return intl.formatMessage({
+        id: "authRecovery.resetPassword.error.tokenExpired",
+      });
     default:
       return error
-        ? "This reset link can't be used anymore. Request a new one and try again."
+        ? intl.formatMessage({
+            id: "authRecovery.resetPassword.error.unknown",
+          })
         : null;
   }
 }
@@ -62,48 +84,66 @@ function getResetPasswordPageCopy({
   isComplete,
   routeError,
   hasToken,
+  intl,
 }: {
   isHostedMode: boolean;
   isComplete: boolean;
   routeError: string | null;
   hasToken: boolean;
+  intl: IntlShape;
 }) {
   if (!isHostedMode) {
     return {
-      title: "Reset password",
-      helperText: "Password reset isn't available right now.",
+      title: intl.formatMessage({ id: "authRecovery.resetPassword.title" }),
+      helperText: intl.formatMessage({
+        id: "authRecovery.passwordResetNotAvailable",
+      }),
     };
   }
 
   if (isComplete) {
     return {
-      title: "Password updated",
-      helperText:
-        "Your password has been updated. Sign in with your new password.",
+      title: intl.formatMessage({
+        id: "authRecovery.resetPassword.complete.title",
+      }),
+      helperText: intl.formatMessage({
+        id: "authRecovery.resetPassword.complete.helper",
+      }),
     };
   }
 
   if (routeError || !hasToken) {
     return {
-      title: "Reset link expired",
+      title: intl.formatMessage({
+        id: "authRecovery.resetPassword.expired.title",
+      }),
       helperText:
         routeError ||
-        "This reset link is no longer valid. Request a new one to keep going.",
+        intl.formatMessage({
+          id: "authRecovery.resetPassword.error.invalidToken",
+        }),
     };
   }
 
   return {
-    title: "Reset password",
-    helperText: "Choose a new password for your account.",
+    title: intl.formatMessage({ id: "authRecovery.resetPassword.title" }),
+    helperText: intl.formatMessage({
+      id: "authRecovery.resetPassword.helper",
+    }),
   };
 }
 
 function ResetPasswordPage() {
+  const intl = useIntl();
   const search = Route.useSearch();
   const redirectTo = normalizeAuthRedirect(search.redirect);
   const isHostedMode = isHostedClientAuthMode();
-  const routeError = getResetPasswordErrorMessage(search.error);
+  const routeError = getResetPasswordErrorMessage(search.error, intl);
   const token = typeof search.token === "string" ? search.token : null;
+  const resetPasswordSchema = useMemo(
+    () => buildResetPasswordSchema(intl),
+    [intl],
+  );
   const form = useForm({
     defaultValues: {
       password: "",
@@ -116,7 +156,9 @@ function ResetPasswordPage() {
       if (!token) {
         formApi.setErrorMap({
           onSubmit: {
-            form: "This reset link is no longer valid. Request a new one and try again.",
+            form: intl.formatMessage({
+              id: "authRecovery.resetPassword.submitError",
+            }),
             fields: {},
           },
         });
@@ -132,7 +174,9 @@ function ResetPasswordPage() {
         if (result.error) {
           formApi.setErrorMap({
             onSubmit: {
-              form: "This reset link is no longer valid. Request a new one and try again.",
+              form: intl.formatMessage({
+                id: "authRecovery.resetPassword.submitError",
+              }),
               fields: {},
             },
           });
@@ -141,7 +185,9 @@ function ResetPasswordPage() {
       } catch {
         formApi.setErrorMap({
           onSubmit: {
-            form: "We couldn't update your password right now. Please try again.",
+            form: intl.formatMessage({
+              id: "authRecovery.resetPassword.submitErrorRetry",
+            }),
             fields: {},
           },
         });
@@ -165,6 +211,7 @@ function ResetPasswordPage() {
             isComplete,
             routeError,
             hasToken: !!token,
+            intl,
           });
 
           return (
@@ -178,7 +225,7 @@ function ResetPasswordPage() {
                     search={getSignInSearch(redirectTo)}
                     className="text-base-content/50 hover:text-base-content transition-colors"
                   >
-                    Sign in
+                    {intl.formatMessage({ id: "authRecovery.signIn" })}
                   </Link>
                 </p>
               }
@@ -192,7 +239,9 @@ function ResetPasswordPage() {
                   }
                   className="btn btn-soft w-full"
                 >
-                  Continue to sign in
+                  {intl.formatMessage({
+                    id: "authRecovery.resetPassword.continueToSignIn",
+                  })}
                 </a>
               ) : routeError || !token ? (
                 <Link
@@ -200,7 +249,9 @@ function ResetPasswordPage() {
                   search={getSignInSearch(redirectTo)}
                   className="btn btn-soft w-full"
                 >
-                  Request a new reset link
+                  {intl.formatMessage({
+                    id: "authRecovery.resetPassword.requestNewLink",
+                  })}
                 </Link>
               ) : (
                 <form
@@ -219,7 +270,9 @@ function ResetPasswordPage() {
                           <input
                             type="password"
                             className="input input-bordered w-full"
-                            placeholder="New password..."
+                            placeholder={intl.formatMessage({
+                              id: "authRecovery.resetPassword.passwordPlaceholder",
+                            })}
                             value={field.state.value}
                             onChange={(event) =>
                               field.handleChange(event.target.value)
@@ -246,7 +299,9 @@ function ResetPasswordPage() {
                           <input
                             type="password"
                             className="input input-bordered w-full"
-                            placeholder="Confirm new password..."
+                            placeholder={intl.formatMessage({
+                              id: "authRecovery.resetPassword.confirmPasswordPlaceholder",
+                            })}
                             value={field.state.value}
                             onChange={(event) =>
                               field.handleChange(event.target.value)
@@ -271,7 +326,13 @@ function ResetPasswordPage() {
                     className="btn btn-soft w-full"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Updating password..." : "Update password"}
+                    {isSubmitting
+                      ? intl.formatMessage({
+                          id: "authRecovery.resetPassword.submitting",
+                        })
+                      : intl.formatMessage({
+                          id: "authRecovery.resetPassword.submit",
+                        })}
                   </button>
                 </form>
               )}

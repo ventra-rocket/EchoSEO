@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getOnboardingAnswers } from "@/serverFunctions/onboarding";
+import type { MessageId } from "@/client/i18n/messages";
 
 export const ONBOARDING_LAST_STEP = 4;
 
@@ -13,6 +14,28 @@ export const INTEREST_OPTIONS = [
   "Other",
 ] as const;
 
+/**
+ * Canonical option value -> message id for its on-screen label. Every array
+ * above stays the exact string persisted to `user_onboarding_answers`
+ * (`interested_features`, `work_for`, `client_website_count`, `found_via`) —
+ * never a translated string — so rows saved before this change still render:
+ * look the stored value up in the matching `*_OPTION_LABELS` record below to
+ * get its current-locale label. "Other" resolves to one shared id across
+ * every list it appears in — same fact, not three different translations.
+ */
+export const INTEREST_OPTION_LABELS: Record<
+  (typeof INTEREST_OPTIONS)[number],
+  MessageId
+> = {
+  "AI workflows with Claude or Codex (MCP)": "onboarding.option.aiWorkflows",
+  "Keyword research": "onboarding.option.keywordResearch",
+  "Competitor research": "onboarding.option.competitorResearch",
+  "Backlink analysis": "onboarding.option.backlinkAnalysis",
+  "Site audits": "onboarding.option.siteAudits",
+  "Rank tracking": "onboarding.option.rankTracking",
+  Other: "onboarding.option.other",
+};
+
 export const WORK_FOR_OPTIONS = [
   "My own startup or business",
   "My clients",
@@ -24,12 +47,39 @@ export const WORK_FOR_OPTIONS = [
 
 export const CLIENT_WORK_FOR = "My clients";
 
+/** See INTEREST_OPTION_LABELS above. */
+export const WORK_FOR_OPTION_LABELS: Record<
+  (typeof WORK_FOR_OPTIONS)[number],
+  MessageId
+> = {
+  "My own startup or business": "onboarding.option.ownBusiness",
+  "My clients": "onboarding.option.clients",
+  "My employer's website": "onboarding.option.employer",
+  "My own side project": "onboarding.option.sideProject",
+  "I'm exploring before choosing a project": "onboarding.option.exploring",
+  Other: "onboarding.option.other",
+};
+
 export const CLIENT_WEBSITE_COUNT_OPTIONS = [
   "1–3",
   "4–10",
   "11–25",
   "25+",
 ] as const;
+
+/**
+ * See INTEREST_OPTION_LABELS above. The ranges themselves carry no words to
+ * translate, matching the shipped rank.charts.band.top4to10 precedent.
+ */
+export const CLIENT_WEBSITE_COUNT_OPTION_LABELS: Record<
+  (typeof CLIENT_WEBSITE_COUNT_OPTIONS)[number],
+  MessageId
+> = {
+  "1–3": "onboarding.option.websiteCount1to3",
+  "4–10": "onboarding.option.websiteCount4to10",
+  "11–25": "onboarding.option.websiteCount11to25",
+  "25+": "onboarding.option.websiteCount25plus",
+};
 
 export const SOURCE_OPTIONS = [
   "Google",
@@ -41,6 +91,21 @@ export const SOURCE_OPTIONS = [
   "Friend or colleague",
   "Other",
 ] as const;
+
+/** See INTEREST_OPTION_LABELS above. */
+export const SOURCE_OPTION_LABELS: Record<
+  (typeof SOURCE_OPTIONS)[number],
+  MessageId
+> = {
+  Google: "onboarding.option.sourceGoogle",
+  Reddit: "onboarding.option.sourceReddit",
+  "X / Twitter": "onboarding.option.sourceTwitter",
+  GitHub: "onboarding.option.sourceGithub",
+  ChatGPT: "onboarding.option.sourceChatgpt",
+  Claude: "onboarding.option.sourceClaude",
+  "Friend or colleague": "onboarding.option.sourceFriend",
+  Other: "onboarding.option.other",
+};
 
 /** In-progress form state. Step is tracked separately in the URL. */
 export type OnboardingAnswers = {

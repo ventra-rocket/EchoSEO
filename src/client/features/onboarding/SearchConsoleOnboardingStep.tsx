@@ -1,12 +1,13 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { toast } from "sonner";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { SelfHostedSetupWarning } from "@/client/features/gsc/SelfHostedSetupWarning";
 import { SitePicker } from "@/client/features/gsc/SitePicker";
 import { startGscLink } from "@/client/features/gsc/startGscLink";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import {
   getGscConnection,
@@ -22,6 +23,7 @@ import { getProjects } from "@/serverFunctions/projects";
  * place.
  */
 export function SearchConsoleOnboardingStep() {
+  const intl = useIntl();
   const projectsQuery = useQuery({
     queryKey: ["projects"],
     queryFn: () => getProjects(),
@@ -31,14 +33,13 @@ export function SearchConsoleOnboardingStep() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">
-        Connect with Google Search Console now?
+        {intl.formatMessage({ id: "onboarding.gscStep.title" })}
       </h2>
 
       {projectId ? <GscConnect projectId={projectId} /> : <Checking />}
 
       <p className="text-xs leading-relaxed text-base-content/55">
-        For now, Search Console data flows through the EchoSEO MCP. We're
-        building it into the EchoSEO app soon too.
+        {intl.formatMessage({ id: "onboarding.gscStep.disclaimer" })}
       </p>
     </div>
   );
@@ -46,6 +47,7 @@ export function SearchConsoleOnboardingStep() {
 
 /** Connect + pick-a-property flow, scoped to a known project. */
 function GscConnect({ projectId }: { projectId: string }) {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const [selectedSiteUrl, setSelectedSiteUrl] = React.useState("");
 
@@ -82,7 +84,14 @@ function GscConnect({ projectId }: { projectId: string }) {
       captureClientEvent("gsc:property_select");
       void queryClient.invalidateQueries({ queryKey: connectionKey });
     },
-    onError: (error) => toast.error(getStandardErrorMessage(error)),
+    onError: (error) =>
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "onboarding.gscStep.saveError" }),
+        ),
+      ),
   });
 
   const handleConnect = () => {
@@ -103,7 +112,13 @@ function GscConnect({ projectId }: { projectId: string }) {
           <Check className="size-3.5" />
         </span>
         <span className="text-base-content/80">
-          Connected to <span className="font-mono">{connection?.siteUrl}</span>.
+          <FormattedMessage
+            id="onboarding.gscStep.connected"
+            values={{
+              siteUrl: connection?.siteUrl,
+              mono: (chunks) => <span className="font-mono">{chunks}</span>,
+            }}
+          />
         </span>
       </div>
     );
@@ -134,16 +149,17 @@ function GscConnect({ projectId }: { projectId: string }) {
       className="inline-flex items-center gap-2.5 rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-semibold text-base-content shadow-sm transition hover:bg-base-200 hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <GoogleGlyph className="size-[18px]" />
-      Connect with Google
+      {intl.formatMessage({ id: "gsc.connectWithGoogle" })}
     </button>
   );
 }
 
 function Checking() {
+  const intl = useIntl();
   return (
     <div className="flex items-center gap-2 text-sm text-base-content/50">
       <span className="loading loading-spinner loading-sm" />
-      Checking…
+      {intl.formatMessage({ id: "gsc.card.checking" })}
     </div>
   );
 }

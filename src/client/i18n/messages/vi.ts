@@ -17,6 +17,10 @@ import { keywordResearch } from "./vi/keywordResearch";
 import { keywordUi } from "./vi/keywordUi";
 import { savedTable } from "./vi/savedTable";
 import { savedModals } from "./vi/savedModals";
+import { onboarding } from "./vi/onboarding";
+import { onboardingChat } from "./vi/onboardingChat";
+import { auth } from "./vi/auth";
+import { authRecovery } from "./vi/authRecovery";
 
 // Vietnamese catalog — machine-translated seed, pending human review (see
 // README.md). Typed as `Messages` so the compiler fails if any English key is
@@ -41,4 +45,8 @@ export const vi: Messages = {
   ...keywordUi,
   ...savedTable,
   ...savedModals,
+  ...onboarding,
+  ...onboardingChat,
+  ...auth,
+  ...authRecovery,
 };

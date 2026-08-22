@@ -1,18 +1,23 @@
 import { Settings, User } from "lucide-react";
+import { useIntl } from "react-intl";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { signOutAndRedirect } from "@/lib/auth-client";
 
 // Account dropdown shared by the onboarding wizard and the onboarding chat so a
 // signed-in user can reach Settings / theme / sign out from either surface.
 // Fixed top-right; renders nothing until we know the user's email.
+//
+// Reuses the shell's account.* message ids (see src/client/layout/AppShell.tsx
+// AccountMenu) rather than spelling the same three facts again under a new
+// onboardingChat.* id: this menu's aria-label, "Settings" and "Sign out" are
+// the exact same facts as the app shell's account menu.
 export function OnboardingAccountMenu({
   email,
 }: {
   email: string | undefined;
 }) {
+  const intl = useIntl();
   if (!email) return null;
-
-  const handleSignOut = () => signOutAndRedirect();
 
   return (
     <div className="fixed top-4 right-4">
@@ -21,7 +26,7 @@ export function OnboardingAccountMenu({
           type="button"
           tabIndex={0}
           className="btn btn-ghost btn-circle"
-          aria-label="Open account menu"
+          aria-label={intl.formatMessage({ id: "account.menuLabel" })}
         >
           <User className="h-5 w-5" />
         </button>
@@ -37,13 +42,13 @@ export function OnboardingAccountMenu({
           <li>
             <a href="/settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Settings
+              {intl.formatMessage({ id: "account.settings" })}
             </a>
           </li>
           <ThemePreferenceMenuItems />
           <li>
-            <button type="button" onClick={handleSignOut}>
-              Sign out
+            <button type="button" onClick={() => signOutAndRedirect()}>
+              {intl.formatMessage({ id: "account.signOut" })}
             </button>
           </li>
         </ul>
