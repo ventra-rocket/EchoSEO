@@ -1,6 +1,8 @@
 import { Check, ChevronDown, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { FormattedMessage, useIntl } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 
 export function Collapsible({
   id,
@@ -66,7 +68,7 @@ export function CodeBlock({ code }: { code: string }) {
       <div className="flex shrink-0 items-start border-l border-base-300 p-1.5">
         <CopyButton
           value={code}
-          successMessage="Copied to clipboard"
+          successMessageId="aiWorkspace.copy.copiedToClipboard"
           iconOnly
         />
       </div>
@@ -76,27 +78,33 @@ export function CodeBlock({ code }: { code: string }) {
 
 export function CopyButton({
   value,
-  successMessage,
+  successMessageId,
   iconOnly = false,
 }: {
   value: string;
-  successMessage: string;
+  // A message id, not a sentence: this button is rendered from the `/ai` page,
+  // the setup guides and the skills section, so a caller passing prose would
+  // ship English into a Vietnamese page from three places at once.
+  successMessageId: MessageId;
   iconOnly?: boolean;
 }) {
+  const intl = useIntl();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-      toast.error("Clipboard not available");
+      toast.error(
+        intl.formatMessage({ id: "aiWorkspace.copy.clipboardUnavailable" }),
+      );
       return;
     }
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(successMessage);
+      toast.success(intl.formatMessage({ id: successMessageId }));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Could not copy to clipboard");
+      toast.error(intl.formatMessage({ id: "aiWorkspace.copy.failed" }));
     }
   };
 
@@ -105,7 +113,7 @@ export function CopyButton({
       <button
         type="button"
         onClick={handleCopy}
-        aria-label="Copy"
+        aria-label={intl.formatMessage({ id: "aiWorkspace.copy.ariaLabel" })}
         className="flex size-7 items-center justify-center rounded-md text-base-content/60 transition-colors hover:bg-base-200 hover:text-base-content"
       >
         {copied ? (
@@ -128,7 +136,7 @@ export function CopyButton({
       ) : (
         <Copy className="size-3" />
       )}
-      Copy
+      <FormattedMessage id="aiWorkspace.copy.action" />
     </button>
   );
 }

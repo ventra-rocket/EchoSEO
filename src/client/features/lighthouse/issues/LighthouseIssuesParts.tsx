@@ -1,12 +1,5 @@
-import {
-  ChevronDown,
-  Copy,
-  Download,
-  FileWarning,
-  Info,
-  Sheet,
-  TriangleAlert,
-} from "lucide-react";
+import { FileWarning, Info, TriangleAlert } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import type {
   CategoryTab,
   ExportPayload,
@@ -16,7 +9,12 @@ import type {
 } from "./types";
 import { LighthouseIssueRow } from "./LighthouseIssueRow";
 import { LighthouseIssuesSummary } from "./LighthouseIssuesSummary";
-import { categoryLabel } from "./utils";
+import { ExportMenu } from "./LighthouseIssuesExportMenu";
+import {
+  categoryLabel,
+  parseLighthouseTimestamp,
+  severityLabel,
+} from "./utils";
 import { categoryTabs } from "./types";
 
 export function LighthouseIssuesHeader({
@@ -36,40 +34,63 @@ export function LighthouseIssuesHeader({
   metrics?: LighthouseMetrics | null;
   severityCounts: { critical: number; warning: number; info: number };
 }) {
+  const intl = useIntl();
+
   return (
     <>
       <div className="flex items-center justify-between gap-3">
         <button className="btn btn-ghost btn-sm px-2" onClick={onBack}>
-          &larr; Back to {backLabel}
+          <FormattedMessage
+            id="lighthouseIssues.header.backTo"
+            values={{ backLabel }}
+          />
         </button>
         <span className="text-xs text-base-content/60">
-          {scannedAt
-            ? `Scanned ${new Date(scannedAt).toLocaleString()}`
-            : "Reading latest issues..."}
+          {scannedAt ? (
+            <FormattedMessage
+              id="lighthouseIssues.header.scanned"
+              values={{
+                date: intl.formatDate(parseLighthouseTimestamp(scannedAt), {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }),
+              }}
+            />
+          ) : (
+            <FormattedMessage id="lighthouseIssues.header.loadingScanTime" />
+          )}
         </span>
       </div>
 
       <div className="card bg-base-100 border border-base-300">
         <div className="card-body py-5 gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold">Lighthouse Issues</h1>
+            <h1 className="text-2xl font-semibold">
+              <FormattedMessage id="lighthouseIssues.header.title" />
+            </h1>
             <p className="text-sm text-base-content/70 break-all">
-              {finalUrl ?? "Loading URL..."}
+              {finalUrl ??
+                intl.formatMessage({
+                  id: "lighthouseIssues.header.loadingUrl",
+                })}
             </p>
           </div>
           <LighthouseIssuesSummary scores={scores} metrics={metrics} />
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="badge border border-error/30 bg-error/10 text-error/80 gap-1">
               <FileWarning className="size-3" />
-              Critical {severityCounts.critical}
+              {severityLabel(intl, "critical")}{" "}
+              {intl.formatNumber(severityCounts.critical)}
             </span>
             <span className="badge border border-warning/30 bg-warning/10 text-warning/80 gap-1">
               <TriangleAlert className="size-3" />
-              Warning {severityCounts.warning}
+              {severityLabel(intl, "warning")}{" "}
+              {intl.formatNumber(severityCounts.warning)}
             </span>
             <span className="badge border border-info/30 bg-info/10 text-info/80 gap-1">
               <Info className="size-3" />
-              Info {severityCounts.info}
+              {severityLabel(intl, "info")}{" "}
+              {intl.formatNumber(severityCounts.info)}
             </span>
           </div>
         </div>
@@ -109,8 +130,6 @@ export function LighthouseIssuesToolbar({
   const exportCurrentCategory: ExportPayload =
     category === "all" ? { mode: "issues" } : { mode: "category", category };
 
-  const categoryLabelLower = selectedCategoryLabel.toLowerCase();
-
   return (
     <div className="sticky top-0 z-[2] -mx-2 px-2 py-2 bg-base-100/95 backdrop-blur-sm border-b border-base-300">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -121,7 +140,7 @@ export function LighthouseIssuesToolbar({
         />
         <ExportMenu
           allIssues={allIssues}
-          categoryLabelLower={categoryLabelLower}
+          selectedCategoryLabel={selectedCategoryLabel}
           exportCurrentCategory={exportCurrentCategory}
           isBusy={isBusy}
           onCopy={onCopy}
@@ -144,6 +163,8 @@ function CategoryTabs({
   categoryCounts: Record<CategoryTab, number>;
   onCategoryChange: (next: CategoryTab) => void;
 }) {
+  const intl = useIntl();
+
   return (
     <div className="flex flex-wrap items-center gap-4">
       {categoryTabs.map((tab) => (
@@ -156,155 +177,12 @@ function CategoryTabs({
           }`}
           onClick={() => onCategoryChange(tab)}
         >
-          <span>{categoryLabel(tab)}</span>
+          <span>{categoryLabel(intl, tab)}</span>
           <span className="ml-1 text-xs opacity-70">
-            ({categoryCounts[tab]})
+            ({intl.formatNumber(categoryCounts[tab])})
           </span>
         </button>
       ))}
-    </div>
-  );
-}
-
-function ExportMenu({
-  allIssues,
-  categoryLabelLower,
-  exportCurrentCategory,
-  isBusy,
-  onCopy,
-  onExport,
-  onExportCsv,
-  onExportSheets,
-  visibleIssues,
-}: {
-  allIssues: LighthouseIssue[];
-  categoryLabelLower: string;
-  exportCurrentCategory: ExportPayload;
-  isBusy: boolean;
-  onCopy: (data: ExportPayload, toastMessage: string) => void;
-  onExport: (data: ExportPayload) => void;
-  onExportCsv: (issues: LighthouseIssue[], variant: "all" | "current") => void;
-  onExportSheets: (
-    issues: LighthouseIssue[],
-    variant: "all" | "current",
-  ) => void;
-  visibleIssues: LighthouseIssue[];
-}) {
-  return (
-    <div className="dropdown dropdown-end">
-      <div tabIndex={0} role="button" className="btn btn-sm gap-1">
-        <Download className="size-4" />
-        Export
-        <ChevronDown className="size-3 opacity-60" />
-      </div>
-      <ul
-        tabIndex={0}
-        className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-72"
-      >
-        <li className="menu-title">
-          <span>Export to Sheets</span>
-        </li>
-        <li>
-          <button
-            disabled={!visibleIssues.length}
-            onClick={() => onExportSheets(visibleIssues, "current")}
-          >
-            <Sheet className="size-4" />
-            Open in Sheets — {categoryLabelLower}
-          </button>
-        </li>
-        <li>
-          <button
-            disabled={!allIssues.length}
-            onClick={() => onExportSheets(allIssues, "all")}
-          >
-            <Sheet className="size-4" />
-            Open in Sheets — all actionable
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Copy</span>
-        </li>
-        <li>
-          <button
-            disabled={isBusy}
-            onClick={() =>
-              onCopy(
-                exportCurrentCategory,
-                `Copied ${categoryLabelLower} issues`,
-              )
-            }
-          >
-            <Copy className="size-4" />
-            Copy {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
-            disabled={isBusy}
-            onClick={() =>
-              onCopy({ mode: "issues" }, "Copied all actionable issues")
-            }
-          >
-            <Copy className="size-4" />
-            Copy all actionable issues
-          </button>
-        </li>
-        <li>
-          <button
-            disabled={isBusy}
-            onClick={() =>
-              onCopy({ mode: "full" }, "Copied saved Lighthouse payload")
-            }
-          >
-            <Copy className="size-4" />
-            Copy saved Lighthouse payload
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Download JSON</span>
-        </li>
-        <li>
-          <button
-            disabled={isBusy}
-            onClick={() => onExport(exportCurrentCategory)}
-          >
-            Download {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
-            disabled={isBusy}
-            onClick={() => onExport({ mode: "issues" })}
-          >
-            Download all actionable issues
-          </button>
-        </li>
-        <li>
-          <button disabled={isBusy} onClick={() => onExport({ mode: "full" })}>
-            Download saved Lighthouse payload
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Download CSV</span>
-        </li>
-        <li>
-          <button
-            disabled={!visibleIssues.length}
-            onClick={() => onExportCsv(visibleIssues, "current")}
-          >
-            Download {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
-            disabled={!allIssues.length}
-            onClick={() => onExportCsv(allIssues, "all")}
-          >
-            Download all actionable issues
-          </button>
-        </li>
-      </ul>
     </div>
   );
 }
@@ -318,46 +196,70 @@ export function LighthouseIssueList({
   isLoading: boolean;
   emptyMessage?: string;
 }) {
+  const intl = useIntl();
+
   if (isLoading) {
-    return <p className="text-sm text-base-content/60">Loading issues...</p>;
+    return (
+      <p className="text-sm text-base-content/60">
+        <FormattedMessage id="lighthouseIssues.list.loading" />
+      </p>
+    );
   }
   if (!issues.length) {
     return (
       <p className="text-sm text-base-content/60">
-        {emptyMessage ?? "No actionable issues for this category."}
+        {emptyMessage ??
+          intl.formatMessage({ id: "lighthouseIssues.list.emptyDefault" })}
       </p>
     );
   }
   return (
-    <table className="table table-sm w-full table-fixed">
-      <colgroup>
-        <col className="w-8" />
-        <col className="w-24" />
-        <col />
-        <col className="w-28 hidden sm:table-column" />
-        <col className="w-28 hidden md:table-column" />
-        <col className="w-14" />
-      </colgroup>
-      <thead>
-        <tr className="text-xs text-base-content/50 uppercase tracking-wide border-b border-base-300">
-          <th />
-          <th className="font-medium">Severity</th>
-          <th className="font-medium">Issue</th>
-          <th className="font-medium hidden sm:table-cell">Category</th>
-          <th className="font-medium hidden md:table-cell text-right">
-            Impact
-          </th>
-          <th className="font-medium text-right">Score</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-base-300">
-        {issues.map((issue, issueIndex) => (
-          <LighthouseIssueRow
-            key={`${issue.category}-${issue.auditKey}-${issueIndex}`}
-            issue={issue}
-          />
-        ))}
-      </tbody>
-    </table>
+    <div className="space-y-2">
+      {/* Discloses that the Issue column below is a mix of EchoSEO's own
+          chrome (Severity, Category, Score) and Lighthouse's own English
+          report text (issue title/description in the Issue column) — see
+          the scope note atop lighthouseIssues.ts. */}
+      <p className="text-xs text-base-content/50">
+        <FormattedMessage id="lighthouseIssues.list.providerNotice" />
+      </p>
+      <table className="table table-sm w-full table-fixed">
+        <colgroup>
+          <col className="w-8" />
+          <col className="w-24" />
+          <col />
+          <col className="w-28 hidden sm:table-column" />
+          <col className="w-28 hidden md:table-column" />
+          <col className="w-14" />
+        </colgroup>
+        <thead>
+          <tr className="text-xs text-base-content/50 uppercase tracking-wide border-b border-base-300">
+            <th />
+            <th className="font-medium">
+              <FormattedMessage id="lighthouseIssues.list.column.severity" />
+            </th>
+            <th className="font-medium">
+              <FormattedMessage id="lighthouseIssues.list.column.issue" />
+            </th>
+            <th className="font-medium hidden sm:table-cell">
+              <FormattedMessage id="lighthouseIssues.list.column.category" />
+            </th>
+            <th className="font-medium hidden md:table-cell text-right">
+              <FormattedMessage id="lighthouseIssues.list.column.impact" />
+            </th>
+            <th className="font-medium text-right">
+              <FormattedMessage id="lighthouseIssues.list.column.score" />
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-base-300">
+          {issues.map((issue, issueIndex) => (
+            <LighthouseIssueRow
+              key={`${issue.category}-${issue.auditKey}-${issueIndex}`}
+              issue={issue}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -1,11 +1,14 @@
-import {
-  formatCount,
-  formatPlatformLabel,
-} from "@/client/features/ai-search/platformLabels";
+import { FormattedMessage, useIntl } from "react-intl";
+import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 
 type ShareOfVoice = NonNullable<BrandLookupResult["shareOfVoice"]>;
 type ShareEntry = ShareOfVoice["entries"][number];
+
+const SHARE_PERCENT_OPTIONS = {
+  style: "percent",
+  maximumFractionDigits: 0,
+} as const;
 
 /**
  * Competitor Share of Voice leaderboard. The server sorts entries descending by
@@ -18,6 +21,7 @@ export function BrandLookupShareOfVoice({
 }: {
   shareOfVoice: ShareOfVoice;
 }) {
+  const intl = useIntl();
   const target = shareOfVoice.entries.find((entry) => entry.isTarget) ?? null;
   const maxPct = Math.max(
     0,
@@ -27,15 +31,27 @@ export function BrandLookupShareOfVoice({
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">
       <div className="flex items-baseline justify-between gap-2 border-b border-base-300 px-4 py-3">
-        <h3 className="text-sm font-semibold">Share of Voice</h3>
+        <h3 className="text-sm font-semibold">
+          <FormattedMessage id="aiBrandLookup.shareOfVoice.title" />
+        </h3>
         {target ? (
           <span className="text-xs text-base-content/50">
             <span className="font-medium text-base-content/80">
               {target.label}
             </span>{" "}
-            {target.sharePct == null
-              ? "· no comparable data"
-              : `· ${Math.round(target.sharePct)}%`}
+            {target.sharePct == null ? (
+              <FormattedMessage id="aiBrandLookup.shareOfVoice.noComparableData" />
+            ) : (
+              <FormattedMessage
+                id="aiBrandLookup.shareOfVoice.targetShare"
+                values={{
+                  percent: intl.formatNumber(
+                    target.sharePct / 100,
+                    SHARE_PERCENT_OPTIONS,
+                  ),
+                }}
+              />
+            )}
           </span>
         ) : null}
       </div>
@@ -54,9 +70,14 @@ export function BrandLookupShareOfVoice({
       {/* Captions only the platforms actually summed — when one platform's
           cross_aggregated call failed, the leaderboard must not claim both. */}
       <p className="border-t border-base-200 px-4 py-2 text-[11px] text-base-content/50">
-        Mentions share across{" "}
-        {shareOfVoice.platforms.map(formatPlatformLabel).join(" and ")} · bars
-        relative to the leader.
+        <FormattedMessage
+          id="aiBrandLookup.shareOfVoice.footer"
+          values={{
+            platforms: intl.formatList(
+              shareOfVoice.platforms.map(formatPlatformLabel),
+            ),
+          }}
+        />
       </p>
     </section>
   );
@@ -71,6 +92,7 @@ function LeaderboardRow({
   rank: number;
   maxPct: number;
 }) {
+  const intl = useIntl();
   const hasData = entry.mentions != null && entry.sharePct != null;
   const barWidth =
     hasData && maxPct > 0 ? ((entry.sharePct ?? 0) / maxPct) * 100 : 0;
@@ -86,11 +108,13 @@ function LeaderboardRow({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm">{entry.label}</span>
           {entry.isTarget ? (
-            <span className="badge badge-primary badge-xs border-0">You</span>
+            <span className="badge badge-primary badge-xs border-0">
+              <FormattedMessage id="aiBrandLookup.shareOfVoice.youBadge" />
+            </span>
           ) : null}
           <span className="ml-auto shrink-0 text-xs tabular-nums text-base-content/50">
             {/* Null mentions = "no data"; render a dash, not zero. */}
-            {entry.mentions == null ? "—" : formatCount(entry.mentions)}
+            {entry.mentions == null ? "—" : intl.formatNumber(entry.mentions)}
           </span>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-base-200">
@@ -103,7 +127,12 @@ function LeaderboardRow({
         </div>
       </div>
       <span className="text-right text-sm font-medium tabular-nums">
-        {hasData ? `${Math.round(entry.sharePct ?? 0)}%` : "—"}
+        {hasData
+          ? intl.formatNumber(
+              (entry.sharePct ?? 0) / 100,
+              SHARE_PERCENT_OPTIONS,
+            )
+          : "—"}
       </span>
     </li>
   );

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { type SortingState } from "@tanstack/react-table";
 import { ChevronDown, Download, Sheet, SlidersHorizontal } from "lucide-react";
+import { useIntl } from "react-intl";
 import { useAppTable } from "@/client/components/table/AppDataTable";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import {
@@ -9,11 +10,13 @@ import {
 } from "@/client/features/ai-search/components/brandLookupExport";
 import { BrandLookupFilterPanel } from "@/client/features/ai-search/components/BrandLookupFilterPanel";
 import {
-  TopPagesTable,
-  TopQueriesTable,
   buildTopPagesColumns,
-  buildTopQueriesColumns,
+  TopPagesTable,
 } from "@/client/features/ai-search/components/BrandLookupCitationTables";
+import {
+  buildTopQueriesColumns,
+  TopQueriesTable,
+} from "@/client/features/ai-search/components/BrandLookupQueriesTable";
 import {
   formatPlatformLabel,
   PLATFORM_DOT_CLASS,
@@ -44,6 +47,7 @@ export function CitationTabsCard({
   result: BrandLookupResult;
   projectId: string;
 }) {
+  const intl = useIntl();
   const [activeTab, setActiveTab] = useState<CitationTab>("queries");
   const [pagesSort, setPagesSort] = useState<SortingState>(DEFAULT_PAGES_SORT);
   const [queriesSort, setQueriesSort] =
@@ -75,21 +79,23 @@ export function CitationTabsCard({
   const pagesColumns = useMemo(
     () =>
       buildTopPagesColumns({
+        intl,
         showPlatform: showPagePlatform,
         targetDomain,
         projectId,
         brand: result.resolvedTarget,
       }),
-    [showPagePlatform, targetDomain, projectId, result.resolvedTarget],
+    [intl, showPagePlatform, targetDomain, projectId, result.resolvedTarget],
   );
   const queriesColumns = useMemo(
     () =>
       buildTopQueriesColumns({
+        intl,
         showPlatform: showQueryPlatform,
         projectId,
         brand: result.resolvedTarget,
       }),
-    [showQueryPlatform, projectId, result.resolvedTarget],
+    [intl, showQueryPlatform, projectId, result.resolvedTarget],
   );
 
   const pagesTable = useAppTable({
@@ -145,6 +151,12 @@ export function CitationTabsCard({
   const activePlatforms = pagesActive ? pagePlatforms : queryPlatforms;
   const captionPlatform =
     activePlatforms.length === 1 ? activePlatforms[0] : null;
+  // The brand/domain the user searched is arbitrary user data, not prose, so
+  // it is interpolated into the sentence as a value rather than translated —
+  // formatMessage returns an array here because a value is a ReactNode.
+  const captionBrand = (
+    <strong className="text-base-content/80">{result.resolvedTarget}</strong>
+  );
 
   return (
     <section className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
@@ -157,7 +169,7 @@ export function CitationTabsCard({
             className={`tab ${queriesActive ? "tab-active" : ""}`}
             onClick={() => setActiveTab("queries")}
           >
-            Queries
+            {intl.formatMessage({ id: "aiCitations.card.tab.queries" })}
           </button>
           <button
             type="button"
@@ -166,7 +178,7 @@ export function CitationTabsCard({
             className={`tab ${pagesActive ? "tab-active" : ""}`}
             onClick={() => setActiveTab("pages")}
           >
-            Cited sources
+            {intl.formatMessage({ id: "aiCitations.card.tab.pages" })}
           </button>
         </div>
 
@@ -177,7 +189,7 @@ export function CitationTabsCard({
             className={`btn btn-ghost btn-sm gap-1.5 ${canExport ? "" : "btn-disabled"}`}
           >
             <Download className="size-3.5" />
-            Export
+            {intl.formatMessage({ id: "common.table.export" })}
             <ChevronDown className="size-3.5" />
           </div>
           <ul
@@ -191,7 +203,7 @@ export function CitationTabsCard({
                 disabled={!canExport}
               >
                 <Sheet className="size-4" />
-                Google Sheets
+                {intl.formatMessage({ id: "common.sheets.export" })}
               </button>
             </li>
             <li>
@@ -201,7 +213,7 @@ export function CitationTabsCard({
                 disabled={!canExport}
               >
                 <Download className="size-4" />
-                CSV
+                {intl.formatMessage({ id: "aiCitations.card.export.csv" })}
               </button>
             </li>
           </ul>
@@ -213,13 +225,15 @@ export function CitationTabsCard({
           type="button"
           className={`btn btn-ghost btn-sm gap-1.5 ${filters.showFilters ? "btn-active" : ""}`}
           onClick={() => filters.setShowFilters((current) => !current)}
-          title="Toggle table filters"
+          title={intl.formatMessage({
+            id: "aiCitations.card.filters.toggleTitle",
+          })}
         >
           <SlidersHorizontal className="size-3.5" />
-          Filters
+          {intl.formatMessage({ id: "aiCitations.card.filters.label" })}
           {currentFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {currentFilterCount}
+              {intl.formatNumber(currentFilterCount)}
             </span>
           ) : null}
         </button>
@@ -227,23 +241,15 @@ export function CitationTabsCard({
 
       <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-2 text-xs text-base-content/60">
         <span>
-          {activeTab === "pages" ? (
-            <>
-              Pages cited alongside{" "}
-              <strong className="text-base-content/80">
-                {result.resolvedTarget}
-              </strong>{" "}
-              in AI answers. Prompt examples come from the fetched sample.
-            </>
-          ) : (
-            <>
-              Fetched sample of prompts whose AI answer cited{" "}
-              <strong className="text-base-content/80">
-                {result.resolvedTarget}
-              </strong>{" "}
-              in its text or sources.
-            </>
-          )}
+          {pagesActive
+            ? intl.formatMessage(
+                { id: "aiCitations.card.caption.pages" },
+                { brand: captionBrand },
+              )
+            : intl.formatMessage(
+                { id: "aiCitations.card.caption.queries" },
+                { brand: captionBrand },
+              )}
         </span>
         {captionPlatform ? (
           <span className="inline-flex shrink-0 items-center gap-1.5 text-base-content/70">

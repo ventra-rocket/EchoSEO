@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { FormattedMessage } from "react-intl";
 import { MARKDOWN_COMPONENTS } from "@/client/components/Markdown";
 
 type Props = {
@@ -44,7 +45,7 @@ export function MarkdownAnswer({ text }: Props) {
   if (normalized.trim().length === 0 && thinking.length === 0) {
     return (
       <p className="text-sm text-base-content/60 italic">
-        Model returned an empty response.
+        <FormattedMessage id="aiPromptExplorer.markdown.emptyResponse" />
       </p>
     );
   }
@@ -93,12 +94,12 @@ export function MarkdownAnswer({ text }: Props) {
           {expanded ? (
             <>
               <ChevronUp className="size-3.5" />
-              Show less
+              <FormattedMessage id="aiPromptExplorer.markdown.showLess" />
             </>
           ) : (
             <>
               <ChevronDown className="size-3.5" />
-              Read more
+              <FormattedMessage id="aiPromptExplorer.markdown.readMore" />
             </>
           )}
         </button>
@@ -115,7 +116,7 @@ function ThinkingBlock({ text }: { text: string }) {
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-base-content/70 hover:text-base-content">
         <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
-        Model Thinking
+        <FormattedMessage id="aiPromptExplorer.markdown.modelThinking" />
       </summary>
       <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-b-lg border-t border-base-300 bg-base-200/60 px-3 py-2.5 text-xs font-mono text-base-content/80">
         {text}

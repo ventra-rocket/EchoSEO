@@ -11,14 +11,16 @@ export const getAssistantWorkspaceIdentity = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z.object({ projectId: z.string().min(1) }).parse(data),
   )
-  .handler(async ({ context }) => ({
-    userId: context.userId,
+  .handler(async ({ context }) => {
     // Hosted billing for this new surface has not been designed yet. Keep it
-    // unavailable there rather than creating unmanaged OpenRouter spend.
-    available:
-      !(await isHostedServerAuthMode()) &&
-      Boolean(await getOptionalEnvValue("OPENROUTER_API_KEY")),
-    unavailableReason: (await isHostedServerAuthMode())
-      ? "Hosted AI workspace is not available yet."
-      : "Add an OPENROUTER_API_KEY to enable the private AI workspace.",
-  }));
+    // unavailable there rather than creating unmanaged OpenRouter spend. The
+    // client resolves *why* it's unavailable itself, via the same
+    // isHostedClientAuthMode() deploy-time contract CommandCenterSignalCards
+    // already relies on — no need to ship English reason text from here.
+    const hosted = await isHostedServerAuthMode();
+    return {
+      userId: context.userId,
+      available:
+        !hosted && Boolean(await getOptionalEnvValue("OPENROUTER_API_KEY")),
+    };
+  });

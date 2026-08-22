@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Bot, ExternalLink, Loader2 } from "lucide-react";
+import { FormattedMessage } from "react-intl";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getProjectAccess } from "@/serverFunctions/projects";
 import { getAssistantWorkspaceIdentity } from "@/serverFunctions/assistant-workspace";
 import { AssistantWorkspaceConversation } from "./AssistantWorkspaceConversation";
@@ -23,7 +25,7 @@ export function AssistantWorkspacePage({ projectId }: { projectId: string }) {
   if (project.isError || identity.isError || !project.data || !identity.data)
     return (
       <div className="alert alert-error mx-4 my-6" role="alert">
-        We could not open this private assistant workspace.
+        <FormattedMessage id="aiWorkspace.workspace.unavailable" />
       </div>
     );
   return (
@@ -36,18 +38,22 @@ export function AssistantWorkspacePage({ projectId }: { projectId: string }) {
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium uppercase tracking-wide text-base-content/60">
-              AI workspace
+              <FormattedMessage id="nav.assistantWorkspace" />
             </p>
             <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold">
               <Bot className="size-6 text-primary" aria-hidden="true" />
-              Assisted SEO workflows
+              <FormattedMessage id="aiWorkspace.workspace.title" />
             </h1>
             <p className="mt-1 text-sm text-base-content/70">
-              Private to you inside {project.data.name}.
+              <FormattedMessage
+                id="aiWorkspace.workspace.privateTo"
+                values={{ projectName: project.data.name }}
+              />
             </p>
           </div>
           <Link to="/ai" className="btn btn-ghost min-h-11 sm:btn-sm">
-            MCP setup <ExternalLink className="size-4" aria-hidden="true" />
+            <FormattedMessage id="aiWorkspace.workspace.mcpSetupLink" />{" "}
+            <ExternalLink className="size-4" aria-hidden="true" />
           </Link>
         </header>
         {identity.data.available ? (
@@ -60,12 +66,20 @@ export function AssistantWorkspacePage({ projectId }: { projectId: string }) {
         ) : (
           <section className="card border border-base-300 bg-base-100 shadow-sm">
             <div className="card-body gap-3">
-              <h2 className="font-semibold">AI setup required</h2>
+              <h2 className="font-semibold">
+                <FormattedMessage id="aiWorkspace.workspace.setupRequired.title" />
+              </h2>
               <p className="text-sm text-base-content/70">
-                {identity.data.unavailableReason}
+                <FormattedMessage
+                  id={
+                    isHostedClientAuthMode()
+                      ? "aiWorkspace.workspace.setupRequired.hostedReason"
+                      : "aiWorkspace.workspace.setupRequired.missingKeyReason"
+                  }
+                />
               </p>
               <Link to="/ai" className="btn btn-primary min-h-11 w-fit">
-                Open MCP and AI setup
+                <FormattedMessage id="aiWorkspace.workspace.setupRequired.openLink" />
               </Link>
             </div>
           </section>

@@ -24,6 +24,14 @@ import { domainOverview } from "./en/domainOverview";
 import { domainTables } from "./en/domainTables";
 import { backlinksOverview } from "./en/backlinksOverview";
 import { backlinksTables } from "./en/backlinksTables";
+import { aiBrandLookup } from "./en/aiBrandLookup";
+import { aiCitations } from "./en/aiCitations";
+import { aiPromptExplorer } from "./en/aiPromptExplorer";
+import { aiWorkspace } from "./en/aiWorkspace";
+import { projectsSettings } from "./en/projectsSettings";
+import { billingPlans } from "./en/billingPlans";
+import { lighthouseIssues } from "./en/lighthouseIssues";
+import { helpSupport } from "./en/helpSupport";
 
 // English catalog — the source of truth for message IDs. Every other locale is
 // typed against this catalog's keys, so adding a key here forces every locale to
@@ -56,6 +64,14 @@ export const en = {
   ...domainTables,
   ...backlinksOverview,
   ...backlinksTables,
+  ...aiBrandLookup,
+  ...aiCitations,
+  ...aiPromptExplorer,
+  ...aiWorkspace,
+  ...projectsSettings,
+  ...billingPlans,
+  ...lighthouseIssues,
+  ...helpSupport,
 } as const;
 
 export type MessageId = keyof typeof en;

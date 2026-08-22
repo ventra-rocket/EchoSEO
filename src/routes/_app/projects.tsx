@@ -2,6 +2,7 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Plus } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { toast } from "sonner";
 import {
   getArchivedProjects,
@@ -9,7 +10,7 @@ import {
   restoreProject,
 } from "@/serverFunctions/projects";
 import { getSiteCards } from "@/serverFunctions/audit";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { getLastProjectId } from "@/client/lib/active-project";
 import { CreateProjectModal } from "@/client/features/projects/CreateProjectModal";
 import { GscImportModal } from "@/client/features/gsc/GscImportModal";
@@ -49,10 +50,11 @@ function ProjectsPage() {
             entirely rather than merely making it narrow. */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              <FormattedMessage id="projectsSettings.page.title" />
+            </h1>
             <p className="mt-1 text-sm text-base-content/60">
-              Each project is a separate workspace with its own Search Console,
-              rank tracking, and audits.
+              <FormattedMessage id="projectsSettings.page.subtitle" />
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -65,7 +67,7 @@ function ProjectsPage() {
               onClick={() => setImporting(true)}
             >
               <Download className="size-4" />
-              Import from Search Console
+              <FormattedMessage id="gsc.import.title" />
             </button>
             <button
               type="button"
@@ -73,7 +75,7 @@ function ProjectsPage() {
               onClick={() => setCreating(true)}
             >
               <Plus className="size-4" />
-              New project
+              <FormattedMessage id="projectsSettings.newProject.action" />
             </button>
           </div>
         </div>
@@ -118,6 +120,7 @@ function ProjectsPage() {
 }
 
 function ArchivedProjects() {
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const archivedQuery = useQuery({
     queryKey: ["projects", "archived"],
@@ -131,17 +134,29 @@ function ArchivedProjects() {
     onSuccess: async () => {
       // Prefix match invalidates both the active and archived lists.
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project restored");
+      toast.success(
+        intl.formatMessage({ id: "projectsSettings.archived.restoreSuccess" }),
+      );
     },
     onError: (error) =>
-      toast.error(getStandardErrorMessage(error, "Failed to restore project")),
+      toast.error(
+        getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({
+            id: "projectsSettings.archived.restoreError",
+          }),
+        ),
+      ),
   });
 
   if (archived.length === 0) return null;
 
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-medium text-base-content/50">Archived</h2>
+      <h2 className="text-sm font-medium text-base-content/50">
+        <FormattedMessage id="projectsSettings.archived.heading" />
+      </h2>
       <ul className="divide-y divide-base-300 overflow-hidden rounded-lg border border-base-300">
         {archived.map((project) => (
           <li
@@ -153,7 +168,10 @@ function ArchivedProjects() {
                 {project.name}
               </span>
               <span className="truncate text-xs text-base-content/50">
-                {project.domain ?? "No domain set"}
+                {project.domain ??
+                  intl.formatMessage({
+                    id: "projectsSettings.archived.noDomain",
+                  })}
               </span>
             </span>
             <button
@@ -162,7 +180,7 @@ function ArchivedProjects() {
               onClick={() => restoreMutation.mutate(project.id)}
               disabled={restoreMutation.isPending}
             >
-              Restore
+              <FormattedMessage id="projectsSettings.archived.restore" />
             </button>
           </li>
         ))}

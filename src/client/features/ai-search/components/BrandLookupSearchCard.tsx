@@ -1,8 +1,22 @@
 import type { FormEvent } from "react";
 import { Search } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { applyBillingMarkupUsd } from "@/shared/billing";
 import { BRAND_LOOKUP_MAX_INPUT_LENGTH } from "@/types/schemas/ai-search";
+
+/**
+ * Field-tagged validation error. `messageId` is data, not prose: the card
+ * resolves it (with `values`, when the message needs one) through the active
+ * `IntlShape` at render time, so the error text always matches the reader's
+ * locale even though the check that produced it lives in the parent page.
+ */
+export type BrandLookupValidationError = {
+  field: "query" | "competitors";
+  messageId: MessageId;
+  values?: Record<string, string | number>;
+};
 
 type Props = {
   query: string;
@@ -11,7 +25,7 @@ type Props = {
   onCompetitorsChange: (next: string) => void;
   onSubmit: (event: FormEvent) => void;
   isLoading: boolean;
-  validationError: { field: "query" | "competitors"; message: string } | null;
+  validationError: BrandLookupValidationError | null;
 };
 
 /**
@@ -31,13 +45,12 @@ const BRAND_LOOKUP_COMPETITOR_RAW_COST_USD = 0.2;
 
 // Hosted customers are billed the marked-up USD; self-hosted users pay
 // DataForSEO directly at the raw rate.
-const markup = (rawUsd: number) =>
-  isHostedClientAuthMode() ? applyBillingMarkupUsd(rawUsd) : rawUsd;
-
-const BRAND_LOOKUP_DISPLAYED_COST_USD = markup(BRAND_LOOKUP_RAW_COST_USD);
-const BRAND_LOOKUP_COMPETITOR_DISPLAYED_COST_USD = markup(
-  BRAND_LOOKUP_COMPETITOR_RAW_COST_USD,
-);
+const BRAND_LOOKUP_DISPLAYED_COST_USD = isHostedClientAuthMode()
+  ? applyBillingMarkupUsd(BRAND_LOOKUP_RAW_COST_USD)
+  : BRAND_LOOKUP_RAW_COST_USD;
+const BRAND_LOOKUP_COMPETITOR_DISPLAYED_COST_USD = isHostedClientAuthMode()
+  ? applyBillingMarkupUsd(BRAND_LOOKUP_COMPETITOR_RAW_COST_USD)
+  : BRAND_LOOKUP_COMPETITOR_RAW_COST_USD;
 
 export function BrandLookupSearchCard({
   query,
@@ -48,6 +61,7 @@ export function BrandLookupSearchCard({
   isLoading,
   validationError,
 }: Props) {
+  const intl = useIntl();
   const hasCompetitors = competitors.trim().length > 0;
   const queryError = validationError?.field === "query";
   const competitorsError = validationError?.field === "competitors";
@@ -65,7 +79,9 @@ export function BrandLookupSearchCard({
               <Search className="size-4 text-base-content/60" />
               <input
                 type="text"
-                placeholder="Enter a brand name or domain"
+                placeholder={intl.formatMessage({
+                  id: "aiBrandLookup.search.queryPlaceholder",
+                })}
                 value={query}
                 maxLength={BRAND_LOOKUP_MAX_INPUT_LENGTH}
                 onChange={(event) => onQueryChange(event.target.value)}
@@ -84,14 +100,20 @@ export function BrandLookupSearchCard({
               className="btn btn-primary px-6"
               disabled={isLoading}
             >
-              {isLoading ? "Looking up..." : "Look up"}
+              {isLoading ? (
+                <FormattedMessage id="aiBrandLookup.search.submitLoading" />
+              ) : (
+                <FormattedMessage id="aiBrandLookup.search.submit" />
+              )}
             </button>
           </div>
 
           <div className="flex flex-col gap-1">
             <input
               type="text"
-              placeholder="Add competitors (comma-separated)"
+              placeholder={intl.formatMessage({
+                id: "aiBrandLookup.search.competitorsPlaceholder",
+              })}
               value={competitors}
               onChange={(event) => onCompetitorsChange(event.target.value)}
               autoComplete="off"
@@ -99,38 +121,57 @@ export function BrandLookupSearchCard({
               className={`input input-bordered w-full ${
                 competitorsError ? "input-error" : ""
               }`}
-              aria-label="Competitors"
+              aria-label={intl.formatMessage({
+                id: "aiBrandLookup.search.competitorsAriaLabel",
+              })}
               aria-invalid={competitorsError || undefined}
               aria-describedby={
                 competitorsError ? "brand-lookup-input-error" : undefined
               }
             />
             <p className="text-xs text-base-content/60">
-              Add up to 5 competitor brands or domains to see your Share of
-              Voice.
+              <FormattedMessage id="aiBrandLookup.search.competitorsHelp" />
             </p>
           </div>
         </form>
 
         {validationError ? (
           <p id="brand-lookup-input-error" className="text-sm text-error">
-            {validationError.message}
+            {intl.formatMessage(
+              { id: validationError.messageId },
+              validationError.values,
+            )}
           </p>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-base-content/60">
           <p className="tabular-nums">
-            Est.{" "}
-            <span className="font-medium text-base-content/80">
-              ${BRAND_LOOKUP_DISPLAYED_COST_USD.toFixed(2)}
-            </span>
+            <FormattedMessage
+              id="aiBrandLookup.search.costEstimate"
+              values={{
+                amount: (
+                  <span className="font-medium text-base-content/80">
+                    {intl.formatNumber(BRAND_LOOKUP_DISPLAYED_COST_USD, {
+                      style: "currency",
+                      currency: "USD",
+                    })}
+                  </span>
+                ),
+              }}
+            />
             {hasCompetitors ? (
-              <span>
+              <>
                 {" "}
-                plus ~$
-                {BRAND_LOOKUP_COMPETITOR_DISPLAYED_COST_USD.toFixed(2)} to
-                compare competitors
-              </span>
+                <FormattedMessage
+                  id="aiBrandLookup.search.costEstimateCompetitors"
+                  values={{
+                    amount: intl.formatNumber(
+                      BRAND_LOOKUP_COMPETITOR_DISPLAYED_COST_USD,
+                      { style: "currency", currency: "USD" },
+                    ),
+                  }}
+                />
+              </>
             ) : null}
           </p>
         </div>

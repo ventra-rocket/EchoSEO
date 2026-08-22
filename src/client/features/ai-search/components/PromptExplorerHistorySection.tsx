@@ -19,8 +19,8 @@ export function PromptExplorerHistorySection({ projectId, ...props }: Props) {
     <SearchHistorySection
       {...props}
       emptyIcon={MessageSquare}
-      emptyMessage="Enter a prompt to compare model answers"
-      noun="prompt"
+      emptyMessageId="aiPromptExplorer.history.emptyMessage"
+      nounId="aiPromptExplorer.history.noun"
       renderItemLink={(item, content) => (
         <Link
           from="/p/$projectId/prompt-explorer"

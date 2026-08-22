@@ -1,13 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { FormattedMessage, useIntl } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import {
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
-import {
-  creditFeatureLabel,
-  mapDataforseoPathToCreditFeature,
-} from "@/shared/billing-credit-features";
+import { mapDataforseoPathToCreditFeature } from "@/shared/billing-credit-features";
 import {
   getBillingUsageEvents,
   type BillingUsageEvent,
@@ -20,6 +19,28 @@ const BILLING_USAGE_FEATURE_IDS: string[] = [
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
+// One id per key `src/shared/billing-credit-features.ts`'s CREDIT_FEATURE_LABELS
+// map can produce (including "ai_search", which isn't part of the CreditFeature
+// union but can still arrive as a raw legacy `creditFeature` property), plus
+// the "Other" fallback for anything unmapped. That shared map stays English —
+// it's server/analytics-facing — this catalog is what actually renders here.
+const CREDIT_FEATURE_LABEL_IDS: Record<string, MessageId> = {
+  keyword_research: "billingPlans.creditFeature.keywordResearch",
+  domain_overview: "billingPlans.creditFeature.domainOverview",
+  backlinks: "billingPlans.creditFeature.backlinks",
+  site_audit: "billingPlans.creditFeature.siteAudit",
+  rank_tracking: "billingPlans.creditFeature.rankTracking",
+  ai_citations: "billingPlans.creditFeature.aiCitations",
+  ai_prompt_responses: "billingPlans.creditFeature.aiPromptResponses",
+  ai_search: "billingPlans.creditFeature.aiSearch",
+  local_seo: "billingPlans.creditFeature.localSeo",
+  onboarding: "billingPlans.creditFeature.onboarding",
+  issue_explainer: "billingPlans.creditFeature.issueExplainer",
+};
+
+const OTHER_CREDIT_FEATURE_LABEL_ID: MessageId =
+  "billingPlans.creditFeature.other";
+
 type BillingUsageEventProperties = {
   creditFeature?: unknown;
   credit_feature?: unknown;
@@ -28,7 +49,7 @@ type BillingUsageEventProperties = {
 };
 
 type BillingFeatureBreakdownRow = {
-  label: string;
+  labelId: MessageId;
   usd: number;
 };
 
@@ -43,10 +64,6 @@ function getLast30DayUsageRange(): BillingUsageRange {
     start: end - THIRTY_DAYS_MS,
     end,
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function getPathSegmentsFromProperties(
@@ -103,7 +120,10 @@ function parseJsonEncodedPath(path: string): string[] | null {
 function getCreditFeatureFromUsageEvent(
   event: BillingUsageEvent,
 ): string | null {
-  const properties = isRecord(event.properties) ? event.properties : {};
+  // `event.properties` is already `Record<string, JsonValue>` per
+  // BillingUsageEvent (getBillingUsageEvents zod-validates it server-side),
+  // so this is a type refinement, not a runtime shape guess.
+  const properties = event.properties as BillingUsageEventProperties;
   const explicitFeature = properties.creditFeature ?? properties.credit_feature;
   if (typeof explicitFeature === "string" && explicitFeature.length > 0) {
     return explicitFeature;
@@ -116,17 +136,22 @@ function getCreditFeatureFromUsageEvent(
 export function getBillingFeatureBreakdownRows(
   events: BillingUsageEvent[],
 ): BillingFeatureBreakdownRow[] {
-  const creditsByLabel = new Map<string, number>();
+  const creditsByLabelId = new Map<MessageId, number>();
 
   for (const event of events) {
     const feature = getCreditFeatureFromUsageEvent(event);
-    const label = feature ? creditFeatureLabel(feature) : "Other";
-    creditsByLabel.set(label, (creditsByLabel.get(label) ?? 0) + event.value);
+    const labelId = feature
+      ? (CREDIT_FEATURE_LABEL_IDS[feature] ?? OTHER_CREDIT_FEATURE_LABEL_ID)
+      : OTHER_CREDIT_FEATURE_LABEL_ID;
+    creditsByLabelId.set(
+      labelId,
+      (creditsByLabelId.get(labelId) ?? 0) + event.value,
+    );
   }
 
-  return [...creditsByLabel.entries()]
-    .map(([label, credits]) => ({
-      label,
+  return [...creditsByLabelId.entries()]
+    .map(([labelId, credits]) => ({
+      labelId,
       usd: autumnSeoDataCreditsToUsd(credits),
     }))
     .filter((row) => row.usd > 0)
@@ -134,6 +159,7 @@ export function getBillingFeatureBreakdownRows(
 }
 
 export function BillingFeatureBreakdown() {
+  const intl = useIntl();
   const eventsQuery = useQuery({
     queryKey: ["billing", "usage-events", BILLING_USAGE_FEATURE_IDS, "30d"],
     queryFn: () => getBillingUsageEvents({ data: getLast30DayUsageRange() }),
@@ -146,8 +172,12 @@ export function BillingFeatureBreakdown() {
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-4 space-y-3">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="font-semibold">Usage by feature</span>
-        <span className="text-xs text-base-content/50">Last 30 days</span>
+        <span className="font-semibold">
+          <FormattedMessage id="billingPlans.usage.byFeatureTitle" />
+        </span>
+        <span className="text-xs text-base-content/50">
+          <FormattedMessage id="billingPlans.usage.last30Days" />
+        </span>
       </div>
 
       {eventsQuery.isLoading ? (
@@ -158,16 +188,21 @@ export function BillingFeatureBreakdown() {
         </div>
       ) : rows.length === 0 ? (
         <div className="text-sm text-base-content/40">
-          No usage recorded yet
+          <FormattedMessage id="billingPlans.usage.noneRecorded" />
         </div>
       ) : (
         <ul className="space-y-2.5">
           {rows.map((row) => (
-            <li key={row.label} className="space-y-1">
+            <li key={row.labelId} className="space-y-1">
               <div className="flex items-baseline justify-between gap-4 text-sm">
-                <span>{row.label}</span>
+                <span>
+                  <FormattedMessage id={row.labelId} />
+                </span>
                 <span className="tabular-nums text-base-content/70">
-                  ${row.usd.toFixed(2)}
+                  {intl.formatNumber(row.usd, {
+                    style: "currency",
+                    currency: "USD",
+                  })}
                 </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-base-200">

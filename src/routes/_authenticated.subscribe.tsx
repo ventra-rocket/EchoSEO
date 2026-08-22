@@ -2,16 +2,18 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AutumnProvider, useCustomer } from "autumn-js/react";
 import { useEffect, useState } from "react";
 import { ArrowRight, Settings, User } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { EchoSeoLogo } from "@/client/components/EchoSeoLogo";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { getStoredRedditAttribution } from "@/client/lib/reddit-attribution";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { getSubscribeRouteState } from "@/client/features/billing/route-state";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
 import { MANAGED_ACCESS_QUERY_KEY } from "@/client/features/billing/managed-access";
+import { BASE_PLAN_PRICE_USD } from "@/client/features/billing/HostedBillingContentUtils";
 import { normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { queryClient } from "@/client/tanstack-db";
 import {
@@ -22,12 +24,15 @@ import { captureRedditConversionEvent } from "@/serverFunctions/redditConversion
 
 const SUPPORT_EMAIL = "ventrarocket.work@gmail.com";
 
-const PLAN_FEATURES = [
-  "Keyword research, backlinks, rank tracking, and site audits",
-  "MCP server and agent skills for Claude, Cursor, and ChatGPT",
-  "Search Console integration that never uses credits",
-  "Includes $10.00 of Usage Credits each month",
-];
+// Reuses billingPlans.plan.featureCredits ("Includes {amount} of Usage Credits
+// each month") from billing.tsx's identical free-plan feature list — same
+// fact, one id — with `amount` interpolated at render time below.
+const PLAN_FEATURE_IDS = [
+  "billingPlans.plan.featureCore",
+  "billingPlans.plan.featureMcp",
+  "billingPlans.plan.featureGsc",
+  "billingPlans.plan.featureCredits",
+] as const;
 
 export const Route = createFileRoute("/_authenticated/subscribe")({
   validateSearch: (
@@ -52,6 +57,7 @@ function SubscribePage() {
 }
 
 function SubscribePageContent() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const { upgrade: isUpgradeFlow, redirect } = Route.useSearch();
   const { data: session } = useSession();
@@ -148,18 +154,24 @@ function SubscribePageContent() {
       <div className="w-full max-w-xs space-y-4 text-center">
         <EchoSeoLogo className="mx-auto size-10" />
         <h1 className="text-xl font-semibold">
-          Finalizing your subscription&hellip;
+          <FormattedMessage id="billingPlans.finalizing.title" />
         </h1>
         <span className="loading loading-spinner loading-md" />
         <p className="text-sm text-base-content/60">
-          This usually takes a few seconds.
+          <FormattedMessage id="billingPlans.finalizing.hint" />
         </p>
         <p className="text-xs text-base-content/50">
-          Taking longer?{" "}
-          <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
-            Email {SUPPORT_EMAIL}
-          </a>
-          .
+          <FormattedMessage
+            id="billingPlans.finalizing.supportPrompt"
+            values={{
+              email: SUPPORT_EMAIL,
+              link: (chunks) => (
+                <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
+                  {chunks}
+                </a>
+              ),
+            }}
+          />
         </p>
       </div>
     );
@@ -170,13 +182,18 @@ function SubscribePageContent() {
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center space-y-3">
           <EchoSeoLogo className="mx-auto size-10" />
-          <h1 className="text-xl font-semibold">Billing unavailable</h1>
+          <h1 className="text-xl font-semibold">
+            <FormattedMessage id="billingPlans.error.title" />
+          </h1>
         </div>
 
         <p className="text-sm text-center text-base-content/70">
-          {getStandardErrorMessage(
+          {getLocalizedErrorMessage(
+            intl,
             customerQuery.error,
-            "We couldn't verify your billing status right now. Please try again.",
+            intl.formatMessage({
+              id: "billingPlans.subscribe.error.verifyFailed",
+            }),
           )}
         </p>
 
@@ -187,7 +204,7 @@ function SubscribePageContent() {
             void customerQuery.refetch();
           }}
         >
-          Try again
+          <FormattedMessage id="common.action.retry" />
         </button>
       </div>
     );
@@ -208,9 +225,10 @@ function SubscribePageContent() {
       });
     } catch (err) {
       setError(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           err,
-          "We couldn't start the checkout. Please try again.",
+          intl.formatMessage({ id: "billingPlans.checkout.startError" }),
         ),
       );
       setIsAttaching(false);
@@ -218,6 +236,14 @@ function SubscribePageContent() {
   }
 
   const firstName = session?.user?.name?.split(" ")[0] || "";
+  // Whole-dollar price, matching billing.tsx's identical convention for this
+  // exact "$10/month" fact.
+  const priceDisplay = intl.formatNumber(BASE_PLAN_PRICE_USD, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
 
   return (
     <div className="w-full max-w-sm space-y-6">
@@ -226,33 +252,42 @@ function SubscribePageContent() {
       <div className="text-center space-y-3">
         <EchoSeoLogo className="mx-auto size-10" />
         <h1 className="text-xl font-semibold">
-          {isUpgradeFlow
-            ? "Upgrade your plan"
-            : firstName
-              ? `Welcome to EchoSEO, ${firstName}!`
-              : "Welcome to EchoSEO!"}
+          {isUpgradeFlow ? (
+            <FormattedMessage id="billingPlans.subscribe.upgradeTitle" />
+          ) : firstName ? (
+            <FormattedMessage
+              id="billingPlans.subscribe.welcomeNamed"
+              values={{ firstName }}
+            />
+          ) : (
+            <FormattedMessage id="billingPlans.subscribe.welcome" />
+          )}
         </h1>
         <p className="text-sm text-base-content/60">
-          SEO on your terms. All your SEO tools in one place at a fair price.
+          <FormattedMessage id="billingPlans.subscribe.tagline" />
         </p>
       </div>
 
       <div className="rounded-lg border border-base-300 p-5 space-y-4">
         <div className="flex items-baseline justify-between gap-4">
-          <span className="font-semibold">Base Plan</span>
-          <span className="text-lg font-semibold tabular-nums">$10/month</span>
+          <span className="font-semibold">
+            <FormattedMessage id="billingPlans.plan.base" />
+          </span>
+          <span className="text-lg font-semibold tabular-nums">
+            <FormattedMessage
+              id="billingPlans.plan.priceLabel"
+              values={{ amount: priceDisplay }}
+            />
+          </span>
         </div>
 
         <ul className="space-y-2">
-          {PLAN_FEATURES.map((item) => (
-            <li
-              key={item}
-              className="flex gap-2.5 text-sm text-base-content/70"
-            >
+          {PLAN_FEATURE_IDS.map((id) => (
+            <li key={id} className="flex gap-2.5 text-sm text-base-content/70">
               <span className="text-base-content/40 mt-[2px] shrink-0">
                 &mdash;
               </span>
-              {item}
+              <FormattedMessage id={id} values={{ amount: priceDisplay }} />
             </li>
           ))}
         </ul>
@@ -264,29 +299,50 @@ function SubscribePageContent() {
           disabled={isAttaching}
           onClick={() => void handleSubscribe()}
         >
-          {isAttaching ? "Redirecting..." : "Subscribe"}
+          <FormattedMessage
+            id={
+              isAttaching
+                ? "billingPlans.subscribe.redirecting"
+                : "billingPlans.subscribe.subscribeButton"
+            }
+          />
         </button>
 
         <p className="text-center text-xs text-base-content/50">
-          <span
-            className="tooltip before:max-w-60 before:whitespace-normal"
-            data-tip={`Not for you yet? Email ${SUPPORT_EMAIL} within 30 days of your charge and we'll refund your subscription.`}
-          >
-            <span className="cursor-help underline decoration-dotted">
-              30-day money-back guarantee
-            </span>
-          </span>
-          . Cancel anytime. Powered by Stripe.
+          <FormattedMessage
+            id="billingPlans.subscribe.guaranteeSentence"
+            values={{
+              tooltip: (chunks) => (
+                <span
+                  className="tooltip before:max-w-60 before:whitespace-normal"
+                  data-tip={intl.formatMessage(
+                    { id: "billingPlans.subscribe.guaranteeTooltip" },
+                    { email: SUPPORT_EMAIL },
+                  )}
+                >
+                  <span className="cursor-help underline decoration-dotted">
+                    {chunks}
+                  </span>
+                </span>
+              ),
+            }}
+          />
         </p>
       </div>
 
       <div className="text-center space-y-2">
         <p className="text-sm text-base-content/60">
-          Questions?{" "}
-          <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
-            Email {SUPPORT_EMAIL}
-          </a>
-          .
+          <FormattedMessage
+            id="billingPlans.subscribe.questionsPrompt"
+            values={{
+              email: SUPPORT_EMAIL,
+              link: (chunks) => (
+                <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
+                  {chunks}
+                </a>
+              ),
+            }}
+          />
         </p>
         {isUpgradeFlow ? (
           <button
@@ -295,7 +351,7 @@ function SubscribePageContent() {
             onClick={() => void navigate({ to: "/", replace: true })}
           >
             <ArrowRight className="size-3.5 rotate-180" />
-            Back to app
+            <FormattedMessage id="billingPlans.subscribe.backToApp" />
           </button>
         ) : null}
       </div>
@@ -304,6 +360,7 @@ function SubscribePageContent() {
 }
 
 function SubscribePageAccountMenu({ email }: { email: string | undefined }) {
+  const intl = useIntl();
   if (!email) return null;
 
   const handleSignOut = () => signOutAndRedirect();
@@ -315,7 +372,9 @@ function SubscribePageAccountMenu({ email }: { email: string | undefined }) {
           type="button"
           tabIndex={0}
           className="btn btn-ghost btn-circle"
-          aria-label="Open account menu"
+          aria-label={intl.formatMessage({
+            id: "billingPlans.accountMenu.openAria",
+          })}
         >
           <User className="h-5 w-5" />
         </button>
@@ -331,7 +390,7 @@ function SubscribePageAccountMenu({ email }: { email: string | undefined }) {
           <li>
             <Link to="/settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Settings
+              <FormattedMessage id="billingPlans.accountMenu.settingsLink" />
             </Link>
           </li>
           <ThemePreferenceMenuItems />
@@ -341,7 +400,7 @@ function SubscribePageAccountMenu({ email }: { email: string | undefined }) {
               className="text-error"
               onClick={handleSignOut}
             >
-              Sign out
+              <FormattedMessage id="billingPlans.accountMenu.signOut" />
             </button>
           </li>
         </ul>

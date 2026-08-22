@@ -84,6 +84,28 @@ const CONVERTED_DIRS = [
   "src/client/features/backlinks",
   "src/routes/_project/p/$projectId/domain.tsx",
   "src/routes/_project/p/$projectId/backlinks.tsx",
+  // The last four English surfaces, closing #103-#106. `_app/ai.tsx` is listed
+  // per file because its siblings (`subscribe`, `billing`) travel with their own
+  // issues, and the AI page is the one that documents MCP tools to agents as
+  // well as to people.
+  "src/client/features/ai-search",
+  "src/client/features/assistant-workspace",
+  "src/client/features/projects",
+  "src/client/features/billing",
+  "src/client/features/lighthouse",
+  "src/routes/_app/ai.tsx",
+  // The `/ai` page renders half its content from this directory: the copy
+  // control, the setup guides, the tool list and the skills section. Converting
+  // only the route left "Copy", "Copied to clipboard" and two clipboard-failure
+  // toasts in English on a Vietnamese page — the same shape as the access-gate
+  // hook, found the same way, by reading the screen instead of the gate.
+  "src/client/features/ai-mcp",
+  "src/routes/_app/settings.tsx",
+  "src/routes/_app/projects.tsx",
+  "src/routes/_app/billing.tsx",
+  "src/routes/_app/support.tsx",
+  "src/routes/_app/help/dataforseo-api-key.tsx",
+  "src/routes/_authenticated.subscribe.tsx",
 ];
 
 /**

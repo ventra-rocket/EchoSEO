@@ -1,13 +1,17 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { AutumnProvider, useCustomer } from "autumn-js/react";
 import { useEffect, useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { getStoredRedditAttribution } from "@/client/lib/reddit-attribution";
 import { BillingUsageChart } from "@/client/features/billing/BillingUsageChart";
 import { BillingFeatureBreakdown } from "@/client/features/billing/BillingFeatureBreakdown";
-import { parseTopUpAmount } from "@/client/features/billing/HostedBillingContentUtils";
+import {
+  formatBillingAmounts,
+  parseTopUpAmount,
+} from "@/client/features/billing/HostedBillingContentUtils";
 import { getBillingRouteState } from "@/client/features/billing/route-state";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
 import {
@@ -38,7 +42,52 @@ function BillingPage() {
   );
 }
 
+/**
+ * The two whole-page states the billing route can render instead of the plan
+ * surface. Extracted so `BillingPageContent` stays under the per-function line
+ * ceiling after localization — each is a real state a reader can land on, not a
+ * fragment split off to satisfy a linter.
+ */
+function BillingLoadError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
+  const intl = useIntl();
+
+  return (
+    <div className="mx-auto w-full max-w-2xl space-y-4 p-4 py-10 md:p-6 md:py-12">
+      <h1 className="text-xl font-semibold">
+        <FormattedMessage id="billingPlans.error.title" />
+      </h1>
+      <p className="text-sm text-base-content/70">
+        {getLocalizedErrorMessage(
+          intl,
+          error,
+          intl.formatMessage({ id: "billingPlans.error.loadFailed" }),
+        )}
+      </p>
+      <button type="button" className="btn btn-soft btn-sm" onClick={onRetry}>
+        <FormattedMessage id="common.action.retry" />
+      </button>
+    </div>
+  );
+}
+
+function BillingRedirecting() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <p className="text-sm text-base-content/50">
+        <FormattedMessage id="billingPlans.pending.redirectingStripe" />
+      </p>
+    </div>
+  );
+}
+
 function BillingPageContent() {
+  const intl = useIntl();
   const { data: session, isPending: isSessionPending } = useSession();
   const [topUpAmount, setTopUpAmount] = useState("20");
   const [isPending, setIsPending] = useState(false);
@@ -92,24 +141,12 @@ function BillingPageContent() {
 
   if (billingRouteState === "error") {
     return (
-      <div className="mx-auto w-full max-w-2xl space-y-4 p-4 py-10 md:p-6 md:py-12">
-        <h1 className="text-xl font-semibold">Billing unavailable</h1>
-        <p className="text-sm text-base-content/70">
-          {getStandardErrorMessage(
-            customerQuery.error,
-            "We couldn't load your billing details right now. Please try again.",
-          )}
-        </p>
-        <button
-          type="button"
-          className="btn btn-soft btn-sm"
-          onClick={() => {
-            void customerQuery.refetch();
-          }}
-        >
-          Try again
-        </button>
-      </div>
+      <BillingLoadError
+        error={customerQuery.error}
+        onRetry={() => {
+          void customerQuery.refetch();
+        }}
+      />
     );
   }
 
@@ -123,90 +160,134 @@ function BillingPageContent() {
       await callback();
       await customerQuery.refetch();
     } catch (err) {
-      setError(getStandardErrorMessage(err, fallbackMessage));
+      setError(getLocalizedErrorMessage(intl, err, fallbackMessage));
     } finally {
       setIsPending(false);
     }
   }
 
   if (isPending) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-base-content/50">Redirecting to Stripe...</p>
-      </div>
-    );
+    return <BillingRedirecting />;
   }
+
+  const {
+    priceDisplay,
+    totalRemainingDisplay,
+    monthlyRemainingDisplay,
+    topUpRemainingDisplay,
+    topUpPrefix,
+    topUpSuffix,
+    topUpMinDisplay,
+    topUpMaxDisplay,
+  } = formatBillingAmounts(intl, {
+    totalRemaining,
+    monthlyRemaining,
+    topUpRemaining,
+  });
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 p-4 py-10 md:p-6 md:py-12">
-      <h1 className="text-xl font-semibold">Billing</h1>
+      <h1 className="text-xl font-semibold">
+        <FormattedMessage id="billingPlans.page.title" />
+      </h1>
 
       <div className="grid gap-5 md:grid-cols-2">
         {/* Subscription card */}
         <div className="flex flex-col justify-between rounded-lg border border-base-300 bg-base-100 p-4 gap-4">
           <div>
             <div className="text-2xl font-semibold tabular-nums">
-              ${totalRemaining.toFixed(2)}{" "}
-              <span className="text-sm font-normal text-base-content/50">
-                remaining
-              </span>
+              <FormattedMessage
+                id="billingPlans.credits.remaining"
+                values={{ amount: totalRemainingDisplay }}
+              />
             </div>
             {!isFreePlan ? (
               <div className="mt-1 flex gap-3 text-xs text-base-content/50">
                 <span className="tabular-nums">
-                  Monthly ${monthlyRemaining.toFixed(2)}
+                  <FormattedMessage
+                    id="billingPlans.credits.monthlyAmount"
+                    values={{ amount: monthlyRemainingDisplay }}
+                  />
                 </span>
                 <span>&middot;</span>
                 <span className="tabular-nums">
-                  Top-ups ${topUpRemaining.toFixed(2)}
+                  <FormattedMessage
+                    id="billingPlans.credits.topupAmount"
+                    values={{ amount: topUpRemainingDisplay }}
+                  />
                 </span>
               </div>
             ) : null}
             {totalRemaining <= 0 ? (
               <p className="mt-2 text-xs text-error">
-                You&rsquo;ve used all your credits.{" "}
-                {isFreePlan
-                  ? "Upgrade your plan to continue."
-                  : "Buy more credits below to continue."}
+                <FormattedMessage
+                  id={
+                    isFreePlan
+                      ? "billingPlans.credits.outOfCreditsFree"
+                      : "billingPlans.credits.outOfCreditsPaid"
+                  }
+                />
               </p>
             ) : totalRemaining < LOW_CREDITS_THRESHOLD_USD ? (
               <p className="mt-2 text-xs text-amber-600">
-                You&rsquo;re running low on credits.{" "}
-                {isFreePlan
-                  ? "Upgrade to get $10/month."
-                  : "Buy more credits below."}
+                <FormattedMessage
+                  id={
+                    isFreePlan
+                      ? "billingPlans.credits.lowFree"
+                      : "billingPlans.credits.lowPaid"
+                  }
+                  values={{ amount: priceDisplay }}
+                />
               </p>
             ) : null}
           </div>
 
           <div className="text-sm">
-            <span className="font-medium">Plan</span>{" "}
+            <span className="font-medium">
+              <FormattedMessage id="billingPlans.plan.label" />
+            </span>{" "}
             <span className="text-base-content/50">
-              {isFreePlan ? "Free Plan" : "Base Plan"}
+              <FormattedMessage
+                id={
+                  isFreePlan
+                    ? "billingPlans.plan.free"
+                    : "billingPlans.plan.base"
+                }
+              />
             </span>
           </div>
 
           {isFreePlan ? (
             <div className="space-y-3 border-t border-base-300 pt-3">
               <div className="flex items-baseline justify-between gap-4">
-                <span className="text-sm font-medium">Base Plan</span>
+                <span className="text-sm font-medium">
+                  <FormattedMessage id="billingPlans.plan.base" />
+                </span>
                 <span className="text-sm font-medium tabular-nums">
-                  $10/month
+                  <FormattedMessage
+                    id="billingPlans.plan.priceLabel"
+                    values={{ amount: priceDisplay }}
+                  />
                 </span>
               </div>
               <ul className="space-y-1.5">
-                {[
-                  "Access to all EchoSEO features",
-                  "Includes $10.00 of Usage Credits each month",
-                ].map((item) => (
+                {(
+                  [
+                    "billingPlans.plan.featureAllAccess",
+                    "billingPlans.plan.featureCredits",
+                  ] as const
+                ).map((id) => (
                   <li
-                    key={item}
+                    key={id}
                     className="flex gap-2 text-xs text-base-content/60"
                   >
                     <span className="text-base-content/30 mt-[1px] shrink-0">
                       &mdash;
                     </span>
-                    {item}
+                    <FormattedMessage
+                      id={id}
+                      values={{ amount: priceDisplay }}
+                    />
                   </li>
                 ))}
               </ul>
@@ -221,11 +302,13 @@ function BillingPageContent() {
                         redirectMode: "always",
                         successUrl: `${window.location.origin}${window.location.pathname}?checkout=success`,
                       }),
-                    "We couldn't start the checkout. Please try again.",
+                    intl.formatMessage({
+                      id: "billingPlans.checkout.startError",
+                    }),
                   )
                 }
               >
-                Upgrade Plan
+                <FormattedMessage id="billingPlans.plan.upgradeButton" />
               </button>
             </div>
           ) : (
@@ -238,11 +321,11 @@ function BillingPageContent() {
                     customerQuery.openCustomerPortal({
                       returnUrl: window.location.href,
                     }),
-                  "We couldn't open the billing portal. Please try again.",
+                  intl.formatMessage({ id: "billingPlans.portal.openError" }),
                 )
               }
             >
-              Manage subscription
+              <FormattedMessage id="billingPlans.plan.manageButton" />
             </button>
           )}
         </div>
@@ -251,16 +334,21 @@ function BillingPageContent() {
         {!isFreePlan ? (
           <div className="rounded-lg border border-base-300 bg-base-100 p-4 space-y-3">
             <div>
-              <span className="font-semibold">Buy credits</span>
+              <span className="font-semibold">
+                <FormattedMessage id="billingPlans.topup.title" />
+              </span>
               <p className="mt-1 text-sm text-base-content/60">
-                Top-up credits never expire and are used after your monthly
-                credits.
+                <FormattedMessage id="billingPlans.topup.description" />
               </p>
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-base-content/60">$</span>
+                {topUpPrefix ? (
+                  <span className="text-sm text-base-content/60">
+                    {topUpPrefix}
+                  </span>
+                ) : null}
                 <input
                   type="number"
                   min={10}
@@ -271,10 +359,18 @@ function BillingPageContent() {
                   value={topUpAmount}
                   onChange={(e) => setTopUpAmount(e.target.value)}
                 />
+                {topUpSuffix ? (
+                  <span className="text-sm text-base-content/60">
+                    {topUpSuffix}
+                  </span>
+                ) : null}
               </div>
               {topUpAmount.trim() !== "" && !isValidTopUp ? (
                 <p className="mt-1 text-xs text-error">
-                  Enter between $10–$99.
+                  <FormattedMessage
+                    id="billingPlans.topup.rangeHint"
+                    values={{ min: topUpMinDisplay, max: topUpMaxDisplay }}
+                  />
                 </p>
               ) : null}
             </div>
@@ -298,11 +394,13 @@ function BillingPageContent() {
                         },
                       ],
                     }),
-                  "We couldn't start the checkout. Please try again.",
+                  intl.formatMessage({
+                    id: "billingPlans.checkout.startError",
+                  }),
                 )
               }
             >
-              Buy credits
+              <FormattedMessage id="billingPlans.topup.buyButton" />
             </button>
           </div>
         ) : null}
@@ -317,7 +415,7 @@ function BillingPageContent() {
       {error ? <p className="text-sm text-error">{error}</p> : null}
 
       <p className="text-xs text-base-content/40">
-        Billing is powered by Stripe.
+        <FormattedMessage id="billingPlans.footer.poweredByStripe" />
       </p>
     </div>
   );
