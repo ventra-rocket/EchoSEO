@@ -1,3 +1,4 @@
+import type { IntlShape } from "react-intl";
 import type {
   DomainSortMode,
   KeywordRow,
@@ -77,22 +78,16 @@ export function normalizeDomainTarget(input: string): string | null {
   }
 }
 
-export function formatNumber(value: number | null | undefined) {
-  if (value == null) return "-";
-  return new Intl.NumberFormat().format(value);
-}
-
-export function formatRounded(value: number | null | undefined) {
-  if (value == null) return "-";
-  return new Intl.NumberFormat().format(Math.round(value));
-}
-
 export function formatMetric(
+  intl: Pick<IntlShape, "formatNumber" | "formatMessage">,
   value: number | null | undefined,
   hasData: boolean | undefined,
 ) {
-  if (!hasData) return "Not enough data";
-  return formatRounded(value);
+  if (!hasData) {
+    return intl.formatMessage({ id: "domainOverview.stats.noData" });
+  }
+  if (value == null) return "-";
+  return intl.formatNumber(Math.round(value));
 }
 
 type ExportTable = { headers: string[]; rows: (string | number | null)[][] };

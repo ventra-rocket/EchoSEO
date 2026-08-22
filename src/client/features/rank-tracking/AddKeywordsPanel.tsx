@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 import { FormattedMessage, useIntl } from "react-intl";
 import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { Loader2 } from "lucide-react";
 
 export function AddKeywordsPanel({
@@ -40,7 +40,8 @@ export function AddKeywordsPanel({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "rank.config.addKeywords.errorDefault" }),
         ),

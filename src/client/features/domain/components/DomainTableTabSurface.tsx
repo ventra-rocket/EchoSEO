@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
+import { useIntl } from "react-intl";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { TableLoadingRows } from "@/client/features/domain/components/TableLoadingRows";
 
@@ -13,9 +14,9 @@ type Props = {
   showFilters: boolean;
   onToggleFilters: () => void;
   activeFilterCount: number;
-  countLabel: string;
-  totalCount: number | null;
-  fallbackCount: number;
+  /** Pre-formatted "N keywords" / "N pages" summary; the caller owns the
+   * pluralization since only it knows which noun applies. */
+  resultSummary: ReactNode;
   exportActions: DomainTableExportAction[];
   filterPanel?: ReactNode;
   isLoading: boolean;
@@ -28,9 +29,7 @@ export function DomainTableTabSurface({
   showFilters,
   onToggleFilters,
   activeFilterCount,
-  countLabel,
-  totalCount,
-  fallbackCount,
+  resultSummary,
   exportActions,
   filterPanel,
   isLoading,
@@ -38,26 +37,27 @@ export function DomainTableTabSurface({
   children,
   pagination,
 }: Props) {
+  const intl = useIntl();
   return (
     <>
       <div className="flex items-center gap-2 px-4 py-2 border-b border-base-300">
         <button
           className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
           onClick={onToggleFilters}
-          title="Toggle filters"
+          title={intl.formatMessage({
+            id: "domainTables.toolbar.toggleFiltersTitle",
+          })}
           type="button"
         >
           <SlidersHorizontal className="size-3.5" />
-          Filters
+          {intl.formatMessage({ id: "domainTables.toolbar.filtersLabel" })}
           {activeFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {activeFilterCount}
+              {intl.formatNumber(activeFilterCount)}
             </span>
           ) : null}
         </button>
-        <span className="text-sm text-base-content/60">
-          {(totalCount ?? fallbackCount).toLocaleString()} {countLabel}
-        </span>
+        <span className="text-sm text-base-content/60">{resultSummary}</span>
         <div className="flex-1" />
         <TableExportMenu actions={exportActions} />
       </div>

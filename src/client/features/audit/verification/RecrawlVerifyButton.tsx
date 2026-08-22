@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { FormattedMessage, useIntl } from "react-intl";
 import { getAuditAccess, startAudit } from "@/serverFunctions/audit";
 import type { AuditResultsData } from "@/client/features/audit/results/types";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 
 /**
  * Re-crawls this audit's target to verify fixes, recording the current audit as
@@ -53,7 +53,8 @@ export function RecrawlVerifyButton({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "audit.verification.recrawlError" }),
         ),

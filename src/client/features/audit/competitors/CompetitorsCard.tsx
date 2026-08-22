@@ -3,7 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useState } from "react";
 import { Loader2, Swords, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import {
   addAuditCompetitor,
   listAuditCompetitors,
@@ -75,7 +75,8 @@ export function CompetitorsCard({
     },
     onError: (error) =>
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({
             id: "audit.competitors.card.addErrorDefault",
@@ -95,7 +96,8 @@ export function CompetitorsCard({
     },
     onError: (error) =>
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({
             id: "audit.competitors.card.removeErrorDefault",

@@ -1,24 +1,154 @@
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
+import type { MessageId } from "@/client/i18n/messages";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import {
   BacklinksNewLostChart,
   BacklinksTrendChart,
 } from "./BacklinksPageCharts";
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
-import { formatRelativeTimestamp } from "./backlinksPageUtils";
 
-type SummaryStat = { label: string; value: string; description: string };
+type SummaryStat = {
+  id: string;
+  label: string;
+  value: string;
+  description: string;
+};
+
+type SummaryStatPrecision = "integer" | "decimal";
+
+type SummaryStatDef = {
+  id: string;
+  labelId: MessageId;
+  descriptionId: MessageId;
+  precision: SummaryStatPrecision;
+  value: (summary: BacklinksOverviewData["summary"]) => number | null;
+};
+
+// Labels/descriptions/precision for each summary card. Values come straight
+// off `data.summary`; formatting and the message catalog live here rather
+// than in backlinksPageUtils.ts's buildSummaryStats so every displayed word
+// goes through the active IntlShape instead of a hardcoded English string.
+const SUMMARY_STAT_DEFS: SummaryStatDef[] = [
+  {
+    id: "backlinks",
+    labelId: "backlinksOverview.summary.backlinks.label",
+    descriptionId: "backlinksOverview.summary.backlinks.description",
+    precision: "integer",
+    value: (summary) => summary.backlinks,
+  },
+  {
+    id: "referringDomains",
+    labelId: "backlinksOverview.summary.referringDomains.label",
+    descriptionId: "backlinksOverview.summary.referringDomains.description",
+    precision: "integer",
+    value: (summary) => summary.referringDomains,
+  },
+  {
+    id: "referringPages",
+    labelId: "backlinksOverview.summary.referringPages.label",
+    descriptionId: "backlinksOverview.summary.referringPages.description",
+    precision: "integer",
+    value: (summary) => summary.referringPages,
+  },
+  {
+    id: "rank",
+    labelId: "backlinksOverview.summary.rank.label",
+    descriptionId: "backlinksOverview.summary.rank.description",
+    precision: "integer",
+    value: (summary) => summary.rank,
+  },
+  {
+    id: "backlinksSpamScore",
+    labelId: "backlinksOverview.summary.backlinksSpamScore.label",
+    descriptionId: "backlinksOverview.summary.backlinksSpamScore.description",
+    precision: "decimal",
+    value: (summary) => summary.backlinksSpamScore,
+  },
+  {
+    id: "brokenBacklinks",
+    labelId: "backlinksOverview.summary.brokenBacklinks.label",
+    descriptionId: "backlinksOverview.summary.brokenBacklinks.description",
+    precision: "integer",
+    value: (summary) => summary.brokenBacklinks,
+  },
+  {
+    id: "brokenPages",
+    labelId: "backlinksOverview.summary.brokenPages.label",
+    descriptionId: "backlinksOverview.summary.brokenPages.description",
+    precision: "integer",
+    value: (summary) => summary.brokenPages,
+  },
+  {
+    id: "targetSpamScore",
+    labelId: "backlinksOverview.summary.targetSpamScore.label",
+    descriptionId: "backlinksOverview.summary.targetSpamScore.description",
+    precision: "decimal",
+    value: (summary) => summary.targetSpamScore,
+  },
+];
+
+/** Mirrors the old formatNumber (rounded, grouped) / formatDecimal (0 or 1
+ * fraction digit past 100) precision rules, through IntlShape instead of a
+ * bare Intl.NumberFormat/toFixed call so the grouping and decimal separator
+ * follow the active locale. */
+function formatSummaryValue(
+  intl: IntlShape,
+  value: number | null,
+  precision: SummaryStatPrecision,
+): string {
+  if (value == null) return "-";
+  if (precision === "integer") return intl.formatNumber(Math.round(value));
+  const fractionDigits = value >= 100 ? 0 : 1;
+  return intl.formatNumber(value, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+}
+
+function buildOverviewSummaryStats(
+  intl: IntlShape,
+  data: BacklinksOverviewData,
+): SummaryStat[] {
+  return SUMMARY_STAT_DEFS.map((def) => ({
+    id: def.id,
+    label: intl.formatMessage({ id: def.labelId }),
+    description: intl.formatMessage({ id: def.descriptionId }),
+    value: formatSummaryValue(intl, def.value(data.summary), def.precision),
+  }));
+}
+
+/** formatRelativeTimestamp's un-parseable-date fallback, through IntlShape. */
+function formatUpdatedAt(intl: IntlShape, value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return intl.formatMessage({
+      id: "backlinksOverview.overview.updatedFallback",
+    });
+  }
+  return intl.formatDate(parsed, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export function BacklinksOverviewPanels({
   projectId,
   data,
-  summaryStats,
 }: {
   projectId: string;
   data: BacklinksOverviewData;
-  summaryStats: SummaryStat[];
 }) {
+  const intl = useIntl();
+  const summaryStats = useMemo(
+    () => buildOverviewSummaryStats(intl, data),
+    [intl, data],
+  );
+
   return (
     <>
       <div>
@@ -38,22 +168,38 @@ export function BacklinksOverviewPanels({
           className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
         >
           <ArrowLeft className="size-4" />
-          Recent searches
+          <FormattedMessage id="backlinksOverview.nav.recentSearches" />
         </Link>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
-        <span className="badge badge-outline">{data.scope}</span>
-        <span>Target: {data.displayTarget}</span>
+        <span className="badge badge-outline">
+          <FormattedMessage
+            id={
+              data.scope === "domain"
+                ? "backlinksOverview.scope.domain"
+                : "backlinksOverview.scope.page"
+            }
+          />
+        </span>
+        <span>
+          <FormattedMessage
+            id="backlinksOverview.overview.target"
+            values={{ target: data.displayTarget }}
+          />
+        </span>
         <span>-</span>
-        <span>Updated {formatRelativeTimestamp(data.fetchedAt)}</span>
+        <span>
+          <FormattedMessage
+            id="backlinksOverview.overview.updated"
+            values={{ date: formatUpdatedAt(intl, data.fetchedAt) }}
+          />
+        </span>
       </div>
       <OverviewGrid data={data} summaryStats={summaryStats} />
       {data.scope === "page" ? (
         <div className="alert alert-info">
           <span>
-            Showing backlinks for this exact page. Enter a bare domain for
-            site-wide results. Trend charts are only shown for domain-level
-            lookups.
+            <FormattedMessage id="backlinksOverview.overview.pageScopeNotice" />
           </span>
         </div>
       ) : null}
@@ -94,7 +240,7 @@ function SummaryStatsGrid({
       <div className="card-body p-4 xl:h-full">
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 xl:gap-y-6">
           {summaryStats.map((item) => (
-            <div key={item.label}>
+            <div key={item.id}>
               <div className="text-xs uppercase tracking-wide text-base-content/55">
                 <HeaderHelpLabel
                   label={item.label}
@@ -111,17 +257,27 @@ function SummaryStatsGrid({
 }
 
 function TrendPanels({ data }: { data: BacklinksOverviewData }) {
+  const intl = useIntl();
+
   return (
     <>
       <TrendCard
-        title="Backlink growth"
-        description="Backlinks and referring domains over the last year"
+        title={intl.formatMessage({
+          id: "backlinksOverview.chart.growth.title",
+        })}
+        description={intl.formatMessage({
+          id: "backlinksOverview.chart.growth.description",
+        })}
       >
         <BacklinksTrendChart data={data.trends} />
       </TrendCard>
       <TrendCard
-        title="New vs lost"
-        description="Backlink acquisition and attrition"
+        title={intl.formatMessage({
+          id: "backlinksOverview.chart.newVsLost.title",
+        })}
+        description={intl.formatMessage({
+          id: "backlinksOverview.chart.newVsLost.description",
+        })}
       >
         <BacklinksNewLostChart data={data.newLostTrends} />
       </TrendCard>

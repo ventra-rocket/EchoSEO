@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { AlertCircle, Search } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { getFieldError, getFormError } from "@/client/lib/forms";
 import type { DomainOverviewControlsForm } from "@/client/features/domain/DomainOverviewPage";
 import { toSortMode } from "@/client/features/domain/utils";
@@ -22,6 +23,7 @@ export function DomainSearchCard({
   onSortChange,
   onLocationChange,
 }: Props) {
+  const intl = useIntl();
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body gap-4">
@@ -40,7 +42,9 @@ export function DomainSearchCard({
                   <Search className="size-4 text-base-content/60" />
                   <input
                     className="grow min-w-0"
-                    placeholder="Enter a domain"
+                    placeholder={intl.formatMessage({
+                      id: "domainOverview.search.domainPlaceholder",
+                    })}
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     aria-invalid={domainError ? true : undefined}
@@ -78,11 +82,29 @@ export function DomainSearchCard({
                   onSortChange(next);
                 }}
               >
-                <option value="rank">By Rank</option>
-                <option value="traffic">By Traffic</option>
-                <option value="volume">By Volume</option>
-                <option value="score">By Score</option>
-                <option value="cpc">By CPC</option>
+                <option value="rank">
+                  {intl.formatMessage({
+                    id: "domainOverview.search.sort.rank",
+                  })}
+                </option>
+                <option value="traffic">
+                  {intl.formatMessage({
+                    id: "domainOverview.search.sort.traffic",
+                  })}
+                </option>
+                <option value="volume">
+                  {intl.formatMessage({
+                    id: "domainOverview.search.sort.volume",
+                  })}
+                </option>
+                <option value="score">
+                  {intl.formatMessage({
+                    id: "domainOverview.search.sort.score",
+                  })}
+                </option>
+                <option value="cpc">
+                  {intl.formatMessage({ id: "domainOverview.search.sort.cpc" })}
+                </option>
               </select>
             )}
           </controlsForm.Field>
@@ -94,7 +116,11 @@ export function DomainSearchCard({
                 className="btn btn-primary shrink-0 px-6"
                 disabled={isLoading || isSubmitting}
               >
-                {isLoading || isSubmitting ? "Loading..." : "Search"}
+                {isLoading || isSubmitting ? (
+                  <FormattedMessage id="domainOverview.search.submitting" />
+                ) : (
+                  <FormattedMessage id="domainOverview.search.submit" />
+                )}
               </button>
             )}
           </controlsForm.Subscribe>
@@ -137,7 +163,9 @@ export function DomainSearchCard({
                 />
               )}
             </controlsForm.Field>
-            <span className="label-text">Include subdomains</span>
+            <span className="label-text">
+              <FormattedMessage id="domainOverview.search.includeSubdomains" />
+            </span>
           </label>
         </div>
       </div>

@@ -1,6 +1,11 @@
 import { ShieldAlert } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { AccessGate } from "@/client/features/access-gate/AccessGate";
 import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
+
+// EchoSEO's managed/hosted price for long-term backlinks access, quoted in
+// the DataForSEO setup gate below.
+const MANAGED_BACKLINKS_PRICE_USD = 10;
 
 export function BacklinksSetupGate({
   errorMessage,
@@ -11,20 +16,39 @@ export function BacklinksSetupGate({
   isRefetching: boolean;
   onRetry: () => void;
 }) {
+  const intl = useIntl();
+  const priceDisplay = intl.formatNumber(MANAGED_BACKLINKS_PRICE_USD, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
   return (
     <AccessGate
-      title="Enable Backlinks"
-      bodyText="Backlinks are not enabled for your DataForSEO account yet. You can enable them in DataForSEO, or use managed EchoSEO for long-term backlinks access at $10/month."
-      helperText={
-        <>
-          We are also planning a Backlinks API so self-hosted apps can use
-          EchoSEO's backlinks data directly. Until then,{" "}
-          <InlineManagedOpenSeoLink />.
-        </>
+      title={intl.formatMessage({ id: "backlinksOverview.gate.title" })}
+      bodyText={
+        <FormattedMessage
+          id="backlinksOverview.gate.body"
+          values={{ price: priceDisplay }}
+        />
       }
-      buttonLabel="Confirm DataForSEO Access"
+      helperText={
+        <FormattedMessage
+          id="backlinksOverview.gate.helper"
+          values={{ link: <InlineManagedOpenSeoLink /> }}
+        />
+      }
+      buttonLabel={intl.formatMessage({
+        id: "backlinksOverview.gate.confirmButton",
+      })}
+      refetchingLabel={intl.formatMessage({
+        id: "backlinksOverview.gate.confirming",
+      })}
       externalUrl="https://app.dataforseo.com/api-access-subscriptions"
-      externalLabel="Open DataForSEO Backlinks"
+      externalLabel={intl.formatMessage({
+        id: "backlinksOverview.gate.externalLabel",
+      })}
       errorMessage={errorMessage}
       isRefetching={isRefetching}
       onRetry={onRetry}
@@ -79,14 +103,18 @@ export function BacklinksErrorState({
           <ShieldAlert className="size-5" />
         </div>
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Could not load backlinks</h2>
+          <h2 className="text-lg font-semibold">
+            <FormattedMessage id="backlinksOverview.state.errorTitle" />
+          </h2>
           <p className="text-sm text-base-content/70">
-            {errorMessage ?? "Please try again in a moment."}
+            {errorMessage ?? (
+              <FormattedMessage id="backlinksOverview.state.errorFallback" />
+            )}
           </p>
         </div>
       </div>
       <button className="btn btn-outline btn-sm" onClick={onRetry}>
-        Retry
+        <FormattedMessage id="common.action.retry" />
       </button>
     </section>
   );
@@ -121,7 +149,7 @@ function InlineManagedOpenSeoLink() {
       target="_blank"
       rel="noreferrer"
     >
-      use managed EchoSEO
+      <FormattedMessage id="backlinksOverview.gate.helperLink" />
     </a>
   );
 }

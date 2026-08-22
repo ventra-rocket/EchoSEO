@@ -1,5 +1,6 @@
 import { Clock, History, X } from "lucide-react";
 import { Globe } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import type { DomainHistoryItem } from "@/client/features/domain/types";
 
@@ -20,6 +21,7 @@ export function DomainHistorySection({
   onRemoveHistoryItem,
   onSelectHistoryItem,
 }: Props) {
+  const intl = useIntl();
   if (seoKeyMissing) {
     return <DataforseoKeyMissingState />;
   }
@@ -33,7 +35,7 @@ export function DomainHistorySection({
       <section className="rounded-2xl border border-dashed border-base-300 bg-base-100/70 p-6 text-center text-base-content/55 space-y-2">
         <Globe className="size-9 mx-auto opacity-35" />
         <p className="text-base font-medium text-base-content/80">
-          Enter a domain to get started
+          <FormattedMessage id="domainOverview.history.emptyPrompt" />
         </p>
       </section>
     );
@@ -45,7 +47,10 @@ export function DomainHistorySection({
         <div className="flex items-center gap-2">
           <History className="size-4 text-base-content/45" />
           <span className="text-sm text-base-content/60">
-            {history.length} recent search{history.length !== 1 ? "es" : ""}
+            <FormattedMessage
+              id="domainOverview.history.recentCount"
+              values={{ count: history.length }}
+            />
           </span>
         </div>
       </div>
@@ -67,13 +72,17 @@ export function DomainHistorySection({
                   {item.domain}
                 </p>
                 <p className="text-sm text-base-content/60 truncate">
-                  {item.subdomains ? "Include subdomains" : "Root domain only"}
+                  {item.subdomains ? (
+                    <FormattedMessage id="domainOverview.search.includeSubdomains" />
+                  ) : (
+                    <FormattedMessage id="domainOverview.history.rootDomainOnly" />
+                  )}
                 </p>
               </div>
             </button>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-base-content/40">
-                {new Date(item.timestamp).toLocaleDateString(undefined, {
+                {intl.formatDate(item.timestamp, {
                   month: "short",
                   day: "numeric",
                 })}
@@ -82,6 +91,10 @@ export function DomainHistorySection({
                 type="button"
                 className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 p-1"
                 onClick={() => onRemoveHistoryItem(item.timestamp)}
+                aria-label={intl.formatMessage(
+                  { id: "domainOverview.history.removeAriaLabel" },
+                  { domain: item.domain },
+                )}
               >
                 <X className="size-3" />
               </button>

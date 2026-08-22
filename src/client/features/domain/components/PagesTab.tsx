@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Copy, Download, FileSpreadsheet, Sheet } from "lucide-react";
 import { toast } from "sonner";
+import { useIntl } from "react-intl";
 import { DomainKeywordsPagination } from "@/client/features/domain/components/DomainKeywordsPagination";
 import { DataforseoKeyMissingState } from "@/client/features/access-gate/DataforseoKeyMissingState";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
@@ -39,18 +40,26 @@ const EMPTY_PAGES_ROWS: PageRow[] = [];
 const PAGE_TEXT_FILTERS = [
   {
     key: "include",
-    label: "Include Page Terms",
-    placeholder: "pricing, tools, guides",
+    labelId: "domainTables.pages.filter.includeLabel",
+    placeholderId: "domainTables.pages.filter.includePlaceholder",
   },
   {
     key: "exclude",
-    label: "Exclude Page Terms",
-    placeholder: "blog, tag, archive",
+    labelId: "domainTables.pages.filter.excludeLabel",
+    placeholderId: "domainTables.pages.filter.excludePlaceholder",
   },
 ] as const;
 const PAGE_RANGE_FILTERS = [
-  { title: "Traffic", minKey: "minTraffic", maxKey: "maxTraffic" },
-  { title: "Keywords", minKey: "minVol", maxKey: "maxVol" },
+  {
+    titleId: "domainTables.pages.filter.trafficTitle",
+    minKey: "minTraffic",
+    maxKey: "maxTraffic",
+  },
+  {
+    titleId: "domainTables.pages.filter.keywordsTitle",
+    minKey: "minVol",
+    maxKey: "maxVol",
+  },
 ] as const;
 
 type Props = {
@@ -78,6 +87,7 @@ export function PagesTab({
   onPageSizeChange,
   seoKeyMissing,
 }: Props) {
+  const intl = useIntl();
   const [showFilters, setShowFilters] = useState(false);
   const filterPreferences = useDomainPageFilterPreferences(
     `${projectId}:${domain}`,
@@ -160,7 +170,9 @@ export function PagesTab({
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
-    toast.success("Copied data");
+    toast.success(
+      intl.formatMessage({ id: "domainTables.export.copiedToast" }),
+    );
   };
   const handleExportToSheets = () => {
     void exportTableToSheets({
@@ -195,29 +207,34 @@ export function PagesTab({
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((prev) => !prev)}
         activeFilterCount={activeFilterCount}
-        countLabel="pages"
-        totalCount={totalCount}
-        fallbackCount={rows.length}
+        resultSummary={intl.formatMessage(
+          { id: "domainTables.pages.resultCount" },
+          { count: totalCount ?? rows.length },
+        )}
         isLoading={isLoading}
         showTableLoading={showTableLoading}
         exportActions={[
           {
-            label: "Export to Sheets",
+            label: intl.formatMessage({ id: "common.sheets.export" }),
             icon: <Sheet className="size-4" />,
             onClick: handleExportToSheets,
           },
           {
-            label: "Copy data (JSON)",
+            label: intl.formatMessage({ id: "domainTables.export.copyJson" }),
             icon: <Copy className="size-4" />,
             onClick: handleCopy,
           },
           {
-            label: "Download CSV",
+            label: intl.formatMessage({
+              id: "domainTables.export.downloadCsv",
+            }),
             icon: <Download className="size-4" />,
             onClick: () => handleDownload("csv"),
           },
           {
-            label: "Download Excel",
+            label: intl.formatMessage({
+              id: "domainTables.export.downloadExcel",
+            }),
             icon: <FileSpreadsheet className="size-4" />,
             onClick: () => handleDownload("xls"),
           },

@@ -20,6 +20,10 @@ import { onboarding } from "./en/onboarding";
 import { onboardingChat } from "./en/onboardingChat";
 import { auth } from "./en/auth";
 import { authRecovery } from "./en/authRecovery";
+import { domainOverview } from "./en/domainOverview";
+import { domainTables } from "./en/domainTables";
+import { backlinksOverview } from "./en/backlinksOverview";
+import { backlinksTables } from "./en/backlinksTables";
 
 // English catalog — the source of truth for message IDs. Every other locale is
 // typed against this catalog's keys, so adding a key here forces every locale to
@@ -48,6 +52,10 @@ export const en = {
   ...onboardingChat,
   ...auth,
   ...authRecovery,
+  ...domainOverview,
+  ...domainTables,
+  ...backlinksOverview,
+  ...backlinksTables,
 } as const;
 
 export type MessageId = keyof typeof en;

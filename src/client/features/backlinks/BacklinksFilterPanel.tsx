@@ -1,3 +1,4 @@
+import { useIntl } from "react-intl";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
 import type { BacklinksTab } from "@/types/schemas/backlinks";
 import {
@@ -37,28 +38,28 @@ export function BacklinksFilterPanel({
         textFields={[
           {
             key: "include",
-            label: "Source URL Contains",
-            placeholder: "example.com, blog",
+            labelId: "backlinksTables.filter.backlinks.sourceContains",
+            placeholderId: "backlinksTables.filter.placeholder.domainExample",
           },
           {
             key: "exclude",
-            label: "Source URL Excludes",
-            placeholder: "spam, forum",
+            labelId: "backlinksTables.filter.backlinks.sourceExcludes",
+            placeholderId: "backlinksTables.filter.placeholder.spamExample",
           },
         ]}
         rangeFields={[
           {
-            title: "Domain Authority",
+            titleId: "backlinksTables.filter.range.domainAuthority",
             minKey: "minDomainRank",
             maxKey: "maxDomainRank",
           },
           {
-            title: "Link Authority",
+            titleId: "backlinksTables.filter.range.linkAuthority",
             minKey: "minLinkAuthority",
             maxKey: "maxLinkAuthority",
           },
           {
-            title: "Spam Score",
+            titleId: "backlinksTables.metric.spamScore",
             minKey: "minSpamScore",
             maxKey: "maxSpamScore",
             step: "0.1",
@@ -92,24 +93,28 @@ export function BacklinksFilterPanel({
         textFields={[
           {
             key: "include",
-            label: "Domain Contains",
-            placeholder: "example.com, blog",
+            labelId: "backlinksTables.filter.domains.domainContains",
+            placeholderId: "backlinksTables.filter.placeholder.domainExample",
           },
           {
             key: "exclude",
-            label: "Domain Excludes",
-            placeholder: "spam, forum",
+            labelId: "backlinksTables.filter.domains.domainExcludes",
+            placeholderId: "backlinksTables.filter.placeholder.spamExample",
           },
         ]}
         rangeFields={[
           {
-            title: "Backlinks",
+            titleId: "backlinksTables.metric.backlinks",
             minKey: "minBacklinks",
             maxKey: "maxBacklinks",
           },
-          { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
           {
-            title: "Spam Score",
+            titleId: "backlinksTables.metric.rank",
+            minKey: "minRank",
+            maxKey: "maxRank",
+          },
+          {
+            titleId: "backlinksTables.metric.spamScore",
             minKey: "minSpamScore",
             maxKey: "maxSpamScore",
             step: "0.1",
@@ -139,23 +144,31 @@ export function BacklinksFilterPanel({
       textFields={[
         {
           key: "include",
-          label: "Page URL Contains",
-          placeholder: "/blog, /products",
+          labelId: "backlinksTables.filter.pages.pageContains",
+          placeholderId: "backlinksTables.filter.pages.pageContainsPlaceholder",
         },
         {
           key: "exclude",
-          label: "Page URL Excludes",
-          placeholder: "/tag, /author",
+          labelId: "backlinksTables.filter.pages.pageExcludes",
+          placeholderId: "backlinksTables.filter.pages.pageExcludesPlaceholder",
         },
       ]}
       rangeFields={[
-        { title: "Backlinks", minKey: "minBacklinks", maxKey: "maxBacklinks" },
         {
-          title: "Referring Domains",
+          titleId: "backlinksTables.metric.backlinks",
+          minKey: "minBacklinks",
+          maxKey: "maxBacklinks",
+        },
+        {
+          titleId: "backlinksTables.metric.referringDomains",
           minKey: "minReferringDomains",
           maxKey: "maxReferringDomains",
         },
-        { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
+        {
+          titleId: "backlinksTables.metric.rank",
+          minKey: "minRank",
+          maxKey: "maxRank",
+        },
       ]}
       onApply={(values) => {
         state.apply(values);
@@ -176,11 +189,23 @@ function BacklinksToggleControls({
   draft: BacklinksTabFilterValues;
   setValue: (key: keyof BacklinksTabFilterValues, value: string) => void;
 }) {
+  const intl = useIntl();
+  const linkTypeLabels: Record<"" | "dofollow" | "nofollow", string> = {
+    "": intl.formatMessage({ id: "backlinksTables.filter.linkType.all" }),
+    dofollow: intl.formatMessage({
+      id: "backlinksTables.filter.linkType.dofollow",
+    }),
+    nofollow: intl.formatMessage({
+      id: "backlinksTables.filter.linkType.nofollow",
+    }),
+  };
   return (
     <div className="flex flex-wrap items-center gap-4">
       <div className="space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-          Link Type
+          {intl.formatMessage({
+            id: "backlinksTables.filter.linkType.label",
+          })}
         </p>
         <div className="flex items-center gap-1">
           {(["", "dofollow", "nofollow"] as const).map((value) => (
@@ -190,11 +215,7 @@ function BacklinksToggleControls({
               className={`btn btn-xs ${draft.linkType === value ? "btn-soft" : "btn-ghost"}`}
               onClick={() => setValue("linkType", value)}
             >
-              {value === ""
-                ? "All"
-                : value === "dofollow"
-                  ? "Dofollow"
-                  : "Nofollow"}
+              {linkTypeLabels[value]}
             </button>
           ))}
         </div>
@@ -202,7 +223,9 @@ function BacklinksToggleControls({
 
       <div className="space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-          Visibility
+          {intl.formatMessage({
+            id: "backlinksTables.filter.visibility.label",
+          })}
         </p>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 cursor-pointer">
@@ -214,7 +237,11 @@ function BacklinksToggleControls({
                 setValue("hideLost", event.target.checked ? "true" : "")
               }
             />
-            <span className="text-xs">Hide lost</span>
+            <span className="text-xs">
+              {intl.formatMessage({
+                id: "backlinksTables.filter.visibility.hideLost",
+              })}
+            </span>
           </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
@@ -225,7 +252,11 @@ function BacklinksToggleControls({
                 setValue("hideBroken", event.target.checked ? "true" : "")
               }
             />
-            <span className="text-xs">Hide broken</span>
+            <span className="text-xs">
+              {intl.formatMessage({
+                id: "backlinksTables.filter.visibility.hideBroken",
+              })}
+            </span>
           </label>
         </div>
       </div>

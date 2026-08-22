@@ -21,6 +21,10 @@ import { onboarding } from "./vi/onboarding";
 import { onboardingChat } from "./vi/onboardingChat";
 import { auth } from "./vi/auth";
 import { authRecovery } from "./vi/authRecovery";
+import { domainOverview } from "./vi/domainOverview";
+import { domainTables } from "./vi/domainTables";
+import { backlinksOverview } from "./vi/backlinksOverview";
+import { backlinksTables } from "./vi/backlinksTables";
 
 // Vietnamese catalog — machine-translated seed, pending human review (see
 // README.md). Typed as `Messages` so the compiler fails if any English key is
@@ -49,4 +53,8 @@ export const vi: Messages = {
   ...onboardingChat,
   ...auth,
   ...authRecovery,
+  ...domainOverview,
+  ...domainTables,
+  ...backlinksOverview,
+  ...backlinksTables,
 };

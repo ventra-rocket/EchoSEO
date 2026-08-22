@@ -8,7 +8,7 @@ import {
 } from "@/serverFunctions/rank-tracking";
 import { Loader2, X } from "lucide-react";
 import { Modal } from "@/client/components/Modal";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import { domainField, normalizeDomain } from "@/types/schemas/domain";
@@ -92,7 +92,8 @@ export function RankTrackingConfigModal({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "rank.config.form.createErrorDefault" }),
         ),
@@ -128,7 +129,8 @@ export function RankTrackingConfigModal({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "rank.config.form.updateErrorDefault" }),
         ),

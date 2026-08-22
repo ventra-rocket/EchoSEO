@@ -6,7 +6,7 @@ import {
   getAuditScreenshot,
 } from "@/serverFunctions/audit-screenshots";
 import { getAuditAccess } from "@/serverFunctions/audit";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 
 /**
  * On-demand evidence screenshot for one affected URL.
@@ -147,7 +147,8 @@ export function IssueEvidenceScreenshot({
       {capture.isError && (
         <p className="flex items-center gap-1.5 text-xs text-error">
           <AlertCircle className="size-3.5" />
-          {getStandardErrorMessage(
+          {getLocalizedErrorMessage(
+            intl,
             capture.error,
             intl.formatMessage({
               id: "audit.issues.screenshot.captureFailedDefault",

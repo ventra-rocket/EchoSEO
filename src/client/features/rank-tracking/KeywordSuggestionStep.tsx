@@ -11,7 +11,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { getDomainKeywordSuggestions } from "@/serverFunctions/domain";
 import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import { isLabsLocationCode } from "@/client/features/keywords/locations";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import {
   AppDataTable,
   makeSelectionColumn,
@@ -140,7 +140,8 @@ export function KeywordSuggestionStep({
     },
     onError: (error) => {
       toast.error(
-        getStandardErrorMessage(
+        getLocalizedErrorMessage(
+          intl,
           error,
           intl.formatMessage({ id: "rank.config.addKeywords.errorDefault" }),
         ),

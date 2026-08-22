@@ -1,5 +1,6 @@
 /* eslint-disable max-lines, max-lines-per-function -- Domain Overview keeps page-only orchestration colocated to avoid fake indirection. */
 import { useCallback, useEffect, useMemo, useRef, type FormEvent } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useForm, useStore } from "@tanstack/react-form";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -42,7 +43,7 @@ import {
   shouldValidateFieldOnChange,
 } from "@/client/lib/forms";
 import { buildDomainFiltersClearSearchUpdate } from "@/client/features/domain/domainFilterUtils";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import type { DomainOverviewRouteState } from "@/client/features/domain/domainRouteState";
 import type {
@@ -178,6 +179,7 @@ function useDomainOverviewState({
   routeState: DomainOverviewRouteState;
   projectId: string;
 }) {
+  const intl = useIntl();
   const lastTrackedKey = useRef<string>("");
 
   const {
@@ -280,8 +282,9 @@ function useDomainOverviewState({
           value,
           shouldValidateFieldOnChange(formApi, "domain"),
           formApi.state.submissionAttempts > 0,
+          intl,
         ),
-      onSubmit: ({ value }) => getDomainSearchValidationErrors(value),
+      onSubmit: ({ value }) => getDomainSearchValidationErrors(value, intl),
     },
     onSubmit: ({ formApi, value }) => {
       const target = normalizeDomainTarget(value.domain);
@@ -319,14 +322,15 @@ function useDomainOverviewState({
     controlsForm.setErrorMap({
       onSubmit: overviewQuery.error
         ? createFormValidationErrors({
-            form: getStandardErrorMessage(
+            form: getLocalizedErrorMessage(
+              intl,
               overviewQuery.error,
-              "Lookup failed.",
+              intl.formatMessage({ id: "domainOverview.search.lookupFailed" }),
             ),
           })
         : undefined,
     });
-  }, [controlsForm, overviewQuery.error]);
+  }, [controlsForm, intl, overviewQuery.error]);
 
   useEffect(() => {
     if (!overviewQuery.isSuccess || !overview) return;
@@ -348,10 +352,13 @@ function useDomainOverviewState({
       locationCode: routeState.locationCode,
     });
     if (!overview.hasData) {
-      toast.info("Not enough data for this domain");
+      toast.info(
+        intl.formatMessage({ id: "domainOverview.search.notEnoughDataToast" }),
+      );
     }
   }, [
     addSearch,
+    intl,
     overview,
     overviewQuery.isSuccess,
     routeState.domain,
@@ -419,6 +426,7 @@ export function DomainOverviewPage({
   onShowRecentSearches,
 }: Props) {
   const state = useDomainOverviewState({ navigate, routeState, projectId });
+  const intl = useIntl();
   const urlTabInput = useMemo<SearchTabInput | null>(() => {
     if (routeState.domain.trim() === "") return null;
     return {
@@ -496,7 +504,10 @@ export function DomainOverviewPage({
         state.controlsForm.setErrorMap({
           onSubmit: createFormValidationErrors({
             fields: {
-              domain: `Close a tab to open more searches (max ${searchTabs.limit}).`,
+              domain: intl.formatMessage(
+                { id: "domainOverview.search.tabLimitReached" },
+                { max: searchTabs.limit },
+              ),
             },
           }),
         });
@@ -505,7 +516,7 @@ export function DomainOverviewPage({
 
       state.handleSearchSubmit(event);
     },
-    [searchTabs, state],
+    [intl, searchTabs, state],
   );
 
   const tabControls = routeState.domain ? (
@@ -520,7 +531,7 @@ export function DomainOverviewPage({
           }}
         >
           <ArrowLeft className="size-4" />
-          Recent searches
+          <FormattedMessage id="domainOverview.recentSearches.button" />
         </button>
       </div>
       <SearchTabStrip
@@ -538,10 +549,11 @@ export function DomainOverviewPage({
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto max-w-7xl space-y-4">
         <div>
-          <h1 className="text-2xl font-semibold">Domain Overview</h1>
+          <h1 className="text-2xl font-semibold">
+            <FormattedMessage id="nav.domainOverview" />
+          </h1>
           <p className="text-sm text-base-content/70">
-            Analyze any domain&apos;s SEO profile: traffic, keywords, and
-            backlinks.
+            <FormattedMessage id="domainOverview.page.subtitle" />
           </p>
         </div>
 
@@ -577,15 +589,17 @@ export function DomainOverviewPage({
             {tabControls}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <StatCard
-                label="Estimated Organic Traffic"
+                labelId="domainOverview.stats.organicTraffic"
                 value={formatMetric(
+                  intl,
                   state.overview.organicTraffic,
                   state.overview.hasData,
                 )}
               />
               <StatCard
-                label="Organic Keywords"
+                labelId="domainOverview.stats.organicKeywords"
                 value={formatMetric(
+                  intl,
                   state.overview.organicKeywords,
                   state.overview.hasData,
                 )}
@@ -595,8 +609,7 @@ export function DomainOverviewPage({
             {!state.overview.hasData ? (
               <div className="alert alert-info">
                 <span>
-                  Not enough data for this domain yet. Try another domain or
-                  include subdomains.
+                  <FormattedMessage id="domainOverview.result.notEnoughData" />
                 </span>
               </div>
             ) : null}
@@ -611,7 +624,7 @@ export function DomainOverviewPage({
                     className={`tab ${routeState.tab === "keywords" ? "tab-active" : ""}`}
                     onClick={() => state.handleTabChange("keywords")}
                   >
-                    Top Keywords
+                    <FormattedMessage id="domainOverview.tabs.keywords" />
                   </button>
                   <button
                     type="button"
@@ -620,7 +633,7 @@ export function DomainOverviewPage({
                     className={`tab ${routeState.tab === "pages" ? "tab-active" : ""}`}
                     onClick={() => state.handleTabChange("pages")}
                   >
-                    Top Pages
+                    <FormattedMessage id="domainOverview.tabs.pages" />
                   </button>
                 </div>
               </div>

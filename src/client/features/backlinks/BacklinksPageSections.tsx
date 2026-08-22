@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { SlidersHorizontal } from "lucide-react";
+import { FormattedMessage, useIntl } from "react-intl";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
+import type { MessageId } from "@/client/i18n/messages";
 import { BacklinksFilterPanel } from "./BacklinksFilterPanel";
 import { BacklinksTable } from "./BacklinksTable";
 import { ReferringDomainsTable } from "./ReferringDomainsTable";
@@ -26,11 +28,11 @@ import {
 
 const BACKLINKS_RESULTS_TABS: Array<{
   tab: BacklinksSearchState["tab"];
-  label: string;
+  labelId: MessageId;
 }> = [
-  { tab: "backlinks", label: "Backlinks" },
-  { tab: "domains", label: "Referring Domains" },
-  { tab: "pages", label: "Top Pages" },
+  { tab: "backlinks", labelId: "backlinksTables.metric.backlinks" },
+  { tab: "domains", labelId: "backlinksTables.metric.referringDomains" },
+  { tab: "pages", labelId: "backlinksTables.tab.pages" },
 ];
 
 export function BacklinksResultsCard({
@@ -74,6 +76,7 @@ export function BacklinksResultsCard({
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
 }) {
+  const intl = useIntl();
   const {
     ratings: domainRatings,
     isLoading: isLoadingRatings,
@@ -107,18 +110,18 @@ export function BacklinksResultsCard({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
         <div className="space-y-2">
           <div role="tablist" className="tabs tabs-box w-fit">
-            {BACKLINKS_RESULTS_TABS.map(({ label, tab }) => (
+            {BACKLINKS_RESULTS_TABS.map(({ labelId, tab }) => (
               <TabLink
                 key={tab}
                 activeTab={activeTab}
-                label={label}
+                labelId={labelId}
                 onSelect={onTabChange}
                 tab={tab}
               />
             ))}
           </div>
           <p className="max-w-xl text-sm text-base-content/60">
-            {TAB_DESCRIPTIONS[activeTab]}
+            <FormattedMessage id={TAB_DESCRIPTIONS[activeTab]} />
           </p>
         </div>
 
@@ -143,10 +146,12 @@ export function BacklinksResultsCard({
         <button
           className={`btn btn-ghost btn-sm gap-1.5 ${filters.showFilters ? "btn-active" : ""}`}
           onClick={() => filters.setShowFilters((current) => !current)}
-          title="Toggle table filters"
+          title={intl.formatMessage({
+            id: "saved.table.filter.toggleTooltip",
+          })}
         >
           <SlidersHorizontal className="size-3.5" />
-          Filters
+          <FormattedMessage id="saved.table.filter.filtersLabel" />
           {activeFilterCount > 0 ? (
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
               {activeFilterCount}
@@ -156,7 +161,9 @@ export function BacklinksResultsCard({
         {activeTab === "backlinks" ? (
           <div
             role="tablist"
-            aria-label="Backlinks view"
+            aria-label={intl.formatMessage({
+              id: "backlinksTables.toolbar.viewAriaLabel",
+            })}
             className="ml-auto tabs tabs-box tabs-xs w-fit"
           >
             <button
@@ -164,20 +171,24 @@ export function BacklinksResultsCard({
               role="tab"
               aria-selected={view !== "all"}
               className={`tab ${view !== "all" ? "tab-active" : ""}`}
-              title="Show each referring domain's strongest link; expand a row for the rest"
+              title={intl.formatMessage({
+                id: "backlinksTables.toolbar.onePerDomainTitle",
+              })}
               onClick={() => onViewChange(undefined)}
             >
-              One per domain
+              <FormattedMessage id="backlinksTables.toolbar.onePerDomain" />
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={view === "all"}
               className={`tab ${view === "all" ? "tab-active" : ""}`}
-              title="List every individual backlink"
+              title={intl.formatMessage({
+                id: "backlinksTables.toolbar.allLinksTitle",
+              })}
               onClick={() => onViewChange("all")}
             >
-              All links
+              <FormattedMessage id="backlinksTables.toolbar.allLinks" />
             </button>
           </div>
         ) : null}
@@ -198,7 +209,7 @@ export function BacklinksResultsCard({
           </div>
         ) : null}
         {isTabLoading && !tabErrorMessage ? (
-          <TabLoadingState label={TAB_LOADING_LABELS[activeTab]} />
+          <TabLoadingState labelId={TAB_LOADING_LABELS[activeTab]} />
         ) : null}
         {!isTabLoading && !tabErrorMessage ? (
           <>
@@ -245,10 +256,10 @@ export function BacklinksResultsCard({
   );
 }
 
-const TAB_LOADING_LABELS: Record<BacklinksTab, string> = {
-  backlinks: "Loading backlinks",
-  domains: "Loading referring domains",
-  pages: "Loading top pages",
+const TAB_LOADING_LABELS: Record<BacklinksTab, MessageId> = {
+  backlinks: "backlinksTables.tab.loading.backlinks",
+  domains: "backlinksTables.tab.loading.domains",
+  pages: "backlinksTables.tab.loading.pages",
 };
 
 /** Unique domains the DR column keys on, from both the backlinks and referring
@@ -265,12 +276,12 @@ function collectRatableDomains(tabRows: BacklinksTabRows): string[] {
 
 function TabLink({
   activeTab,
-  label,
+  labelId,
   onSelect,
   tab,
 }: {
   activeTab: BacklinksSearchState["tab"];
-  label: string;
+  labelId: MessageId;
   onSelect: (tab: BacklinksSearchState["tab"]) => void;
   tab: BacklinksSearchState["tab"];
 }) {
@@ -284,15 +295,17 @@ function TabLink({
       className={`tab ${isActive ? "tab-active" : ""}`}
       onClick={() => onSelect(tab)}
     >
-      {label}
+      <FormattedMessage id={labelId} />
     </button>
   );
 }
 
-function TabLoadingState({ label }: { label: string }) {
+function TabLoadingState({ labelId }: { labelId: MessageId }) {
   return (
     <div className="space-y-3 py-2">
-      <p className="text-sm text-base-content/60">{label}...</p>
+      <p className="text-sm text-base-content/60">
+        <FormattedMessage id={labelId} />
+      </p>
       <div className="skeleton h-10 w-full" />
       <div className="skeleton h-10 w-full" />
       <div className="skeleton h-10 w-full" />

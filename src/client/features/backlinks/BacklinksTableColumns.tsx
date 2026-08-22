@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
+import { FormattedMessage, type IntlShape, useIntl } from "react-intl";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import { BacklinksSourceLink } from "./BacklinksPageLinks";
@@ -31,19 +32,26 @@ function BacklinkFlags({ row }: { row: BacklinksRow }) {
   return (
     <div className="flex flex-wrap gap-1">
       {row.isLost ? (
-        <span className="badge badge-sm badge-error badge-outline">Lost</span>
+        <span className="badge badge-sm badge-error badge-outline">
+          <FormattedMessage id="backlinksTables.flag.lost" />
+        </span>
       ) : null}
       {row.isBroken ? (
         <span className="badge badge-sm badge-warning badge-outline">
-          Broken
+          <FormattedMessage id="backlinksTables.flag.broken" />
         </span>
       ) : null}
       {row.isDofollow === false ? (
-        <span className="badge badge-sm badge-outline">Nofollow</span>
+        <span className="badge badge-sm badge-outline">
+          <FormattedMessage id="backlinksTables.flag.nofollow" />
+        </span>
       ) : null}
       {row.linksCount != null && row.linksCount > 1 ? (
         <span className="badge badge-sm badge-outline min-w-fit whitespace-nowrap">
-          {row.linksCount} links
+          <FormattedMessage
+            id="backlinksTables.flag.linksCount"
+            values={{ count: row.linksCount }}
+          />
         </span>
       ) : null}
     </div>
@@ -55,15 +63,19 @@ function StatusCell({ status }: { status: "loading" | "error" | "empty" }) {
     return (
       <span className="flex items-center gap-2 pl-6 text-sm text-base-content/60">
         <span className="loading loading-spinner loading-xs" />
-        Loading links…
+        <FormattedMessage id="backlinksTables.state.loadingLinks" />
       </span>
     );
   }
   return (
     <span className="pl-6 text-sm text-base-content/60">
-      {status === "error"
-        ? "Couldn't load this domain's links."
-        : "No other links from this domain."}
+      <FormattedMessage
+        id={
+          status === "error"
+            ? "backlinksTables.state.loadError"
+            : "backlinksTables.state.noOtherLinks"
+        }
+      />
     </span>
   );
 }
@@ -75,6 +87,7 @@ function SourceCell({
   displayRow: BacklinksDisplayRow;
   onToggleDomain?: (domain: string) => void;
 }) {
+  const intl = useIntl();
   if (displayRow.kind === "status") {
     return <StatusCell status={displayRow.status} />;
   }
@@ -99,7 +112,14 @@ function SourceCell({
         <button
           type="button"
           className="btn btn-ghost btn-xs btn-square shrink-0 -ml-1"
-          aria-label={`${expanded ? "Hide" : "Show"} all links from ${domainLabel}`}
+          aria-label={intl.formatMessage(
+            {
+              id: expanded
+                ? "backlinksTables.source.hideLinksFromDomain"
+                : "backlinksTables.source.showLinksFromDomain",
+            },
+            { domain: domainLabel },
+          )}
           aria-expanded={expanded}
           onClick={() => onToggleDomain(row.domainFrom ?? "")}
         >
@@ -127,6 +147,7 @@ function linkCell(
 }
 
 function buildBaseColumns(
+  intl: IntlShape,
   onToggleDomain?: (domain: string) => void,
 ): ColumnDef<BacklinksDisplayRow>[] {
   // Sortable column ids ("rank", "domainRank", "spamScore", "firstSeen") map
@@ -137,7 +158,12 @@ function buildBaseColumns(
       id: "source",
       enableSorting: false,
       header: () => (
-        <HeaderHelpLabel label="Source" helpText="Page linking to you" />
+        <HeaderHelpLabel
+          label={intl.formatMessage({ id: "backlinksTables.column.source" })}
+          helpText={intl.formatMessage({
+            id: "backlinksTables.tooltip.source",
+          })}
+        />
       ),
       size: 250,
       minSize: 180,
@@ -149,7 +175,12 @@ function buildBaseColumns(
       id: "target",
       enableSorting: false,
       header: () => (
-        <HeaderHelpLabel label="Target" helpText="Destination on your site" />
+        <HeaderHelpLabel
+          label={intl.formatMessage({ id: "backlinksTables.column.target" })}
+          helpText={intl.formatMessage({
+            id: "backlinksTables.tooltip.target",
+          })}
+        />
       ),
       size: 220,
       minSize: 150,
@@ -167,13 +198,21 @@ function buildBaseColumns(
       id: "anchor",
       enableSorting: false,
       header: () => (
-        <HeaderHelpLabel label="Anchor" helpText="Text or format of the link" />
+        <HeaderHelpLabel
+          label={intl.formatMessage({ id: "backlinksTables.column.anchor" })}
+          helpText={intl.formatMessage({
+            id: "backlinksTables.tooltip.anchor",
+          })}
+        />
       ),
       size: 150,
       minSize: 100,
       cell: linkCell((row) => (
         <div className="space-y-0.5 break-words">
-          <span className="text-sm">{row.anchor || "No anchor text"}</span>
+          <span className="text-sm">
+            {row.anchor ||
+              intl.formatMessage({ id: "backlinksTables.anchorEmpty" })}
+          </span>
           {row.itemType ? (
             <div className="text-xs text-base-content/55">{row.itemType}</div>
           ) : null}
@@ -185,8 +224,10 @@ function buildBaseColumns(
       enableSorting: false,
       header: () => (
         <HeaderHelpLabel
-          label="Flags"
-          helpText="Special backlink attributes, such as lost, broken, nofollow, or multiple links from the same source."
+          label={intl.formatMessage({ id: "backlinksTables.column.flags" })}
+          helpText={intl.formatMessage({
+            id: "backlinksTables.tooltip.flags",
+          })}
         />
       ),
       size: 130,
@@ -200,8 +241,8 @@ function buildBaseColumns(
       header: ({ column }) => (
         <SortableHeader
           column={column}
-          label="Link"
-          helpText="Authority of the linking page"
+          label={intl.formatMessage({ id: "backlinksTables.column.link" })}
+          helpText={intl.formatMessage({ id: "backlinksTables.tooltip.link" })}
           align="right"
         />
       ),
@@ -210,7 +251,7 @@ function buildBaseColumns(
       sortDescFirst: true,
       cell: linkCell((row) => (
         <div className="text-right tabular-nums text-sm">
-          {formatNumber(row.rank)}
+          {formatNumber(intl, row.rank)}
         </div>
       )),
     },
@@ -221,8 +262,8 @@ function buildBaseColumns(
       header: ({ column }) => (
         <SortableHeader
           column={column}
-          label="DA"
-          helpText="Authority of the linking domain"
+          label={intl.formatMessage({ id: "backlinksTables.column.da" })}
+          helpText={intl.formatMessage({ id: "backlinksTables.tooltip.da" })}
           align="right"
         />
       ),
@@ -231,7 +272,7 @@ function buildBaseColumns(
       sortDescFirst: true,
       cell: linkCell((row) => (
         <div className="text-right tabular-nums text-sm">
-          {formatNumber(row.domainFromRank)}
+          {formatNumber(intl, row.domainFromRank)}
         </div>
       )),
     },
@@ -242,8 +283,10 @@ function buildBaseColumns(
       header: ({ column }) => (
         <SortableHeader
           column={column}
-          label="Spam"
-          helpText="Estimated spam risk for this backlink. Higher scores are more likely to be manipulative or low quality."
+          label={intl.formatMessage({ id: "backlinksTables.metric.spam" })}
+          helpText={intl.formatMessage({
+            id: "backlinksTables.tooltip.backlinksSpam",
+          })}
           align="right"
         />
       ),
@@ -266,8 +309,12 @@ function buildBaseColumns(
       header: ({ column }) => (
         <SortableHeader
           column={column}
-          label="First Seen"
-          helpText="When this link was first discovered by the crawler"
+          label={intl.formatMessage({
+            id: "backlinksTables.column.firstSeen",
+          })}
+          helpText={intl.formatMessage({
+            id: "backlinksTables.tooltip.backlinksFirstSeen",
+          })}
         />
       ),
       size: 110,
@@ -275,10 +322,13 @@ function buildBaseColumns(
       sortDescFirst: true,
       cell: linkCell((row) => (
         <div className="whitespace-nowrap text-sm">
-          <div>{formatCompactDate(row.firstSeen)}</div>
+          <div>{formatCompactDate(intl, row.firstSeen)}</div>
           {row.lastSeen ? (
             <div className="text-xs text-base-content/55">
-              Last {formatCompactDate(row.lastSeen)}
+              {intl.formatMessage(
+                { id: "backlinksTables.lastSeen" },
+                { date: formatCompactDate(intl, row.lastSeen) },
+              )}
             </div>
           ) : null}
         </div>
@@ -294,10 +344,11 @@ function buildBaseColumns(
  * in server-side sorting.
  */
 export function buildBacklinksColumns(
+  intl: IntlShape,
   domainRatings: DomainRatings | null,
   onToggleDomain?: (domain: string) => void,
 ): ColumnDef<BacklinksDisplayRow>[] {
-  const baseColumns = buildBaseColumns(onToggleDomain);
+  const baseColumns = buildBaseColumns(intl, onToggleDomain);
   if (!domainRatings) return baseColumns;
 
   const ratings = domainRatings;
@@ -307,8 +358,10 @@ export function buildBacklinksColumns(
     header: () => (
       <span className="flex w-full justify-end">
         <HeaderHelpLabel
-          label="Ahrefs DR"
-          helpText="Ahrefs Domain Rating (0-100) for the linking domain."
+          label={intl.formatMessage({ id: "backlinksTables.metric.ahrefsDr" })}
+          helpText={intl.formatMessage({
+            id: "backlinksTables.tooltip.backlinksAhrefsDr",
+          })}
         />
       </span>
     ),
@@ -319,7 +372,7 @@ export function buildBacklinksColumns(
       const dr = domain ? (ratings[domain] ?? null) : null;
       return (
         <div className="text-right tabular-nums text-sm">
-          {dr == null ? "—" : formatDecimal(dr)}
+          {dr == null ? "—" : formatDecimal(intl, dr)}
         </div>
       );
     }),

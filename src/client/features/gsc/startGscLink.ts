@@ -1,5 +1,6 @@
 import { toast } from "sonner";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { createIntl } from "react-intl";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { readClientLocale } from "@/client/i18n/config";
 import { MESSAGES } from "@/client/i18n/messages";
 import { authClient } from "@/lib/auth-client";
@@ -43,6 +44,18 @@ export async function startGscLink(callbackURL: string): Promise<void> {
       window.location.href = res.data.url;
     }
   } catch (error) {
-    toast.error(getStandardErrorMessage(error));
+    // Coded server failures used to resolve through the English-only standard
+    // map, so this toast stayed English on a Vietnamese page. `createIntl` over
+    // the same catalog this function already reads keeps ICU arguments correct
+    // for every code, which a raw record lookup would leave unsubstituted.
+    const locale = readClientLocale();
+    const intl = createIntl({ locale, messages: MESSAGES[locale] });
+    toast.error(
+      getLocalizedErrorMessage(
+        intl,
+        error,
+        MESSAGES[locale]["gsc.startLink.error"],
+      ),
+    );
   }
 }

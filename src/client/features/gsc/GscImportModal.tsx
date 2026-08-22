@@ -5,7 +5,7 @@ import { useIntl } from "react-intl";
 import { Modal } from "@/client/components/Modal";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { startGscLink } from "@/client/features/gsc/startGscLink";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import type { MessageId } from "@/client/i18n/messages";
 import type {
   GscImportCandidate,
@@ -112,7 +112,8 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
           <ReconnectPrompt />
         ) : candidatesQuery.isError ? (
           <p className="rounded-box border border-error/40 bg-error/10 px-4 py-3 text-sm">
-            {getStandardErrorMessage(
+            {getLocalizedErrorMessage(
+              intl,
               candidatesQuery.error,
               intl.formatMessage({ id: "gsc.import.loadError" }),
             )}
@@ -197,7 +198,8 @@ export function GscImportModal({ onClose }: { onClose: () => void }) {
 
             {importMutation.isError ? (
               <p className="rounded-box border border-error/40 bg-error/10 px-4 py-3 text-sm">
-                {getStandardErrorMessage(
+                {getLocalizedErrorMessage(
+                  intl,
                   importMutation.error,
                   intl.formatMessage({ id: "gsc.import.submitError" }),
                 )}

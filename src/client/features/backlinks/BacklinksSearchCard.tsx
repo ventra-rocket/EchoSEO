@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { Search } from "lucide-react";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 import {
   createFormValidationErrors,
   getFieldError,
@@ -16,6 +17,7 @@ import {
 type SearchDraft = Pick<BacklinksSearchState, "target" | "scope">;
 
 function getBacklinksValidationErrors(
+  intl: IntlShape,
   value: SearchDraft,
   shouldValidateUntouchedField: boolean,
   canOpenSearch?: (value: SearchDraft) => boolean,
@@ -28,7 +30,9 @@ function getBacklinksValidationErrors(
 
     return createFormValidationErrors({
       fields: {
-        target: "Enter a domain or URL to analyze.",
+        target: intl.formatMessage({
+          id: "backlinksOverview.search.validation.targetRequired",
+        }),
       },
     });
   }
@@ -41,7 +45,10 @@ function getBacklinksValidationErrors(
   if (canOpenSearch && !canOpenSearch(normalizedValue)) {
     return createFormValidationErrors({
       fields: {
-        target: `Close a tab to open more searches (max ${tabLimit ?? 8}).`,
+        target: intl.formatMessage(
+          { id: "backlinksOverview.search.validation.tabLimit" },
+          { tabLimit: tabLimit ?? 8 },
+        ),
       },
     });
   }
@@ -62,19 +69,27 @@ export function BacklinksSearchCard({
   onSubmit: (values: SearchDraft) => void;
   tabLimit?: number;
 }) {
+  const intl = useIntl();
   const [userSelectedScope, setUserSelectedScope] = useState(false);
   const form = useForm({
     defaultValues: initialValues,
     validators: {
       onChange: ({ formApi, value }) =>
         getBacklinksValidationErrors(
+          intl,
           value,
           shouldValidateFieldOnChange(formApi, "target"),
           canOpenSearch,
           tabLimit,
         ),
       onSubmit: ({ value }) =>
-        getBacklinksValidationErrors(value, true, canOpenSearch, tabLimit),
+        getBacklinksValidationErrors(
+          intl,
+          value,
+          true,
+          canOpenSearch,
+          tabLimit,
+        ),
     },
     onSubmit: ({ value }) => {
       const target = value.target.trim();
@@ -119,7 +134,9 @@ export function BacklinksSearchCard({
                     >
                       <Search className="size-4 text-base-content/60" />
                       <input
-                        placeholder="Enter a domain or URL"
+                        placeholder={intl.formatMessage({
+                          id: "backlinksOverview.search.placeholder",
+                        })}
                         value={field.state.value}
                         onChange={(event) => {
                           const nextTarget = event.target.value;
@@ -144,7 +161,13 @@ export function BacklinksSearchCard({
                     className="btn btn-primary lg:col-span-2"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Loading..." : "Search"}
+                    <FormattedMessage
+                      id={
+                        isSubmitting
+                          ? "backlinksOverview.search.submitting"
+                          : "backlinksOverview.search.submit"
+                      }
+                    />
                   </button>
                 )}
               </form.Subscribe>
@@ -182,7 +205,7 @@ export function BacklinksSearchCard({
                         field.handleChange("domain");
                       }}
                     >
-                      Site-wide
+                      <FormattedMessage id="backlinksOverview.scope.domain" />
                     </button>
                     <button
                       type="button"
@@ -192,7 +215,7 @@ export function BacklinksSearchCard({
                         field.handleChange("page");
                       }}
                     >
-                      Exact page
+                      <FormattedMessage id="backlinksOverview.scope.page" />
                     </button>
                   </>
                 )}

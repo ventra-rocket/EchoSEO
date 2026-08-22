@@ -15,7 +15,7 @@ import {
   type AuditExportFormat,
   type ReportLocale,
 } from "@/shared/audit-export-format";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import type { MessageId } from "@/client/i18n/messages";
 
 /** Export format labels — audit-export-specific, so they live beside the panel
@@ -159,7 +159,8 @@ export function AuditExportPanel({
         <div className="alert alert-error alert-sm">
           <AlertCircle className="size-4" />
           <span>
-            {getStandardErrorMessage(
+            {getLocalizedErrorMessage(
+              intl,
               request.error,
               intl.formatMessage({ id: "audit.exports.startError" }),
             )}

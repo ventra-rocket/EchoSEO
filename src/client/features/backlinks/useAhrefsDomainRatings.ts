@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chunk, unique } from "remeda";
 import { toast } from "sonner";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { useIntl } from "react-intl";
+import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { getAhrefsDomainRatings } from "@/serverFunctions/ahrefs";
 
 /** Map of domain (as held in table rows) → Ahrefs DR, or null when unknown. */
@@ -13,6 +14,7 @@ const DOMAINS_PER_REQUEST = 100;
 
 export function useAhrefsDomainRatings(projectId: string) {
   const [ratings, setRatings] = useState<DomainRatings | null>(null);
+  const intl = useIntl();
   const ratingsRef = useRef<DomainRatings | null>(null);
   const pendingDomainsRef = useRef(new Set<string>());
   const [activeLoadCount, setActiveLoadCount] = useState(0);
@@ -47,7 +49,11 @@ export function useAhrefsDomainRatings(projectId: string) {
       } catch (error) {
         // Opt-in convenience feature — surface partial results, don't crash.
         toast.error(
-          getStandardErrorMessage(error, "Could not load Ahrefs DR."),
+          getLocalizedErrorMessage(
+            intl,
+            error,
+            intl.formatMessage({ id: "backlinksOverview.ahrefs.loadError" }),
+          ),
         );
       } finally {
         if (Object.keys(fetched).length > 0) {
@@ -59,7 +65,7 @@ export function useAhrefsDomainRatings(projectId: string) {
         setActiveLoadCount((count) => Math.max(0, count - 1));
       }
     },
-    [projectId],
+    [projectId, intl],
   );
 
   return { ratings, isLoading: activeLoadCount > 0, loadRatings };

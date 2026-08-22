@@ -20,7 +20,6 @@ import type {
 } from "./backlinksPageTypes";
 import type { UseAccessGateResult } from "@/client/features/access-gate/useAccessGate";
 import { AccessGateLoadingState } from "@/client/features/access-gate/AccessGate";
-import { buildSummaryStats } from "./backlinksPageUtils";
 import type { BacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import {
@@ -108,10 +107,6 @@ export function BacklinksBody({
       : searchState.tab === "domains"
         ? referringDomainsPage
         : topPagesPage;
-  const summaryStats = useMemo(
-    () => buildSummaryStats(overviewData),
-    [overviewData],
-  );
   const tabStrip = searchTabs ? (
     <SearchTabStrip
       projectId={projectId}
@@ -182,11 +177,7 @@ export function BacklinksBody({
   return (
     <>
       {tabStrip}
-      <BacklinksOverviewPanels
-        projectId={projectId}
-        data={overviewData}
-        summaryStats={summaryStats}
-      />
+      <BacklinksOverviewPanels projectId={projectId} data={overviewData} />
       <BacklinksResultsCard
         projectId={projectId}
         activeTab={searchState.tab}

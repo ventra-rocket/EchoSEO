@@ -4,6 +4,7 @@ import {
   type ColumnDef,
   type RowSelectionState,
 } from "@tanstack/react-table";
+import { useIntl } from "react-intl";
 import {
   AppDataTable,
   makeSelectionColumn,
@@ -14,7 +15,6 @@ import { ExternalUrlCell } from "@/client/components/table/url";
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
 import { SortableHeader } from "@/client/features/domain/components/SortableHeader";
 import { useDomainRenderDebug } from "@/client/features/domain/domainDebug";
-import { formatNumber, formatRounded } from "@/client/features/domain/utils";
 import type {
   DomainSortMode,
   KeywordRow,
@@ -44,6 +44,7 @@ function DomainKeywordsTableComponent({
   onSortClick,
   onToggleKeyword,
 }: Props) {
+  const intl = useIntl();
   const renderStarted = performance.now();
   const selectAnchorRef = useSelectionAnchor();
   const rowSelection = useMemo<RowSelectionState>(
@@ -57,7 +58,8 @@ function DomainKeywordsTableComponent({
     () => [
       makeSelectionColumn<KeywordRow>(selectAnchorRef),
       keywordColumnHelper.accessor("keyword", {
-        header: () => "Keyword",
+        header: () =>
+          intl.formatMessage({ id: "domainTables.keywords.column.keyword" }),
         cell: ({ getValue }) => (
           <span className="font-medium">{getValue()}</span>
         ),
@@ -65,41 +67,60 @@ function DomainKeywordsTableComponent({
       keywordColumnHelper.accessor("position", {
         header: () => (
           <SortableHeader
-            label="Rank"
+            label={intl.formatMessage({
+              id: "domainTables.keywords.column.rank",
+            })}
             isActive={sortMode === "rank"}
             order={currentSortOrder}
             onClick={() => onSortClick("rank")}
           />
         ),
-        cell: ({ getValue }) => getValue() ?? "-",
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value == null ? "-" : intl.formatNumber(value);
+        },
       }),
       keywordColumnHelper.accessor("searchVolume", {
         header: () => (
           <SortableHeader
-            label="Volume"
+            label={intl.formatMessage({
+              id: "domainTables.keywords.column.volume",
+            })}
             isActive={sortMode === "volume"}
             order={currentSortOrder}
             onClick={() => onSortClick("volume")}
           />
         ),
-        cell: ({ getValue }) => formatNumber(getValue()),
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value == null ? "-" : intl.formatNumber(value);
+        },
       }),
       keywordColumnHelper.accessor("traffic", {
         header: () => (
           <SortableHeader
-            label="Traffic"
+            label={intl.formatMessage({
+              id: "domainTables.keywords.column.traffic",
+            })}
             isActive={sortMode === "traffic"}
             order={currentSortOrder}
             onClick={() => onSortClick("traffic")}
           />
         ),
-        cell: ({ getValue }) => formatRounded(getValue()),
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value == null ? "-" : intl.formatNumber(Math.round(value));
+        },
       }),
       keywordColumnHelper.accessor("cpc", {
         header: () => (
           <SortableHeader
-            label="CPC"
-            helpText="Cost per click in USD."
+            label={intl.formatMessage({
+              id: "domainTables.keywords.column.cpc",
+            })}
+            helpText={intl.formatMessage({
+              id: "domainTables.keywords.column.cpcTooltip",
+            })}
             isActive={sortMode === "cpc"}
             order={currentSortOrder}
             onClick={() => onSortClick("cpc")}
@@ -107,12 +128,18 @@ function DomainKeywordsTableComponent({
         ),
         cell: ({ getValue }) => {
           const value = getValue();
-          return value == null ? "-" : `$${value.toFixed(2)}`;
+          return value == null
+            ? "-"
+            : intl.formatNumber(value, {
+                style: "currency",
+                currency: "USD",
+              });
         },
       }),
       keywordColumnHelper.display({
         id: "url",
-        header: () => "URL",
+        header: () =>
+          intl.formatMessage({ id: "domainTables.keywords.column.url" }),
         cell: ({ row }) => (
           <ExternalUrlCell
             value={row.original.relativeUrl ?? row.original.url}
@@ -127,8 +154,12 @@ function DomainKeywordsTableComponent({
       keywordColumnHelper.accessor("keywordDifficulty", {
         header: () => (
           <SortableHeader
-            label="Score"
-            helpText="Organic ranking difficulty (0-100): higher means harder to reach Google's top 10."
+            label={intl.formatMessage({
+              id: "domainTables.keywords.column.score",
+            })}
+            helpText={intl.formatMessage({
+              id: "domainTables.keywords.column.scoreTooltip",
+            })}
             isActive={sortMode === "score"}
             order={currentSortOrder}
             onClick={() => onSortClick("score")}
@@ -137,7 +168,7 @@ function DomainKeywordsTableComponent({
         cell: ({ getValue }) => <DifficultyBadge value={getValue()} />,
       }),
     ],
-    [currentSortOrder, domain, onSortClick, selectAnchorRef, sortMode],
+    [currentSortOrder, domain, intl, onSortClick, selectAnchorRef, sortMode],
   );
   const table = useAppTable({
     data: rows,
@@ -170,9 +201,14 @@ function DomainKeywordsTableComponent({
   return (
     <div className="overflow-x-auto">
       <div className="mb-2 text-xs text-base-content/60">
-        {selectedKeywords.size > 0
-          ? `${selectedKeywords.size} selected`
-          : "Select keywords to save"}
+        {selectedKeywords.size > 0 ? (
+          <>
+            {intl.formatNumber(selectedKeywords.size)}{" "}
+            {intl.formatMessage({ id: "common.table.selected" })}
+          </>
+        ) : (
+          intl.formatMessage({ id: "domainTables.keywords.selectionHint" })
+        )}
       </div>
       <AppDataTable
         table={table}
@@ -180,7 +216,7 @@ function DomainKeywordsTableComponent({
         wrapperClassName=""
         empty={
           <div className="py-6 text-center text-base-content/60">
-            No keywords match this search.
+            {intl.formatMessage({ id: "domainTables.keywords.empty" })}
           </div>
         }
       />
