@@ -29,6 +29,7 @@ import {
   getPagesByUrls,
   listEdgesToTargets,
   listInboundCountsByTarget,
+  listPagesForAudit,
 } from "./audit-page-queries";
 
 const DB_BATCH_SIZE = 100;
@@ -436,6 +437,7 @@ export const AuditRepository = {
   getPagesByUrls,
   listEdgesToTargets,
   listInboundCountsByTarget,
+  listPagesForAudit,
   getAuditForProject,
   getLastPacingForTarget,
   getAuditsByProject,

@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   docker:
-    if: github.repository == 'every-app/open-seo'
+    # Skip on forks: only this repo owns the ghcr.io/ventra-rocket/echoseo
+    # namespace, and only its GITHUB_TOKEN can push there.
+    if: github.repository == 'ventra-rocket/EchoSEO'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,7 +39,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/every-app/open-seo
+          images: ghcr.io/ventra-rocket/echoseo
           tags: |
             type=ref,event=branch
             type=ref,event=tag

@@ -56,4 +56,7 @@ export const projectsSettings: Record<keyof typeof en, string> = {
     "Không thể cập nhật cài đặt phân tích của bạn.",
   "projectsSettings.settings.analyticsEnabledToast": "Đã bật phân tích",
   "projectsSettings.settings.analyticsDisabledToast": "Đã tắt phân tích",
+
+  "projectsSettings.settings.about": "Thông tin",
+  "projectsSettings.settings.version": "Phiên bản",
 };

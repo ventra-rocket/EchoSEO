@@ -82,11 +82,15 @@ export function buildTaskBilling(
   return billing;
 }
 
-/** DataForSEO's "No Search Results" (40501) — a successful empty result, not a failure. */
+/**
+ * DataForSEO's "No Search Results" (40501) — a successful empty result, not a
+ * failure. Match on the status message, not the code alone: 40501 also covers
+ * validation rejections like "Invalid Field: 'target'.", which are real charged
+ * failures we must surface rather than mask as empty results.
+ */
 export function isNoResultsTask(task: DataforseoTaskLike): boolean {
   return (
-    task.status_code === 40501 ||
-    (task.status_message?.toLowerCase().includes("no search results") ?? false)
+    task.status_message?.toLowerCase().includes("no search results") ?? false
   );
 }
 
@@ -95,7 +99,11 @@ type AssertOkOptions = {
   classify?: DataforseoErrorClassifier;
   /** Request path string handed to the classifier (e.g. "/v3/backlinks/summary/live"). */
   classifyPath?: string;
-  /** Treat DataForSEO's "no search results" (40501) as an empty success. */
+  /**
+   * Treat a "no search results" task as an empty success. Keyed off the status
+   * message, not status_code 40501 — DataForSEO reuses that code for charged
+   * validation rejections, which must still surface.
+   */
   treatNoResultsAsEmpty?: boolean;
 };
 

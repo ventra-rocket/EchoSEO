@@ -71,6 +71,11 @@ export const projects = sqliteTable(
       .where(
         sql`${table.name} = 'Default' AND ${table.domain} IS NULL AND ${table.archivedAt} IS NULL`,
       ),
+    // Every project listing filters by organization. The partial-unique index
+    // above only covers the single Default/null-domain row, so org-scoped list
+    // queries otherwise seq-scan the whole table. Per-org row counts are small,
+    // so the archived/created_at ordering sorts cheaply on top of this lookup.
+    index("projects_organization_id_idx").on(table.organizationId),
   ],
 );
 
@@ -238,6 +243,14 @@ export const rankTrackingConfigs = sqliteTable(
       table.projectId,
       table.domain,
       table.locationCode,
+    ),
+    // listConfigsForProject filters (project_id, is_active) and orders by
+    // created_at; the unique index above leads with project_id but then domain,
+    // so it cannot serve the is_active predicate or the sort.
+    index("rank_tracking_configs_project_active_created_idx").on(
+      table.projectId,
+      table.isActive,
+      table.createdAt,
     ),
   ],
 );

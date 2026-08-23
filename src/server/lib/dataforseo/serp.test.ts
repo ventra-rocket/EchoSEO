@@ -168,10 +168,104 @@ describe("rank check task queue", () => {
       result: {
         keywordId: "kw-1",
         keyword: "alpha",
-        position: 4,
+        // rank_group (3), not rank_absolute (4) — the extra absolute slot is a
+        // SERP feature, not an organic competitor above us.
+        position: 3,
         url: "https://www.example.com/page",
         serpFeatures: ["organic"],
       },
+    });
+  });
+
+  // The reported position is the number the user sees when they count organic
+  // results on the page. DataForSEO's rank_absolute counts SERP features (AI
+  // overview, local pack, People Also Ask) as positions too, so reading it as
+  // "rank" silently reports a #1 organic result as #4.
+  it("reports the organic rank, not the absolute SERP slot", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        status_code: 20000,
+        tasks: [
+          {
+            id: "task-a",
+            status_code: 20000,
+            cost: 0,
+            path: ["v3", "serp", "google", "organic", "task_get", "advanced"],
+            result: [
+              {
+                items: [
+                  { type: "ai_overview", rank_group: 1, rank_absolute: 1 },
+                  { type: "local_pack", rank_group: 1, rank_absolute: 2 },
+                  { type: "people_also_ask", rank_group: 1, rank_absolute: 3 },
+                  {
+                    type: "organic",
+                    rank_group: 1,
+                    rank_absolute: 4,
+                    domain: "example.com",
+                    url: "https://example.com/page",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const outcome = await fetchRankCheckTaskResult({
+      taskId: "task-a",
+      keywordId: "kw-1",
+      keyword: "alpha",
+      targetDomain: "example.com",
+    });
+
+    expect(outcome).toMatchObject({
+      status: "completed",
+      result: { position: 1 },
+    });
+  });
+
+  // Some SERP element types carry only rank_absolute. Falling back keeps a
+  // position rather than reporting "not ranking" for a page that does rank.
+  it("falls back to rank_absolute when rank_group is absent", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        status_code: 20000,
+        tasks: [
+          {
+            id: "task-a",
+            status_code: 20000,
+            cost: 0,
+            path: ["v3", "serp", "google", "organic", "task_get", "advanced"],
+            result: [
+              {
+                items: [
+                  {
+                    type: "organic",
+                    rank_absolute: 7,
+                    domain: "example.com",
+                    url: "https://example.com/page",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const outcome = await fetchRankCheckTaskResult({
+      taskId: "task-a",
+      keywordId: "kw-1",
+      keyword: "alpha",
+      targetDomain: "example.com",
+    });
+
+    expect(outcome).toMatchObject({
+      status: "completed",
+      result: { position: 7 },
     });
   });
 });

@@ -24,6 +24,13 @@ const clampStep = (step: number) =>
   Math.min(Math.max(0, Math.trunc(step)), ONBOARDING_LAST_STEP);
 
 export const Route = createFileRoute("/_authenticated/onboarding/")({
+  // The app renders inside <ClientOnly> in __root.tsx, and this guard reads
+  // account-scoped data through the module-scoped query client in
+  // @/client/tanstack-db/queryClient (gcTime 1h, staleTime 5m). A Worker
+  // isolate is reused across requests and across accounts, so running
+  // beforeLoad on the server would let one account's cached onboarding answers
+  // decide another account's redirect. Keep the guard off server requests.
+  ssr: false,
   // Step lives in the URL so it survives refresh and works with back/forward.
   validateSearch: (search: Record<string, unknown>): { step: number } => {
     const raw = Number(search.step);

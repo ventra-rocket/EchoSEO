@@ -61,8 +61,6 @@ export const keywordUi = {
     "Please enter at least one keyword.",
   "keywordUi.controlsForm.tooManyKeywords":
     "Please enter no more than {max, number} keywords (one per line).",
-  "keywordUi.controlsForm.tabsSkipped":
-    "{skipped, plural, one {# keyword} other {# keywords}} skipped — close a tab to open more (max {max, number}).",
 
   // Save/export actions (keywordControllerActions.ts). CSV/Sheets headers stay
   // English on purpose — see KEYWORD_RESEARCH_HEADERS in that file.

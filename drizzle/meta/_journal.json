@@ -337,6 +337,13 @@
       "when": 1787201573189,
       "tag": "0047_lazy_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1787503904593,
+      "tag": "0048_curvy_paladin",
+      "breakpoints": true
     }
   ]
 }

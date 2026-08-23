@@ -1,4 +1,5 @@
 import { ProjectService } from "@/server/features/projects/services/ProjectService";
+import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { AppError } from "@/server/lib/errors";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import {
@@ -39,7 +40,10 @@ export async function requireLiveOrgMembership(auth: {
   }
 }
 
-async function requireProjectAccess(extra: ToolExtra, projectId: string) {
+async function requireProjectAccess(
+  extra: ToolExtra,
+  projectId: string,
+): Promise<McpProjectAuthContext> {
   const { baseUrl, ...auth } = requireMcpToolAuthContext(extra);
 
   await requireLiveOrgMembership(auth);
@@ -59,10 +63,32 @@ async function requireProjectAccess(extra: ToolExtra, projectId: string) {
     auth,
     baseUrl,
     billing: buildBillingCustomer(auth, projectId),
+    // The request's cancellation signal. Only tools that wait on something read
+    // it, but they must: `get_audit_status` blocks server-side while a crawl
+    // runs, and a client that hangs up mid-wait should stop the re-reads rather
+    // than have them run out their budget against a socket nobody is holding.
+    signal: extra.signal,
   };
 }
 
-type McpProjectAuthContext = Awaited<ReturnType<typeof requireProjectAccess>>;
+/**
+ * What every project-scoped MCP tool handler receives once the caller's
+ * organization, live membership, and ownership of `projectId` are all proven.
+ */
+export interface McpProjectAuthContext {
+  auth: {
+    userId: string;
+    userEmail: string;
+    organizationId: string;
+    scopes: string[];
+    clientId: string | null;
+    audience: string;
+    subject: string;
+  };
+  baseUrl: string;
+  billing: BillingCustomerContext;
+  signal: AbortSignal;
+}
 
 export function withMcpProjectAuth<TArgs extends ProjectScopedArgs, TResult>(
   handler: (

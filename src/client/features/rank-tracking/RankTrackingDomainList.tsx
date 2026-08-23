@@ -19,14 +19,17 @@ import {
 import { Modal } from "@/client/components/Modal";
 import type { MessageId } from "@/client/i18n/messages";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
+import type { RankTrackingSkipReason } from "@/shared/rank-tracking";
+import { DomainListFilterBar } from "./RankTrackingFilters";
 import {
   applyDomainListFilters,
   countActiveDomainListFilters,
-  DomainListFilterBar,
-  EMPTY_DOMAIN_LIST_FILTERS,
   getDomainListFilterOptions,
+} from "./rankTrackingFiltering";
+import {
+  EMPTY_DOMAIN_LIST_FILTERS,
   type DomainListFilters,
-} from "./RankTrackingFilters";
+} from "./rankTrackingFilterTypes";
 
 type ConfigSummary = Awaited<
   ReturnType<typeof getRankTrackingConfigSummaries>
@@ -57,6 +60,21 @@ const SCHEDULE_SUMMARY_IDS: Record<
   monthly: "rank.config.schedule.monthly",
   manual: "rank.config.schedule.manual",
 };
+
+// Every reason the cron can write must say something, or a config sits idle
+// with the row looking healthy. Keyed on the writer's union so a new reason
+// fails to compile until it has a line to show.
+const SKIP_REASON_IDS: Record<RankTrackingSkipReason, MessageId> = {
+  plan_required: "rank.config.domainList.row.planSkipped",
+  key_missing: "rank.config.domainList.row.keySkipped",
+  no_keywords: "rank.config.domainList.row.noKeywordsSkipped",
+  insufficient_credits: "rank.config.domainList.row.creditsSkipped",
+};
+
+// last_skip_reason is free-form text in the schema, so a stored value the union
+// no longer covers reads as "nothing to show" rather than crashing a row.
+const SKIP_REASON_ID_BY_VALUE: Record<string, MessageId | undefined> =
+  SKIP_REASON_IDS;
 
 /**
  * `completed_at` is written by app code as `new Date().toISOString()` (see
@@ -94,7 +112,7 @@ export function RankTrackingDomainList({
   const [filters, setFilters] = useState<DomainListFilters>(
     EMPTY_DOMAIN_LIST_FILTERS,
   );
-  const { data: summaries } = useQuery({
+  const { data: summaries, isPending } = useQuery({
     queryKey: ["rankTrackingConfigSummaries", projectId],
     queryFn: () => getRankTrackingConfigSummaries({ data: { projectId } }),
   });
@@ -154,7 +172,18 @@ export function RankTrackingDomainList({
           />
         )}
         <div className="divide-y divide-base-300 border-t border-base-300">
-          {allSummaries.length === 0 ? (
+          {/* Without this the empty state ("no domains tracked yet") flashes
+              on every load, because `summaries` is undefined while pending. */}
+          {isPending ? (
+            <div className="space-y-4 px-5 py-4" aria-busy>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="skeleton h-4 w-48" />
+                  <div className="skeleton h-3 w-72" />
+                </div>
+              ))}
+            </div>
+          ) : allSummaries.length === 0 ? (
             <div className="px-5 py-10 text-center space-y-2">
               <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-base-200">
                 <Globe className="size-5 text-base-content/40" />
@@ -246,6 +275,9 @@ function DomainRow({
   onArchive: () => void;
 }) {
   const intl = useIntl();
+  const skipReasonId = summary.lastSkipReason
+    ? SKIP_REASON_ID_BY_VALUE[summary.lastSkipReason]
+    : undefined;
   return (
     <div className="relative flex w-full items-center gap-4 px-5 py-3.5 transition-colors hover:bg-base-200/50">
       <Link
@@ -284,10 +316,10 @@ function DomainRow({
             />
           )}
         </p>
-        {summary.lastSkipReason === "insufficient_credits" && (
+        {skipReasonId && (
           <p className="flex items-center gap-1 text-xs text-warning">
             <AlertTriangle className="size-3" />
-            <FormattedMessage id="rank.config.domainList.row.creditsSkipped" />
+            <FormattedMessage id={skipReasonId} />
           </p>
         )}
       </div>

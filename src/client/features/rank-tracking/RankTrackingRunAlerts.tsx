@@ -2,16 +2,34 @@ import { AlertTriangle } from "lucide-react";
 import { FormattedMessage } from "react-intl";
 import { isProviderAuthFailureMessage } from "@/shared/provider-failure";
 import { RankTrackingSearchPerformanceHint } from "./RankTrackingSearchPerformanceHint";
+import type { MessageId } from "@/client/i18n/messages";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
+import type { RankTrackingSkipReason } from "@/shared/rank-tracking";
 import type { useRankRunPolling } from "./useRankRunPolling";
 
+// Every reason the cron can write gets its own sentence naming the way out; a
+// silent skip looks identical to "nothing scheduled". Keyed on the writer's
+// union so a new reason fails to compile until it has a line to show.
+const SKIP_ALERT_IDS: Record<RankTrackingSkipReason, MessageId> = {
+  plan_required: "rank.config.detail.planSkippedAlert",
+  key_missing: "rank.config.detail.keySkippedAlert",
+  no_keywords: "rank.config.detail.noKeywordsSkippedAlert",
+  insufficient_credits: "rank.config.detail.creditsSkippedAlert",
+};
+
+// last_skip_reason is free-form text in the schema, so a stored value the union
+// no longer covers reads as "nothing to show" rather than crashing the page.
+const SKIP_ALERT_ID_BY_VALUE: Record<string, MessageId | undefined> =
+  SKIP_ALERT_IDS;
+
 /**
- * The three ways a scheduled or triggered check can have gone wrong, each
- * with its own alert: insufficient credits is a billing state rather than a
- * bug, general staleness is cleaned up automatically so the alert only has to
- * say so, and an outright failure gets the provider's own error text plus a
- * pointer to Search Console when the failure was an auth problem, since that
- * leaves the user with zero rank data and a free alternative worth naming.
+ * The ways a scheduled or triggered check can have gone wrong, each with its
+ * own alert: a skip is a config or billing state rather than a bug and names
+ * what to change, general staleness is cleaned up automatically so the alert
+ * only has to say so, and an outright failure gets the provider's own error
+ * text plus a pointer to Search Console when the failure was an auth problem,
+ * since that leaves the user with zero rank data and a free alternative worth
+ * naming.
  *
  * Extracted out of RankTrackingDomainDetail.tsx: three conditional alert
  * blocks were pushing that file's component past the line budget, and "what
@@ -27,13 +45,16 @@ export function RankTrackingRunAlerts({
   latestRun: ReturnType<typeof useRankRunPolling>;
   projectId: string;
 }) {
+  const skipAlertId = config.lastSkipReason
+    ? SKIP_ALERT_ID_BY_VALUE[config.lastSkipReason]
+    : undefined;
   return (
     <>
-      {config.lastSkipReason === "insufficient_credits" && (
+      {skipAlertId && (
         <div className="alert alert-warning text-sm py-2">
           <AlertTriangle className="size-4" />
           <span>
-            <FormattedMessage id="rank.config.detail.creditsSkippedAlert" />
+            <FormattedMessage id={skipAlertId} />
           </span>
         </div>
       )}
@@ -47,14 +68,15 @@ export function RankTrackingRunAlerts({
         </div>
       )}
 
-      {/* Surface any other failed-run reason (e.g. missing DataForSEO key,
-          workflow error) instead of leaving the failure invisible. The
-          insufficient-credits case has its own friendlier alert above. When the
-          provider is what refused, the user has no rank data at all, so name
-          the free alternative rather than leaving them at the error. */}
+      {/* Surface any other failed-run reason (e.g. workflow error) instead of
+          leaving the failure invisible. A skip already has its own friendlier
+          alert above, so it suppresses this one rather than stacking a raw
+          provider string on top. When the provider is what refused, the user has
+          no rank data at all, so name the free alternative rather than leaving
+          them at the error. */}
       {latestRun?.status === "failed" &&
         latestRun.errorMessage &&
-        config.lastSkipReason !== "insufficient_credits" && (
+        !skipAlertId && (
           <div className="alert alert-error text-sm py-2 items-start">
             <AlertTriangle className="size-4 mt-0.5 shrink-0" />
             <div className="space-y-1">

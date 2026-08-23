@@ -35,6 +35,10 @@ export const shell = {
   "projectSwitcher.switch": "Switch project",
   "projectSwitcher.select": "Select project",
   "projectSwitcher.manage": "Manage projects",
+  "projectSwitcher.listAria": "Projects",
+  "projectSwitcher.searchPlaceholder": "Find project…",
+  "projectSwitcher.searchAria": "Filter projects",
+  "projectSwitcher.noMatches": "No projects match “{query}”",
 
   "account.menuLabel": "Open account menu",
   "account.help": "Help & Community",

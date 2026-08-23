@@ -1,7 +1,10 @@
 import { env } from "cloudflare:workers";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createSeoDataProvider } from "@/server/lib/seo-data";
-import { getKeywordDataProvider } from "@/shared/keyword-locations";
+import {
+  getKeywordDataProvider,
+  resolveKeywordDataLanguage,
+} from "@/shared/keyword-locations";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { AppError } from "@/server/lib/errors";
 import type {
@@ -37,19 +40,32 @@ async function createConfig(input: {
   const normalizedDomain = normalizeDomain(input.domain);
 
   const locationCode = input.locationCode ?? 2840;
+  const scheduleInterval = input.scheduleInterval ?? "weekly";
+  const nextCheckAt = isScheduledRankTrackingInterval(scheduleInterval)
+    ? computeNextCheckAt(scheduleInterval)
+    : null;
+
   const existing =
     await RankTrackingRepository.getConfigByProjectDomainLocation(
       input.projectId,
       normalizedDomain,
       locationCode,
     );
-  if (existing) {
+  // Archiving a domain only flips isActive to false, so the
+  // (project, domain, location) row survives and the unique index would reject
+  // a plain insert. Re-adding an archived domain therefore reactivates that row
+  // — keeping its keyword and ranking history — with the freshly chosen
+  // settings. Only an already-active row is a genuine duplicate.
+  if (existing?.isActive) {
     throw new AppError(
       "VALIDATION_ERROR",
       "This domain + country combination is already being tracked",
     );
   }
 
+  // Checked before the reactivation below, not just before the insert:
+  // getConfigsForProject counts active configs only, so archiving and re-adding
+  // domains would otherwise walk a project past the active-config cap.
   const allConfigs = await RankTrackingRepository.getConfigsForProject(
     input.projectId,
   );
@@ -60,11 +76,28 @@ async function createConfig(input: {
     );
   }
 
+  if (existing) {
+    await RankTrackingRepository.updateConfig(existing.id, input.projectId, {
+      isActive: true,
+      languageCode: input.languageCode ?? "en",
+      devices: input.devices ?? "both",
+      serpDepth: input.serpDepth,
+      scheduleInterval,
+      nextCheckAt,
+      // A reactivated config lands disarmed, exactly like a freshly created one:
+      // the create path never sets scheduledEnabled, so inheriting a stale `true`
+      // from before it was archived would resume unattended spending on the
+      // organization's own key without anyone opting in again.
+      scheduledEnabled: false,
+      // Drop any skip reason recorded before archiving so the re-added domain
+      // doesn't surface an outdated warning.
+      lastSkipReason: null,
+    });
+
+    return { configId: existing.id };
+  }
+
   const configId = crypto.randomUUID();
-  const scheduleInterval = input.scheduleInterval ?? "weekly";
-  const nextCheckAt = isScheduledRankTrackingInterval(scheduleInterval)
-    ? computeNextCheckAt(scheduleInterval)
-    : null;
 
   await RankTrackingRepository.createConfig({
     id: configId,
@@ -286,7 +319,13 @@ async function refreshKeywordMetrics(
     const request = {
       keywords: batch.map((kw) => kw.keyword),
       locationCode: config.locationCode,
-      languageCode: config.languageCode,
+      // A tracker can pair any SERP language with any country; the keyword-data
+      // APIs only serve a country's own languages and reject anything else as a
+      // charged task failure, so fall back to the country's default.
+      languageCode: resolveKeywordDataLanguage(
+        config.locationCode,
+        config.languageCode,
+      ),
     };
 
     // Build a lookup by lowercase keyword

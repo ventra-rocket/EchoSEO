@@ -73,6 +73,9 @@ when a feature is not configured.
 
 ## Documentation
 
+- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — how to run the checks CI runs, and what this project rejects
+- [`docs/LOCAL_DEVELOPMENT.md`](docs/LOCAL_DEVELOPMENT.md) — running the app locally
+- [`docs/self-host-auth-mode-spec.md`](docs/self-host-auth-mode-spec.md) — the three auth modes and the build-time/runtime `AUTH_MODE` contract
 - [`docs/project-overview-pdr.md`](docs/project-overview-pdr.md) — product definition, personas, scope, architecture
 - [`docs/project-roadmap.md`](docs/project-roadmap.md) — phased roadmap and milestones
 - [`docs/marketing-overview.md`](docs/marketing-overview.md) — positioning, GTM, pricing

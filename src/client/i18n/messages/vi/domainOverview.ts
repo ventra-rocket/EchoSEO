@@ -23,8 +23,6 @@ export const domainOverview: Record<keyof typeof en, string> = {
   "domainOverview.search.lookupFailed": "Tra cứu thất bại.",
   "domainOverview.search.notEnoughDataToast":
     "Không đủ dữ liệu cho tên miền này",
-  "domainOverview.search.tabLimitReached":
-    "Đóng bớt một tab để mở thêm lượt tìm kiếm (tối đa {max, number}).",
 
   "domainOverview.stats.organicTraffic": "Lưu lượng truy cập tự nhiên ước tính",
   "domainOverview.stats.organicKeywords": "Từ khóa tự nhiên",

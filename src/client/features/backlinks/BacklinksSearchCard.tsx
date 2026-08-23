@@ -20,8 +20,6 @@ function getBacklinksValidationErrors(
   intl: IntlShape,
   value: SearchDraft,
   shouldValidateUntouchedField: boolean,
-  canOpenSearch?: (value: SearchDraft) => boolean,
-  tabLimit?: number,
 ) {
   if (!value.target.trim()) {
     if (!shouldValidateUntouchedField) {
@@ -37,37 +35,17 @@ function getBacklinksValidationErrors(
     });
   }
 
-  const normalizedValue = {
-    ...value,
-    target: value.target.trim(),
-  };
-
-  if (canOpenSearch && !canOpenSearch(normalizedValue)) {
-    return createFormValidationErrors({
-      fields: {
-        target: intl.formatMessage(
-          { id: "backlinksOverview.search.validation.tabLimit" },
-          { tabLimit: tabLimit ?? 8 },
-        ),
-      },
-    });
-  }
-
   return null;
 }
 
 export function BacklinksSearchCard({
-  canOpenSearch,
   errorMessage,
   initialValues,
   onSubmit,
-  tabLimit,
 }: {
-  canOpenSearch?: (values: SearchDraft) => boolean;
   errorMessage: string | null;
   initialValues: SearchDraft;
   onSubmit: (values: SearchDraft) => void;
-  tabLimit?: number;
 }) {
   const intl = useIntl();
   const [userSelectedScope, setUserSelectedScope] = useState(false);
@@ -79,17 +57,8 @@ export function BacklinksSearchCard({
           intl,
           value,
           shouldValidateFieldOnChange(formApi, "target"),
-          canOpenSearch,
-          tabLimit,
         ),
-      onSubmit: ({ value }) =>
-        getBacklinksValidationErrors(
-          intl,
-          value,
-          true,
-          canOpenSearch,
-          tabLimit,
-        ),
+      onSubmit: ({ value }) => getBacklinksValidationErrors(intl, value, true),
     },
     onSubmit: ({ value }) => {
       const target = value.target.trim();

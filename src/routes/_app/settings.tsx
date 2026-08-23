@@ -8,6 +8,7 @@ import { DataForSeoKeyCard } from "@/client/features/seo-credentials/DataForSeoK
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
 import { authClient, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { version } from "../../../package.json";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -140,7 +141,24 @@ function SettingsPage() {
               />
             </div>
           </section>
-        ) : null}
+        ) : (
+          // Self-hosters have no release channel to check and often no shell
+          // into the container. Surfacing the version here is what makes a bug
+          // report actionable.
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium text-base-content/50">
+              <FormattedMessage id="projectsSettings.settings.about" />
+            </h2>
+            <div className="flex items-center justify-between gap-6">
+              <span className="text-sm">
+                <FormattedMessage id="projectsSettings.settings.version" />
+              </span>
+              <span className="font-mono text-sm text-base-content/60">
+                v{version}
+              </span>
+            </div>
+          </section>
+        )}
 
         <DataForSeoKeyCard />
       </div>

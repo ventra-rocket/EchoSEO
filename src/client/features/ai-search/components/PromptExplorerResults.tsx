@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -13,6 +14,7 @@ import {
 } from "@/client/features/ai-search/platformLabels";
 import { formatUrlForDisplay } from "@/client/components/table/url";
 import type {
+  PromptExplorerCitation,
   PromptExplorerModelResult,
   PromptExplorerResult,
 } from "@/types/schemas/ai-search";
@@ -85,42 +87,10 @@ function ModelResultCard({
       </div>
 
       {modelResult.citations.length > 0 ? (
-        <div className="border-t border-base-200 bg-base-200/30 px-5 py-3">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-base-content/50">
-            <FormattedMessage
-              id="aiPromptExplorer.results.citedSourcesHeading"
-              values={{ count: modelResult.citations.length }}
-            />
-          </p>
-          <ul className="space-y-1.5">
-            {modelResult.citations.map((citation, index) => (
-              <li
-                key={`${citation.url}-${index}`}
-                className="flex items-start gap-2 text-sm"
-              >
-                <span className="mt-1 size-1 shrink-0 rounded-full bg-base-content/30" />
-                <a
-                  href={citation.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`link inline-flex items-start gap-1 ${
-                    citation.matchedBrand ? "link-primary font-medium" : ""
-                  }`}
-                >
-                  <span className="break-all">
-                    {citation.title || formatUrlForDisplay(citation.url)}
-                  </span>
-                  <ExternalLink className="mt-1 size-3 shrink-0" />
-                </a>
-                {citation.matchedBrand && highlightBrand ? (
-                  <span className="badge badge-primary badge-xs">
-                    {highlightBrand}
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <CitationsList
+          citations={modelResult.citations}
+          highlightBrand={highlightBrand}
+        />
       ) : null}
 
       {modelResult.fanOutQueries.length > 0 ? (
@@ -141,6 +111,83 @@ function ModelResultCard({
         </div>
       ) : null}
     </article>
+  );
+}
+
+/**
+ * Citations collapse to the first few entries: a web-search answer can cite 25
+ * sources, and an always-expanded list buries the sibling model cards in a
+ * side-by-side comparison.
+ */
+const CITATIONS_COLLAPSED_COUNT = 3;
+
+function CitationsList({
+  citations,
+  highlightBrand,
+}: {
+  citations: PromptExplorerCitation[];
+  highlightBrand: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const visible = expanded
+    ? citations
+    : citations.slice(0, CITATIONS_COLLAPSED_COUNT);
+  const remaining = citations.length - visible.length;
+
+  return (
+    <div className="border-t border-base-200 bg-base-200/30 px-5 py-3">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-base-content/50">
+        <FormattedMessage
+          id="aiPromptExplorer.results.citedSourcesHeading"
+          values={{ count: citations.length }}
+        />
+      </p>
+      <ul className="space-y-1.5">
+        {visible.map((citation, index) => (
+          <li
+            key={`${citation.url}-${index}`}
+            className="flex items-start gap-2 text-sm"
+          >
+            <span className="mt-1 size-1 shrink-0 rounded-full bg-base-content/30" />
+            <a
+              href={citation.url}
+              target="_blank"
+              rel="noreferrer"
+              className={`link inline-flex items-start gap-1 ${
+                citation.matchedBrand ? "link-primary font-medium" : ""
+              }`}
+            >
+              <span className="break-all">
+                {citation.title || formatUrlForDisplay(citation.url)}
+              </span>
+              <ExternalLink className="mt-1 size-3 shrink-0" />
+            </a>
+            {citation.matchedBrand && highlightBrand ? (
+              <span className="badge badge-primary badge-xs">
+                {highlightBrand}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {citations.length > CITATIONS_COLLAPSED_COUNT ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="mt-1.5 text-xs text-base-content/50 hover:text-base-content"
+        >
+          {expanded ? (
+            <FormattedMessage id="aiPromptExplorer.results.citationsShowLess" />
+          ) : (
+            <FormattedMessage
+              id="aiPromptExplorer.results.citationsShowMore"
+              values={{ count: remaining }}
+            />
+          )}
+        </button>
+      ) : null}
+    </div>
   );
 }
 

@@ -15,9 +15,11 @@ COPY . .
 
 EXPOSE 3001
 
+# Startup (migrations, conditional build, serve) lives in docker-entrypoint.sh.
 # The build MUST run at container start, not image-build time: AUTH_MODE (and the
 # other client envs) are inlined into the client bundle by `vite build`, and the
 # self-hoster only chooses AUTH_MODE at runtime via Compose. Building here lets
-# that runtime value bake into the bundle. NODE_OPTIONS raises the V8 heap ceiling
-# so the SSR build of ~7400 modules doesn't OOM under Node's ~2GB default.
-CMD ["sh", "-c", "pnpm run db:migrate:local && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build && pnpm exec vite preview --host 0.0.0.0 --port ${PORT:-3001}"]
+# that runtime value bake into the bundle — see
+# docs/self-host-auth-mode-spec.md. The entrypoint fingerprints those envs and
+# skips the rebuild when a restart cannot have changed the output.
+CMD ["sh", "docker-entrypoint.sh"]

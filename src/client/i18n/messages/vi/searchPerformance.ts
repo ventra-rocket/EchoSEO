@@ -10,7 +10,6 @@ export const searchPerformance: Record<keyof typeof en, string> = {
   "searchPerf.title": "Hiệu suất tìm kiếm",
   "searchPerf.subtitle":
     "Xem lượt nhấp, lượt hiển thị, CTR và vị trí tìm kiếm của site bạn trên Google Search Console.",
-  "searchPerf.loading": "Đang tải dữ liệu Search Console…",
   "searchPerf.strikingDistanceIntro":
     "Tìm các từ khóa trong tầm với — những truy vấn đang xếp hạng ngay sát top đầu trang 1, nơi chỉ cần cải thiện thứ hạng một chút là có thể giành thêm nhiều lượt nhấp mới. Kết nối Search Console để xem các từ khóa này.",
   "searchPerf.tab.striking": "Từ khóa trong tầm với ({count})",

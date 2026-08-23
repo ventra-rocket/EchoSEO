@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -14,8 +14,8 @@ import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import { domainField, normalizeDomain } from "@/types/schemas/domain";
 import {
   DEFAULT_LOCATION_CODE,
+  SERP_LANGUAGE_OPTIONS,
   getLanguageCode,
-  getLanguageOptions,
 } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
@@ -54,10 +54,6 @@ export function RankTrackingConfigModal({
   const [languageCode, setLanguageCode] = useState(
     existingConfig?.languageCode ??
       getLanguageCode(existingConfig?.locationCode ?? DEFAULT_LOCATION_CODE),
-  );
-  const languageOptions = useMemo(
-    () => getLanguageOptions(locationCode),
-    [locationCode],
   );
   const [serpDepth, setSerpDepth] = useState(existingConfig?.serpDepth ?? 40);
   const [schedule, setSchedule] = useState<
@@ -259,14 +255,16 @@ export function RankTrackingConfigModal({
             className="select select-bordered w-full"
             value={languageCode}
             onChange={(e) => setLanguageCode(e.target.value)}
-            disabled={languageOptions.length <= 1}
           >
-            {languageOptions.map((language) => (
+            {SERP_LANGUAGE_OPTIONS.map((language) => (
               <option key={language.code} value={language.code}>
                 {language.label}
               </option>
             ))}
           </select>
+          <div className="mt-1.5 text-xs text-base-content/50">
+            <FormattedMessage id="rank.config.form.languageHint" />
+          </div>
         </div>
 
         <DevicesField devices={devices} onChange={setDevices} />

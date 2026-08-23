@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 import { rankTrackingConfigs } from "@/db/app.schema";
 import { domainField } from "@/types/schemas/domain";
+import { isSupportedLanguageCode } from "@/shared/keyword-locations";
 
 // ---------------------------------------------------------------------------
 // DB-derived types
@@ -59,6 +60,14 @@ export interface RankTrackingRow {
 
 const devicesEnum = z.enum(rankTrackingConfigs.devices.enumValues);
 const scheduleEnum = z.enum(rankTrackingConfigs.scheduleInterval.enumValues);
+// Rank tracking runs against the SERP API, which serves any language in any
+// country — so no country pairing is enforced here. An *unknown* code is a
+// different matter: DataForSEO rejects it as an opaque, already-charged
+// "Invalid Field: 'language_code'." task failure, so reject it at cost 0.
+const languageCodeField = z
+  .string()
+  .max(10)
+  .refine(isSupportedLanguageCode, "Unsupported language code");
 export const getConfigsSchema = z.object({
   projectId: z.string().uuid(),
 });
@@ -67,7 +76,7 @@ export const createConfigSchema = z.object({
   projectId: z.string().uuid(),
   domain: domainField,
   locationCode: z.number().int().positive().optional(),
-  languageCode: z.string().max(10).optional(),
+  languageCode: languageCodeField.optional(),
   devices: devicesEnum.optional(),
   serpDepth: z.number().int().min(10).max(100).multipleOf(10),
   scheduleInterval: scheduleEnum.optional(),
@@ -78,7 +87,7 @@ export const updateConfigSchema = z.object({
   configId: z.string().uuid(),
   domain: domainField.optional(),
   locationCode: z.number().int().positive().optional(),
-  languageCode: z.string().max(10).optional(),
+  languageCode: languageCodeField.optional(),
   devices: devicesEnum.optional(),
   serpDepth: z.number().int().min(10).max(100).multipleOf(10).optional(),
   scheduleInterval: scheduleEnum.optional(),

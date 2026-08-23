@@ -1,9 +1,11 @@
+import { waitUntil } from "cloudflare:workers";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { z } from "zod";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import type { CreditFeature } from "@/shared/billing-credit-features";
 import { createSeoDataProvider } from "@/server/lib/seo-data";
 import { normalizeDomainInput } from "@/server/lib/domainUtils";
+import { resolveKeywordDataLanguage } from "@/shared/keyword-locations";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
 import { getKeywordsPage } from "@/server/features/domain/services/domainKeywordsPage";
 import { getPagesPage } from "@/server/features/domain/services/domainPagesPage";
@@ -90,10 +92,14 @@ async function getOverview(
   };
 
   if (result.hasData) {
-    void setCached(cacheKey, result, DOMAIN_OVERVIEW_TTL_SECONDS).catch(
-      (error) => {
-        console.error("domain.overview.cache-write failed:", error);
-      },
+    // waitUntil, not void: workerd cancels unregistered pending I/O once the
+    // response is sent, so a fire-and-forget put never persists the cache.
+    waitUntil(
+      setCached(cacheKey, result, DOMAIN_OVERVIEW_TTL_SECONDS).catch(
+        (error) => {
+          console.error("domain.overview.cache-write failed:", error);
+        },
+      ),
     );
   }
 
@@ -122,12 +128,21 @@ async function getSuggestedKeywords(
 > {
   const domain = normalizeDomainInput(input.domain, true);
 
+  // Callers can hold a SERP-only language/country pair — a rank tracker may
+  // follow English searches in Czechia. This is a Labs call, which serves only a
+  // country's own languages and rejects anything else as a charged task
+  // failure, so resolve before both the cache key and the request.
+  const languageCode = resolveKeywordDataLanguage(
+    input.locationCode,
+    input.languageCode,
+  );
+
   const cacheKey = await buildCacheKey("domain:keyword-suggestions", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     domain,
     locationCode: input.locationCode,
-    languageCode: input.languageCode,
+    languageCode,
   });
 
   const cachedRaw = await getCached(cacheKey);
@@ -152,7 +167,7 @@ async function getSuggestedKeywords(
   const rankedKeywordsResponse = await dataforseo.domain.rankedKeywords({
     target: domain,
     locationCode: input.locationCode,
-    languageCode: input.languageCode,
+    languageCode,
     limit: 100,
     orderBy: ["ranked_serp_element.serp_item.etv,desc"],
     ...metering,
@@ -174,10 +189,15 @@ async function getSuggestedKeywords(
     }));
 
   if (keywords.length > 0) {
-    void setCached(cacheKey, keywords, DOMAIN_OVERVIEW_TTL_SECONDS).catch(
-      (error) => {
-        console.error("domain.keyword-suggestions.cache-write failed:", error);
-      },
+    waitUntil(
+      setCached(cacheKey, keywords, DOMAIN_OVERVIEW_TTL_SECONDS).catch(
+        (error) => {
+          console.error(
+            "domain.keyword-suggestions.cache-write failed:",
+            error,
+          );
+        },
+      ),
     );
   }
 

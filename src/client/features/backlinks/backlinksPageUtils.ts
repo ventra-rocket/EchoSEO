@@ -54,8 +54,18 @@ export function extractUrlPath(url: string) {
   }
 }
 
+const ELLIPSIS = "...";
+
 export function truncateMiddle(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
-  const sideLength = Math.floor((maxLength - 1) / 2);
-  return `${value.slice(0, sideLength)}...${value.slice(-sideLength)}`;
+  // `(maxLength - 1) / 2` per side plus a 3-char ellipsis overshoots maxLength
+  // by up to 2 characters, so the "truncated" label was wider than the column
+  // it was truncated for. Budget the ellipsis before splitting the sides.
+  if (maxLength <= ELLIPSIS.length)
+    return value.slice(0, Math.max(maxLength, 0));
+  const sideLength = Math.floor((maxLength - ELLIPSIS.length) / 2);
+  if (sideLength <= 0) {
+    return `${value.slice(0, maxLength - ELLIPSIS.length)}${ELLIPSIS}`;
+  }
+  return `${value.slice(0, sideLength)}${ELLIPSIS}${value.slice(-sideLength)}`;
 }

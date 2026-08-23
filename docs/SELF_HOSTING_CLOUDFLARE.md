@@ -1,15 +1,38 @@
 # Cloudflare Self-Hosting
 
+## Which path
+
+**Use [Manual deploy with Wrangler](#manual-deploy-with-wrangler).** It is the
+path this project deploys production with, and the only one that provisions
+D1/KV/R2 reliably.
+
+The [Deploy to Cloudflare button](#deploy-to-cloudflare-button-legacy) is kept
+for people who already used it. Do not start there: it cannot create the D1
+database, KV namespaces, R2 bucket, or the Access application, so it routinely
+dies on `Cannot provision a KV Namespace with the title "open-seo" because it
+already exists` and leaves you hand-finishing the rest. Upstream shipped that
+button, spent months patching it (`3a94f02a`, 2026-07-20, "unbreak the Deploy to
+Cloudflare button"), then retired it outright (`ffb5c9d9`, 2026-07-29) and
+declared migration off it unsupported. See [Why not
+Alchemy](#why-not-alchemy) for what they replaced it with and why we have not
+followed yet.
+
 This guide covers:
 
-1. [Initial setup after clicking Deploy to Cloudflare](#initial-setup)
-2. [Manual deploy with Wrangler](#manual-deploy-with-wrangler)
-3. [How to run a public hosted SaaS](#run-a-public-hosted-saas)
-4. [How to connect the EchoSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
-5. [How to update to the latest EchoSEO version](#how-to-update-to-the-latest-echoseo-version)
-6. [How to add teammates](#give-teammates-access-to-echoseo)
+1. [Manual deploy with Wrangler](#manual-deploy-with-wrangler)
+2. [How to run a public hosted SaaS](#run-a-public-hosted-saas)
+3. [How to connect the EchoSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
+4. [How to update to the latest EchoSEO version](#how-to-update-to-the-latest-echoseo-version)
+5. [How to add teammates](#give-teammates-access-to-echoseo)
+6. [Why not Alchemy](#why-not-alchemy)
+7. [Deploy to Cloudflare button (legacy)](#deploy-to-cloudflare-button-legacy)
 
-## Initial setup
+## Deploy to Cloudflare button (legacy)
+
+> **Legacy.** Prefer [Manual deploy with Wrangler](#manual-deploy-with-wrangler).
+> What follows is maintenance for deployments that already exist. The
+> [feature-key table](#feature-keys-and-safe-degradation) and the [R2 lifecycle
+> rule](#3-optional-add-an-r2-lifecycle-rule) below apply to both paths.
 
 ### 1) Deploy from GitHub
 
@@ -205,11 +228,25 @@ Screenshots from the setup flow:
 - [Add teammate emails to the allow list](https://github.com/user-attachments/assets/fa4ecaf2-31f7-4a64-9001-210cf729747b)
 
 After saving, teammates can open your EchoSEO URL and sign in through Cloudflare
-Access. EchoSEO will use a shared workspace for everyone allowed by the policy.
+Access.
+
+> **Each Access user gets their own private workspace, not a shared one.** The
+> Access JWT's `sub` becomes the user id, and that id becomes the workspace id
+> (`src/middleware/ensure-user/cloudflareAccess.ts:73`,
+> `src/server/auth/delegated-organization.ts:5-7` — `delegated-${userId}`).
+> Teammates therefore see none of each other's projects, audits, or tracked
+> keywords. Invite them into a workspace from inside the app if you want shared
+> data. Upstream changed its default to one shared workspace per deployment
+> (`17e7515e`); we have not, because folding existing per-user workspaces
+> together is a destructive data merge, not a config flag.
 
 ## Manual deploy with Wrangler
 
-Use this flow if the Deploy to Cloudflare button fails with `Cannot provision a KV Namespace with the title "open-seo" because it already exists`. The reliable path is to create Cloudflare resources yourself, put their IDs into `wrangler.jsonc`, then deploy with Wrangler.
+This is the recommended path, and what this project deploys production with. It
+is also the only way past the Deploy button's `Cannot provision a KV Namespace
+with the title "open-seo" because it already exists`. You create the Cloudflare
+resources yourself, put their IDs into `wrangler.jsonc`, then deploy with
+Wrangler.
 
 ### 1) Clone your EchoSEO repo
 
@@ -328,3 +365,47 @@ pnpm exec wrangler r2 bucket lifecycle add open-seo-YOUR_SUFFIX dataforseo-cache
 3. EchoSEO should load after login.
 
 If login fails, re-check the three secrets, the Access toggle, and the binding values in `wrangler.jsonc`.
+
+## Why not Alchemy
+
+Upstream replaced the Deploy button with [Alchemy](https://alchemy.run) IaC
+(`bd22268a` 2026-07-14, `ffb5c9d9` 2026-07-29, `625b76eb` 2026-07-29): a
+declarative `alchemy.run.ts` stack behind one `pnpm deploy:selfhost`, which
+provisions D1/KV/R2 and the Cloudflare Access application in a single command.
+It is a genuinely better shape than a button, and it is the right long-term
+direction for us too. We have not adopted it yet, for reasons that are about
+cost and timing rather than design:
+
+- **It is a beta toolchain, not a dependency.** Upstream pins
+  `alchemy@2.0.0-beta.61`, `effect@4.0.0-beta.93`,
+  `@effect/platform-node@4.0.0-beta.93`, and `@distilled.cloud/cloudflare@0.28.2`.
+  That is four pre-1.0 packages, including Effect v4 betas, added to the
+  lockfile that our working production deploy resolves from. Our
+  `pnpm-workspace.yaml` also sets `minimumReleaseAge: 11520` (eight days), which
+  these fast-moving betas trip.
+- **Their URL derivation does not hold for us.** The stack names the Worker and
+  the Access application from the account's `workers.dev` subdomain. We set
+  `"workers_dev": false` and serve a custom domain (`wrangler.jsonc:64-67`), so
+  every hostname the stack computes would be wrong for this deployment.
+- **Half the stack is Postgres.** `DATABASE_PROVIDER`, the `HYPERDRIVE`
+  connection, and the `deploy:postgres` stage exist because upstream migrated
+  off D1. We are D1-only and staying D1-only, so that half is dead weight we
+  would have to keep excising on every future port.
+- **Our Worker has more surface to model.** Four Workflows, four SQLite-backed
+  Durable Objects, Browser Rendering, and Turnstile
+  (`wrangler.jsonc:68-134,171-173`) all need representing, and Alchemy is not the
+  thing that runs local dev or the Docker self-host — so `wrangler.jsonc` stays
+  the source of truth either way and the stack becomes a second place to keep in
+  sync.
+
+The button's actual failure was resource provisioning, and the manual Wrangler
+flow above already solves that with tools we already ship. When Alchemy v2 goes
+stable, the port is worth revisiting: read `alchemy.run.ts` on `upstream/main`,
+drop the Hyperdrive/`DATABASE_PROVIDER` branches, and derive the runtime
+contract from `wrangler.jsonc` the way upstream does — that anti-drift trick is
+the genuinely good idea in their design.
+
+What we did take from that work is the defect it exposed: a self-host deploy can
+bake one `AUTH_MODE` into the client bundle while the Worker runs another
+(upstream `f14aa4c7`). `pnpm run deploy` now refuses to ship that mismatch — see
+[`self-host-auth-mode-spec.md`](self-host-auth-mode-spec.md).

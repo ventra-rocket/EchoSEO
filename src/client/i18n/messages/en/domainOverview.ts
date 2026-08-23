@@ -31,8 +31,6 @@ export const domainOverview = {
   // Search flow fallbacks (DomainOverviewPage.tsx)
   "domainOverview.search.lookupFailed": "Lookup failed.",
   "domainOverview.search.notEnoughDataToast": "Not enough data for this domain",
-  "domainOverview.search.tabLimitReached":
-    "Close a tab to open more searches (max {max, number}).",
 
   // Stat cards (StatCard.tsx via DomainOverviewPage.tsx)
   "domainOverview.stats.organicTraffic": "Estimated Organic Traffic",

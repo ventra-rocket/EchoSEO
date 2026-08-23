@@ -35,6 +35,10 @@ export const shell: Record<keyof typeof en, string> = {
   "projectSwitcher.switch": "Đổi dự án",
   "projectSwitcher.select": "Chọn dự án",
   "projectSwitcher.manage": "Quản lý dự án",
+  "projectSwitcher.listAria": "Danh sách dự án",
+  "projectSwitcher.searchPlaceholder": "Tìm dự án…",
+  "projectSwitcher.searchAria": "Lọc dự án",
+  "projectSwitcher.noMatches": "Không có dự án nào khớp “{query}”",
 
   "account.menuLabel": "Mở menu tài khoản",
   "account.help": "Trợ giúp & Cộng đồng",

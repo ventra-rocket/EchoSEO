@@ -1,3 +1,13 @@
 minimumReleaseAge: 11520
 minimumReleaseAgeExclude:
   - "@every-app/*"
+
+# Advisories triaged as not applicable. Re-review when the parent updates.
+# - GHSA-67mh-4wv8-2f99: esbuild <=0.24.2 dev-server CORS. Only reachable via
+#   drizzle-kit -> @esbuild-kit/esm-loader -> @esbuild-kit/core-utils ->
+#   esbuild@0.18.20 (a dev-time CLI path); drizzle-kit never starts esbuild's
+#   serve mode, so the vulnerable path cannot execute. drizzle-kit's own direct
+#   esbuild is already 0.25.x.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-67mh-4wv8-2f99

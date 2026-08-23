@@ -11,16 +11,19 @@ import { toast } from "sonner";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
+import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
 import {
   DimensionTable,
-  exportDimensionRows,
-  exportStriking,
   StrikingDistanceTable,
   TabButton,
   TotalsCards,
-  type ExportTarget,
   type Tab,
 } from "@/client/features/search-performance/SearchPerformanceParts";
+import {
+  exportDimensionRows,
+  exportStriking,
+  type ExportTarget,
+} from "@/client/features/search-performance/searchPerformanceExport";
 import type { MessageId } from "@/client/i18n/messages";
 import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import {
@@ -209,10 +212,7 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
         </div>
 
         {reportQuery.isPending ? (
-          <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-            <Loader2 className="size-4 animate-spin" />
-            <FormattedMessage id="searchPerf.loading" />
-          </div>
+          <SearchPerformanceLoadingState />
         ) : reportQuery.isError ? (
           <div className="alert alert-error">
             <span className="text-sm">

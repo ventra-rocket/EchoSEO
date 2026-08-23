@@ -40,6 +40,12 @@ export const rankConfig = {
   "rank.config.domainList.row.archiveTitle": "Archive domain",
   "rank.config.domainList.row.creditsSkipped":
     "Scheduled check skipped — insufficient credits",
+  "rank.config.domainList.row.planSkipped":
+    "Scheduled check skipped — paid plan required",
+  "rank.config.domainList.row.keySkipped":
+    "Scheduled check skipped — no DataForSEO key connected",
+  "rank.config.domainList.row.noKeywordsSkipped":
+    "Scheduled check skipped — no keywords tracked yet",
   "rank.config.domainList.row.keywordsLabel": "Keywords",
   // Leading space: appended directly after the schedule label with no other
   // separator, same convention as audit.progress.lighthouseFailedSuffix.
@@ -54,6 +60,12 @@ export const rankConfig = {
   "rank.config.detail.notFound": "Domain configuration not found.",
   "rank.config.detail.creditsSkippedAlert":
     "Last scheduled check was skipped due to insufficient credits. Top up your balance to resume automatic tracking.",
+  "rank.config.detail.planSkippedAlert":
+    "Last scheduled check was skipped because this workspace has no paid plan. Upgrade to resume automatic tracking.",
+  "rank.config.detail.keySkippedAlert":
+    "Last scheduled check was skipped because no DataForSEO key is connected. Add one in Settings to resume automatic tracking.",
+  "rank.config.detail.noKeywordsSkippedAlert":
+    "Last scheduled check was skipped because this domain has no tracked keywords. Add keywords to resume automatic tracking.",
   "rank.config.detail.staleRunAlert":
     "This run may be unresponsive and will be cleaned up automatically.",
   "rank.config.detail.lastCheckFailed": "Last check failed: {error}",
@@ -81,6 +93,8 @@ export const rankConfig = {
   "rank.config.form.domainPlaceholder": "example.com",
   "rank.config.form.countryLabel": "Country",
   "rank.config.form.languageLabel": "Language",
+  "rank.config.form.languageHint":
+    "Defaults to the country's language. Rank tracking can follow any language in any country — pick the one your customers search in.",
   "rank.config.form.devicesLabel": "Devices",
   "rank.config.form.deviceOnly.desktop": "Desktop only",
   "rank.config.form.deviceOnly.mobile": "Mobile only",

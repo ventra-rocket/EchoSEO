@@ -2,6 +2,7 @@ import { createMiddleware } from "@tanstack/react-start";
 import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
 import { errorHandlingMiddleware } from "@/middleware/errorHandling";
+import { csrfMiddleware } from "@/middleware/csrf";
 import type { EnsuredUserContext } from "@/middleware/ensure-user/types";
 import { ensureUserMiddleware } from "@/middleware/ensureUser";
 
@@ -24,8 +25,13 @@ function getAuthenticatedContext(context: unknown): EnsuredUserContext {
   return result.data;
 }
 
+// Order matters: errorHandling first so every rejection below it is serialized
+// as a client error code, then the origin check, so a cross-site caller is
+// turned away before ensureUser spends a session lookup and a project query on
+// it.
 export const globalServerFunctionMiddleware = [
   errorHandlingMiddleware,
+  csrfMiddleware,
   ensureUserMiddleware,
 ] as const;
 

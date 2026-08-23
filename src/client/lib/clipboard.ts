@@ -2,6 +2,20 @@ import { normalizeExportValue, type CsvValue, type ExportValue } from "./csv";
 
 export const GOOGLE_SHEETS_NEW_URL = "https://sheets.new";
 
+/**
+ * One-column clipboard payload (a keyword/query per line), sanitized the same
+ * way CSV and Sheets exports are.
+ *
+ * The values are untrusted: GSC query strings, SERP keywords and saved-keyword
+ * text all originate outside the app and may begin with `=`, `+`, `-`, `@`,
+ * tab or CR. A plain `join("\n")` hands those straight to Sheets/Excel, which
+ * evaluates them as formulas on paste — the same injection the export paths
+ * already guard against. See OWASP "CSV Injection".
+ */
+export function buildListClipboardText(values: CsvValue[]): string {
+  return values.map((value) => normalizeExportValue(value ?? "")).join("\n");
+}
+
 export async function copyTableToClipboard(
   headers: string[],
   rows: CsvValue[][],

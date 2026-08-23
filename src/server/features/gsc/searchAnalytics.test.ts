@@ -46,6 +46,35 @@ describe("resolveDateRange", () => {
     );
     expect(startDate).toBe("2026-01-01");
   });
+
+  it("subtracts calendar months without overflowing short months", () => {
+    // 2026-06-03 lagged 3 days is 2026-05-31; minus 3 calendar months is
+    // 2026-02-31, which a bare setUTCMonth rolls forward to 2026-03-03.
+    const { startDate, endDate } = resolveDateRange(
+      { dateRange: "last_3_months" },
+      new Date("2026-06-03T00:00:00Z"),
+    );
+    expect(startDate).toBe("2026-02-28");
+    expect(endDate).toBe("2026-05-31");
+  });
+
+  it("clamps the 16-month floor to the last valid day of a short month", () => {
+    const { startDate } = resolveDateRange(
+      { dateRange: "last_16_months" },
+      new Date("2026-06-30T00:00:00Z"),
+    );
+    expect(startDate).toBe("2025-02-28");
+  });
+
+  it("keeps a leap day when the target month has one", () => {
+    // 2024 is a leap year: 2024-05-31 minus 3 months clamps to 2024-02-29,
+    // not 2024-02-28.
+    const { startDate } = resolveDateRange(
+      { dateRange: "last_3_months" },
+      new Date("2024-06-03T00:00:00Z"),
+    );
+    expect(startDate).toBe("2024-02-29");
+  });
 });
 
 describe("buildSearchAnalyticsRequest", () => {

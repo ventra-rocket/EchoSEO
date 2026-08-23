@@ -1,3 +1,4 @@
+import { waitUntil } from "cloudflare:workers";
 import { type SerpLiveItem } from "@/server/lib/dataforseo";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { SerpResultItem } from "@/types/keywords";
@@ -36,11 +37,14 @@ const serpCacheSchema = z.object({
   reason: z.enum(["no_organic_results"]).optional(),
 });
 
+// `rank` is the organic position (rank_group), not the absolute SERP slot:
+// rank_absolute counts SERP features (local pack, PAA, AI overviews) as
+// positions, which overstates how deep each result sits.
 function mapOrganicSerpItems(items: SerpLiveItem[]): SerpResultItem[] {
   return items
     .filter((item) => item.type === "organic")
     .map((item) => ({
-      rank: item.rank_absolute ?? item.rank_group ?? 0,
+      rank: item.rank_group ?? item.rank_absolute ?? 0,
       title: item.title ?? "",
       url: item.url ?? "",
       domain: item.domain ?? "",
@@ -91,9 +95,13 @@ async function getSerpLiveAnalysis(
     result.reason = "no_organic_results";
   }
 
-  void setCached(cacheKey, result, SERP_CACHE_TTL_SECONDS).catch((error) => {
-    console.error("keywords.serp.cache-write failed:", error);
-  });
+  // waitUntil, not void: workerd cancels unregistered pending I/O once the
+  // response is sent, so a fire-and-forget put never persists the cache.
+  waitUntil(
+    setCached(cacheKey, result, SERP_CACHE_TTL_SECONDS).catch((error) => {
+      console.error("keywords.serp.cache-write failed:", error);
+    }),
+  );
 
   return result;
 }

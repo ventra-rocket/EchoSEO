@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { FormattedMessage } from "react-intl";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { getErrorCode } from "@/client/lib/error-messages";
 import { BILLING_ROUTE } from "@/shared/billing";
@@ -116,14 +116,10 @@ export function KeywordResearchPage(input: Props) {
         clickstream: value.clickstream,
       }));
 
-      let activeInput: KeywordSearchTabInput | null = null;
       for (const tabInput of inputs) {
-        const result = searchTabs.openTab(tabInput);
-        if (result.tab?.input.type === "keyword") {
-          activeInput = result.tab.input;
-        }
+        searchTabs.openTab(tabInput);
       }
-      if (activeInput) navigateToKeywordInput(activeInput);
+      navigateToKeywordInput(inputs.at(-1) ?? null);
     },
     [navigateToKeywordInput, searchTabs],
   );
@@ -131,24 +127,6 @@ export function KeywordResearchPage(input: Props) {
     searchTabs.setActiveTab(null);
     navigateToKeywordInput(null);
   }, [navigateToKeywordInput, searchTabs]);
-  const getOpenKeywordTabs = useCallback(
-    () =>
-      searchTabs.tabs.flatMap((tab) =>
-        tab.input.type === "keyword"
-          ? [
-              {
-                keyword: tab.input.keyword,
-                locationCode: tab.input.locationCode,
-                resultLimit: tab.input.resultLimit,
-                mode: tab.input.mode,
-                clickstream: tab.input.clickstream,
-              },
-            ]
-          : [],
-      ),
-    [searchTabs.tabs],
-  );
-
   const controllerInput = useMemo<Props>(
     () =>
       activeTab
@@ -160,34 +138,14 @@ export function KeywordResearchPage(input: Props) {
             resultLimit: activeTab.input.resultLimit,
             keywordMode: activeTab.input.mode,
             clickstream: activeTab.input.clickstream,
-            getOpenKeywordTabs,
-            keywordTabsLimit: searchTabs.limit,
           }
-        : {
-            ...input,
-            getOpenKeywordTabs,
-            keywordTabsLimit: searchTabs.limit,
-          },
-    [activeTab, getOpenKeywordTabs, input, searchTabs.limit],
+        : input,
+    [activeTab, input],
   );
   const controller = useKeywordResearchController({
     ...controllerInput,
     onFormSubmit,
   });
-  useEffect(() => {
-    controller.controlsForm.setErrorMap({ onSubmit: undefined });
-    controller.controlsForm.setFieldMeta("keyword", (meta) => ({
-      ...meta,
-      errorMap: {
-        ...meta.errorMap,
-        onSubmit: undefined,
-      },
-      errorSourceMap: {
-        ...meta.errorSourceMap,
-        onSubmit: undefined,
-      },
-    }));
-  }, [controller.controlsForm, searchTabs.tabs]);
 
   return (
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">

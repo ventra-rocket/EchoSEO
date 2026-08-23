@@ -36,8 +36,13 @@ export const SECONDS_PER_BATCH = 6;
 /** Maximum keywords allowed per rank tracking config */
 export const MAX_KEYWORDS_PER_CONFIG = 1000;
 
-/** Maximum configs (domain+location combos) per project */
-export const MAX_CONFIGS_PER_PROJECT = 20;
+/**
+ * Maximum active configs (domain+location combos) per project. A soft guard
+ * against runaway scheduled DataForSEO workload, not a product constraint, so
+ * projects tracking many domain/location combos aren't blocked. Unattended
+ * spending is gated separately by each config's `scheduledEnabled` opt-in.
+ */
+export const MAX_CONFIGS_PER_PROJECT = 500;
 
 // ---------------------------------------------------------------------------
 // Cost estimation
@@ -87,6 +92,17 @@ export function isScheduledRankTrackingInterval(
 ): interval is ScheduledRankTrackingInterval {
   return interval !== "manual";
 }
+
+/**
+ * Values written to rank_tracking_configs.last_skip_reason. The column is
+ * free-form text in the schema; this union keeps writers and the UI's
+ * comparisons in sync.
+ */
+export type RankTrackingSkipReason =
+  | "plan_required"
+  | "key_missing"
+  | "no_keywords"
+  | "insufficient_credits";
 
 function endOfMonthWithTime(source: Date, monthOffset = 0): Date {
   const endOfMonth = new Date(

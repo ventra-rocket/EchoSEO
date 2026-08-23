@@ -34,6 +34,12 @@ export const rankConfig: Record<keyof typeof en, string> = {
   "rank.config.domainList.row.archiveTitle": "Lưu trữ tên miền",
   "rank.config.domainList.row.creditsSkipped":
     "Đã bỏ qua lượt kiểm tra định kỳ — không đủ credit",
+  "rank.config.domainList.row.planSkipped":
+    "Đã bỏ qua lượt kiểm tra định kỳ — cần gói trả phí",
+  "rank.config.domainList.row.keySkipped":
+    "Đã bỏ qua lượt kiểm tra định kỳ — chưa kết nối API key DataForSEO",
+  "rank.config.domainList.row.noKeywordsSkipped":
+    "Đã bỏ qua lượt kiểm tra định kỳ — chưa theo dõi từ khóa nào",
   "rank.config.domainList.row.keywordsLabel": "Từ khóa",
   "rank.config.summary.paused": " (tạm dừng)",
   "rank.config.summary.lastRunSuffix": " · Lần cuối: {date}",
@@ -42,6 +48,12 @@ export const rankConfig: Record<keyof typeof en, string> = {
   "rank.config.detail.notFound": "Không tìm thấy cấu hình tên miền.",
   "rank.config.detail.creditsSkippedAlert":
     "Lượt kiểm tra định kỳ gần nhất đã bị bỏ qua do không đủ credit. Nạp thêm số dư để tiếp tục theo dõi tự động.",
+  "rank.config.detail.planSkippedAlert":
+    "Lượt kiểm tra định kỳ gần nhất đã bị bỏ qua vì workspace này chưa có gói trả phí. Nâng cấp để tiếp tục theo dõi tự động.",
+  "rank.config.detail.keySkippedAlert":
+    "Lượt kiểm tra định kỳ gần nhất đã bị bỏ qua vì chưa kết nối API key DataForSEO. Thêm key trong Settings để tiếp tục theo dõi tự động.",
+  "rank.config.detail.noKeywordsSkippedAlert":
+    "Lượt kiểm tra định kỳ gần nhất đã bị bỏ qua vì tên miền này chưa có từ khóa nào được theo dõi. Thêm từ khóa để tiếp tục theo dõi tự động.",
   "rank.config.detail.staleRunAlert":
     "Lượt chạy này có thể đang treo và sẽ được tự động dọn dẹp.",
   "rank.config.detail.lastCheckFailed":
@@ -68,6 +80,8 @@ export const rankConfig: Record<keyof typeof en, string> = {
   "rank.config.form.domainPlaceholder": "example.com",
   "rank.config.form.countryLabel": "Quốc gia",
   "rank.config.form.languageLabel": "Ngôn ngữ",
+  "rank.config.form.languageHint":
+    "Mặc định theo ngôn ngữ của quốc gia. Rank Tracking có thể theo dõi bất kỳ ngôn ngữ nào ở bất kỳ quốc gia nào — hãy chọn ngôn ngữ khách hàng của bạn dùng để tìm kiếm.",
   "rank.config.form.devicesLabel": "Thiết bị",
   "rank.config.form.deviceOnly.desktop": "Chỉ Desktop",
   "rank.config.form.deviceOnly.mobile": "Chỉ Mobile",

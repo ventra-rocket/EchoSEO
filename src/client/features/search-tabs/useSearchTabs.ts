@@ -11,11 +11,6 @@ type OpenTabInput = {
   input: SearchTabInput;
 };
 
-type OpenTabResult = {
-  tab: SearchTab | null;
-  dropped: boolean;
-};
-
 const EMPTY_STATE: TabsState = {
   tabs: [],
   activeTabId: null,
@@ -23,7 +18,7 @@ const EMPTY_STATE: TabsState = {
 
 const CHANGE_EVENT = "search-tabs-change";
 const stateCache = new Map<string, TabsState>();
-const SEARCH_TABS_LIMIT = 8;
+const SEARCH_TABS_LIMIT = 20;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -93,7 +88,8 @@ function tabInputKey(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function parseStoredState(value: unknown): TabsState {
+// Exported for unit tests.
+export function parseStoredState(value: unknown): TabsState {
   if (!isRecord(value)) return EMPTY_STATE;
   if (!Array.isArray(value.tabs)) return EMPTY_STATE;
   const tabs = value.tabs
@@ -119,7 +115,8 @@ function parseStoredState(value: unknown): TabsState {
         },
       ];
     })
-    .slice(0, SEARCH_TABS_LIMIT);
+    // Keep the newest tabs when over the limit, matching openTab's eviction.
+    .slice(-SEARCH_TABS_LIMIT);
   const activeTabId =
     typeof value.activeTabId === "string" &&
     tabs.some((tab) => tab.id === value.activeTabId)
@@ -184,6 +181,17 @@ function generateTabId(): string {
   return `tab_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// At capacity, evict the oldest tabs instead of refusing the new one: hitting a
+// hard ceiling forced the user to close a tab before the search they just asked
+// for would run. Exported for unit tests.
+export function appendTabWithEviction(
+  tabs: SearchTab[],
+  next: SearchTab,
+): SearchTab[] {
+  const kept = tabs.slice(Math.max(0, tabs.length - SEARCH_TABS_LIMIT + 1));
+  return [...kept, next];
+}
+
 export function useSearchTabs(key: string) {
   const state = useSyncExternalStore(
     subscribe,
@@ -192,21 +200,14 @@ export function useSearchTabs(key: string) {
   );
 
   const openTab = useCallback(
-    ({ label, input }: OpenTabInput): OpenTabResult => {
-      let result: SearchTab | null = null;
-      let dropped = false;
+    ({ label, input }: OpenTabInput) => {
       update(key, (current) => {
         const inputKey = tabInputKey(input);
         const existing = current.tabs.find(
           (tab) => tabInputKey(tab.input) === inputKey,
         );
         if (existing) {
-          result = existing;
           return { ...current, activeTabId: existing.id };
-        }
-        if (current.tabs.length >= SEARCH_TABS_LIMIT) {
-          dropped = true;
-          return current;
         }
         const next: SearchTab = {
           id: generateTabId(),
@@ -215,13 +216,11 @@ export function useSearchTabs(key: string) {
           createdAt: Date.now(),
           viewedAt: null,
         };
-        result = next;
         return {
-          tabs: [...current.tabs, next],
+          tabs: appendTabWithEviction(current.tabs, next),
           activeTabId: next.id,
         };
       });
-      return { tab: result, dropped };
     },
     [key],
   );
@@ -255,7 +254,11 @@ export function useSearchTabs(key: string) {
         let activeTabId = current.activeTabId;
         if (current.activeTabId === tabId) {
           closedActive = true;
-          const neighbor = tabs[index - 1] ?? tabs[index] ?? null;
+          // Post-removal array: tabs[index] is the tab that slid into the
+          // closed tab's slot (its right-hand neighbour). Select it first —
+          // browser-tab convention — and fall back to the left neighbour only
+          // when the last tab was closed.
+          const neighbor = tabs[index] ?? tabs[index - 1] ?? null;
           activeTabId = neighbor?.id ?? null;
           nextActiveTab = neighbor;
         }
@@ -293,12 +296,6 @@ export function useSearchTabs(key: string) {
     [state.tabs],
   );
 
-  const canOpenTab = useCallback(
-    (input: SearchTabInput) =>
-      Boolean(findMatchingTab(input)) || state.tabs.length < SEARCH_TABS_LIMIT,
-    [findMatchingTab, state.tabs.length],
-  );
-
   const activeTab = useMemo(
     () => state.tabs.find((tab) => tab.id === state.activeTabId) ?? null,
     [state.activeTabId, state.tabs],
@@ -308,10 +305,8 @@ export function useSearchTabs(key: string) {
     activeTab,
     activeTabId: state.activeTabId,
     tabs: state.tabs,
-    canOpenTab,
     closeTab,
     findMatchingTab,
-    limit: SEARCH_TABS_LIMIT,
     markTabViewed,
     openTab,
     setActiveTab,

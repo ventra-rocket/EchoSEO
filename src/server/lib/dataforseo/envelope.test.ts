@@ -126,4 +126,23 @@ describe("assertOk", () => {
       ),
     ).toBe(task);
   });
+
+  it("still surfaces a charged 40501 whose message is a validation rejection", () => {
+    // 40501 is not unique to "No Search Results": DataForSEO reuses it for
+    // invalid-field rejections, which are billed. Masking those as an empty
+    // success hides a real provider error behind a zero-row answer.
+    const task = {
+      status_code: 40501,
+      status_message: "Invalid Field: 'target'.",
+      path: ["v3", "business_data", "business_listings", "search", "live"],
+      cost: 0.02,
+      result_count: 0,
+    };
+    expect(() =>
+      assertOk(
+        { status_code: 20000, tasks: [task] },
+        { treatNoResultsAsEmpty: true },
+      ),
+    ).toThrow(DataforseoChargedTaskError);
+  });
 });

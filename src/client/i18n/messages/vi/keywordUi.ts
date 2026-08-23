@@ -46,8 +46,6 @@ export const keywordUi: Record<keyof typeof en, string> = {
     "Vui lòng nhập ít nhất một từ khóa.",
   "keywordUi.controlsForm.tooManyKeywords":
     "Vui lòng nhập không quá {max, number} từ khóa (mỗi dòng một từ khóa).",
-  "keywordUi.controlsForm.tabsSkipped":
-    "{skipped, plural, other {# từ khóa}} bị bỏ qua — đóng bớt một tab để mở thêm (tối đa {max, number}).",
 
   "keywordUi.saveExport.noSelectionToast": "Vui lòng chọn ít nhất một từ khóa",
   "keywordUi.saveExport.savedToast":
