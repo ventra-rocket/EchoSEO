@@ -12,13 +12,20 @@ const chatState = vi.hoisted(() => ({
   messages: [] as UIMessage[],
   status: "ready" as "submitted" | "streaming" | "ready" | "error",
   sendMessage: vi.fn(),
+  // Captured rather than ignored: the server streams its replies outside
+  // react-intl, so what the component puts in the request body is the only
+  // thing that decides the reader's language.
+  lastOptions: undefined as { body?: { locale?: unknown } } | undefined,
 }));
 
 vi.mock("agents/react", () => ({
   useAgent: () => ({}),
 }));
 vi.mock("@cloudflare/ai-chat/react", () => ({
-  useAgentChat: () => chatState,
+  useAgentChat: (options: { body?: { locale?: unknown } }) => {
+    chatState.lastOptions = options;
+    return chatState;
+  },
 }));
 
 import { AssistantWorkspaceConversation } from "./AssistantWorkspaceConversation";
@@ -139,5 +146,20 @@ describe("AssistantWorkspaceConversation", () => {
     expect(errors).toEqual([]);
     expect(markup).not.toContain("Xây dựng workflow SEO an toàn hơn");
     expect(markup).toContain("Chào bạn, tôi có thể giúp gì?");
+  });
+
+  it("sends the reader's locale with every message", () => {
+    // The model's answer is generated server-side and never passes through this
+    // catalog, so a Vietnamese reader only gets Vietnamese if the locale
+    // travels in the request body. It did not: the prompt carried no reply
+    // language, the same defect #111 fixed for the onboarding agent.
+    chatState.messages = [];
+    chatState.status = "ready";
+
+    renderConversation("vi");
+    expect(chatState.lastOptions?.body?.locale).toBe("vi");
+
+    renderConversation("en");
+    expect(chatState.lastOptions?.body?.locale).toBe("en");
   });
 });

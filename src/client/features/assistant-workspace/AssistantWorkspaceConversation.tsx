@@ -28,7 +28,12 @@ export function AssistantWorkspaceConversation({
     agent: "assistant-workspace",
     name: createAssistantWorkspaceName(projectId, userId),
   });
-  const { messages, sendMessage, status } = useAgentChat({ agent });
+  // The reply and both gate messages are streamed server-side and never pass
+  // through react-intl, so the reader's locale has to travel with the message.
+  const { messages, sendMessage, status } = useAgentChat({
+    agent,
+    body: { locale: intl.locale },
+  });
   const [draft, setDraft] = useState("");
   const busy = status === "submitted" || status === "streaming";
   function submit(text = draft) {

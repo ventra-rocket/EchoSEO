@@ -12,6 +12,7 @@ import type { ChatMessage, OnChatMessageOptions } from "@cloudflare/ai-chat";
 import { z } from "zod";
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
 import { buildOnboardingTools } from "@/server/features/onboarding/onboardingChatTools";
+import { chatLocaleSchema } from "@/shared/chat-locale";
 import { getOnboardingModel } from "@/server/lib/openrouter";
 import {
   isHostedAccessOpen,
@@ -43,8 +44,6 @@ function openRouterCostUsd(providerMetadata: unknown): number {
  * than trusted: the body is client-supplied, and an unknown value must fall
  * back to English rather than reach the prompt verbatim.
  */
-const chatLocaleSchema = z.enum(["en", "vi"]).catch("en");
-
 const REPLY_LANGUAGE_INSTRUCTION: Record<"en" | "vi", string> = {
   en: "Reply in English.",
   // The fact sheet, the tool descriptions and this prompt stay English on
