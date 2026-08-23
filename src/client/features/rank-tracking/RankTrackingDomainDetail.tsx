@@ -11,6 +11,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
+import { buildListClipboardText } from "@/client/lib/clipboard";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { FreePlanAlert } from "./FreePlanAlert";
 import { RankTrackingRunAlerts } from "./RankTrackingRunAlerts";
@@ -32,13 +33,9 @@ import type {
   ComparePeriod,
 } from "@/types/schemas/rank-tracking";
 import { AddKeywordsPanel } from "./AddKeywordsPanel";
-import {
-  FilterPanel,
-  applyFilters,
-  countActiveFilters,
-  EMPTY_FILTERS,
-  type Filters,
-} from "./RankTrackingFilters";
+import { FilterPanel } from "./RankTrackingFilters";
+import { applyFilters, countActiveFilters } from "./rankTrackingFiltering";
+import { EMPTY_FILTERS, type Filters } from "./rankTrackingFilterTypes";
 import { CheckConfirmModal } from "./CheckConfirmModal";
 import { useMetricsRefresh } from "./useMetricsRefresh";
 import { useRankCheckTrigger } from "./useRankCheckTrigger";
@@ -305,7 +302,7 @@ function RankTrackingDomainDetailInner({
           }
           onCopyKeywords={() => {
             void navigator.clipboard.writeText(
-              filtered.map((r) => r.keyword).join("\n"),
+              buildListClipboardText(filtered.map((r) => r.keyword)),
             );
             toast.success(
               intl.formatMessage({

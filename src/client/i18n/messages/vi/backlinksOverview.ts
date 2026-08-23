@@ -16,8 +16,6 @@ export const backlinksOverview: Record<keyof typeof en, string> = {
   "backlinksOverview.search.submitting": "Đang tải…",
   "backlinksOverview.search.validation.targetRequired":
     "Nhập tên miền hoặc URL để phân tích.",
-  "backlinksOverview.search.validation.tabLimit":
-    "Đóng bớt một tab để mở thêm tìm kiếm (tối đa {tabLimit, number}).",
 
   "backlinksOverview.scope.domain": "Toàn site",
   "backlinksOverview.scope.page": "Đúng trang",

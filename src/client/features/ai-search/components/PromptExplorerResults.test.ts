@@ -108,4 +108,48 @@ describe("PromptExplorerResults", () => {
     expect(markup).not.toContain(">Error<");
     expect(errors).toEqual([]);
   });
+
+  it("collapses long citation lists behind a bilingual show-more toggle", () => {
+    const many: PromptExplorerResult = {
+      ...result,
+      results: [
+        {
+          status: "success",
+          model: "chat_gpt",
+          modelName: "gpt-5",
+          text: "answer",
+          citations: Array.from({ length: 7 }, (_, index) => ({
+            url: `https://example.com/${index}`,
+            domain: "example.com",
+            title: `Source ${index}`,
+            matchedBrand: false,
+          })),
+          fanOutQueries: [],
+          brandMentioned: false,
+          outputTokens: null,
+          webSearch: false,
+        },
+      ],
+    };
+
+    const english = renderWithIntl(
+      "en",
+      createElement(PromptExplorerResults, { result: many }),
+    );
+    // Heading counts every citation; only the first three render collapsed.
+    expect(english.markup).toContain("Cited sources (7)");
+    expect(english.markup).toContain("Source 2");
+    expect(english.markup).not.toContain("Source 3");
+    expect(english.markup).toContain("+4 more");
+    expect(english.errors).toEqual([]);
+
+    const vietnamese = renderWithIntl(
+      "vi",
+      createElement(PromptExplorerResults, { result: many }),
+    );
+    expect(vietnamese.markup).toContain("Nguồn trích dẫn (7)");
+    expect(vietnamese.markup).toContain("+4 nguồn khác");
+    expect(vietnamese.markup).not.toContain("+4 more");
+    expect(vietnamese.errors).toEqual([]);
+  });
 });

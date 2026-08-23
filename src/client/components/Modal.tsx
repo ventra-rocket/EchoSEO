@@ -25,14 +25,17 @@ export function Modal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    // `p-4` + `max-h-full` bound the card to the viewport and `overflow-y-auto`
+    // on the body scrolls the contents. Without these a modal taller than the
+    // viewport centred itself and its footer actions became unreachable.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`card bg-base-100 border border-base-300 w-full ${maxWidth} shadow-xl`}
+        className={`card bg-base-100 border border-base-300 w-full ${maxWidth} max-h-full shadow-xl`}
       >
-        <div className="card-body gap-4">{children}</div>
+        <div className="card-body gap-4 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

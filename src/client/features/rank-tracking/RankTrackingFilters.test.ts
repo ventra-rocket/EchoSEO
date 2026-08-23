@@ -4,13 +4,16 @@ import {
   applyDomainListFilters,
   applyFilters,
   countActiveDomainListFilters,
+  getDomainListFilterOptions,
+  matchesMetricRangeFilter,
+  matchesPositionFilter,
+} from "./rankTrackingFiltering";
+import {
   EMPTY_DOMAIN_LIST_FILTERS,
   EMPTY_FILTERS,
-  getDomainListFilterOptions,
-  matchesPositionFilter,
   type DomainListFilters,
   type Filters,
-} from "./RankTrackingFilters";
+} from "./rankTrackingFilterTypes";
 
 type DomainSummary = {
   id: string;
@@ -23,13 +26,16 @@ function makeRow(
   keyword: string,
   desktopPosition: number | null,
   mobilePosition: number | null,
+  metrics: Partial<
+    Pick<RankTrackingRow, "searchVolume" | "keywordDifficulty" | "cpc">
+  > = {},
 ): RankTrackingRow {
   return {
     trackingKeywordId: keyword,
     keyword,
-    searchVolume: null,
-    keywordDifficulty: null,
-    cpc: null,
+    searchVolume: metrics.searchVolume ?? null,
+    keywordDifficulty: metrics.keywordDifficulty ?? null,
+    cpc: metrics.cpc ?? null,
     desktop: {
       position: desktopPosition,
       previousPosition: null,
@@ -78,6 +84,34 @@ describe("matchesPositionFilter", () => {
   });
 });
 
+describe("matchesMetricRangeFilter", () => {
+  it("treats a max of zero as a literal bound, not as unranked", () => {
+    // The position filter overloads max=0 to mean "no ranking"; a metric has no
+    // such sentinel, and zero volume is a real answer.
+    expect(matchesMetricRangeFilter(0, "", "0")).toBe(true);
+    expect(matchesMetricRangeFilter(1, "", "0")).toBe(false);
+    expect(matchesMetricRangeFilter(null, "", "0")).toBe(false);
+  });
+
+  it("passes everything through when no bound is set", () => {
+    expect(matchesMetricRangeFilter(null, "", "")).toBe(true);
+    expect(matchesMetricRangeFilter(1200, "", "")).toBe(true);
+  });
+
+  it("applies one-sided and two-sided bounds inclusively", () => {
+    expect(matchesMetricRangeFilter(1200, "1200", "")).toBe(true);
+    expect(matchesMetricRangeFilter(1200, "", "1200")).toBe(true);
+    expect(matchesMetricRangeFilter(1199, "1200", "")).toBe(false);
+    expect(matchesMetricRangeFilter(1.75, "0.5", "2")).toBe(true);
+    expect(matchesMetricRangeFilter(2.5, "0.5", "2")).toBe(false);
+  });
+
+  it("excludes rows with no metric once a bound is set", () => {
+    // A keyword whose metrics were never fetched cannot satisfy a range.
+    expect(matchesMetricRangeFilter(null, "1", "")).toBe(false);
+  });
+});
+
 describe("applyFilters", () => {
   const rows = [
     makeRow("ranked both", 3, 6),
@@ -109,6 +143,41 @@ describe("applyFilters", () => {
         withFilters({ maxDesktopPos: "0", maxMobilePos: "0" }),
       ).map((row) => row.keyword),
     ).toEqual(["unranked both"]);
+  });
+
+  const metricRows = [
+    makeRow("high volume", 1, 1, {
+      searchVolume: 5000,
+      keywordDifficulty: 70,
+      cpc: 4.5,
+    }),
+    makeRow("low volume", 2, 2, {
+      searchVolume: 40,
+      keywordDifficulty: 10,
+      cpc: 0.25,
+    }),
+    makeRow("no metrics", 3, 3),
+  ];
+
+  it("narrows by volume, difficulty, and cpc together", () => {
+    expect(
+      applyFilters(
+        metricRows,
+        withFilters({ minVolume: "100", maxKd: "80", minCpc: "1" }),
+      ).map((row) => row.keyword),
+    ).toEqual(["high volume"]);
+  });
+
+  it("drops rows whose metrics were never fetched", () => {
+    expect(
+      applyFilters(metricRows, withFilters({ minVolume: "1" })).map(
+        (row) => row.keyword,
+      ),
+    ).toEqual(["high volume", "low volume"]);
+  });
+
+  it("leaves every row when no metric bound is set", () => {
+    expect(applyFilters(metricRows, EMPTY_FILTERS)).toHaveLength(3);
   });
 });
 

@@ -29,14 +29,6 @@ import {
 } from "./keywordControllerInternals";
 import { useKeywordOverviewState } from "./useKeywordOverviewState";
 
-type OpenKeywordTabInput = {
-  keyword: string;
-  locationCode: number;
-  resultLimit: ResultLimit;
-  mode: KeywordMode;
-  clickstream: boolean;
-};
-
 export type KeywordResearchControllerInput = {
   projectId: string;
   keywordInput: string;
@@ -47,8 +39,7 @@ export type KeywordResearchControllerInput = {
   clickstream: boolean;
   sortField: SortField;
   sortDir: SortDir;
-  getOpenKeywordTabs?: () => readonly OpenKeywordTabInput[];
-  keywordTabsLimit?: number;
+
   /**
    * Called when the user submits the search form. Lets the caller decide
    * whether the submission opens tabs or just rewrites the URL — the
@@ -150,8 +141,6 @@ export function useKeywordResearchController(
     {
       ...input,
       locationCode,
-      getOpenKeywordTabs: input.getOpenKeywordTabs,
-      keywordTabsLimit: input.keywordTabsLimit,
     },
     (value) => {
       setPreferredLocationCode(value.locationCode);

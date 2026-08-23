@@ -3,7 +3,6 @@ export const searchPerformance = {
   "searchPerf.title": "Search Performance",
   "searchPerf.subtitle":
     "See your site's clicks, impressions, CTR, and position from Google Search Console.",
-  "searchPerf.loading": "Loading Search Console data…",
   // The page's most important sentence: what "striking distance" means and why it matters.
   "searchPerf.strikingDistanceIntro":
     "Find your striking-distance keywords — queries ranking just off the top of page one, where a small improvement can win the most new clicks. Connect Search Console to see them.",

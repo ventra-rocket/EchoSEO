@@ -32,6 +32,7 @@ import {
 import { useSavedKeywordsExport } from "@/client/features/saved-keywords/useSavedKeywordsExport";
 import { useSavedKeywordsFilters } from "@/client/features/saved-keywords/useSavedKeywordsFilters";
 import { useTagManage } from "@/client/features/saved-keywords/useTagManage";
+import { buildListClipboardText } from "@/client/lib/clipboard";
 import { getLocalizedErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import {
@@ -339,7 +340,7 @@ function SavedKeywordsPage() {
           exportingSelection={exporter.exportingSelection}
           onCopy={() => {
             void navigator.clipboard.writeText(
-              selectedRows.map((row) => row.keyword).join("\n"),
+              buildListClipboardText(selectedRows.map((row) => row.keyword)),
             );
             toast.success(
               intl.formatMessage(

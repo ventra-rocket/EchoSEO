@@ -88,4 +88,6 @@ export const common: Record<keyof typeof en, string> = {
   "common.sheets.instructions":
     "Mở một Google Sheet mới rồi dán để điền dữ liệu.",
   "common.sheets.open": "Mở Google Sheet mới",
+  "common.searchTabs.listLabel": "Các tab tìm kiếm",
+  "common.searchTabs.close": "Đóng tab {label}",
 };

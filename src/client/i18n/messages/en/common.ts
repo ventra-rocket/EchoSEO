@@ -86,4 +86,6 @@ export const common = {
     "Copied {rowCount, plural, one {# row} other {# rows}} to your clipboard",
   "common.sheets.instructions": "Open a new Google Sheet and paste to fill it.",
   "common.sheets.open": "Open new Google Sheet",
+  "common.searchTabs.listLabel": "Search tabs",
+  "common.searchTabs.close": "Close {label} tab",
 } as const;

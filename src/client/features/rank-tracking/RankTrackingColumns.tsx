@@ -1,7 +1,7 @@
 import { useMemo, type MutableRefObject } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useIntl } from "react-intl";
-import type { ColumnDef, SortingFn } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { makeSelectionColumn } from "@/client/components/table/AppDataTable";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import {
@@ -81,18 +81,16 @@ export function SortableHeader({
   );
 }
 
-const nullsLastNumeric: SortingFn<RankTrackingRow> = (rowA, rowB, columnId) => {
-  const a = rowA.getValue<number | null>(columnId);
-  const b = rowB.getValue<number | null>(columnId);
-  if (a == null && b == null) return 0;
-  if (a == null) return 1;
-  if (b == null) return -1;
-  return a - b;
-};
+// Missing metrics sort last in BOTH directions via TanStack's `sortUndefined`,
+// which resolves undefined before the desc negation. A custom comparator that
+// returned ±1 for nulls could not: the table multiplies its result by -1 when
+// sorting descending, so "no data" rows jumped to the top of a desc sort — the
+// one place a reader is looking for the strongest values. `sortUndefined` only
+// recognises `undefined`, never `null`, so each accessor below maps null to it.
 
 const volumeColumn: ColumnDef<RankTrackingRow> = {
   id: "volume",
-  accessorKey: "searchVolume",
+  accessorFn: (row) => row.searchVolume ?? undefined,
   header: ({ column }) => {
     const intl = useIntl();
     return (
@@ -104,13 +102,15 @@ const volumeColumn: ColumnDef<RankTrackingRow> = {
     );
   },
   size: 90,
-  cell: ({ getValue }) => <VolumeCell value={getValue<number | null>()} />,
-  sortingFn: nullsLastNumeric,
+  cell: ({ getValue }) => (
+    <VolumeCell value={getValue<number | undefined>() ?? null} />
+  ),
+  sortUndefined: "last",
 };
 
 const kdColumn: ColumnDef<RankTrackingRow> = {
   id: "kd",
-  accessorKey: "keywordDifficulty",
+  accessorFn: (row) => row.keywordDifficulty ?? undefined,
   header: ({ column }) => {
     const intl = useIntl();
     return (
@@ -122,13 +122,15 @@ const kdColumn: ColumnDef<RankTrackingRow> = {
     );
   },
   size: 70,
-  cell: ({ getValue }) => <DifficultyCell value={getValue<number | null>()} />,
-  sortingFn: nullsLastNumeric,
+  cell: ({ getValue }) => (
+    <DifficultyCell value={getValue<number | undefined>() ?? null} />
+  ),
+  sortUndefined: "last",
 };
 
 const cpcColumn: ColumnDef<RankTrackingRow> = {
   id: "cpc",
-  accessorKey: "cpc",
+  accessorFn: (row) => row.cpc ?? undefined,
   header: ({ column }) => {
     const intl = useIntl();
     return (
@@ -140,8 +142,10 @@ const cpcColumn: ColumnDef<RankTrackingRow> = {
     );
   },
   size: 80,
-  cell: ({ getValue }) => <CpcCell value={getValue<number | null>()} />,
-  sortingFn: nullsLastNumeric,
+  cell: ({ getValue }) => (
+    <CpcCell value={getValue<number | undefined>() ?? null} />
+  ),
+  sortUndefined: "last",
 };
 
 function makeKeywordColumn(
@@ -185,7 +189,7 @@ function makeDeviceColumn(
   const id = device === "desktop" ? "desktopPosition" : "mobilePosition";
   return {
     id,
-    accessorFn: (row) => row[device].position,
+    accessorFn: (row) => row[device].position ?? undefined,
     header: ({ column }) => {
       const intl = useIntl();
       return (
@@ -199,7 +203,7 @@ function makeDeviceColumn(
     size: 120,
     maxSize: 140,
     cell: ({ row }) => <DeviceRankCell result={row.original[device]} />,
-    sortingFn: nullsLastNumeric,
+    sortUndefined: "last",
   };
 }
 
@@ -262,7 +266,7 @@ function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
   return [
     {
       id: "gscClicks",
-      accessorFn: (row) => row.gsc?.clicks ?? null,
+      accessorFn: (row) => row.gsc?.clicks ?? undefined,
       header: ({ column }) => {
         const intl = useIntl();
         return (
@@ -277,11 +281,11 @@ function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
       cell: ({ row }) => (
         <GscCountCell value={row.original.gsc?.clicks} complete={complete} />
       ),
-      sortingFn: nullsLastNumeric,
+      sortUndefined: "last",
     },
     {
       id: "gscImpressions",
-      accessorFn: (row) => row.gsc?.impressions ?? null,
+      accessorFn: (row) => row.gsc?.impressions ?? undefined,
       header: ({ column }) => {
         const intl = useIntl();
         return (
@@ -301,11 +305,11 @@ function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
           complete={complete}
         />
       ),
-      sortingFn: nullsLastNumeric,
+      sortUndefined: "last",
     },
     {
       id: "gscPosition",
-      accessorFn: (row) => row.gsc?.position ?? null,
+      accessorFn: (row) => row.gsc?.position ?? undefined,
       header: ({ column }) => {
         const intl = useIntl();
         return (
@@ -325,7 +329,7 @@ function makeGscColumns(complete: boolean): ColumnDef<RankTrackingRow>[] {
           complete={complete}
         />
       ),
-      sortingFn: nullsLastNumeric,
+      sortUndefined: "last",
     },
   ];
 }

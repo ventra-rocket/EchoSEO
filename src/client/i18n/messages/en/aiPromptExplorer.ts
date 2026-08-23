@@ -61,6 +61,8 @@ export const aiPromptExplorer = {
   "aiPromptExplorer.results.webSearchBadge": "web search",
   "aiPromptExplorer.results.tokensCount": "{count, number} tokens",
   "aiPromptExplorer.results.brandNotMentioned": "no {brand}",
+  "aiPromptExplorer.results.citationsShowLess": "Show less",
+  "aiPromptExplorer.results.citationsShowMore": "+{count, number} more",
 
   // MarkdownAnswer.tsx — wrapper copy only; the rendered markdown itself is
   // model output and stays out of scope.

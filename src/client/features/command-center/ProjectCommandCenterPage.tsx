@@ -21,7 +21,10 @@ export function ProjectCommandCenterPage({ projectId }: { projectId: string }) {
     staleTime: 0,
   });
 
-  if (query.isLoading) return <CommandCenterLoadingState />;
+  // `isPending`, not `isLoading`: a paused fetch (offline, or a query resumed
+  // after remount) leaves isLoading false while data is still undefined, which
+  // fell through to the load-error card instead of the skeleton.
+  if (query.isPending) return <CommandCenterLoadingState />;
 
   if (query.isError || !query.data) {
     return (

@@ -12,8 +12,6 @@ export const backlinksOverview = {
   "backlinksOverview.search.submitting": "Loading...",
   "backlinksOverview.search.validation.targetRequired":
     "Enter a domain or URL to analyze.",
-  "backlinksOverview.search.validation.tabLimit":
-    "Close a tab to open more searches (max {tabLimit, number}).",
 
   // Search scope — shared by the search card's toggle, the overview panel's
   // scope badge, and the history list's per-item subtitle.

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useIntl } from "react-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { QueryKey } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
@@ -38,12 +39,15 @@ export function SearchTabStrip({
   onClose,
   onViewed,
 }: Props) {
+  const intl = useIntl();
+
   if (tabs.length === 0) return null;
 
   return (
     <div className="rounded-xl border border-base-300 bg-base-100 p-1">
       <div
         role="tablist"
+        aria-label={intl.formatMessage({ id: "common.searchTabs.listLabel" })}
         className="flex min-w-0 items-stretch gap-1 overflow-x-auto"
       >
         {tabs.map((tab) => {
@@ -84,7 +88,10 @@ export function SearchTabStrip({
                 data-search-tab-id={tab.id}
                 className="flex items-center px-1.5 text-base-content/50 opacity-60 transition hover:bg-base-content/10 hover:text-base-content hover:opacity-100 group-hover:opacity-100"
                 onClick={() => onClose(tab.id)}
-                aria-label={`Close ${tab.label} tab`}
+                aria-label={intl.formatMessage(
+                  { id: "common.searchTabs.close" },
+                  { label: tab.label },
+                )}
               >
                 <X className="size-3.5" />
               </button>

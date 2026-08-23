@@ -52,6 +52,8 @@ export const aiPromptExplorer: Record<keyof typeof en, string> = {
   "aiPromptExplorer.results.webSearchBadge": "tìm kiếm web",
   "aiPromptExplorer.results.tokensCount": "{count, number} token",
   "aiPromptExplorer.results.brandNotMentioned": "không có {brand}",
+  "aiPromptExplorer.results.citationsShowLess": "Thu gọn",
+  "aiPromptExplorer.results.citationsShowMore": "+{count, number} nguồn khác",
 
   "aiPromptExplorer.markdown.emptyResponse":
     "Mô hình trả về câu trả lời trống.",

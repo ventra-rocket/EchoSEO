@@ -70,4 +70,9 @@ export const projectsSettings = {
     "We couldn't update your analytics setting.",
   "projectsSettings.settings.analyticsEnabledToast": "Analytics enabled",
   "projectsSettings.settings.analyticsDisabledToast": "Analytics disabled",
+
+  // Self-host "About" section: the running app version, so a bug report from a
+  // self-hoster can name the build without shell access to the container.
+  "projectsSettings.settings.about": "About",
+  "projectsSettings.settings.version": "Version",
 } as const;
