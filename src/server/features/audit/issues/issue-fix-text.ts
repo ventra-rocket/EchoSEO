@@ -16,7 +16,7 @@
 import { getFix, type Locale } from "@/server/lib/seo-rules";
 import { CROSS_PAGE_RULES } from "@/server/lib/audit/rules/cross-page";
 
-interface IssueFixText {
+export interface IssueFixText {
   label: string;
   problem: string;
   fixSteps: string[];

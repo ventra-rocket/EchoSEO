@@ -15,7 +15,10 @@ import {
   brokenPageUrls,
   buildLinkGraph,
 } from "@/server/features/audit/issues/cross-page-signals";
-import { getIssueFixText } from "@/server/features/audit/issues/issue-fix-text";
+import {
+  getIssueFixText,
+  type IssueFixText,
+} from "@/server/features/audit/issues/issue-fix-text";
 import type { IssueEvidence } from "@/server/features/audit/issues/issue-evidence";
 import { AppError } from "@/server/lib/errors";
 import { parseAuditConfig } from "@/server/lib/audit/types";
@@ -100,6 +103,43 @@ async function requireAudit(auditId: string, projectId: string) {
   return audit;
 }
 
+/** One rule's verdict over the whole crawl, with its remediation text. */
+export interface AuditIssueFinding {
+  ruleId: string;
+  issueGroup: string;
+  severity: string;
+  /** Distinct URLs this rule fired on. */
+  urlCount: number;
+  /** Null only when the rule id belongs to no catalogue — a defect, not a state. */
+  fix: IssueFixText | null;
+}
+
+interface AuditIssueSummary {
+  /** Null means the analysis never ran. NOT the same as "no issues found". */
+  materializedAt: string | null;
+  rollups: AuditIssueFinding[];
+}
+
+/** One affected URL, with the evidence measured on it. */
+export interface AuditIssueOccurrence {
+  id: string;
+  ruleId: string;
+  issueGroup: string;
+  severity: string;
+  status: string;
+  url: string;
+  /** The same URL when it passes the http(s) allow-list, else null. */
+  safeUrl: string | null;
+  evidence: IssueEvidenceField[];
+}
+
+interface AuditIssueOccurrencePage {
+  occurrences: AuditIssueOccurrence[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 /**
  * Per-rule counts for the All Issues summary.
  *
@@ -112,7 +152,7 @@ async function getIssueSummary(
   auditId: string,
   projectId: string,
   locale: Locale = "en",
-) {
+): Promise<AuditIssueSummary> {
   await requireAudit(auditId, projectId);
 
   const [snapshot, rollups] = await Promise.all([
@@ -147,7 +187,7 @@ async function listIssueOccurrences(input: {
   urlContains?: string;
   limit?: number;
   offset?: number;
-}) {
+}): Promise<AuditIssueOccurrencePage> {
   await requireAudit(input.auditId, input.projectId);
 
   const limit = Math.min(Math.max(input.limit ?? 50, 1), MAX_ISSUE_PAGE_SIZE);
@@ -174,11 +214,17 @@ async function listIssueOccurrences(input: {
 }
 
 /**
- * Shape an occurrence for the browser: only the fields the URL table renders.
+ * Shape an occurrence for a reader: the fields the URL table renders, plus the
+ * rule identity that says which finding the row is evidence OF.
  *
  * Remediation text is deliberately NOT attached per occurrence. It is identical
  * for every row of a rule, so shipping it here would repeat the same paragraphs
- * fifty times a page; the summary carries it once per rule instead.
+ * fifty times a page; the summary carries it once per rule instead. The rule
+ * *identifiers* are a different thing and do belong here: the UI only ever
+ * lists occurrences under a rule it already picked, but a `severity` or
+ * `issueGroup` filter spans several rules, and a row that cannot say which one
+ * it belongs to is unattributable evidence. The MCP tool surface reads exactly
+ * that way.
  *
  * Two things happen here rather than in the client. `evidenceJson` is parsed
  * once server-side so a malformed payload degrades to an empty list instead of
@@ -190,12 +236,18 @@ async function listIssueOccurrences(input: {
  */
 function toClientOccurrence(occurrence: {
   id: string;
+  ruleId: string;
+  issueGroup: string;
+  severity: string;
   status: string;
   url: string;
   evidenceJson: string | null;
 }) {
   return {
     id: occurrence.id,
+    ruleId: occurrence.ruleId,
+    issueGroup: occurrence.issueGroup,
+    severity: occurrence.severity,
     status: occurrence.status,
     url: occurrence.url,
     safeUrl: safeHttpUrl(occurrence.url),
@@ -204,7 +256,7 @@ function toClientOccurrence(occurrence: {
 }
 
 /** One evidence field, already reduced to text the client can render as-is. */
-interface IssueEvidenceField {
+export interface IssueEvidenceField {
   key: string;
   value: string;
 }

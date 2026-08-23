@@ -4,7 +4,7 @@
  * audit data layer and has a 400-line ceiling, so a read with a single caller
  * lives beside it rather than inside it.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLinkEdges, auditPages } from "@/db/schema";
 
@@ -101,6 +101,127 @@ export async function listEdgesToTargets(
     );
   }
   return rows;
+}
+
+/**
+ * `%` and `_` are LIKE wildcards, and `_` is common in real URLs. Escaping them
+ * keeps a search for `my_page` from also matching `myXpage`.
+ */
+function toLikePattern(search: string): string {
+  const escaped = search.replace(/[\\%_]/g, (character) => `\\${character}`);
+  return `%${escaped}%`;
+}
+
+type AuditPageFilter = {
+  auditId: string;
+  statusCode?: number;
+  indexable?: boolean;
+  inSitemap?: boolean;
+  isHtml?: boolean;
+  urlContains?: string;
+};
+
+function buildPageFilter(filter: AuditPageFilter) {
+  return and(
+    eq(auditPages.auditId, filter.auditId),
+    filter.statusCode === undefined
+      ? undefined
+      : eq(auditPages.statusCode, filter.statusCode),
+    filter.indexable === undefined
+      ? undefined
+      : eq(auditPages.isIndexable, filter.indexable),
+    filter.inSitemap === undefined
+      ? undefined
+      : eq(auditPages.inSitemap, filter.inSitemap),
+    filter.isHtml === undefined
+      ? undefined
+      : eq(auditPages.isHtml, filter.isHtml),
+    filter.urlContains
+      ? sql`${auditPages.url} LIKE ${toLikePattern(filter.urlContains)} ESCAPE '\\'`
+      : undefined,
+  );
+}
+
+/**
+ * The per-page crawl facts a page listing publishes.
+ *
+ * Declared rather than inferred so the annotation on `listPagesForAudit` checks
+ * the projection against it: silently dropping a column would otherwise just
+ * change every consumer's type.
+ */
+export interface AuditPageFacts {
+  url: string;
+  statusCode: number | null;
+  redirectUrl: string | null;
+  title: string | null;
+  metaDescription: string | null;
+  canonicalUrl: string | null;
+  robotsMeta: string | null;
+  h1Count: number;
+  wordCount: number;
+  imagesTotal: number;
+  imagesMissingAlt: number;
+  internalLinkCount: number;
+  externalLinkCount: number;
+  hasStructuredData: boolean;
+  isIndexable: boolean;
+  hasMixedContent: boolean;
+  isHtml: boolean;
+  inSitemap: boolean;
+  responseTimeMs: number | null;
+}
+
+/**
+ * One filtered page of crawled-page facts, with the match count from SQL.
+ *
+ * Distinct from `getAuditResultsForProject`, which hands the browser the whole
+ * crawl because the results view renders a virtualized table over it. A caller
+ * that asks a *question* of the page set ("which URLs 404?", "which are
+ * noindex?") must not read the other 4,900 rows of a 5,000-page crawl to answer
+ * it, so both the filter and the count run in SQL.
+ *
+ * The projection is scalar-only on purpose. The JSON blob columns (images,
+ * hreflang, heading order) are evidence the rule engine reads; shipping them to
+ * a caller that asked for a page list would multiply the payload for data it
+ * has no way to act on.
+ */
+export async function listPagesForAudit(
+  filter: AuditPageFilter,
+  page: { limit: number; offset: number },
+): Promise<{ rows: AuditPageFacts[]; total: number }> {
+  const where = buildPageFilter(filter);
+  const [rows, [totalRow]] = await Promise.all([
+    db
+      .select({
+        url: auditPages.url,
+        statusCode: auditPages.statusCode,
+        redirectUrl: auditPages.redirectUrl,
+        title: auditPages.title,
+        metaDescription: auditPages.metaDescription,
+        canonicalUrl: auditPages.canonicalUrl,
+        robotsMeta: auditPages.robotsMeta,
+        h1Count: auditPages.h1Count,
+        wordCount: auditPages.wordCount,
+        imagesTotal: auditPages.imagesTotal,
+        imagesMissingAlt: auditPages.imagesMissingAlt,
+        internalLinkCount: auditPages.internalLinkCount,
+        externalLinkCount: auditPages.externalLinkCount,
+        hasStructuredData: auditPages.hasStructuredData,
+        isIndexable: auditPages.isIndexable,
+        hasMixedContent: auditPages.hasMixedContent,
+        isHtml: auditPages.isHtml,
+        inSitemap: auditPages.inSitemap,
+        responseTimeMs: auditPages.responseTimeMs,
+      })
+      .from(auditPages)
+      .where(where)
+      .orderBy(asc(auditPages.url))
+      .limit(page.limit)
+      .offset(page.offset),
+    db.select({ value: count() }).from(auditPages).where(where),
+  ]);
+
+  return { rows, total: totalRow?.value ?? 0 };
 }
 
 /**

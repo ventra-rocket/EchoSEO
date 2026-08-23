@@ -34,6 +34,30 @@ import { getOrigin } from "@/server/lib/audit/url-utils";
 import { resolveDataforseoCredentials } from "@/server/lib/dataforseo/resolve-credentials";
 import { resolveDataforseoCredentialAccess } from "@/server/lib/dataforseo/credential-access-policy";
 
+/** The crawl a launch actually started, after every clamp was applied. */
+export interface StartedAudit {
+  auditId: string;
+  maxPages: number;
+  lighthouseStrategy: LighthouseStrategy;
+}
+
+/** A crawl's live progress, as every status reader sees it. */
+export interface AuditStatus {
+  id: string;
+  startUrl: string;
+  status: "running" | "completed" | "failed";
+  pagesCrawled: number;
+  pagesTotal: number;
+  lighthouseTotal: number;
+  lighthouseCompleted: number;
+  lighthouseFailed: number;
+  currentPhase: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  /** Null unless the run failed. */
+  errorMessage: string | null;
+}
+
 async function startAudit(input: {
   actorUserId: string;
   authMode: AuthMode;
@@ -44,7 +68,7 @@ async function startAudit(input: {
   lighthouseStrategy?: LighthouseStrategy;
   // Set when this launch is a re-crawl to verify fixes against an earlier crawl.
   baselineAuditId?: string;
-}) {
+}): Promise<StartedAudit> {
   const role = await resolveWorkspaceRole({
     userId: input.actorUserId,
     organizationId: input.billingCustomer.organizationId,
@@ -206,7 +230,12 @@ async function startAudit(input: {
     throw error;
   }
 
-  return { auditId };
+  // The EFFECTIVE config, not the requested one. `maxPages` was clamped by the
+  // crawler ceiling and any lower per-target limit, and `lighthouseStrategy`
+  // may have been forced to "none" for want of a DataForSEO key — a caller that
+  // reports back what it asked for would be describing a crawl that isn't
+  // running. Every existing caller reads `auditId` alone.
+  return { auditId, maxPages, lighthouseStrategy };
 }
 
 /**
@@ -240,7 +269,10 @@ async function getAccess(input: {
   };
 }
 
-async function getStatus(auditId: string, projectId: string) {
+async function getStatus(
+  auditId: string,
+  projectId: string,
+): Promise<AuditStatus> {
   const audit = await AuditRepository.getAuditForProject(auditId, projectId);
   if (!audit) throw new AppError("NOT_FOUND");
 

@@ -80,7 +80,7 @@ describe("withMcpProjectAuth", () => {
     );
   });
 
-  it("passes auth, baseUrl, and billing context to the wrapped handler", async () => {
+  it("passes auth, baseUrl, billing and the request signal to the handler", async () => {
     const { withMcpProjectAuth } = await import("@/server/mcp/project-auth");
     const handler = vi.fn().mockReturnValue("ok");
 
@@ -106,6 +106,10 @@ describe("withMcpProjectAuth", () => {
           organizationId: "org_123",
           projectId: "project_123",
         },
+        // Identity, not just presence: a waiting tool that read a different
+        // signal would keep re-reading after the caller hung up. Only
+        // `get_audit_status` waits today, but it waits for up to 60s.
+        signal: toolExtra.signal,
       },
     );
   });
