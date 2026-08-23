@@ -9,7 +9,16 @@ import type { KeywordIntent, MonthlySearch } from "@/types/keywords";
 import type { RefreshSavedKeywordMetricsInput } from "@/types/schemas/keywords";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 
+// Provider batch: DataForSEO's metric endpoints accept ~700 keywords per call.
 const REFRESH_BATCH_SIZE = 700;
+// DB-write batch, deliberately far smaller. One `upsertKeywordMetric` is one D1
+// statement, and fanning a whole 700-keyword provider batch out through a single
+// Promise.all pins 700 concurrent statements against D1's per-invocation
+// concurrency ceiling — the requests queue, the Worker holds every promise's
+// memory, and a large saved list can take the refresh down. Write in bounded
+// chunks so concurrency stays capped regardless of how many keywords a project
+// has saved in one location/language.
+const REFRESH_UPSERT_BATCH_SIZE = 100;
 
 // Match the shape the research/save flow persists so a refresh never degrades
 // stored metrics (see research-data.ts mapKeywordDataItems / mapAdsKeywordItems).
@@ -121,24 +130,27 @@ export async function refreshSavedKeywordMetrics(
 
       const metricsMap = await fetchBatchMetrics(client, request, useGoogleAds);
 
-      await Promise.all(
-        batch.map((r) => {
-          const metrics = metricsMap.get(r.row.keyword.toLowerCase());
-          if (!metrics) return Promise.resolve();
-          return KeywordResearchRepository.upsertKeywordMetric({
-            projectId: input.projectId,
-            keyword: r.row.keyword,
-            locationCode,
-            languageCode,
-            searchVolume: metrics.searchVolume,
-            cpc: metrics.cpc,
-            competition: metrics.competition,
-            keywordDifficulty: metrics.keywordDifficulty,
-            intent: metrics.intent,
-            monthlySearchesJson: metrics.monthlySearchesJson,
-          });
-        }),
-      );
+      for (let j = 0; j < batch.length; j += REFRESH_UPSERT_BATCH_SIZE) {
+        const writeChunk = batch.slice(j, j + REFRESH_UPSERT_BATCH_SIZE);
+        await Promise.all(
+          writeChunk.map((r) => {
+            const metrics = metricsMap.get(r.row.keyword.toLowerCase());
+            if (!metrics) return Promise.resolve();
+            return KeywordResearchRepository.upsertKeywordMetric({
+              projectId: input.projectId,
+              keyword: r.row.keyword,
+              locationCode,
+              languageCode,
+              searchVolume: metrics.searchVolume,
+              cpc: metrics.cpc,
+              competition: metrics.competition,
+              keywordDifficulty: metrics.keywordDifficulty,
+              intent: metrics.intent,
+              monthlySearchesJson: metrics.monthlySearchesJson,
+            });
+          }),
+        );
+      }
 
       updated += metricsMap.size;
     }

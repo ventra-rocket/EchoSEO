@@ -65,5 +65,9 @@ export const auditScreenshots = sqliteTable(
     index("audit_screenshots_audit_idx").on(table.auditId),
     // Retention scans by capture age.
     index("audit_screenshots_captured_idx").on(table.capturedAt),
+    // FK path from audit_pages deletes: `ON DELETE SET NULL` needs the same
+    // child-side index a cascade does, or nulling one page's captures scans
+    // this whole table.
+    index("audit_screenshots_page_id_idx").on(table.pageId),
   ],
 );

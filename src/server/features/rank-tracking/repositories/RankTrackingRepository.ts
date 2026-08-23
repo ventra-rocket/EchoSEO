@@ -1,4 +1,15 @@
-import { and, count, desc, eq, inArray, isNull, lte, max } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  lte,
+  max,
+  ne,
+} from "drizzle-orm";
 import type { InferInsertModel } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -8,6 +19,7 @@ import {
   rankTrackingKeywords,
   projects,
 } from "@/db/schema";
+import type { RankTrackingSkipReason } from "@/shared/rank-tracking";
 import {
   getLatestSnapshotsForKeywords,
   getSnapshotsBeforeDate,
@@ -30,6 +42,19 @@ async function executeInBatches<T>(
     if (!first) continue;
     await db.batch([first, ...rest]);
   }
+}
+
+/**
+ * Split ids into chunks that keep each `IN (...)` list under D1's ~100
+ * bound-parameter cap. A project may hold up to MAX_CONFIGS_PER_PROJECT (500)
+ * configs, so a single-statement IN over every config would be rejected.
+ */
+function chunkIds(ids: string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += DB_BATCH_SIZE) {
+    chunks.push(ids.slice(i, i + DB_BATCH_SIZE));
+  }
+  return chunks;
 }
 
 // ---------------------------------------------------------------------------
@@ -110,33 +135,107 @@ async function updateConfig(
     );
 }
 
+/**
+ * Candidates examined per tick.
+ *
+ * Derived from the Worker invocation's 1,000-subrequest cap, which binds before
+ * wall clock does: a started config costs three subrequests (CAS claim, run
+ * insert, workflow create) and a blocked one up to four (the run guard inspects
+ * the blocker), so 200 candidates peak near 800 and leave room for the fixed
+ * overhead — the due query itself, the batched keyword counts, and one
+ * access/credential round trip per distinct organization. Being killed mid-tick
+ * is worse than deferring work: a kill between the claim and the start advances
+ * a config's schedule with no run behind it, costing that config a whole
+ * interval, and it drops the tick summary that would have said so.
+ *
+ * The tick's unit budget and deadline in scheduledRankChecks.ts stop the loop
+ * earlier whenever the candidates are actually startable; this cap is the
+ * ceiling for a skip-heavy tick, where nothing starts and the loop pays only
+ * one claim per row.
+ */
+const DUE_CONFIGS_PER_TICK = 200;
+
 async function getDueConfigsWithOrganization(nowIso: string) {
-  return db
-    .select({
-      id: rankTrackingConfigs.id,
-      projectId: rankTrackingConfigs.projectId,
-      domain: rankTrackingConfigs.domain,
-      locationCode: rankTrackingConfigs.locationCode,
-      languageCode: rankTrackingConfigs.languageCode,
-      devices: rankTrackingConfigs.devices,
-      serpDepth: rankTrackingConfigs.serpDepth,
-      scheduleInterval: rankTrackingConfigs.scheduleInterval,
-      nextCheckAt: rankTrackingConfigs.nextCheckAt,
-      organizationId: projects.organizationId,
+  return (
+    db
+      .select({
+        id: rankTrackingConfigs.id,
+        projectId: rankTrackingConfigs.projectId,
+        domain: rankTrackingConfigs.domain,
+        locationCode: rankTrackingConfigs.locationCode,
+        languageCode: rankTrackingConfigs.languageCode,
+        devices: rankTrackingConfigs.devices,
+        serpDepth: rankTrackingConfigs.serpDepth,
+        scheduleInterval: rankTrackingConfigs.scheduleInterval,
+        nextCheckAt: rankTrackingConfigs.nextCheckAt,
+        organizationId: projects.organizationId,
+      })
+      .from(rankTrackingConfigs)
+      .innerJoin(projects, eq(rankTrackingConfigs.projectId, projects.id))
+      .where(
+        and(
+          eq(rankTrackingConfigs.isActive, true),
+          // Only configs the owner explicitly opted into scheduled runs. Others
+          // are never selected, so they neither auto-spend nor churn the loop.
+          eq(rankTrackingConfigs.scheduledEnabled, true),
+          // A config switched to "manual" can keep a stale non-null next_check_at
+          // (only updateConfig nulls it). The loop cannot advance a manual
+          // config's schedule, so without this it would be re-selected every tick
+          // forever.
+          ne(rankTrackingConfigs.scheduleInterval, "manual"),
+          lte(rankTrackingConfigs.nextCheckAt, nowIso),
+          isNull(projects.archivedAt),
+        ),
+      )
+      // Oldest first so a backlog drains in order instead of the same arbitrary
+      // rows filling every tick. `lte` already excludes NULL, so both ordering
+      // columns are non-null; id breaks ties for a stable total order.
+      .orderBy(
+        asc(rankTrackingConfigs.nextCheckAt),
+        asc(rankTrackingConfigs.id),
+      )
+      .limit(DUE_CONFIGS_PER_TICK)
+  );
+}
+
+/**
+ * Conditionally advance a due config's schedule, returning false when the
+ * config changed underneath us (manual edit, deactivation, a concurrent tick).
+ *
+ * `next_check_at` equality is the compare-and-set token. `schedule_interval` is
+ * deliberately absent from the predicate: every schedule edit rewrites
+ * `next_check_at` (updateConfig recomputes it, or nulls it for "manual"), so the
+ * timestamp check already detects interval changes.
+ *
+ * `lastSkipReason` is written only when the caller passes it — the restore path
+ * omits it so it cannot clobber a reason the blocking run just wrote.
+ */
+async function claimDueConfig(input: {
+  configId: string;
+  projectId: string;
+  observedNextCheckAt: string;
+  nextCheckAt: string;
+  lastSkipReason?: RankTrackingSkipReason | null;
+}): Promise<boolean> {
+  const claimed = await db
+    .update(rankTrackingConfigs)
+    .set({
+      nextCheckAt: input.nextCheckAt,
+      ...(input.lastSkipReason !== undefined && {
+        lastSkipReason: input.lastSkipReason,
+      }),
     })
-    .from(rankTrackingConfigs)
-    .innerJoin(projects, eq(rankTrackingConfigs.projectId, projects.id))
     .where(
       and(
+        eq(rankTrackingConfigs.id, input.configId),
+        eq(rankTrackingConfigs.projectId, input.projectId),
         eq(rankTrackingConfigs.isActive, true),
-        // Only configs the owner explicitly opted into scheduled runs. Others
-        // are never selected, so they neither auto-spend nor churn the loop.
         eq(rankTrackingConfigs.scheduledEnabled, true),
-        lte(rankTrackingConfigs.nextCheckAt, nowIso),
-        isNull(projects.archivedAt),
+        eq(rankTrackingConfigs.nextCheckAt, input.observedNextCheckAt),
       ),
     )
-    .limit(50);
+    .returning({ id: rankTrackingConfigs.id });
+  return claimed.length > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,69 +361,73 @@ async function removeKeywordsFromConfig(
     );
 }
 
+/** Keyword counts keyed by config id. Configs with no keywords are absent. */
+async function getKeywordCountsForConfigs(configIds: string[]) {
+  const counts = new Map<string, number>();
+  for (const chunk of chunkIds(configIds)) {
+    const rows = await db
+      .select({ configId: rankTrackingKeywords.configId, value: count() })
+      .from(rankTrackingKeywords)
+      .where(inArray(rankTrackingKeywords.configId, chunk))
+      .groupBy(rankTrackingKeywords.configId);
+    for (const row of rows) counts.set(row.configId, row.value);
+  }
+  return counts;
+}
+
+/** Each config's most recent run, keyed by config id. */
+async function getLatestRunsForConfigs(configIds: string[]) {
+  const latest = new Map<
+    string,
+    { status: string; completedAt: string | null }
+  >();
+  for (const chunk of chunkIds(configIds)) {
+    // Subquery: latest startedAt per config
+    const latestStarted = db
+      .select({
+        configId: rankCheckRuns.configId,
+        maxStartedAt: max(rankCheckRuns.startedAt).as("maxStartedAt"),
+      })
+      .from(rankCheckRuns)
+      .where(inArray(rankCheckRuns.configId, chunk))
+      .groupBy(rankCheckRuns.configId)
+      .as("latestStarted");
+
+    // Join back to get status + completedAt for each config's latest run
+    const rows = await db
+      .select({
+        configId: rankCheckRuns.configId,
+        status: rankCheckRuns.status,
+        completedAt: rankCheckRuns.completedAt,
+      })
+      .from(rankCheckRuns)
+      .innerJoin(
+        latestStarted,
+        and(
+          eq(rankCheckRuns.configId, latestStarted.configId),
+          eq(rankCheckRuns.startedAt, latestStarted.maxStartedAt),
+        ),
+      );
+
+    for (const run of rows) {
+      latest.set(run.configId, {
+        status: run.status,
+        completedAt: run.completedAt,
+      });
+    }
+  }
+  return latest;
+}
+
 async function getConfigSummaries(projectId: string) {
   const configs = await getConfigsForProject(projectId);
   if (configs.length === 0) return [];
 
-  // Batch: keyword counts grouped by config
-  const kwCounts = await db
-    .select({
-      configId: rankTrackingKeywords.configId,
-      value: count(),
-    })
-    .from(rankTrackingKeywords)
-    .where(
-      inArray(
-        rankTrackingKeywords.configId,
-        configs.map((c) => c.id),
-      ),
-    )
-    .groupBy(rankTrackingKeywords.configId);
-
-  const kwCountMap = new Map(kwCounts.map((r) => [r.configId, r.value]));
-
-  // Subquery: latest startedAt per config
-  const latestStarted = db
-    .select({
-      configId: rankCheckRuns.configId,
-      maxStartedAt: max(rankCheckRuns.startedAt).as("maxStartedAt"),
-    })
-    .from(rankCheckRuns)
-    .where(
-      inArray(
-        rankCheckRuns.configId,
-        configs.map((c) => c.id),
-      ),
-    )
-    .groupBy(rankCheckRuns.configId)
-    .as("latestStarted");
-
-  // Join back to get status + completedAt for each config's latest run
-  const latestRuns = await db
-    .select({
-      configId: rankCheckRuns.configId,
-      status: rankCheckRuns.status,
-      completedAt: rankCheckRuns.completedAt,
-    })
-    .from(rankCheckRuns)
-    .innerJoin(
-      latestStarted,
-      and(
-        eq(rankCheckRuns.configId, latestStarted.configId),
-        eq(rankCheckRuns.startedAt, latestStarted.maxStartedAt),
-      ),
-    );
-
-  const latestRunMap = new Map<
-    string,
-    { status: string; completedAt: string | null }
-  >();
-  for (const run of latestRuns) {
-    latestRunMap.set(run.configId, {
-      status: run.status,
-      completedAt: run.completedAt,
-    });
-  }
+  // Both lookups chunk their IN lists: a project may hold up to 500 configs,
+  // well past D1's ~100 bound-parameter cap for a single statement.
+  const configIds = configs.map((c) => c.id);
+  const kwCountMap = await getKeywordCountsForConfigs(configIds);
+  const latestRunMap = await getLatestRunsForConfigs(configIds);
 
   return configs.map((config) => ({
     ...config,
@@ -371,6 +474,7 @@ export const RankTrackingRepository = {
   createConfig,
   updateConfig,
   getDueConfigsWithOrganization,
+  claimDueConfig,
   tryCreateRun,
   updateRun,
   getRunById,
@@ -383,6 +487,7 @@ export const RankTrackingRepository = {
   removeKeywordsFromConfig,
   updateKeywordMetrics,
   getKeywordCountForConfig,
+  getKeywordCountsForConfigs,
   getConfigSummaries,
   getLatestSnapshotsForKeywords,
   getSnapshotsBeforeDate,

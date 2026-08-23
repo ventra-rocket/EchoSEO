@@ -1,7 +1,17 @@
-import { isHostedAuthMode } from "@/lib/auth-mode";
+import { getAuthMode, type AuthMode } from "@/lib/auth-mode";
 
 let workersEnvPromise: Promise<Record<string, unknown> | null> | null = null;
 
+/**
+ * Read an env var from `process.env` first, then the Workers `env` binding.
+ *
+ * An empty string counts as UNSET in both branches. A blank var is what you get
+ * from a `wrangler secret` set to "" or a var left empty in a dashboard, and
+ * every caller treats a returned string as "operator configured this" — so
+ * handing back "" silently disables the fallback (see resend-client's `reply_to`
+ * contract, which only omits the header when this is `undefined`). The
+ * `process.env` branch already behaved this way; the Workers branch did not.
+ */
 export async function getOptionalEnvValue(
   name: string,
 ): Promise<string | undefined> {
@@ -13,7 +23,9 @@ export async function getOptionalEnvValue(
 
   const workersEnv = await getWorkersEnv();
   const workerValue = workersEnv?.[name];
-  return typeof workerValue === "string" ? workerValue : undefined;
+  return typeof workerValue === "string" && workerValue !== ""
+    ? workerValue
+    : undefined;
 }
 
 export async function getRequiredEnvValue(name: string): Promise<string> {
@@ -24,8 +36,21 @@ export async function getRequiredEnvValue(name: string): Promise<string> {
   return value;
 }
 
+/**
+ * The deployment's auth mode, read from the runtime environment.
+ *
+ * The server-function surface reads `env.AUTH_MODE` directly because it always
+ * runs with a request-scoped Cloudflare env. The MCP tool layer does not, so it
+ * resolves the mode through this accessor — which is what keeps the audit
+ * role/verification gates identical across both entry points instead of one of
+ * them quietly defaulting to the permissive self-host answer.
+ */
+export async function getServerAuthMode(): Promise<AuthMode> {
+  return getAuthMode(await getOptionalEnvValue("AUTH_MODE"));
+}
+
 export async function isHostedServerAuthMode(): Promise<boolean> {
-  return isHostedAuthMode(await getOptionalEnvValue("AUTH_MODE"));
+  return (await getServerAuthMode()) === "hosted";
 }
 
 /**

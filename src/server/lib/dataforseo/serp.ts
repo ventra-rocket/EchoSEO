@@ -128,8 +128,12 @@ function buildRankCheckResult(
   return {
     keywordId: input.keywordId,
     keyword: input.keyword,
+    // rank_group = position among organic results only, which is what a user
+    // means by "my ranking". rank_absolute also counts SERP features (local
+    // pack, PAA, AI overviews), so it reads several slots worse than what the
+    // user sees on the page.
     position: organicMatch
-      ? (organicMatch.rank_absolute ?? organicMatch.rank_group ?? null)
+      ? (organicMatch.rank_group ?? organicMatch.rank_absolute ?? null)
       : null,
     url: organicMatch?.url ?? null,
     serpFeatures: [...new Set(items.map((item) => item.type).filter(Boolean))],

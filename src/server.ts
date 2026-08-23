@@ -5,14 +5,8 @@ import {
 import { routeAgentRequest } from "agents";
 import { resolveUserContextFromHeaders } from "@/middleware/ensure-user/resolve";
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
-import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
-import { beginRankCheckRun } from "@/server/features/rank-tracking/services/rankCheckRunGuards";
-import {
-  getOrCreateOrganizationCustomer,
-  orgMayUsePaidFeatures,
-} from "@/server/billing/subscription";
-import { resolveDataforseoCredentials } from "@/server/lib/dataforseo/resolve-credentials";
-import { resolveDataforseoCredentialAccess } from "@/server/lib/dataforseo/credential-access-policy";
+import { runScheduledRankChecks } from "@/server/features/rank-tracking/services/scheduledRankChecks";
+import { getOrCreateOrganizationCustomer } from "@/server/billing/subscription";
 import {
   isAutumnConfigured,
   isHostedServerAuthMode,
@@ -25,10 +19,6 @@ import {
 import { requestWithPublicOrigin } from "@/server/mcp/public-origin";
 import { MCP_ROUTE } from "@/server/mcp/context";
 import { handleSelfHostedOpenSeoMcpRequest } from "@/server/mcp/transport";
-import {
-  computeNextCheckAt,
-  isScheduledRankTrackingInterval,
-} from "@/shared/rank-tracking";
 import {
   AUTUMN_WEBHOOK_PATH,
   handleAutumnWebhookRequest,
@@ -387,101 +377,6 @@ export default {
       return;
     }
 
-    const nowIso = new Date().toISOString();
-    const dueConfigs =
-      await RankTrackingRepository.getDueConfigsWithOrganization(nowIso);
-
-    const isHosted = await isHostedServerAuthMode();
-
-    for (const config of dueConfigs) {
-      try {
-        // Advance nextCheckAt so a config never stays "due forever" — used on
-        // every skip path AND before starting a run (retry-storm guard).
-        const interval = isScheduledRankTrackingInterval(
-          config.scheduleInterval,
-        )
-          ? config.scheduleInterval
-          : null;
-        const advanceSchedule = () =>
-          interval
-            ? RankTrackingRepository.updateConfig(config.id, config.projectId, {
-                nextCheckAt: computeNextCheckAt(interval, config.nextCheckAt),
-              })
-            : Promise.resolve();
-
-        // Access gate: allowlisted (founder + invited) or a paid plan. With
-        // billing deferred this degrades to a clean SKIP, never a failed run.
-        if (isHosted && !(await orgMayUsePaidFeatures(config.organizationId))) {
-          console.log(
-            `[cron] Skipping config ${config.id} (${config.domain}) — org ${config.organizationId} has no core access`,
-          );
-          await advanceSchedule();
-          continue;
-        }
-
-        // Key gate: a scheduled run with no DataForSEO key would start the
-        // workflow then fail at the credential seam (DATAFORSEO_KEY_MISSING).
-        // Skip before spending a run so scheduled runs never show `failed` just
-        // because the org hasn't connected a key.
-        const credentials = await resolveDataforseoCredentials(
-          config.organizationId,
-        );
-        if (
-          (await resolveDataforseoCredentialAccess(credentials)) ===
-          "unavailable"
-        ) {
-          console.log(
-            `[cron] Skipping config ${config.id} (${config.domain}) — no DataForSEO key for org ${config.organizationId}`,
-          );
-          await advanceSchedule();
-          continue;
-        }
-
-        // Skip configs with no keywords before advancing the schedule
-        const kwCount = await RankTrackingRepository.getKeywordCountForConfig(
-          config.id,
-        );
-        if (kwCount === 0) {
-          console.log(
-            `[cron] Skipping config ${config.id} (${config.domain}) — no keywords`,
-          );
-          await advanceSchedule();
-          continue;
-        }
-
-        // Advance nextCheckAt immediately to prevent retry storms if the run fails
-        await advanceSchedule();
-
-        const result = await beginRankCheckRun({
-          workflow: env.RANK_CHECK_WORKFLOW,
-          config,
-          projectId: config.projectId,
-          billingCustomer: {
-            userId: "system",
-            userEmail: "system@echoseo.ventrarocket.vn",
-            organizationId: config.organizationId,
-            projectId: config.projectId,
-          },
-          keywordsTotal: kwCount,
-          trigger: "scheduled",
-          workflowStartErrorMessage: "Failed to start scheduled workflow",
-        });
-
-        if (!result.ok) {
-          console.log(
-            `[cron] Skipping config ${config.id} (${config.domain}) — run already active`,
-          );
-        } else {
-          console.log(
-            `[cron] Started scheduled rank check ${result.runId} for config ${config.id} (${config.domain})`,
-          );
-        }
-      } catch (err) {
-        console.error(
-          `[cron] Error processing config ${config.id} (${config.domain}):`,
-          err,
-        );
-      }
-    }
+    await runScheduledRankChecks(env);
   },
 };

@@ -141,7 +141,13 @@ export const auditPages = sqliteTable(
     // Performance
     responseTimeMs: integer("response_time_ms"),
   },
-  (table) => [index("audit_pages_audit_id_idx").on(table.auditId)],
+  (table) => [
+    index("audit_pages_audit_id_idx").on(table.auditId),
+    // Screenshot capture and the page-fact lookups resolve a page by
+    // (audit_id, url); the audit_id-only index above makes those scan every
+    // page row of the audit.
+    index("audit_pages_audit_url_idx").on(table.auditId, table.url),
+  ],
 );
 
 // One row per Lighthouse test (mobile + desktop per page).
@@ -168,7 +174,12 @@ export const auditLighthouseResults = sqliteTable(
     r2Key: text("r2_key"),
     payloadSizeBytes: integer("payload_size_bytes"),
   },
-  (table) => [index("audit_lighthouse_results_audit_id_idx").on(table.auditId)],
+  (table) => [
+    index("audit_lighthouse_results_audit_id_idx").on(table.auditId),
+    // Cascade path from audit_pages deletes. Without it, deleting one page
+    // seq-scans this table to find the rows to cascade.
+    index("audit_lighthouse_results_page_id_idx").on(table.pageId),
+  ],
 );
 
 // Project/domain-bound professional audit target. Auto-created from the first
@@ -296,6 +307,10 @@ export const auditIssueOccurrences = sqliteTable(
       table.severity,
     ),
     index("audit_issue_occurrences_rule_idx").on(table.auditId, table.ruleId),
+    // Cascade path from audit_pages deletes (page-level occurrences carry a
+    // cascading page_id); without this, deleting one page seq-scans every
+    // occurrence row.
+    index("audit_issue_occurrences_page_id_idx").on(table.pageId),
   ],
 );
 
