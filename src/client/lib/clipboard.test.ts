@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { copyTableToClipboard } from "./clipboard";
+import { buildListClipboardText, copyTableToClipboard } from "./clipboard";
 
 type WrittenItem = {
   plain: string;
@@ -107,5 +107,37 @@ describe("copyTableToClipboard", () => {
     await expect(copyTableToClipboard(["X"], [["y"]])).rejects.toThrow(
       /Clipboard API not available/,
     );
+  });
+});
+
+describe("buildListClipboardText", () => {
+  it("neutralizes every spreadsheet formula lead-in", () => {
+    // GSC queries and SERP keywords are attacker-controllable text; pasting
+    // them into Sheets/Excel must not execute anything.
+    const hostile = [
+      "=IMPORTXML(CONCAT(A1),1)",
+      "+1-555-0100",
+      "-2+3",
+      "@SUM(A1:A9)",
+      "\tleading tab",
+      "\rleading cr",
+      "\nleading lf",
+    ];
+
+    expect(buildListClipboardText(hostile)).toBe(
+      hostile.map((value) => `'${value}`).join("\n"),
+    );
+  });
+
+  it("leaves ordinary keywords untouched", () => {
+    const plain = ["best crm software", "giá vé máy bay"];
+
+    expect(buildListClipboardText(plain)).toBe(plain.join("\n"));
+  });
+
+  it("treats null and undefined as empty lines", () => {
+    const sparse = ["a", null, undefined, "b"];
+
+    expect(buildListClipboardText(sparse)).toBe("a\n\n\nb");
   });
 });
