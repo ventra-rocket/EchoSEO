@@ -62,7 +62,25 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
   - [x] Severity-tiered audit issue taxonomy (critical/high/low) — shipped in the rules engine (`src/server/lib/audit/rules/`), read by the audit UI rather than redefined there.
   - [x] Private-by-default audit review; free public links never expose a workspace audit — `/r/{id}` reads the free-check report store only (`src/routes/r.$id.tsx`), and is `noindex` + robots-disallowed.
 
-**Exit / launch:** public open-source release; "Deploy to Cloudflare" one-click; docs; positioning = _the open, agent-native SEO platform_.
+**Exit / launch:** public open-source release; a self-host path that actually
+works (see below); docs; positioning = _the open, agent-native SEO platform_.
+
+> **Dropped: "Deploy to Cloudflare" one-click.** Upstream shipped that button,
+> spent months patching it (`3a94f02a` "unbreak the Deploy to Cloudflare
+> button"), then **retired it** in favour of a declarative IaC deploy
+> (`ffb5c9d9`, `625b76eb`), moving the button's docs to
+> `SELF_HOSTING_CLOUDFLARE_LEGACY.md` and refusing to migrate existing
+> button-created deployments at all. The button cannot provision D1/KV/R2 or an
+> Access application, so it always left the operator hand-finishing the parts
+> that break. We are not rebuilding something upstream measured as broken.
+>
+> Our self-host story is the two paths we already ship and can support:
+> [`SELF_HOSTING_CLOUDFLARE.md`](SELF_HOSTING_CLOUDFLARE.md) (wrangler,
+> `AUTH_MODE=cloudflare_access`) and
+> [`SELF_HOSTING_DOCKER.md`](SELF_HOSTING_DOCKER.md) (`local_noauth`). Upstream's
+> replacement is Alchemy IaC; adopting it is assessed in
+> [`SELF_HOSTING_CLOUDFLARE.md`](SELF_HOSTING_CLOUDFLARE.md#why-not-alchemy) and
+> is **not** a launch blocker.
 
 ## Phase 2 — V1: "Tool → Business" (~2–4 months)
 

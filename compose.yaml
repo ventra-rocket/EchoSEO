@@ -1,6 +1,8 @@
 services:
   open-seo:
-    image: ${OPEN_SEO_IMAGE:-ghcr.io/every-app/open-seo:latest}
+    # Published by .github/workflows/docker-image.yml from this repo. Override
+    # with ECHOSEO_IMAGE to run a locally built or pinned tag.
+    image: ${ECHOSEO_IMAGE:-ghcr.io/ventra-rocket/echoseo:latest}
     restart: unless-stopped
     environment:
       # Required for local Docker self-hosting: exposes Compose env vars to cloudflare:workers bindings.
@@ -14,6 +16,12 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-}
+      # Optional: the in-app AI features (onboarding chat, assistant workspace,
+      # audit issue explainer). Without these the setup gate in the app asks for
+      # a key, but nothing here would forward one.
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-}
+      - OPENROUTER_EXPLAINER_MODEL=${OPENROUTER_EXPLAINER_MODEL:-}
       - VITE_SHOW_DEVTOOLS=false
     ports:
       - "127.0.0.1:${PORT:-3001}:${PORT:-3001}"

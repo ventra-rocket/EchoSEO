@@ -43,10 +43,19 @@ function gh(args) {
   }).trim();
 }
 
-/** @param {string} remoteName */
+/**
+ * Probes an optional remote. A missing remote is the normal case here (`public`
+ * only exists in some checkouts), so swallow git's stderr — otherwise every run
+ * opens with a bogus `error: No such remote 'public'`.
+ *
+ * @param {string} remoteName
+ */
 function getRemoteRepo(remoteName) {
   try {
-    const remote = git(["remote", "get-url", remoteName]);
+    const remote = execFileSync("git", ["remote", "get-url", remoteName], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
     const match = remote.match(/github\.com[:/]([^/]+\/[^/.]+)(?:\.git)?$/);
     return match?.[1];
   } catch {

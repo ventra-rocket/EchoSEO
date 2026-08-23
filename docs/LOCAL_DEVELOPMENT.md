@@ -2,14 +2,16 @@
 
 ## Prerequisites
 
-- Node.js 20+
-- [pnpm](https://pnpm.io/)
+- Node.js 22+
+- [Corepack](https://nodejs.org/api/corepack.html) (bundled through Node.js 24; install it separately on Node.js 25+)
 - A DataForSEO account/API credentials
 
 ## Local Development Workflow
 
 ```sh
-pnpm install
+# Activates the exact pnpm version declared by package.json's `packageManager`.
+corepack enable
+pnpm install --frozen-lockfile
 
 # Run once per fresh local DB
 pnpm run db:migrate:local
@@ -61,8 +63,14 @@ pnpm run db:migrate:local
 - `AUTH_MODE=local_noauth`: local trusted mode, no auth check, injects `admin@localhost`.
 - `AUTH_MODE=hosted`: Better Auth-backed public email/password mode. Requires `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, and `AUTH_EMAIL_FROM`.
 
-Local scripts (`pnpm dev` and `pnpm dev:agents`) set `AUTH_MODE=local_noauth` automatically.
-Use `AUTH_MODE=cloudflare_access pnpm dev` when you specifically want to test Access validation locally.
+Nothing sets `AUTH_MODE` for you: `pnpm dev` is a bare `vite dev`. The mode comes
+from `.env.local`, which is both the build-time value Vite inlines into the
+client bundle and — via `CLOUDFLARE_INCLUDE_PROCESS_ENV` — the runtime value the
+Worker reads. Set `AUTH_MODE=local_noauth` there for ordinary local work, or
+`AUTH_MODE=cloudflare_access` when you specifically want to exercise Access
+validation. Both halves come from one file locally, so they cannot disagree —
+see [`self-host-auth-mode-spec.md`](./self-host-auth-mode-spec.md) for why they
+can on a deploy.
 
 For a public Cloudflare deployment, set `AUTH_MODE=hosted` and do not protect
 the public hostname with Cloudflare Access. For a private Access deployment,
