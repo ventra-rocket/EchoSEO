@@ -48,7 +48,7 @@ Phases are scope-ordered, not date-locked. Durations are rough estimates for a s
 - [~] Backlink analysis + prospecting
 - [~] Competitor analysis + domain overview
 - [~] GSC integration (search performance, striking-distance)
-- [~] MCP server (18 tools) + agent skills — **assisted** workflows
+- [~] MCP server (23 tools) + agent skills — **assisted** workflows
 - [~] AI-search visibility (Brand Lookup + Prompt Explorer) — basic
 
 **EchoSEO additions in MVP:**
