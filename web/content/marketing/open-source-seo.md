@@ -43,7 +43,7 @@ Shipped EchoSEO surfaces include:
 
 EchoSEO also inherits several working surfaces from its upstream base. With your own DataForSEO key, these include keyword research, global rank tracking, backlink analysis, and competitor or domain overview. These inherited features are present but are still being dogfooded and hardened as EchoSEO.
 
-An [18-tool MCP server](/docs/mcp) and portable agent skills support **assisted** SEO workflows. An agent can help research and work with SEO data through MCP, while you remain responsible for reviewing decisions and actions.
+A [23-tool MCP server](/docs/mcp) and portable agent skills support **assisted** SEO workflows. An agent can help research and work with SEO data through MCP, while you remain responsible for reviewing decisions and actions.
 
 Two boundaries are explicit:
 

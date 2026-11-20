@@ -13,7 +13,7 @@ EchoSEO is the **open, agent-native SEO platform**: a comprehensive, self-hostab
 
 ## 2. Strategy & Approach
 
-- **Build by forking [every-app/open-seo](https://github.com/every-app/open-seo)** (MIT, ~74k LOC, actively maintained). It already ships the expensive parts — a clean DataForSEO integration, an 18-tool MCP server, 7 agent skills, rank tracking, site audit + Lighthouse, GSC, AI-Visibility. Rebranding + extending is ~1–3 weeks to MVP vs 4–8 months greenfield.
+- **Build by forking [every-app/open-seo](https://github.com/every-app/open-seo)** (MIT, ~74k LOC, actively maintained). It already ships the expensive parts — a clean DataForSEO integration, an MCP server (19 tools at fork time; EchoSEO now ships 23), 7 agent skills, rank tracking, site audit + Lighthouse, GSC, AI-Visibility. Rebranding + extending is ~1–3 weeks to MVP vs 4–8 months greenfield.
 - **Track upstream** as a git remote for security and feature pulls.
 - Covers **~55%** of a comprehensive platform out of the box; remaining gaps are **product build, not R&D** (DataForSEO supplies the data).
 
@@ -80,7 +80,7 @@ Owning a backlink crawl/index, proxy-fleet SERP scraping, PPC/paid-media managem
 - **App:** TanStack Start (React 19) single unified Worker; file-based routes; server functions (RPC); feature-sliced `services/` + `repositories/`.
 - **Runtime:** Cloudflare Workers (workerd). **D1 (SQLite)** via Drizzle (26 migrations). KV ×2, R2 (Lighthouse payloads), Durable Objects (onboarding chat agent), Workflows (`SiteAuditWorkflow`, `RankCheckWorkflow`), cron (`*/15 * * * *`).
 - **Data layer:** `src/server/lib/dataforseo/` — layered core → per-section (labs/serp/backlinks/business/google-ads/lighthouse/ai) → metered client. BYO Base64 key, read lazily per-request.
-- **MCP:** `src/server/mcp/` — 18 tools, zod in/out, OAuth 2.1 (DCR) hosted + self-host transports.
+- **MCP:** `src/server/mcp/` — 23 tools, zod in/out, OAuth 2.1 (DCR) hosted + self-host transports.
 - **Auth:** `AUTH_MODE` = `local_noauth` | `cloudflare_access` | `hosted` (Better Auth + org).
 - **Skills:** `.agents/skills/` — 7 portable SKILL.md agent skills.
 

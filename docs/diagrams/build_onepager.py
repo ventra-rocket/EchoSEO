@@ -255,7 +255,7 @@ TMPL = """<!DOCTYPE html>
   <div class="chart-wrap">
     <div>%%DONUT%%</div>
     <div style="flex:1;min-width:280px">
-      <p>OpenSEO đã dựng sẵn phần khó và tốn kém: tích hợp DataForSEO (7 nhóm API), MCP server 18 công cụ, 7 agent skills, rank tracking theo lịch, crawler audit + Lighthouse, tích hợp GSC, tính năng AI-Visibility, và cơ chế xác thực 3 chế độ.</p>
+      <p>OpenSEO đã dựng sẵn phần khó và tốn kém: tích hợp DataForSEO (7 nhóm API), MCP server 19 công cụ (EchoSEO nay có 23), 7 agent skills, rank tracking theo lịch, crawler audit + Lighthouse, tích hợp GSC, tính năng AI-Visibility, và cơ chế xác thực 3 chế độ.</p>
       <p style="color:var(--muted)">Phần còn thiếu (tối ưu nội dung, audit sâu, GA4/Bing, báo cáo white-label) đều là <b>độ khó thấp–trung bình</b> ở tầng sản phẩm — không phải bài toán nghiên cứu dữ liệu.</p>
     </div>
   </div>

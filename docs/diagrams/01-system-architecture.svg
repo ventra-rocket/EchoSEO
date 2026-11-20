@@ -33,7 +33,7 @@
 <text x="590.0" y="325.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">audit · competitor · ai-search</text>
 <rect x="830" y="255" width="240" height="95" rx="12" fill="#d0bfff" stroke="#7048e8" stroke-width="2"/>
 <text x="950.0" y="298.5" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">MCP Server</text>
-<text x="950.0" y="316.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">18 tools + skills</text>
+<text x="950.0" y="316.5" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">23 tools + skills</text>
 <rect x="80" y="430" width="170" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
 <text x="165.0" y="466.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">D1 / SQLite</text>
 <text x="165.0" y="484.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">Drizzle</text>

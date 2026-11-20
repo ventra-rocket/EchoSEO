@@ -240,7 +240,7 @@ def d_architecture() -> Scene:
     routes = s.box(110, 255, 240, 95, ["Routes +", "Server Functions"], "backend")
     feats = s.box(440, 250, 300, 105, ["Feature Services", "keyword · rank · backlink",
                                        "audit · competitor · ai-search"], "backend")
-    mcp = s.box(830, 255, 240, 95, ["MCP Server", "18 tools + skills"], "backend")
+    mcp = s.box(830, 255, 240, 95, ["MCP Server", "23 tools + skills"], "backend")
     # primitives
     d1 = s.box(80, 430, 170, 80, ["D1 / SQLite", "Drizzle"], "db")
     kv = s.box(270, 430, 150, 80, ["KV ×2"], "db")
