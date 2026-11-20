@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Ventra SEO flow diagrams.
+"""Build EchoSEO flow diagrams.
 
 One abstract scene model -> two outputs:
   * `<name>.excalidraw`  editable Excalidraw canvas (open on excalidraw.com)
@@ -227,7 +227,7 @@ def _ex_arrow(seed, p1, p2, dashed=False):
 # ================= Diagrams =================
 def d_architecture() -> Scene:
     s = Scene()
-    s.text(40, 34, "Kiến trúc & luồng dữ liệu Ventra SEO", 22, "#0f172a", bold=True)
+    s.text(40, 34, "Kiến trúc & luồng dữ liệu EchoSEO", 22, "#0f172a", bold=True)
     # zones
     s.zone(40, 60, 1080, 130, "Client / Agent")
     s.zone(40, 220, 1080, 150, "Cloudflare Workers · TanStack Start (React 19)")
@@ -306,7 +306,7 @@ def d_phase0() -> Scene:
     s = Scene()
     s.text(40, 34, "Luồng thực thi Phase 0 (fork → M0)", 22, "#0f172a", bold=True)
     p1 = s.box(430, 90, 300, 90, ["P01 · Fork + Deploy", "đường găng"], "decision")
-    p2 = s.box(120, 260, 250, 90, ["P02 · Rebrand", "→ Ventra"], "backend")
+    p2 = s.box(120, 260, 250, 90, ["P02 · Rebrand", "→ EchoSEO"], "backend")
     p3 = s.box(455, 260, 250, 90, ["P03 · Strip / gate", "hosted couplings"], "backend")
     p5 = s.box(790, 260, 250, 90, ["P05 · Provider", "abstraction seam"], "backend")
     p4 = s.box(120, 430, 250, 90, ["P04 · i18n", "VN + EN"], "ui")
@@ -325,7 +325,7 @@ def d_funnel() -> Scene:
     seats = s.box(400, 430, 260, 90, ["Team / Pro seats", "collaboration"], "backend")
     s.arrow(free, managed); s.arrow(managed, seats)
     s.text(840, 140, "Cộng đồng + skill marketplace", 14, "#64748b")
-    s.text(840, 310, "Ventra quản lý DataForSEO + OAuth", 14, "#64748b")
+    s.text(840, 310, "EchoSEO quản lý DataForSEO + OAuth", 14, "#64748b")
     s.text(690, 480, "Không khoá dữ liệu thô sau seats", 14, "#64748b")
     return s
 
@@ -393,9 +393,9 @@ def _write_html(svgs: dict):
     doc = (
         "<!DOCTYPE html>\n<html lang=\"vi\">\n<head>\n<meta charset=\"UTF-8\"/>\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>\n"
-        "<title>Ventra SEO — Kiến trúc & Luồng (Excalidraw)</title>\n<style>" + css + "</style>\n</head>\n<body>\n"
+        "<title>EchoSEO — Kiến trúc & Luồng (Excalidraw)</title>\n<style>" + css + "</style>\n</head>\n<body>\n"
         "<header class=\"hero\"><div class=\"badge\">Excalidraw · 2026-07-03 · Foundation</div>"
-        "<h1>Ventra SEO — Kiến trúc &amp; Các luồng đi</h1>"
+        "<h1>EchoSEO — Kiến trúc &amp; Các luồng đi</h1>"
         "<p class=\"tagline\">Sơ đồ Excalidraw (SVG offline) cho kiến trúc hệ thống, luồng xử lý, vòng lặp agent, "
         "kế hoạch Phase 0 và mô hình kinh doanh. File <code>.excalidraw</code> nguồn nằm trong <code>docs/diagrams/</code>.</p></header>\n"
         "<nav class=\"toc\"><ul>" + nav + "</ul></nav>\n<main>\n" + "\n".join(secs) + "\n</main>\n"

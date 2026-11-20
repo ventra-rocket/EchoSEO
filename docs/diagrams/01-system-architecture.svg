@@ -57,5 +57,5 @@
 <rect x="820" y="595" width="260" height="80" rx="12" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2"/>
 <text x="950.0" y="631.0" font-size="15" fill="#1f2937" text-anchor="middle" font-weight="700">First-party OAuth</text>
 <text x="950.0" y="649.0" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="500">GSC · GA4 · Bing (free)</text>
-<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Kiến trúc &amp; luồng dữ liệu Ventra SEO</text>
+<text x="40.0" y="34.0" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">Kiến trúc &amp; luồng dữ liệu EchoSEO</text>
 </svg>

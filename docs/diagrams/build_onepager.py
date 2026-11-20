@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the Ventra SEO executive one-pager (self-contained HTML).
+"""Build the EchoSEO executive one-pager (self-contained HTML).
 
 Reads the 5 diagram SVGs from this folder and inlines them (offline, no CDN),
 adds detailed Vietnamese business narrative + charts drawn in pure SVG/CSS.
@@ -131,8 +131,8 @@ PRICING = bars([
     ("Semrush", 139.95, "#f87171"),
     ("Moz", 99, "#fbbf24"),
     ("Ubersuggest", 12, "#60a5fa"),
-    ("Ventra (self-host)", 0, "#34d399"),
-], unit="$", note="Giá thuê bao/tháng của các suite. Ventra self-host miễn phí — người dùng chỉ trả chi phí dữ liệu thực dùng (BYO-key).")
+    ("EchoSEO (self-host)", 0, "#34d399"),
+], unit="$", note="Giá thuê bao/tháng của các suite. EchoSEO self-host miễn phí — người dùng chỉ trả chi phí dữ liệu thực dùng (BYO-key).")
 
 COST = bars([
     ("SerpApi (~)", 7.0, "#f87171"),
@@ -144,13 +144,13 @@ TMPL = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Ventra SEO — Tầm nhìn & Định hướng</title>
+<title>EchoSEO — Tầm nhìn & Định hướng</title>
 <style>%%CSS%%</style>
 </head>
 <body>
 <header class="hero"><div class="wrap">
   <div class="badge">Tài liệu định hướng · 2026-07-03 · Bản nháp nội bộ</div>
-  <h1>Ventra SEO</h1>
+  <h1>EchoSEO</h1>
   <p class="lead">Nền tảng SEO <b>mở</b> và <b>agent-native</b> — tự host được, thay thế Semrush/Ahrefs, xây trên nền mã nguồn mở đã trưởng thành.</p>
   <p class="oneliner">"Nền tảng SEO mở không chỉ trả lời câu hỏi — nó tự làm việc và chứng minh kết quả bằng chính dữ liệu Search Console của bạn."</p>
 </div></header>
@@ -215,7 +215,7 @@ TMPL = """<!DOCTYPE html>
 
 <section id="solution">
   <p class="kicker">03 · Giải pháp</p>
-  <h2>Ventra: dashboard mạnh + lớp agent tự làm việc</h2>
+  <h2>EchoSEO: dashboard mạnh + lớp agent tự làm việc</h2>
   <p class="sub">Đầy đủ nghiệp vụ SEO cốt lõi trong một sản phẩm, với hai "mặt": bảng điều khiển trực quan cho người làm, và lớp AI-agent tự động hoá phần lặp đi lặp lại — cân bằng, cả hai đều là công dân hạng nhất.</p>
   <table>
     <thead><tr><th>Nhóm tính năng</th><th>MVP</th><th>V1</th><th>Sau</th></tr></thead>
@@ -233,7 +233,7 @@ TMPL = """<!DOCTYPE html>
   <p class="kicker">04 · Lợi thế cạnh tranh</p>
   <h2>"Agent-native" chưa đủ — hào nằm ở read-WRITE + dữ liệu + kinh tế mở</h2>
   <table>
-    <thead><tr><th>Tiêu chí</th><th>Semrush / Ahrefs</th><th>OpenSEO (nền)</th><th>Ventra</th></tr></thead>
+    <thead><tr><th>Tiêu chí</th><th>Semrush / Ahrefs</th><th>OpenSEO (nền)</th><th>EchoSEO</th></tr></thead>
     <tbody>
       <tr><td>Agent truy cập</td><td>MCP chỉ đọc</td><td>MCP chỉ đọc</td><td><strong>Vòng lặp read-WRITE</strong></td></tr>
       <tr><td>Hợp nhất dữ liệu GSC/GA4</td><td>Hạn chế</td><td>Chỉ GSC</td><td><strong>GSC+GA4+Bing trong ngữ cảnh agent</strong></td></tr>
@@ -270,7 +270,7 @@ TMPL = """<!DOCTYPE html>
 
 <section id="agent">
   <p class="kicker">07 · Cách agent hoạt động</p>
-  <h2>Vòng lặp read-WRITE — trái tim khác biệt của Ventra</h2>
+  <h2>Vòng lặp read-WRITE — trái tim khác biệt của EchoSEO</h2>
   <div class="diagram">%%SVG_AGENT%%</div>
   <p class="sub" style="margin-top:14px">Và bên dưới, mỗi truy vấn đi qua lớp cache-first để tối ưu chi phí dữ liệu:</p>
   <div class="diagram">%%SVG_REQ%%</div>
@@ -296,7 +296,7 @@ TMPL = """<!DOCTYPE html>
   <table>
     <thead><tr><th>Mốc</th><th>Giai đoạn</th><th>Hoàn thành khi</th></tr></thead>
     <tbody>
-      <tr><td><strong>M0 · Ventra chạy</strong></td><td>Phase 0 (1–3 tuần)</td><td>App đổi thương hiệu, tự host trên Cloudflare, song ngữ, đã track upstream</td></tr>
+      <tr><td><strong>M0 · EchoSEO chạy</strong></td><td>Phase 0 (1–3 tuần)</td><td>App đổi thương hiệu, tự host trên Cloudflare, song ngữ, đã track upstream</td></tr>
       <tr><td><strong>M1 · MVP</strong></td><td>~4–8 tuần</td><td>Tính năng kế thừa + lớp agent + VN/EN + quick-wins; phát hành mã nguồn mở</td></tr>
       <tr><td><strong>M2 · Nội dung + audit</strong></td><td>V1</td><td>Engine tối ưu nội dung + audit sâu theo lịch</td></tr>
       <tr><td><strong>M3 · Bật doanh thu</strong></td><td>V1</td><td>Managed Cloud PAYG (beta) + báo cáo white-label</td></tr>
@@ -315,11 +315,11 @@ TMPL = """<!DOCTYPE html>
 
     <div class="phase" style="border-left-color:#e8590c">
       <div class="phase-head"><span class="pnum">PHASE 0</span><h4>Fork &amp; Foundation</h4><span class="phase-dur">1–3 tuần · M0</span></div>
-      <p class="goal">Mục tiêu: một Ventra chạy được — đổi thương hiệu, song ngữ, tự host trên Cloudflare, sẵn "khe" cho tính năng sau.</p>
+      <p class="goal">Mục tiêu: một EchoSEO chạy được — đổi thương hiệu, song ngữ, tự host trên Cloudflare, sẵn "khe" cho tính năng sau.</p>
       <ul class="worklist">
         <li>Fork OpenSEO + track remote <code>upstream</code></li>
         <li>Dựng hạ tầng Cloudflare (D1/KV/R2/DO/Workflows) + deploy self-host</li>
-        <li>Đổi thương hiệu → Ventra (UI, MCP tools, skills, web, wrangler)</li>
+        <li>Đổi thương hiệu → EchoSEO (UI, MCP tools, skills, web, wrangler)</li>
         <li>Tách/ẩn coupling hosted (PostHog/Loops/Reddit/Autumn) sau cờ <code>hosted</code></li>
         <li>Dựng khung i18n VN + EN, tách chuỗi, seed bản dịch Việt</li>
         <li>Thêm lớp provider-abstraction cho DataForSEO</li>
@@ -405,7 +405,7 @@ TMPL = """<!DOCTYPE html>
   <h2>Đề xuất: đồng thuận khởi động Phase 0</h2>
   <div class="ask">
     <p>Chúng ta có một cơ hội hiếm: xây một nền tảng SEO thế hệ mới với <b>rủi ro thấp và tốc độ cao</b>, nhờ đứng trên một nền mã nguồn mở đã trưởng thành và một khác biệt hoá rõ ràng (agent read-write + dữ liệu người dùng + mở + song ngữ).</p>
-    <p style="margin-bottom:0"><b>Định hướng đề xuất:</b> khởi động <b>Phase 0 (Fork &amp; Foundation, 1–3 tuần)</b> để đạt mốc M0 — một Ventra chạy được, đổi thương hiệu, song ngữ, tự host trên Cloudflare — rồi cùng đánh giá lại trước khi cam kết nguồn lực cho MVP.</p>
+    <p style="margin-bottom:0"><b>Định hướng đề xuất:</b> khởi động <b>Phase 0 (Fork &amp; Foundation, 1–3 tuần)</b> để đạt mốc M0 — một EchoSEO chạy được, đổi thương hiệu, song ngữ, tự host trên Cloudflare — rồi cùng đánh giá lại trước khi cam kết nguồn lực cho MVP.</p>
     <ul class="clean" style="margin-top:14px">
       <li>Cần chuẩn bị: fork OpenSEO, tài khoản Cloudflare, một API key DataForSEO để thử.</li>
       <li>Quyết định đã chốt: fork trên Cloudflare · open-core prosumer · song ngữ VN+EN · posture cân bằng dashboard + agent.</li>
@@ -414,7 +414,7 @@ TMPL = """<!DOCTYPE html>
 </section>
 
 </main>
-<footer>Ventra SEO · tài liệu định hướng nội bộ · dựa trên nghiên cứu tại
+<footer>EchoSEO · tài liệu định hướng nội bộ · dựa trên nghiên cứu tại
 <code>plans/reports/research-summary-260703-1047-ventra-seo.md</code> ·
 sơ đồ: <code>docs/diagrams/*.excalidraw</code></footer>
 </body>
